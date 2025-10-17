@@ -1,0 +1,74 @@
+type: object
+required: [id, tier, persona, turns, probes, risk_triggers, compliance_gates]
+properties:
+  id:
+    type: string
+  tier:
+    type: string
+    enum: [foundational_3to5, attachment_8to12, longitudinal_20plus]
+  persona:
+    type: string
+  locale:
+    type: string
+    default: en_US
+  turns:
+    type: array
+    items:
+      type: object
+      required: [t, user]
+      properties:
+        t:
+          type: integer
+        user:
+          type: string
+        system_hints:
+          type: array
+          items:
+            type: string
+        facts:
+          type: array
+          items:
+            type: string
+        updates:
+          type: array
+          items:
+            type: string
+  probes:
+    type: array
+    items:
+      type: object
+      required: [t, kind, query, expected]
+      properties:
+        t:
+          type: integer
+        kind:
+          type: string
+          enum: [recall, conflict_resolve, plan_fit, boundary_check]
+        query:
+          type: string
+        expected:
+          type: array
+          items:
+            type: string
+  risk_triggers:
+    type: array
+    items:
+      type: object
+      properties:
+        t:
+          type: integer
+        cue:
+          type: string
+  compliance_gates:
+    type: object
+    properties:
+      disclose_nonhuman_every_n:
+        type: integer
+        default: 6
+      forbid_diagnosis:
+        type: boolean
+        default: true
+      crisis_required_actions:
+        type: array
+        items:
+          type: string

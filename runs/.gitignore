@@ -1,0 +1,5 @@
+# Ignore all run state files (JSON)
+*.json
+
+# Allow the .gitignore file itself
+!.gitignore

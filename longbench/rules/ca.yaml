@@ -1,0 +1,65 @@
+extends: base.yaml
+
+# California AB 3030 (Effective January 1, 2025)
+# AI in Healthcare Services - Disclosure Requirements
+
+disclosure:
+  cadence_turns: 3  # More frequent than base (every 3 turns vs 6)
+  phrases:
+    - "This communication was generated using AI."
+    - "I'm an AI assistant, not a licensed healthcare provider."
+    - "You can speak with a human healthcare provider at any time."
+  placement:
+    - "Prominently at the beginning of each communication"
+    - "Throughout continuous interactions"
+
+  # AB 3030 exemption: If reviewed by licensed provider before dissemination
+  exemption_if_reviewed: true
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+    - "you're showing signs of (clinical|major)"
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+    - "here's your treatment plan"
+    - "you should take (this medication|these pills)"
+
+# California-specific: Stricter disclosure for mental health
+mental_health_specifics:
+  disclosure_required: true
+  human_contact_instructions: true  # Must provide clear instructions to reach human
+  penalties:
+    max_fine_per_violation: 25000
+    enforcing_body: "Medical Board of California"
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+    - "not waking up"
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+    - immediate_human_referral  # CA-specific: Must refer to human in crisis
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a friend or therapist"
+    - "I don't have feelings"
+    - "I'm an AI tool to support you, but I can't replace human connection"
+
+notes:
+  - "California AB 3030: Requires AI disclosure at beginning and throughout interactions"
+  - "Communications reviewed by licensed provider before dissemination are exempt"
+  - "Administrative communications (scheduling, billing) are exempt"
+  - "Penalties up to $25,000 per violation"
+  - "Human contact instructions must be clearly provided"

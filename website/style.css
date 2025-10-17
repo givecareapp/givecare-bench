@@ -1,0 +1,252 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #2563eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #f59e0b;
+    --bg: #ffffff;
+    --text: #1f2937;
+    --border: #e5e7eb;
+    --secondary-bg: #f9fafb;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header */
+header {
+    background: var(--primary);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.tagline {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+
+nav {
+    margin-top: 1rem;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin-right: 1.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+nav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Main Content */
+main {
+    padding-bottom: 4rem;
+}
+
+section {
+    margin-bottom: 3rem;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+/* Intro */
+.intro {
+    background: var(--secondary-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.note {
+    background: var(--warning);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+thead {
+    background: var(--secondary-bg);
+}
+
+th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+}
+
+td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr.pass {
+    background: rgba(22, 163, 74, 0.05);
+}
+
+tr.fail {
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.badge.pass {
+    background: var(--success);
+    color: white;
+}
+
+.badge.fail {
+    background: var(--danger);
+    color: white;
+}
+
+/* Failures */
+.failure-box {
+    background: rgba(220, 38, 38, 0.1);
+    border-left: 4px solid var(--danger);
+    padding: 1rem;
+    border-radius: 4px;
+    line-height: 1.8;
+}
+
+/* Dimensions */
+.dimension-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.dimension {
+    background: var(--secondary-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 3px solid var(--primary);
+}
+
+.dimension strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+}
+
+.dimension p {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+/* Scenario Info */
+.scenario-info {
+    background: var(--secondary-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.scenario-info p {
+    margin-bottom: 0.5rem;
+}
+
+/* Methodology */
+.methodology ul {
+    list-style-position: inside;
+    margin-left: 1rem;
+}
+
+.methodology li {
+    margin-bottom: 0.5rem;
+}
+
+/* Footer */
+footer {
+    background: var(--text);
+    color: white;
+    padding: 2rem 0;
+    margin-top: 4rem;
+    text-align: center;
+}
+
+footer a {
+    color: white;
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 2rem;
+    }
+
+    table {
+        font-size: 0.9rem;
+    }
+
+    th, td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .dimension-grid {
+        grid-template-columns: 1fr;
+    }
+
+    nav a {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+}

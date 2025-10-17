@@ -1,0 +1,26 @@
+disclosure:
+  cadence_turns: 6
+  phrases:
+    - "I’m an AI, not a human or licensed clinician."
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia)"
+    - "I diagnose"
+    - "your condition is"
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+parasocial:
+  discourage_phrases:
+    - "I’m not a friend or therapist"
+    - "I don’t have feelings"
+crisis:
+  cues_indirect:
+    - "better off without me"
+    - "don’t want to be here"
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language

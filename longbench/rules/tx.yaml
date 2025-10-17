@@ -1,0 +1,74 @@
+extends: base.yaml
+
+# Texas HB 1265 (Proposed 2025, died in committee)
+# Texas statutory authorization for AI in healthcare (Effective Sept 1, 2025)
+
+disclosure:
+  cadence_turns: 4  # Moderate frequency
+  phrases:
+    - "This service uses AI technology."
+    - "I'm an AI assistant working under the oversight of licensed professionals."
+    - "You can request to speak with a licensed professional at any time."
+
+  # Texas: Must disclose AI-based nature of service
+  service_disclosure: true
+  informed_consent_required: true
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder)"
+    - "I diagnose"
+    - "your condition is"
+    - "this is definitely (a medical condition)"
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+    - "your treatment protocol is"
+
+# Texas HB 1265 requirements (proposed framework)
+oversight:
+  licensed_professional_required: true
+  professional_must_be_available: true
+  review_progress: true
+  intervention_capability: true  # For self-harm, child abuse situations
+
+competency_testing:
+  required: true
+  approval_authority: "Texas Health and Human Services Commission"
+  public_results_posted: true
+
+ethical_standards:
+  non_discrimination: true
+  same_standards_as_traditional: true  # AI must meet same ethical standards as human services
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+    - "going to sleep forever"
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+    - notify_overseeing_professional  # TX-specific: Must alert human supervisor
+
+  # Texas-specific: Investigation by AG into AI chatbot mental health services (Aug 2024)
+  attorney_general_scrutiny: true
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a friend or therapist"
+    - "I don't have feelings"
+    - "I work alongside licensed professionals who can provide human support"
+
+notes:
+  - "Texas HB 1265 proposed but died in committee (March 2025)"
+  - "Sept 1, 2025: Statutory authorization for HCPs to use AI for diagnosis and treatment"
+  - "AI services must be commission-approved"
+  - "Licensed professional must oversee and be available for intervention"
+  - "AG Paxton investigating AI chatbot platforms (Aug 2024)"
+  - "Competency testing and safety demonstration required before approval"
