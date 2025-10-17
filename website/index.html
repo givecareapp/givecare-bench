@@ -3,18 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LongitudinalBench - AI Safety Benchmark for Long-Term Care</title>
+    <title>LongitudinalBench - AI Safety Benchmark for Longitudinal Caregiver Support</title>
+    <meta name="description" content="Open-source benchmark evaluating AI safety in longitudinal caregiver support across multi-turn conversations. Test crisis detection, regulatory compliance, and self-care support quality.">
+    <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://givecareapp.github.io/givecare-bench/">
+    <meta property="og:title" content="LongitudinalBench - AI Safety Benchmark for Longitudinal Caregiver Support">
+    <meta property="og:description" content="Open-source benchmark evaluating AI safety in longitudinal caregiver support across multi-turn conversations. Test crisis detection, regulatory compliance, and self-care support quality.">
+    <meta property="og:image" content="https://givecareapp.github.io/givecare-bench/gc.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://givecareapp.github.io/givecare-bench/">
+    <meta property="twitter:title" content="LongitudinalBench - AI Safety Benchmark for Longitudinal Caregiver Support">
+    <meta property="twitter:description" content="Open-source benchmark evaluating AI safety in longitudinal caregiver support across multi-turn conversations. Test crisis detection, regulatory compliance, and self-care support quality.">
+    <meta property="twitter:image" content="https://givecareapp.github.io/givecare-bench/gc.svg">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="logo">
+        <img src="gc.svg" alt="GiveCare Logo">
+    </div>
     <header>
         <div class="container">
             <h1>LongitudinalBench</h1>
-            <p class="tagline">AI Safety Benchmark for Long-Term Care Relationships</p>
+            <p class="tagline">AI Safety Benchmark for Longitudinal Caregiver Support</p>
             <nav>
                 <a href="index.html">Leaderboard</a>
                 <a href="about.html">About</a>
-                <a href="https://github.com/givecare/longitudinalbench" target="_blank">GitHub</a>
+                <a href="https://github.com/givecareapp/givecare-bench" target="_blank">GitHub</a>
             </nav>
         </div>
     </header>
@@ -29,16 +49,17 @@
             <h2>Tier 1: Crisis Detection (tier1_crisis_001)</h2>
 
             <table>
+                <caption class="sr-only">Model performance comparison for Tier 1 Crisis Detection scenario. Shows 2 models tested with 1 passing and 1 failing.</caption>
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th>Model</th>
-                        <th>Score</th>
-                        <th>Autofails</th>
-                        <th>Status</th>
-                        <th>Crisis Safety</th>
-                        <th>Regulatory Fitness</th>
-                        <th>Actionable Support</th>
+                        <th scope="col">Rank</th>
+                        <th scope="col">Model</th>
+                        <th scope="col">Score</th>
+                        <th scope="col">Autofails</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Crisis Safety</th>
+                        <th scope="col">Regulatory Fitness</th>
+                        <th scope="col">Actionable Support</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -64,6 +85,7 @@
                     </tr>
                 </tbody>
             </table>
+            <div aria-live="polite" class="sr-only">Leaderboard summary: 2 models tested, 1 passed, 1 failed with 2 autofail conditions.</div>
         </section>
 
         <section class="failures">
@@ -115,21 +137,21 @@
 
         <section class="methodology">
             <h3>Why This Matters</h3>
-            <p>Most AI benchmarks don't test <strong>longitudinal relationships</strong> where safety issues emerge over time:</p>
+            <p>Most AI benchmarks don't test <strong>longitudinal caregiver support</strong> where safety issues emerge over time:</p>
             <ul>
                 <li>Crisis detection degradation</li>
                 <li>Attachment engineering</li>
                 <li>Regulatory boundary creep</li>
                 <li>Memory hygiene failures</li>
             </ul>
-            <p>LongitudinalBench tests AI safety in the contexts where people are most vulnerable: long-term care relationships.</p>
+            <p>LongitudinalBench tests AI safety in the contexts where caregivers are most vulnerable: ongoing support relationships.</p>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p>LongitudinalBench v0.1.0 (Preliminary) | <a href="https://github.com/givecare/longitudinalbench">GitHub</a></p>
-            <p>Built for evaluating AI safety in long-term care relationships</p>
+            <p>LongitudinalBench v0.1.0 (Preliminary) | <a href="https://github.com/givecareapp/givecare-bench">GitHub</a></p>
+            <p>Built for evaluating AI safety in longitudinal caregiver support</p>
         </div>
     </footer>
 </body>
