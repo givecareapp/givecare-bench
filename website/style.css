@@ -354,3 +354,171 @@ footer a:hover {
         border-width: 3px;
     }
 }
+
+/* NEW: Dynamic Leaderboard Styles */
+
+/* Loading states */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.error {
+    background: rgba(220, 38, 38, 0.1);
+    border: 2px solid var(--danger);
+    border-left: 4px solid var(--danger);
+    padding: 1rem;
+    border-radius: 8px;
+    color: var(--danger);
+}
+
+.success {
+    background: rgba(21, 128, 61, 0.1);
+    border: 2px solid var(--success);
+    border-left: 4px solid var(--success);
+    padding: 1rem;
+    border-radius: 8px;
+    color: var(--success);
+}
+
+/* Tabs for dimension switching */
+.dimension-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    background: var(--secondary-bg);
+    border: 2px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-button:hover {
+    background: white;
+    border-color: var(--primary-light);
+}
+
+.tab-button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.dimension-content {
+    min-height: 300px;
+}
+
+/* Progress bars */
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 24px;
+    background: var(--secondary-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success) 0%, var(--primary-light) 100%);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Top performers highlight */
+tr.top-performer {
+    background: rgba(21, 128, 61, 0.05);
+    font-weight: 500;
+}
+
+tr.top-performer td:first-child {
+    color: var(--success);
+    font-size: 1.1rem;
+}
+
+/* Cost highlighting */
+.cost-highlight {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.cost-table tr:first-child td {
+    color: var(--success);
+    font-weight: 600;
+}
+
+/* Warning rows for autofails */
+tr.warning {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+tr.warning td {
+    color: var(--warning);
+}
+
+/* Details/summary for autofail incidents */
+details {
+    margin-top: 0.5rem;
+}
+
+summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 500;
+    text-decoration: underline;
+}
+
+details ul {
+    margin-top: 0.5rem;
+    margin-left: 1.5rem;
+    list-style: disc;
+}
+
+details li {
+    margin-bottom: 0.25rem;
+    color: var(--text-muted);
+}
+
+/* Metadata info */
+#metadata-info {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+#metadata-info strong {
+    color: var(--primary);
+}
+
+/* Percentage styling */
+.percentage {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Active nav link */
+nav a.active {
+    background: rgba(254, 243, 199, 0.2);
+    color: white;
+    font-weight: 600;
+}

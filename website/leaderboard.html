@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - LongitudinalBench</title>
+    <meta name="description" content="Live leaderboard for LongitudinalBench - AI safety benchmark for longitudinal caregiver support">
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+    <div class="logo">
+        <img src="gc.svg" alt="GiveCare Logo">
+    </div>
+    <header>
+        <div class="container">
+            <h1>LongitudinalBench</h1>
+            <p class="tagline">AI Safety Benchmark for Longitudinal Caregiver Support</p>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="leaderboard.html" class="active">Leaderboard</a>
+                <a href="about.html">About</a>
+                <a href="https://github.com/givecareapp/givecare-bench" target="_blank">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="intro">
+            <h2>Overall Rankings</h2>
+            <p id="metadata-info">Loading leaderboard data...</p>
+        </section>
+
+        <!-- Overall Leaderboard -->
+        <section class="leaderboard">
+            <div id="overall-leaderboard">
+                <div class="loading">Loading rankings...</div>
+            </div>
+        </section>
+
+        <!-- Profile Section (NEW from MindBenchAI) -->
+        <section class="profile-section">
+            <h2>Model Profiles</h2>
+            <p>Static characteristics evaluated before performance testing</p>
+            <div class="profile-tabs">
+                <button class="profile-tab active" data-profile="privacy">Privacy & Data</button>
+                <button class="profile-tab" data-profile="personality">Personality</button>
+                <button class="profile-tab" data-profile="technical">Technical Specs</button>
+            </div>
+            <div id="profile-content" class="profile-display">
+                <div class="loading">Loading profile data...</div>
+            </div>
+        </section>
+
+        <!-- Dimension Breakdowns -->
+        <section class="dimensions">
+            <h2>Dimension-Specific Rankings</h2>
+            <div class="dimension-tabs">
+                <button class="tab-button active" data-dimension="crisis_safety">Crisis Safety</button>
+                <button class="tab-button" data-dimension="regulatory_fitness">Regulatory Fitness</button>
+                <button class="tab-button" data-dimension="trauma_informed_flow">Trauma-Informed</button>
+                <button class="tab-button" data-dimension="belonging_cultural_fitness">Cultural Fitness</button>
+                <button class="tab-button" data-dimension="relational_quality">Relational Quality</button>
+                <button class="tab-button" data-dimension="actionable_support">Actionable Support</button>
+            </div>
+            <div id="dimension-leaderboard" class="dimension-content">
+                <div class="loading">Select a dimension to view rankings...</div>
+            </div>
+        </section>
+
+        <!-- Cost Efficiency -->
+        <section class="cost-efficiency">
+            <h2>Cost-Performance Frontier</h2>
+            <p>Models ranked by cost per quality point (lower is better)</p>
+            <div id="cost-leaderboard">
+                <div class="loading">Loading cost analysis...</div>
+            </div>
+        </section>
+
+        <!-- Autofail Tracking -->
+        <section class="autofails">
+            <h2>⚠️ Safety Incidents (Autofails)</h2>
+            <p>Models that triggered critical safety failures</p>
+            <div id="autofail-report">
+                <div class="loading">Loading safety reports...</div>
+            </div>
+        </section>
+
+        <!-- Variance Report -->
+        <section class="variance">
+            <h2>Stability Analysis</h2>
+            <p>Score variance across multiple runs</p>
+            <div id="variance-report">
+                <div class="loading">Loading stability data...</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>LongitudinalBench v1.0 | Built for 63 million American caregivers 💙</p>
+            <p><a href="https://github.com/givecareapp/givecare-bench">Contribute scenarios</a> | <a href="https://github.com/givecareapp/givecare-bench/issues">Report issues</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Fetch and render leaderboard data
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('data/leaderboard.json');
+                const data = await response.json();
+
+                renderMetadata(data.metadata);
+                renderOverallLeaderboard(data.overall_leaderboard);
+                renderDimensionLeaderboards(data.dimension_leaderboards);
+                renderCostEfficiency(data.cost_efficiency);
+                renderAutofails(data.autofail_tracking);
+                renderVariance(data.variance_report);
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('overall-leaderboard').innerHTML =
+                    '<p class="error">⚠️ Error loading leaderboard data. Please try again later.</p>';
+            }
+        }
+
+        function renderMetadata(metadata) {
+            document.getElementById('metadata-info').innerHTML = `
+                Benchmark Version: <strong>${metadata.benchmark_version}</strong> |
+                Models Evaluated: <strong>${metadata.total_models}</strong> |
+                Scenarios: <strong>${metadata.total_scenarios}</strong> |
+                Last Updated: <strong>${new Date(metadata.generated_at).toLocaleDateString()}</strong>
+            `;
+        }
+
+        function renderOverallLeaderboard(leaderboard) {
+            const html = `
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Model</th>
+                            <th>Overall Score</th>
+                            <th>Pass Rate</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${leaderboard.map(entry => `
+                            <tr class="${entry.rank <= 3 ? 'top-performer' : ''}">
+                                <td><strong>${entry.rank}</strong></td>
+                                <td>${formatModelName(entry.model)}</td>
+                                <td>${entry.overall_score.toFixed(1)}/20.0 <span class="percentage">(${(entry.overall_score/20*100).toFixed(1)}%)</span></td>
+                                <td>${renderPassBadge(entry.overall_score)}</td>
+                                <td>${entry.total_cost ? '$' + entry.total_cost.toFixed(2) : 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('overall-leaderboard').innerHTML = html;
+        }
+
+        function renderDimensionLeaderboards(dimensions) {
+            // Set up tab switching
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Update active tab
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    button.classList.add('active');
+
+                    // Render dimension data
+                    const dimension = button.dataset.dimension;
+                    const dimData = dimensions[dimension] || [];
+
+                    const html = `
+                        <table class="dimension-table">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Score</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dimData.map((entry, i) => `
+                                    <tr>
+                                        <td><strong>${i + 1}.</strong> ${formatModelName(entry.model)}</td>
+                                        <td>${entry.score.toFixed(1)}/${entry.max_score.toFixed(1)}</td>
+                                        <td>${renderProgressBar(entry.score, entry.max_score)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    document.getElementById('dimension-leaderboard').innerHTML = html;
+                });
+            });
+
+            // Trigger first tab
+            document.querySelector('.tab-button').click();
+        }
+
+        function renderCostEfficiency(efficiency) {
+            if (!efficiency || efficiency.length === 0) {
+                document.getElementById('cost-leaderboard').innerHTML = '<p>No cost data available yet.</p>';
+                return;
+            }
+
+            const html = `
+                <table class="cost-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Score</th>
+                            <th>Total Cost</th>
+                            <th>Cost per Point</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${efficiency.map(entry => `
+                            <tr>
+                                <td>${formatModelName(entry.model)}</td>
+                                <td>${entry.score.toFixed(1)}/20.0</td>
+                                <td>$${entry.cost.toFixed(2)}</td>
+                                <td class="cost-highlight">$${entry.cost_per_point.toFixed(3)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('cost-leaderboard').innerHTML = html;
+        }
+
+        function renderAutofails(autofails) {
+            if (!autofails || autofails.length === 0) {
+                document.getElementById('autofail-report').innerHTML = '<p class="success">✅ No autofail incidents reported.</p>';
+                return;
+            }
+
+            const html = `
+                <table class="autofail-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Incidents</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${autofails.map(entry => `
+                            <tr class="warning">
+                                <td>${formatModelName(entry.model)}</td>
+                                <td><strong>${entry.autofail_count}</strong></td>
+                                <td>
+                                    <details>
+                                        <summary>View incidents</summary>
+                                        <ul>
+                                            ${entry.incidents.map(incident => `
+                                                <li><strong>${incident.scenario_id}</strong>: ${incident.reason}</li>
+                                            `).join('')}
+                                        </ul>
+                                    </details>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('autofail-report').innerHTML = html;
+        }
+
+        function renderVariance(variance) {
+            if (!variance || variance.length === 0) {
+                document.getElementById('variance-report').innerHTML = '<p>No multi-run variance data available yet.</p>';
+                return;
+            }
+
+            const html = `
+                <table class="variance-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Mean Score</th>
+                            <th>Std Dev</th>
+                            <th>Range</th>
+                            <th>Runs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${variance.map(entry => `
+                            <tr>
+                                <td>${formatModelName(entry.model)}</td>
+                                <td>${entry.mean_score.toFixed(2)}</td>
+                                <td>${entry.std_dev.toFixed(2)}</td>
+                                <td>${entry.min_score.toFixed(1)} - ${entry.max_score.toFixed(1)}</td>
+                                <td>${entry.run_count}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('variance-report').innerHTML = html;
+        }
+
+        // Helper functions
+        function formatModelName(model) {
+            // Format model names for readability
+            return model.replace(/anthropic\//, '')
+                       .replace(/openai\//, '')
+                       .replace(/google\//, '')
+                       .replace(/-/g, ' ');
+        }
+
+        function renderPassBadge(score) {
+            const passThreshold = 14.0;
+            if (score >= passThreshold) {
+                return '<span class="badge pass">✅ PASS</span>';
+            } else {
+                return '<span class="badge fail">❌ FAIL</span>';
+            }
+        }
+
+        function renderProgressBar(score, maxScore) {
+            const percentage = (score / maxScore * 100).toFixed(0);
+            return `
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${percentage}%"></div>
+                    <span class="progress-text">${percentage}%</span>
+                </div>
+            `;
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadLeaderboard);
+    </script>
+</body>
+</html>

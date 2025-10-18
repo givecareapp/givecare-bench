@@ -33,10 +33,10 @@ The `longbench` scoring system is now **production-ready** with 99.45% test cove
 
 ### Basic Evaluation
 ```bash
-python -m longbench.cli \
-  --scenario longbench/scenarios/care-burnout-arc-01.yaml \
+python -m src.longbench.cli \
+  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules longbench/rules/ny.yaml \
+  --rules src/longbench/rules/ny.yaml \
   --out report.html \
   --json results.json
 ```
@@ -45,42 +45,42 @@ python -m longbench.cli \
 
 **Variance Measurement** - Run multiple iterations to measure score stability:
 ```bash
-python -m longbench.cli \
-  --scenario longbench/scenarios/care-burnout-arc-01.yaml \
+python -m src.longbench.cli \
+  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules longbench/rules/ny.yaml \
+  --rules src/longbench/rules/ny.yaml \
   --iterations 10
 ```
 
 **State Tracking & Resume** - Track runs by model and resume interrupted evaluations:
 ```bash
 # Track by model name
-python -m longbench.cli \
-  --scenario longbench/scenarios/care-burnout-arc-01.yaml \
+python -m src.longbench.cli \
+  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules longbench/rules/ny.yaml \
+  --rules src/longbench/rules/ny.yaml \
   --model "anthropic/claude-3.7-sonnet"
 
 # Resume interrupted run
-python -m longbench.cli --resume --resume-file runs/abc123.json
+python -m src.longbench.cli --resume --resume-file outputs/runs/abc123.json
 
 # List all runs
-python -m longbench.cli --list-runs
+python -m src.longbench.cli --list-runs
 
 # Delete runs for a model
-python -m longbench.cli --reset "anthropic/claude-3.7-sonnet"
+python -m src.longbench.cli --reset "anthropic/claude-3.7-sonnet"
 ```
 
 **Progress Tracking** - Three verbosity modes:
 ```bash
 # Quiet mode (no progress bars)
-python -m longbench.cli --scenario S --transcript T --rules R --quiet
+python -m src.longbench.cli --scenario S --transcript T --rules R --quiet
 
 # Default mode (progress bars)
-python -m longbench.cli --scenario S --transcript T --rules R
+python -m src.longbench.cli --scenario S --transcript T --rules R
 
 # Verbose mode (detailed output)
-python -m longbench.cli --scenario S --transcript T --rules R --verbose
+python -m src.longbench.cli --scenario S --transcript T --rules R --verbose
 ```
 
 ## Installation
@@ -537,7 +537,7 @@ python -m src.runner [OPTIONS]
 Options:
   --scenarios DIR           Path to scenarios directory (default: ./scenarios)
   --models MODEL [MODEL...] Models to test (default: top 10)
-  --output DIR              Output directory (default: ./results)
+  --output DIR              Output directory (default: ./outputs/results)
   --session-approach STR    Tier 3 approach: memory_injection, full_history, hybrid_summary
   --single-scenario ID      Test single scenario by ID
   --single-model MODEL      Test single model
@@ -553,7 +553,7 @@ from src.models import TierLevel
 # Initialize runner
 runner = BenchmarkRunner(
     session_approach="hybrid_summary",
-    output_dir="./results"
+    output_dir="./outputs/results"
 )
 
 # Load scenarios
@@ -829,6 +829,49 @@ We welcome contributions! Areas of focus:
 5. **Documentation**: Tutorial content, case studies
 
 See `CONTRIBUTING.md` for guidelines.
+
+---
+
+## Repository Structure
+
+```
+givecare-bench/
+├── README.md              # This file
+├── CLAUDE.md              # AI assistant instructions
+├── pyproject.toml         # Project configuration
+│
+├── data/                  # Datasets and caches (gitignored)
+├── docs/                  # All documentation
+│   ├── specs/            # PRD, roadmaps, integration plans
+│   │   ├── PRD.md
+│   │   ├── V2_ROADMAP.md
+│   │   ├── HEALTHBENCH_INTEGRATION.md
+│   │   ├── MINDBENCH_INTEGRATION.md
+│   │   └── ...
+│   └── ... (research references)
+│
+├── examples/              # Example scripts
+│   └── quick_start.py
+│
+├── outputs/              # Evaluation outputs (gitignored)
+│   ├── benchmarks/      # Canonical results
+│   ├── results/         # Test results
+│   └── runs/            # Run tracking
+│
+├── paper/                # Paper materials
+├── scenarios/            # Benchmark scenarios
+├── src/                  # Core Python code
+│   ├── longbench/       # YAML-based system
+│   ├── runner.py
+│   ├── evaluator.py
+│   ├── profiler.py
+│   └── ...
+├── tests/                # Test suite
+├── tools/                # Utilities
+└── website/              # Leaderboard site
+```
+
+For detailed methodology and integration plans, see `docs/specs/`.
 
 ---
 

@@ -1,0 +1,178 @@
+{
+  "metadata": {
+    "benchmark_version": "v1.0",
+    "generated_at": "2025-01-18T20:00:00Z",
+    "total_models": 3,
+    "total_scenarios": 10,
+    "includes_profiles": true
+  },
+  "model_profiles": {
+    "anthropic/claude-3.7-sonnet": {
+      "privacy": {
+        "data_ownership": "user",
+        "data_retention": "user-controlled",
+        "pii_handling": "encrypted",
+        "conversation_storage": "cloud-encrypted",
+        "privacy_policy_url": "https://www.anthropic.com/legal/privacy"
+      },
+      "personality": {
+        "agreeableness": 75,
+        "sycophancy_risk": "moderate",
+        "boundary_assertiveness": "strong",
+        "emotional_stability": "high"
+      },
+      "technical": {
+        "context_window": 200000,
+        "max_output_tokens": 8192,
+        "cost_per_1k_tokens": 0.003,
+        "supports_streaming": true
+      }
+    },
+    "openai/gpt-4o": {
+      "privacy": {
+        "data_ownership": "shared",
+        "data_retention": "indefinite",
+        "pii_handling": "stored",
+        "conversation_storage": "cloud-plain",
+        "privacy_policy_url": "https://openai.com/policies/privacy-policy"
+      },
+      "personality": {
+        "agreeableness": 82,
+        "sycophancy_risk": "high",
+        "boundary_assertiveness": "moderate",
+        "emotional_stability": "moderate"
+      },
+      "technical": {
+        "context_window": 128000,
+        "max_output_tokens": 16384,
+        "cost_per_1k_tokens": 0.0025,
+        "supports_streaming": true
+      }
+    },
+    "google/gemini-2.5-pro": {
+      "privacy": {
+        "data_ownership": "shared",
+        "data_retention": "session",
+        "pii_handling": "anonymized",
+        "conversation_storage": "cloud-encrypted",
+        "privacy_policy_url": "https://policies.google.com/privacy"
+      },
+      "personality": {
+        "agreeableness": 78,
+        "sycophancy_risk": "moderate",
+        "boundary_assertiveness": "moderate",
+        "emotional_stability": "high"
+      },
+      "technical": {
+        "context_window": 1000000,
+        "max_output_tokens": 8192,
+        "cost_per_1k_tokens": 0.00125,
+        "supports_streaming": true
+      }
+    }
+  },
+  "overall_leaderboard": [
+    {
+      "rank": 1,
+      "model": "anthropic/claude-3.7-sonnet",
+      "overall_score": 16.8,
+      "total_cost": 1.23,
+      "dimension_scores": {
+        "crisis_safety": 2.9,
+        "regulatory_fitness": 3.0,
+        "trauma_informed_flow": 2.6,
+        "belonging_cultural_fitness": 1.8,
+        "relational_quality": 2.7,
+        "actionable_support": 2.4,
+        "longitudinal_consistency": 1.4,
+        "memory_hygiene": 0.0
+      }
+    },
+    {
+      "rank": 2,
+      "model": "openai/gpt-4o",
+      "overall_score": 15.2,
+      "total_cost": 0.98,
+      "dimension_scores": {
+        "crisis_safety": 2.7,
+        "regulatory_fitness": 2.8,
+        "trauma_informed_flow": 2.3,
+        "belonging_cultural_fitness": 1.6,
+        "relational_quality": 2.5,
+        "actionable_support": 2.2,
+        "longitudinal_consistency": 1.1,
+        "memory_hygiene": 0.0
+      }
+    },
+    {
+      "rank": 3,
+      "model": "google/gemini-2.5-pro",
+      "overall_score": 13.4,
+      "total_cost": 0.76,
+      "dimension_scores": {
+        "crisis_safety": 2.4,
+        "regulatory_fitness": 2.6,
+        "trauma_informed_flow": 2.1,
+        "belonging_cultural_fitness": 1.4,
+        "relational_quality": 2.2,
+        "actionable_support": 1.9,
+        "longitudinal_consistency": 0.8,
+        "memory_hygiene": 0.0
+      }
+    }
+  ],
+  "dimension_leaderboards": {
+    "crisis_safety": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 2.9, "max_score": 3.0},
+      {"model": "openai/gpt-4o", "score": 2.7, "max_score": 3.0},
+      {"model": "google/gemini-2.5-pro", "score": 2.4, "max_score": 3.0}
+    ],
+    "regulatory_fitness": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 3.0, "max_score": 3.0},
+      {"model": "openai/gpt-4o", "score": 2.8, "max_score": 3.0},
+      {"model": "google/gemini-2.5-pro", "score": 2.6, "max_score": 3.0}
+    ],
+    "trauma_informed_flow": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 2.6, "max_score": 3.0},
+      {"model": "openai/gpt-4o", "score": 2.3, "max_score": 3.0},
+      {"model": "google/gemini-2.5-pro", "score": 2.1, "max_score": 3.0}
+    ],
+    "belonging_cultural_fitness": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 1.8, "max_score": 2.0},
+      {"model": "openai/gpt-4o", "score": 1.6, "max_score": 2.0},
+      {"model": "google/gemini-2.5-pro", "score": 1.4, "max_score": 2.0}
+    ],
+    "relational_quality": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 2.7, "max_score": 3.0},
+      {"model": "openai/gpt-4o", "score": 2.5, "max_score": 3.0},
+      {"model": "google/gemini-2.5-pro", "score": 2.2, "max_score": 3.0}
+    ],
+    "actionable_support": [
+      {"model": "anthropic/claude-3.7-sonnet", "score": 2.4, "max_score": 3.0},
+      {"model": "openai/gpt-4o", "score": 2.2, "max_score": 3.0},
+      {"model": "google/gemini-2.5-pro", "score": 1.9, "max_score": 3.0}
+    ]
+  },
+  "cost_efficiency": [
+    {
+      "model": "google/gemini-2.5-pro",
+      "score": 13.4,
+      "cost": 0.76,
+      "cost_per_point": 0.057
+    },
+    {
+      "model": "openai/gpt-4o",
+      "score": 15.2,
+      "cost": 0.98,
+      "cost_per_point": 0.064
+    },
+    {
+      "model": "anthropic/claude-3.7-sonnet",
+      "score": 16.8,
+      "cost": 1.23,
+      "cost_per_point": 0.073
+    }
+  ],
+  "autofail_tracking": [],
+  "variance_report": []
+}

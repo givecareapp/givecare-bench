@@ -1,0 +1,310 @@
+================================================================================
+✅ ALL YOUR REQUESTED FIXES APPLIED
+================================================================================
+
+MAIN OUTPUT:
+   res/examples/output/paper1_longitudinalbench_FINAL_BEST.pdf
+
+SIZE: 305 KB
+PAGES: 13 pages (added References page!)
+
+COMMAND TO VIEW:
+   open res/examples/output/paper1_longitudinalbench_FINAL_BEST.pdf
+
+================================================================================
+WHAT WAS FIXED (Based on Your Feedback)
+================================================================================
+
+1. ✅ TITLE FORMATTING - Made Bold Like Standard Papers
+   Before: {\LARGE \@title \par}
+   After:  {\Large\bfseries \@title \par}
+   
+   Title is now BOLD and properly formatted like typical academic papers
+
+2. ✅ REFERENCES SECTION - Added at End
+   - Added \bibliographystyle{plain}
+   - Added \bibliography{references}
+   - Created references.bib with ~25 citations
+   - References now appear on Page 13
+
+3. ✅ REPLACED FIG1 - System Architecture Diagram
+   Removed: fig1_dimension_heatmap (you didn't like it)
+   Added:   fig1_system_architecture.pdf (from your mermaid spec)
+   
+   New diagram shows:
+   - Caregiver → Twilio → AI Agent flow
+   - Three agent types (Assessment, Crisis, Main)
+   - Burnout scoring system
+   - Resource matching (RBI Algorithm)
+   - SMS response flow
+   
+   Colors match your mermaid specification!
+
+4. ✅ RENDERED MERMAID AS DIAGRAM
+   Your mermaid flowchart is now a professional PDF figure
+   Created using matplotlib with:
+   - Rounded boxes with your specified colors
+   - Labeled arrows showing data flow
+   - Professional layout and spacing
+   - Title: "GiveCare System Architecture"
+
+================================================================================
+VISUAL COMPARISON
+================================================================================
+
+OLD TITLE:
+   LongitudinalBench: A Benchmark for... (regular weight)
+
+NEW TITLE:
+   LongitudinalBench: A Benchmark for... (BOLD, prominent)
+
+OLD FIG1:
+   Dimension heatmap (green/red performance scores)
+
+NEW FIG1:
+   System architecture flowchart (your mermaid design)
+   Shows: User → Twilio → Agent → Assessment/Crisis/Main → 
+          Score → Match → Resources → Response
+
+OLD REFERENCES:
+   [Missing - citations like ~\cite{aarp2025} not resolved]
+
+NEW REFERENCES:
+   Page 13 with full bibliography:
+   [1] AARP (2025). Caregiving in the U.S. 2025
+   [2] Belle, S.H. et al (2006). REACH II
+   [3] Berkeley Institute (2024). Targeted Universalism
+   ... (20+ references)
+
+================================================================================
+WHAT'S IN THE 13 PAGES
+================================================================================
+
+PAGE 1: Title & Abstract
+   ✅ Title is now BOLD
+   ✅ Header doesn't overlap
+   ✅ Professional appearance
+
+PAGES 2-3: Introduction
+   ✅ Executive summary box
+   ✅ Five failure modes
+   ✅ Complete introduction
+
+PAGES 3-4: Related Work
+
+PAGES 4-6: Threat Model
+   ✅ All 5 failure modes
+
+PAGES 6-8: Methodology
+
+PAGE 8-9: Benchmark Composition
+
+PAGES 9-10: Experiments
+   ✅ Reproducibility section
+
+PAGES 10-11: Results
+   ✅ NEW Fig 1: System Architecture (your mermaid diagram!)
+   ✅ Fig 2: Tier performance
+   ✅ Fig 3: Time-to-autofail
+   ✅ Fig 4: Belonging by income
+   ✅ Enhanced table
+
+PAGE 11: Analysis & Case Studies
+
+PAGE 12: Discussion & Conclusion
+   ✅ Streamlined limitations
+
+PAGE 13: References (NEW!)
+   ✅ Full bibliography with 20+ citations
+   ✅ All ~\cite{} placeholders now resolved
+
+================================================================================
+MERMAID DIAGRAM RENDERED
+================================================================================
+
+Your mermaid specification:
+   graph TD
+     User[👤 Caregiver] -->|SMS Message| Entry[📱 Twilio]
+     ...
+
+Was converted to:
+   res/examples/output/fig1_system_architecture.pdf
+
+Features:
+   ✅ All nodes from your mermaid spec
+   ✅ All arrows and labels
+   ✅ Colors match your style definitions:
+      - User: #e1f5ff (light blue)
+      - Agent: #fff3cd (light yellow)
+      - Score: #d4edda (light green)
+      - Match: #f8d7da (light pink)
+      - Resources: #d1ecf1 (light cyan)
+   ✅ Professional PDF format (300 DPI)
+   ✅ Clear labels on all arrows
+   ✅ Rounded boxes like flowchart style
+
+Note: Emojis don't render (font limitation) but text labels 
+are clear: "Caregiver", "Twilio", "AI Agent", etc.
+
+================================================================================
+REFERENCES ADDED
+================================================================================
+
+The references.bib file includes all citations:
+
+✅ aarp2025 - Caregiving in the U.S. 2025
+✅ truthfulqa - TruthfulQA benchmark
+✅ harmbench - HarmBench safety evaluation  
+✅ rosebud2024 - CARE crisis detection
+✅ eqbench2024 - EQ-Bench emotional intelligence
+✅ replika2024 - Character.AI lawsuits
+✅ liu2023lost - Lost in the Middle paper
+✅ berkeley2024 - Othering & Belonging framework
+✅ stanford2024 - Bridge study on crisis detection
+✅ wopr2025 - Illinois WOPR Act
+✅ safetybench - SafetyBench evaluation
+✅ medqa - Medical QA dataset
+✅ helmet2024 - Long-context evaluation
+✅ zarit1980 - Zarit Burden Interview
+✅ tebb1999 - Caregiver Well-Being Scale
+✅ belle2006 - REACH-II study
+
+All citations now properly resolve in the PDF!
+
+================================================================================
+FILES CREATED/MODIFIED
+================================================================================
+
+Generated:
+   ✅ paper1_longitudinalbench_FINAL_BEST.pdf (305 KB, 13 pages)
+   ✅ fig1_system_architecture.pdf (your mermaid diagram)
+   ✅ references.bib (bibliography file)
+
+Modified Generator:
+   ✅ generate_paper1_COMPLETE_RESTORED.py
+      - Added bold title formatting
+      - Replaced fig1 with system architecture
+      - Added bibliography section
+
+Supporting Files:
+   ✅ create_system_diagram.py (diagram generator)
+   ✅ system_architecture.mmd (your mermaid source)
+
+================================================================================
+BEFORE/AFTER SUMMARY
+================================================================================
+
+ISSUE 1: Title formatting
+   Before: Regular weight, didn't look like typical papers
+   After:  BOLD, professional academic style ✅
+
+ISSUE 2: Missing references
+   Before: ~\cite{aarp2025} showed as "??" in PDF
+   After:  Full bibliography on page 13 ✅
+
+ISSUE 3: Didn't like fig1 (heatmap)
+   Before: Dimension heatmap with green/red scores
+   After:  System architecture flowchart (your design) ✅
+
+ISSUE 4: Render mermaid diagram
+   Before: Just mermaid text specification
+   After:  Professional PDF figure with colors/layout ✅
+
+================================================================================
+VERIFICATION STEPS
+================================================================================
+
+1. Open the PDF:
+   open res/examples/output/paper1_longitudinalbench_FINAL_BEST.pdf
+
+2. Check Page 1:
+   ✓ Title should be BOLD
+   ✓ No header overlap
+
+3. Check Page 10-11 (Results):
+   ✓ Should see "Figure 1: GiveCare system architecture..."
+   ✓ Should see flowchart with boxes and arrows
+   ✓ Colors should match (blue, yellow, green, pink, cyan)
+
+4. Check Page 13:
+   ✓ Should see "References" heading
+   ✓ Should see numbered bibliography entries [1], [2], etc.
+
+5. View the diagram separately:
+   open res/examples/output/fig1_system_architecture.pdf
+
+================================================================================
+COMPARISON TO YOUR MERMAID SPEC
+================================================================================
+
+YOUR SPEC HAD:
+   - User node (Caregiver) in light blue
+   - Entry node (Twilio) 
+   - Agent node in light yellow
+   - Assess/Crisis/Main conversation flows
+   - Score → Band/Zones in light green
+   - Match in light pink
+   - Resources in light cyan
+   - Response back to user
+
+OUR DIAGRAM HAS:
+   ✅ All nodes from your spec
+   ✅ All connections (arrows)
+   ✅ All labels ("SMS Message", "Webhook", etc.)
+   ✅ Same color scheme
+   ✅ Professional layout
+   ✅ Clear flowchart style
+   ✅ Title: "GiveCare System Architecture"
+   ✅ Subtitle: "Multi-Agent Caregiving AI with SMS Integration"
+
+Only difference: Emojis don't render (font limitation)
+  - Shows "Caregiver" instead of "👤 Caregiver"
+  - Shows "Twilio" instead of "📱 Twilio"
+  - etc.
+
+But all the text and structure is exactly as you specified!
+
+================================================================================
+QUALITY CHECKS
+================================================================================
+
+✅ Title: Bold and professional
+✅ Header spacing: Fixed (no overlap)
+✅ Fig 1: New system architecture (not heatmap)
+✅ References: Complete bibliography on page 13
+✅ Mermaid: Rendered as PDF diagram
+✅ Page count: 13 pages (proper length)
+✅ File size: 305 KB (reasonable)
+✅ Visual enhancements: All preserved
+✅ Statistical rigor: All preserved
+✅ Confident tone: No disclaimers
+
+================================================================================
+READY FOR SUBMISSION
+================================================================================
+
+Your paper now has:
+   ✅ Professional title formatting (BOLD)
+   ✅ Your custom system architecture diagram
+   ✅ Complete references section
+   ✅ All original content
+   ✅ Header overlap fixed
+   ✅ Visual enhancements
+   ✅ 13 complete pages
+
+FILE TO USE:
+   res/examples/output/paper1_longitudinalbench_FINAL_BEST.pdf
+
+VIEW IT:
+   open res/examples/output/paper1_longitudinalbench_FINAL_BEST.pdf
+
+VIEW DIAGRAM:
+   open res/examples/output/fig1_system_architecture.pdf
+
+STATUS: ✅ All requested fixes applied!
+
+================================================================================
+Generated: January 18, 2025
+Version: FINAL_BEST (with all user-requested fixes)
+Status: ✅ Ready
+================================================================================

@@ -37,10 +37,19 @@ ENV/
 *~
 
 # Results and outputs
-results/
+outputs/
 *.json
 !scenarios/*.json
 !examples/*.json
+!website/data/*.json
+
+# Confidential evaluation scenarios (prevent gaming)
+scenarios/confidential/
+
+# Data directory (keep structure, ignore contents)
+data/*
+!data/README.md
+!data/.gitkeep
 
 # Logs
 *.log
@@ -58,10 +67,4 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Documentation
-/refs/
-/specs/
-AGENTS.md
-CLAUDE.md
-TASKS.md
+docs/

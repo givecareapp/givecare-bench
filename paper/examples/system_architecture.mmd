@@ -1,0 +1,28 @@
+graph TD
+    User[👤 Caregiver] -->|SMS Message| Entry[📱 Twilio]
+    Entry -->|Webhook| Agent[🤖 AI Agent]
+
+    Agent -->|Needs Assessment?| Assess[📋 Clinical Assessment]
+    Agent -->|Crisis Detected?| Crisis[🚨 Crisis Support]
+    Agent -->|Normal Flow| Main[💬 Main Conversation]
+
+    Assess -->|Responses| Score[📊 Burnout Score]
+    Score -->|0-100 Score| Band[🎯 Risk Band]
+    Score -->|Top 2-3| Zones[⚡ Pressure Zones]
+
+    Band --> Match[🔍 Resource Matching]
+    Zones --> Match
+
+    Match -->|RBI Algorithm| Resources[(📚 Resource Database)]
+    Resources -->|Top 3 Matches| Response[📤 SMS Response]
+
+    Crisis -->|Immediate Help| Response
+    Main -->|Conversation| Response
+
+    Response -->|SMS| User
+
+    style User fill:#e1f5ff
+    style Agent fill:#fff3cd
+    style Score fill:#d4edda
+    style Match fill:#f8d7da
+    style Resources fill:#d1ecf1

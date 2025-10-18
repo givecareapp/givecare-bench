@@ -128,3 +128,8 @@ ignore = [
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]  # unused imports
 "tests/*" = ["B011"]  # assert false
+
+[tool.uv.workspace]
+members = [
+    "res",
+]
