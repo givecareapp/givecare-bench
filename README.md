@@ -175,11 +175,11 @@ Scoring Config ────────> Weights
 ```
 
 **Components:**
-- **Loaders** (`longbench/loaders.py`): Parse YAML rules (with inheritance), scenarios, transcripts, and scoring config
-- **Scorers** (`longbench/scorers/`): Five independent scoring modules
-- **Orchestrator** (`longbench/orchestrator.py`): Coordinates scorers and applies weights
-- **Report Generators** (`longbench/reports.py`): Creates HTML and JSON output
-- **CLI** (`longbench/cli.py`): Command-line interface
+- **Loaders** (`src/longbench/loaders.py`): Parse YAML rules (with inheritance), scenarios, transcripts, and scoring config
+- **Scorers** (`src/longbench/scorers/`): Five independent scoring modules
+- **Orchestrator** (`src/longbench/orchestrator.py`): Coordinates scorers and applies weights
+- **Report Generators** (`src/longbench/reports.py`): Creates HTML and JSON output
+- **CLI** (`src/longbench/cli.py`): Command-line interface with 12+ flags
 
 ### File Formats
 
@@ -881,12 +881,16 @@ givecare-bench/
 ├── paper/                # Paper materials
 ├── scenarios/            # Benchmark scenarios
 ├── src/                  # Core Python code
-│   ├── longbench/       # YAML-based system
+│   ├── longbench/       # YAML-based scoring system
+│   │   ├── cli.py      # CLI with 12+ flags
+│   │   ├── scorers/    # 5 scoring modules
+│   │   ├── rules/      # YAML rule configs
+│   │   └── ...
 │   ├── runner.py
 │   ├── evaluator.py
 │   ├── profiler.py
 │   └── ...
-├── tests/                # Test suite
+├── tests/                # Test suite (99.45% coverage)
 ├── tools/                # Utilities
 └── website/              # Leaderboard site
 ```
