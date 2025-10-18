@@ -2,12 +2,12 @@
 
 **AI Safety Benchmark for Long-Term Care Relationships**
 
-[![Website](https://img.shields.io/badge/website-longitudinalbench-blue)](https://longitudinalbench.org)
+[![Website](https://img.shields.io/badge/website-bench.givecareapp.com-blue)](https://bench.givecareapp.com)
 [![GitHub](https://img.shields.io/badge/github-givecare%2Flongitudinalbench-black)](https://github.com/givecareapp/givecare-bench)
 
 Testing AI models on crisis detection, regulatory compliance, and caregiver support across multi-turn conversations.
 
-**🎯 [View Leaderboard](https://longitudinalbench.org)** | **📖 [Read the Docs](#documentation)** | **🚀 [Quick Start](#quick-start)**
+**🎯 [View Leaderboard](https://bench.givecareapp.com)** | **📖 [Read the Docs](#documentation)** | **🚀 [Quick Start](#quick-start)**
 
 ---
 
@@ -818,17 +818,37 @@ Top 10 models from `OPERATIONS.md`:
 
 ---
 
+## Roadmap
+
+### v2.0 Major Features (In Progress)
+
+**From HealthBench & MindBenchAI Integration:**
+- **Rubric-Based Evaluation**: Expert-written point-value rubrics for reproducible scoring
+- **Meta-Evaluation**: Validate tri-judge ensemble against expert consensus (crisis counselors, caregiver specialists)
+- **Worst-of-n Testing**: Report worst-case performance across 3 runs (conservative safety claims)
+- **Profile Evaluation**: Privacy, personality, and technical specs assessed before performance testing
+
+**New Capabilities:**
+- **Adversarial Testing Suite**: Systematic testing across 5 attack vectors (boundary evasion, authority mimicry, crisis obfuscation, attachment engineering, regulatory probing)
+- **Demographic Robustness**: Test same scenario across demographics to detect bias (race, gender, age, SES, geography)
+- **Fine-Tuning Dataset Export**: Generate preference pairs from benchmark results for RLHF training
+- **Real-World Validation**: Partnership with 988 Suicide & Crisis Lifeline for scenario review
+
+See `docs/specs/V2_ROADMAP.md` for complete roadmap.
+
+---
+
 ## Contributing
 
-We welcome contributions! Areas of focus:
+We welcome contributions! Priority areas:
 
-1. **New Scenarios**: Expand coverage of caregiver demographics and challenges
-2. **Judge Calibration**: Improve judge prompt templates
-3. **DIF Analysis**: Build automated fairness testing
-4. **Visualization**: Enhanced leaderboard and heatmap tools
-5. **Documentation**: Tutorial content, case studies
+1. **New Scenarios**: Expand coverage of BIPOC caregivers, rural communities, young caregivers, diverse conditions
+2. **Expert Validation**: Crisis counselors and caregiver specialists to review scenarios
+3. **Bias Detection**: Demographic robustness testing and fairness analysis
+4. **Developer Tools**: Preference pair export, visualization, CLI improvements
+5. **Documentation**: Tutorials, case studies, translations
 
-See `CONTRIBUTING.md` for guidelines.
+See `CONTRIBUTING.md` for detailed guidelines.
 
 ---
 
@@ -885,7 +905,7 @@ LongitudinalBench is seeking $50K-100K in funding for:
 
 **Top funding targets**: Emergent Ventures, Open Philanthropy, RWJF, Anthropic
 
-See `specs/FUNDING.md` for complete strategy.
+See `docs/specs/FUNDING.md` for complete strategy.
 
 ---
 
@@ -902,9 +922,9 @@ If you use LongitudinalBench in research, please cite:
 ```bibtex
 @software{longitudinalbench2025,
   title={LongitudinalBench: Evaluating AI Safety in Long-Term Care Relationships},
-  author={GiveCare Team},
+  author={Ali Madad},
   year={2025},
-  url={https://github.com/givecare/longitudinalbench}
+  url={https://github.com/givecareapp/givecare-bench}
 }
 ```
 
@@ -912,20 +932,7 @@ If you use LongitudinalBench in research, please cite:
 
 ## Website & Leaderboard
 
-**🌐 Live Site:** [longitudinalbench.org](https://longitudinalbench.org) (Coming Soon)
-
-The website is a minimal static site hosted on Cloudflare Pages:
-- **Leaderboard:** Current model rankings
-- **About:** Methodology and evaluation dimensions
-- **Source:** `website/` directory
-
-To deploy:
-```bash
-# The website/ directory is ready for Cloudflare Pages
-# Connect your GitHub repo to Cloudflare Pages
-# Build output directory: website
-# Build command: (none - static files)
-```
+**🌐 Live Site:** [bench.givecareapp.com](https://bench.givecareapp.com)
 
 ---
 
@@ -933,14 +940,17 @@ To deploy:
 
 - **GitHub**: [github.com/givecareapp/givecare-bench](https://github.com/givecareapp/givecare-bench)
 - **Issues**: [github.com/givecareapp/givecare-bench/issues](https://github.com/givecareapp/givecare-bench/issues)
-- **Website**: [longitudinalbench.org](https://longitudinalbench.org)
+- **Website**: [bench.givecareapp.com](https://bench.givecareapp.com)
 
 ---
 
 ## Related Projects
 
+- **GiveCare**: AI companion for family caregivers ([givecareapp.com](https://givecareapp.com))
+- **Rosebud CARE**: Crisis Assessment and Response Evaluator ([rosebud.app/care](https://www.rosebud.app/care))
+- **HealthBench**: OpenAI's medical reasoning benchmark ([openai.com/index/healthbench](https://openai.com/index/healthbench/))
+- **MindBenchAI**: Mental health AI evaluation framework
 - **EQ-Bench**: Emotional intelligence benchmark ([eqbench.com](https://eqbench.com))
-- **GiveCare**: AI companion for family caregivers
 
 ---
 
