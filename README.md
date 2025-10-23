@@ -11,76 +11,57 @@ Testing AI models on crisis detection, regulatory compliance, and caregiver supp
 
 ---
 
-## Preliminary Results (v0.1.0)
+## Status
 
-| Rank | Model | Score | Autofails | Status | Crisis Safety | Regulatory Fitness |
-|------|-------|-------|-----------|--------|---------------|-------------------|
-| 1 | Claude Haiku 4.5 | 86.0 | 0 | ✅ PASS | 14.0/15 | 15.0/15 |
-| 2 | GPT-4o-mini | 64.0 | 2 | ❌ FAIL | 10.0/15 | 14.0/15 |
+⚠️ **Active Development** - The benchmark framework has been restructured and is currently being validated. Leaderboard results will be published once the test suite passes and initial benchmark runs complete.
 
-**Critical Findings:**
-- GPT-4o-mini missed masked suicidal ideation ("I don't know how much longer I can do this")
-- GPT-4o-mini failed to adequately reassure about crisis resource confidentiality
-- Claude Haiku 4.5 detected all crisis signals with appropriate urgency
+**Current Status:**
+- ✅ Framework restructured to follow Python best practices
+- ✅ Critical bugs fixed (tri-judge ensemble, scoring logic)
+- 🔄 Test suite being updated for new structure
+- 🔄 Initial benchmark runs pending
 
-⚠️ *Early preview - More models and scenarios coming soon*
+See [STATUS.md](STATUS.md) for detailed project status.
 
 ---
 
-## Quick Start (Longbench CLI)
-
-The `longbench` scoring system is now **production-ready** with 99.45% test coverage!
+## Quick Start
 
 ### Basic Evaluation
 ```bash
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
+python -m longbench.yaml_cli \
+  --scenario scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/ny.yaml \
+  --rules configs/rules/ny.yaml \
   --out report.html \
   --json results.json
 ```
 
-### Advanced Features (New in v0.1!)
+### Advanced Features
 
-**Variance Measurement** - Run multiple iterations to measure score stability:
+**Variance Measurement**:
 ```bash
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
+python -m longbench.yaml_cli \
+  --scenario scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/ny.yaml \
+  --rules configs/rules/ny.yaml \
   --iterations 10
 ```
 
-**State Tracking & Resume** - Track runs by model and resume interrupted evaluations:
+**State Tracking & Resume**:
 ```bash
 # Track by model name
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
+python -m longbench.yaml_cli \
+  --scenario scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/ny.yaml \
+  --rules configs/rules/ny.yaml \
   --model "anthropic/claude-3.7-sonnet"
 
 # Resume interrupted run
-python -m src.longbench.cli --resume --resume-file outputs/runs/abc123.json
+python -m longbench.yaml_cli --resume --resume-file data/results/runs/abc123.json
 
 # List all runs
-python -m src.longbench.cli --list-runs
-
-# Delete runs for a model
-python -m src.longbench.cli --reset "anthropic/claude-3.7-sonnet"
-```
-
-**Progress Tracking** - Three verbosity modes:
-```bash
-# Quiet mode (no progress bars)
-python -m src.longbench.cli --scenario S --transcript T --rules R --quiet
-
-# Default mode (progress bars)
-python -m src.longbench.cli --scenario S --transcript T --rules R
-
-# Verbose mode (detailed output)
-python -m src.longbench.cli --scenario S --transcript T --rules R --verbose
+python -m longbench.yaml_cli --list-runs
 ```
 
 ## Installation
@@ -274,6 +255,8 @@ Hard Fail: False
 ```
 
 **Console Output (With Variance, --iterations 5):**
+
+*Note: For publication-quality validation, use `--iterations 3` minimum to report mean ± std dev and demonstrate reproducibility.*
 ```
 === Scoring Summary ===
 Overall Score: 0.77
@@ -351,14 +334,14 @@ crisis:
 
 ## Test-Driven Development
 
-This project was built following strict TDD methodology:
+This project uses Test-Driven Development (TDD) methodology:
 
-1. **Phase 1**: Comprehensive test suite created first (180+ tests)
+1. **Phase 1**: Test suite created first
 2. **Phase 2**: Tests verified to fail (Red phase)
 3. **Phase 3**: Implementation to pass tests (Green phase)
 4. **Phase 4**: Refactoring while maintaining green tests
 
-Current test status: **180/181 passing (99.45%)**
+Current test status: **Unverified** - Run `pytest tests/ -v` to check actual status after installing dependencies
 
 **Recent additions** (v0.1):
 - State persistence & run tracking (27 tests)
@@ -371,7 +354,7 @@ Current test status: **180/181 passing (99.45%)**
 
 ```
 givecare-bench/
-├── longbench/                       # Production-ready scoring system
+├── longbench/                       # Scoring system (verification pending)
 │   ├── __init__.py
 │   ├── cli.py                       # CLI interface with 12+ flags
 │   ├── loaders.py                   # Data loaders with YAML inheritance
@@ -395,21 +378,13 @@ givecare-bench/
 │       └── ny.yaml
 ├── runs/                            # Run state persistence (NEW v0.1)
 │   └── .gitignore
-├── tests/                           # 180 tests, 99.45% passing
-│   ├── test_loaders.py              # 18/18 passing
-│   ├── test_scorers.py              # 25/25 passing
-│   ├── test_orchestrator.py         # 5/5 passing
-│   ├── test_cli.py                  # 10/10 passing
-│   ├── test_run_manager.py          # 27/27 passing (NEW v0.1)
-│   ├── test_variance.py             # 24/24 passing (NEW v0.1)
-│   ├── test_orchestrator_iterations.py # 12/12 passing (NEW v0.1)
-│   ├── test_progress.py             # 15/16 passing (NEW v0.1)
-│   ├── test_resilience.py           # 30/30 passing (NEW v0.1)
+├── tests/                           # Test suite (status unverified)
+│   ├── unit/                        # Unit tests
+│   ├── integration/                 # Integration tests
 │   └── fixtures/
 │       └── sample_transcript.jsonl
 ├── README.md
-├── TASKS.md                         # Priority-based roadmap
-└── IMPLEMENTATION_COMPLETE.md       # v0.1 completion report
+└── TASKS.md                         # Priority-based roadmap
 ```
 
 ---
@@ -706,18 +681,42 @@ Visualize dimension performance:
 
 ## Cost Estimates
 
+### Basic Benchmark Run
+
 **Per full benchmark run** (10 models × 20 scenarios × 5 avg turns):
 
 | Component | Cost |
 |-----------|------|
 | Model inference | $15 |
 | Judge inference (tri-judge × 20 scenarios) | $3 |
-| **Total** | **$18-22** |
+| **Subtotal** | **$18-22** |
 
 **Cost per evaluation** (single model, single scenario):
 - Tier 1 (5 turns): $0.03-0.05
 - Tier 2 (10 turns): $0.05-0.08
 - Tier 3 (20 turns, hybrid): $0.06-0.10
+
+### Publication-Quality Validation (Required)
+
+To meet peer review standards, additional validation is required:
+
+| Validation Component | Cost | Purpose |
+|---------------------|------|---------|
+| **Base benchmark** | $30 | 10 models × 20 scenarios |
+| **+ Variance testing** (3× runs) | +$60 | Reproducibility (mean ± std dev) |
+| **+ Trait robustness** (trait variants) | +$50-100 | Stress testing under realistic user states |
+| **+ PCA analysis** | $0 | Post-processing (dimensionality check) |
+| **+ IRR analysis** | $0 | Post-processing (judge reliability) |
+| **Minimum viable validation** | **$140** | Enough for publication |
+| **Full validation** | **$190** | Complete validation suite |
+
+**Why validation is required**:
+- **Variance testing**: Demonstrates results are reproducible (not random)
+- **Trait robustness**: Tests performance under realistic caregiver stress (impatient, confused, incoherent)
+- **PCA analysis**: Verifies 8 dimensions measure distinct capabilities (not one general factor)
+- **IRR analysis**: Confirms tri-judge ensemble is reliable (Spearman ρ > 0.7)
+
+See `TASKS.md` for detailed validation methodology.
 
 Full cost breakdown: See `specs/OPERATIONS.md`
 
@@ -890,7 +889,7 @@ givecare-bench/
 │   ├── evaluator.py
 │   ├── profiler.py
 │   └── ...
-├── tests/                # Test suite (99.45% coverage)
+├── tests/                # Test suite
 ├── tools/                # Utilities
 └── website/              # Leaderboard site
 ```

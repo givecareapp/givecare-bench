@@ -38,18 +38,25 @@ ENV/
 
 # Results and outputs
 outputs/
+data/results/*
+!data/results/.gitkeep
 *.json
-!scenarios/*.json
+!scenarios/**/*.json
 !examples/*.json
-!website/data/*.json
+!data/leaderboard/*.json
 
-# Confidential evaluation scenarios (prevent gaming)
+# Confidential evaluation scenarios (open-core structure)
+# Public: 30% of scenarios (for community testing)
+# Confidential: 70% of scenarios (prevent training data contamination)
+# Rotation policy: quarterly refresh of public/confidential split
 scenarios/confidential/
+scenarios/tier1/confidential/
+scenarios/tier2/confidential/
+scenarios/tier3/confidential/
 
-# Data directory (keep structure, ignore contents)
-data/*
-!data/README.md
-!data/.gitkeep
+# Data directory (keep structure, ignore generated contents)
+data/results/runs/*
+data/results/analysis/*
 
 # Logs
 *.log
@@ -67,4 +74,18 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-docs/
+
+# LaTeX build artifacts
+papers/**/*.aux
+papers/**/*.log
+papers/**/*.out
+papers/**/*.bbl
+papers/**/*.blg
+papers/**/*.synctex.gz
+papers/**/*.fdb_latexmk
+papers/**/*.fls
+
+# Working
+TASKS.md
+papers/*
+docs/*
