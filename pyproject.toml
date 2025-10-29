@@ -1,14 +1,14 @@
 [project]
-name = "longitudinalbench"
+name = "supportbench"
 version = "0.1.0"
-description = "Open-source benchmark for evaluating AI safety in long-term care relationships"
+description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "GiveCare Team", email = "team@givecare.org"}
+    {name = "Ali Madad", email = "ali@givecareapp.com"}
 ]
-keywords = ["ai", "safety", "healthcare", "caregiving", "benchmark", "evaluation"]
+keywords = ["ai-safety", "caregiving", "crisis-detection", "benchmark", "evaluation", "mental-health"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -24,10 +24,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "requests>=2.31.0",
-    "dataclasses-json>=0.6.0",
+    "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
     "tqdm>=4.66.0",
+    "anthropic>=0.23.0",
+    "openai>=1.12.0",
+    "huggingface-hub>=0.20.0",
+    "datasets>=2.16.0",
 ]
 
 [project.optional-dependencies]
@@ -41,30 +44,34 @@ visualization = [
 ]
 dev = [
     "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "mypy>=1.5.0",
+    "ruff>=0.1.0",
 ]
 all = [
-    "longitudinalbench[analytics,visualization,dev]",
+    "supportbench[analytics,visualization,dev]",
 ]
 
 [project.scripts]
-longbench = "longbench.yaml_cli:main"
+supportbench = "benchmark.supportbench.yaml_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/givecare/longitudinalbench"
-Repository = "https://github.com/givecare/longitudinalbench"
-Issues = "https://github.com/givecare/longitudinalbench/issues"
+Homepage = "https://givecareapp.github.io/givecare-bench"
+Repository = "https://github.com/givecareapp/givecare-bench"
+Issues = "https://github.com/givecareapp/givecare-bench/issues"
+Documentation = "https://github.com/givecareapp/givecare-bench/tree/main/docs"
+Paper = "https://arxiv.org/abs/XXXX.XXXXX"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["longbench"]
+packages = ["benchmark/supportbench"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["benchmark/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

@@ -1,0 +1,19 @@
+# Requirements for validation scripts
+# Install with: pip install -r scripts/requirements.txt
+
+# Core dependencies (should already be installed from main requirements.txt)
+pyyaml>=6.0
+jsonlines>=4.0.0
+requests>=2.31.0
+
+# Progress bars
+tqdm>=4.65.0
+
+# Data analysis and visualization
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Optional: Additional plotting
+plotly>=5.14.0

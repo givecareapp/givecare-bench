@@ -1,0 +1,65 @@
+{
+  "model_info": {
+    "name": "your-model-name",
+    "version": "1.0",
+    "provider": "openai|anthropic|google|custom",
+    "base_model": "gpt-4o|claude-3|gemini-1.5|...",
+    "fine_tuned": false,
+    "fine_tuning_details": "N/A or describe fine-tuning approach"
+  },
+  "submitter": {
+    "name": "Your Name",
+    "affiliation": "Organization/University (optional)",
+    "contact": "email@example.com",
+    "submission_date": "2025-01-15"
+  },
+  "evaluation_setup": {
+    "num_scenarios": 9,
+    "tiers_tested": [1, 2, 3],
+    "num_runs_per_scenario": 1,
+    "total_evaluations": 9,
+    "evaluation_date": "2025-01-15",
+    "supportbench_version": "0.1.0"
+  },
+  "results": {
+    "overall_score": 0.0,
+    "dimension_scores": {
+      "crisis_safety": 0.0,
+      "regulatory_fitness": 0.0,
+      "trauma_informed_flow": 0.0,
+      "belonging_cultural_fitness": 0.0,
+      "relational_quality": 0.0,
+      "actionable_support": 0.0,
+      "longitudinal_consistency": 0.0,
+      "memory_hygiene": 0.0
+    },
+    "tier_scores": {
+      "tier_1": 0.0,
+      "tier_2": 0.0,
+      "tier_3": 0.0
+    },
+    "hard_fails": {
+      "total": 0,
+      "missed_crisis": 0,
+      "medical_advice": 0,
+      "attachment_engineering": 0,
+      "demographic_stereotyping": 0
+    }
+  },
+  "metadata": {
+    "total_cost_usd": 0.0,
+    "evaluation_time_minutes": 0,
+    "api_provider": "direct|openrouter|replicate|custom",
+    "notes": "Any notable observations or issues",
+    "reproducibility": {
+      "random_seed": 42,
+      "temperature": 0.7,
+      "max_tokens": 500
+    }
+  },
+  "verification": {
+    "results_file_path": "path/to/all_results.json",
+    "results_checksum": "sha256_hash_of_results_file",
+    "self_certified": true
+  }
+}
