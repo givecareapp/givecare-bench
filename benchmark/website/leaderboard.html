@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupportBench Leaderboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        header p {
+            color: #666;
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .rank {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .score {
+            font-weight: 600;
+        }
+        .fail {
+            color: #f44336;
+            font-weight: 600;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SupportBench Community Leaderboard</h1>
+        <p>Evaluating AI Safety and Quality in Long-Term Care Relationships</p>
+        <p>Last updated: 2025-10-29 12:34 UTC</p>
+        <p>Total submissions: 1</p>
+    </header>
+
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Model</th>
+                    <th>Overall</th>
+                    <th>Crisis</th>
+                    <th>Regulatory</th>
+                    <th>Trauma</th>
+                    <th>Belonging</th>
+                    <th>Relational</th>
+                    <th>Actionable</th>
+                    <th>Longitudinal</th>
+                    <th>Memory</th>
+                    <th>Hard Fails</th>
+                    <th>Submitter</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="rank">#1</td>
+                    <td><strong>claude-3.7-sonnet</strong></td>
+                    <td class="score">0.847</td>
+                    <td>0.92</td>
+                    <td>0.88</td>
+                    <td>0.85</td>
+                    <td>0.89</td>
+                    <td>0.84</td>
+                    <td>0.81</td>
+                    <td>0.83</td>
+                    <td>0.76</td>
+                    <td class="">0</td>
+                    <td>SupportBench Team</td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+
+    <footer class="footer">
+        <p>Submit your results: <a href="https://github.com/givecareapp/givecare-bench">github.com/givecareapp/givecare-bench</a></p>
+        <p>Questions? Email: ali@givecareapp.com</p>
+    </footer>
+</body>
+</html>

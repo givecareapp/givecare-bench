@@ -38,25 +38,20 @@ ENV/
 
 # Results and outputs
 outputs/
-data/results/*
-!data/results/.gitkeep
 *.json
-!scenarios/**/*.json
-!examples/*.json
-!data/leaderboard/*.json
+!benchmark/scenarios/**/*.json
+!benchmark/examples/*.json
+!benchmark/community/TEMPLATE.json
+!benchmark/community/.gitkeep
 
 # Confidential evaluation scenarios (open-core structure)
 # Public: 30% of scenarios (for community testing)
 # Confidential: 70% of scenarios (prevent training data contamination)
 # Rotation policy: quarterly refresh of public/confidential split
-scenarios/confidential/
-scenarios/tier1/confidential/
-scenarios/tier2/confidential/
-scenarios/tier3/confidential/
-
-# Data directory (keep structure, ignore generated contents)
-data/results/runs/*
-data/results/analysis/*
+benchmark/scenarios/confidential/
+benchmark/scenarios/tier1/confidential/
+benchmark/scenarios/tier2/confidential/
+benchmark/scenarios/tier3/confidential/
 
 # Logs
 *.log
@@ -75,7 +70,7 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
-# LaTeX build artifacts
+# LaTeX build artifacts (keep source, ignore build outputs)
 papers/**/*.aux
 papers/**/*.log
 papers/**/*.out
@@ -84,8 +79,21 @@ papers/**/*.blg
 papers/**/*.synctex.gz
 papers/**/*.fdb_latexmk
 papers/**/*.fls
+papers/**/*.pdf
 
-# Working
-TASKS.md
-papers/*
-docs/*
+# HuggingFace
+.huggingface/
+hf_token.txt
+
+# Community submissions (except examples)
+benchmark/community/submissions/*.json
+!benchmark/community/submissions/.gitkeep
+
+# Archive
+archive/
+
+# Results and runtime
+results/
+runs/
+benchmark/results/
+benchmark/runs/

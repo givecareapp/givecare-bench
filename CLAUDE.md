@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🎯 Instructions Philosophy
+
+Following Anthropic's best practices, these instructions are:
+1. **Clear and Direct**: Numbered steps, explicit success criteria, concrete examples
+2. **Contextual**: Background on why tasks matter and how results will be used
+3. **Sequential**: Step-by-step guidance for complex operations
+4. **Testable**: "Show these instructions to a colleague—if they're confused, Claude will be too"
+
+**Mental Model**: Treat Claude as a brilliant but new colleague who needs explicit context. Don't assume knowledge of project history or implicit conventions.
+
 ## ⚠️ CRITICAL: Documentation Creation Policy
 
 **MAXIMUM 15 MARKDOWN FILES IN THIS REPOSITORY. NO EXCEPTIONS.**
@@ -49,58 +59,77 @@ This repository values comprehensive documentation BUT NOT document proliferatio
 
 ## Project Overview
 
-**LongitudinalBench** is a benchmark for evaluating AI safety and quality in long-term care relationships. It tests AI models across multi-turn conversations (3-20 turns) to identify relationship failure modes that emerge over time—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep.
+**SupportBench** is a benchmark for evaluating AI safety and quality in long-term care relationships. It tests AI models across multi-turn conversations (3-20 turns) to identify relationship failure modes that emerge over time—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep.
 
-This is a dual-implementation project:
-1. **Main Python framework** (`src/`) - Production-ready evaluation system with tri-judge ensemble
-2. **Longbench system** (`src/longbench/`) - YAML-based scoring system (✅ FULLY OPERATIONAL)
+## Repository Structure
+
+```
+givecare-bench/
+├── README.md          # Project overview & quick start
+├── CLAUDE.md          # This file - AI assistant instructions
+├── LICENSE            # MIT License
+├── pyproject.toml     # Package configuration (uv-based)
+├── uv.lock            # Dependency lock file
+│
+├── benchmark/         # 🎯 THE COMPLETE BENCHMARK
+│   ├── supportbench/      # Python package (source code)
+│   ├── scenarios/         # Test scenarios (17 scenarios)
+│   ├── tests/             # Test suite (183 tests)
+│   ├── docs/              # Documentation
+│   ├── examples/          # Usage examples
+│   ├── configs/           # Scoring configurations
+│   ├── website/           # Public leaderboard
+│   ├── community/         # Community submissions
+│   ├── scripts/           # Utility scripts
+│   └── huggingface/       # HuggingFace upload tools
+│
+└── papers/            # 📄 Research papers (LaTeX source)
+    ├── supportbench/      # Main benchmark paper
+    └── givecare/          # GiveCare system paper
+```
+
+**Key principle**: Everything benchmark-related is in `benchmark/`. Papers are separate (for citations/research).
 
 ## Running Evaluations
 
-### Main Python Framework
+### Installation
 
 ```bash
-# Run single scenario test
-python -m src.runner \
-  --single-scenario tier1_crisis_001 \
-  --single-model anthropic/claude-3.7-sonnet \
-  --scenarios ./scenarios \
-  --output ./results
+# Install uv (if needed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Run full benchmark (10 models across all scenarios)
-python -m src.runner \
-  --scenarios ./scenarios \
-  --output ./results \
-  --export-html
+# Install SupportBench
+uv pip install -e .
 
-# Test with specific models
-python -m src.runner \
-  --models anthropic/claude-3.7-sonnet openai/gpt-4o \
-  --scenarios ./scenarios \
-  --output ./results
+# Set API key
+export OPENROUTER_API_KEY="sk-or-v1-..."
 ```
 
-### Longbench CLI (Fully Operational)
+### Quick Start
 
 ```bash
-# Basic evaluation
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
-  --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/base.yaml
+# Run minimal validation (3 models × 3 scenarios)
+python benchmark/scripts/validation/run_minimal.py
+
+# Run single scenario evaluation
+python -m supportbench.yaml_cli \
+  --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
+  --transcript your_transcript.jsonl \
+  --rules benchmark/configs/scoring.yaml \
+  --out results.html
 
 # With HTML report
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
+python -m supportbench.cli \
+  --scenario supportbench/scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/ny.yaml \
+  --rules supportbench/rules/ny.yaml \
   --out report.html
 
 # With both JSON and HTML output
-python -m src.longbench.cli \
-  --scenario src/longbench/scenarios/care-burnout-arc-01.yaml \
+python -m supportbench.cli \
+  --scenario supportbench/scenarios/care-burnout-arc-01.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
-  --rules src/longbench/rules/ny.yaml \
+  --rules supportbench/rules/ny.yaml \
   --out report.html \
   --json results.json
 ```
@@ -330,7 +359,7 @@ Component breakdown:
 
 ## Longbench System (Fully Operational)
 
-The `longbench/` directory contains a complete YAML-based scoring system built with TDD:
+The `supportbench/` directory contains a complete YAML-based scoring system built with TDD:
 
 ### Architecture
 
@@ -343,16 +372,16 @@ Scoring Config ────────> Weights
 ```
 
 **Components:**
-- **Loaders** (`longbench/loaders.py`): Parse YAML rules with inheritance resolution, scenarios, transcripts, scoring config
-- **Scorers** (`longbench/scorers/`): Five independent scoring modules with real logic
+- **Loaders** (`supportbench/loaders.py`): Parse YAML rules with inheritance resolution, scenarios, transcripts, scoring config
+- **Scorers** (`supportbench/scorers/`): Five independent scoring modules with real logic
   - **Memory**: Entity consistency, recall F1, conflict resolution, PII leak detection
   - **Trauma**: Grounding before advice, boundary integrity
   - **Belonging**: Recognition, agency, othering detection (UC Berkeley framework)
   - **Compliance**: Diagnosis/treatment prohibition (hard fails), AI disclosure cadence
   - **Safety**: Crisis detection, response quality, de-escalation
-- **Orchestrator** (`longbench/orchestrator.py`): Coordinates scorers, applies weights, handles hard fails
-- **Report Generators** (`longbench/reports.py`): Creates HTML and JSON output
-- **CLI** (`longbench/cli.py`): Fully functional command-line interface
+- **Orchestrator** (`supportbench/orchestrator.py`): Coordinates scorers, applies weights, handles hard fails
+- **Report Generators** (`supportbench/reports.py`): Creates HTML and JSON output
+- **CLI** (`supportbench/cli.py`): Fully functional command-line interface
 
 ### Scoring Dimensions
 
