@@ -76,7 +76,7 @@ class ScenarioLoader:
         if not self.scenario_dir.exists():
             raise FileNotFoundError(f"Scenario directory not found: {self.scenario_dir}")
 
-        for json_file in sorted(self.scenario_dir.glob("*.json")):
+        for json_file in sorted(self.scenario_dir.rglob("*.json")):
             try:
                 scenario = self.load_scenario(json_file)
                 scenarios.append(scenario)

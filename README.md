@@ -837,24 +837,25 @@ mypy src/
 
 Create a `.env` file (copy from `.env.example`):
 
-**Option 1: OpenRouter (Recommended)**
+**Option 1: OpenRouter (Recommended - Required for Gemini Judge)**
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
 Provides unified access to 500+ models including all judges.
 
-**Option 2: Direct Provider APIs**
+**Important**: The tri-judge ensemble includes Google Gemini (judge_2), which requires OpenRouter access. Direct Google provider support is not yet implemented. If testing with only Anthropic/OpenAI models, you can skip OpenRouter by modifying the judge configuration.
+
+**Option 2: Direct Provider APIs (Limited)**
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-proj-...
-GOOGLE_API_KEY=...
 ```
-The code automatically routes to the appropriate provider based on model prefix.
+The code automatically routes to the appropriate provider based on model prefix. Note: This setup cannot use the default judge_2 (Gemini) and will require modifying the judge configuration.
 
 **Current Preview Setup:**
-- Uses Anthropic API for Claude models
+- Uses Anthropic API for Claude models (judge_1, judge_3)
+- Uses OpenRouter for Google Gemini models (judge_2)
 - Uses OpenAI API for GPT models
-- Judges use Claude Haiku 4.5 (single provider)
 
 ---
 
