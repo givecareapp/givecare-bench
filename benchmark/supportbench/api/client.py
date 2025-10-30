@@ -306,19 +306,39 @@ class ModelAPIClient:
 
 
 class JudgeClient:
-    """Specialized client for judge models with pre-configured prompts."""
+    """Specialized client for judge models with pre-configured prompts.
+
+    Note: Judge 2 uses google/gemini-2.5-pro which requires OpenRouter.
+    Direct Google provider is not implemented. Ensure OPENROUTER_API_KEY
+    is set or modify JUDGE_MODELS to use only Anthropic/OpenAI models.
+    """
 
     # Judge model assignments - heterogeneous judges for diverse perspectives
     # As described in paper: each judge specializes in specific dimensions
     JUDGE_MODELS = {
         "judge_1": "anthropic/claude-3.7-sonnet",  # Safety & Regulatory (instruction-following)
-        "judge_2": "google/gemini-2.5-pro",       # Cultural & Relational (nuanced understanding)
+        "judge_2": "google/gemini-2.5-pro",       # Cultural & Relational (nuanced understanding) - REQUIRES OPENROUTER
         "judge_3": "anthropic/claude-opus-4"      # Trajectory & Actionable (advanced reasoning)
     }
 
     def __init__(self, api_client: ModelAPIClient):
-        """Initialize with base API client."""
+        """Initialize with base API client.
+
+        Warns if using Gemini models without OpenRouter configured.
+        """
         self.api_client = api_client
+
+        # Warn if using Gemini without OpenRouter
+        import logging
+        if "openrouter" not in api_client.available_providers:
+            # Check if any judge uses Google models
+            has_google_judge = any("google/" in model for model in self.JUDGE_MODELS.values())
+            if has_google_judge:
+                logging.warning(
+                    "Judge configuration includes Google Gemini models but OPENROUTER_API_KEY "
+                    "is not set. Direct Google provider is not implemented. "
+                    "Set OPENROUTER_API_KEY or modify JUDGE_MODELS to use only Anthropic/OpenAI models."
+                )
 
     def evaluate_turn(
         self,

@@ -25,6 +25,7 @@ from supportbench.evaluation.resilience import (
 from supportbench.evaluation.run_manager import RunManager
 from supportbench.evaluation.scorers import belonging, compliance, memory, safety, trauma
 from supportbench.evaluation.variance import aggregate_iteration_results
+from supportbench.api import ModelAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class ScoringOrchestrator:
         enable_state_persistence: bool = True,
         progress_callback=None,
         save_interval: int = 1,
+        api_client: Optional[ModelAPIClient] = None,
     ):
         """
         Initialize orchestrator with scoring configuration.
@@ -49,12 +51,14 @@ class ScoringOrchestrator:
             enable_state_persistence: Enable/disable run tracking
             progress_callback: Optional callback(dimension, score) for progress tracking
             save_interval: Save state after every N scorers (default: 1)
+            api_client: Optional ModelAPIClient for LLM-based scorers (lazy-initialized if not provided)
         """
         self.scoring_config_path = scoring_config_path
         self.config_loader = ScoringConfigLoader()
         self.scoring_config = self.config_loader.load(scoring_config_path)
         self.progress_callback = progress_callback
         self.save_interval = save_interval
+        self._api_client = api_client  # Store provided client, lazy-init if needed
 
         # Initialize run manager
         self.enable_state_persistence = enable_state_persistence
@@ -280,7 +284,7 @@ class ScoringOrchestrator:
         # Belonging
         if dimension_scores["belonging"].get("status") != "completed":
             dimension_scores["belonging"] = self._run_scorer_safely(
-                lambda: belonging.score(transcript, scenario),
+                lambda: belonging.score(transcript, scenario, api_client=self._api_client),
                 "belonging"
             )
             scorers_completed += 1
@@ -293,7 +297,7 @@ class ScoringOrchestrator:
         # Compliance
         if dimension_scores["compliance"].get("status") != "completed":
             dimension_scores["compliance"] = self._run_scorer_safely(
-                lambda: compliance.score(transcript, scenario, rules),
+                lambda: compliance.score(transcript, scenario, rules, api_client=self._api_client),
                 "compliance"
             )
             scorers_completed += 1
@@ -306,7 +310,7 @@ class ScoringOrchestrator:
         # Safety
         if dimension_scores["safety"].get("status") != "completed":
             dimension_scores["safety"] = self._run_scorer_safely(
-                lambda: safety.score(transcript, scenario, rules),
+                lambda: safety.score(transcript, scenario, rules, api_client=self._api_client),
                 "safety"
             )
             scorers_completed += 1

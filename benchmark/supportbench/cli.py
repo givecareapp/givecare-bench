@@ -1,7 +1,6 @@
 """
 Main benchmark runner for SupportBench.
 """
-import json
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -15,6 +14,7 @@ from supportbench.session import SessionManager
 from supportbench.evaluation import ScenarioEvaluator as ScenarioEvaluator
 from supportbench.export import ResultsExporter
 from supportbench.export.results_exporter import LeaderboardHTMLGenerator
+from supportbench.loaders.scenario_loader import ScenarioLoader
 
 
 class BenchmarkRunner:
@@ -48,7 +48,7 @@ class BenchmarkRunner:
 
     def load_scenarios(self, scenario_dir: str) -> List[Scenario]:
         """
-        Load all scenario JSON files from directory.
+        Load all scenario JSON files from directory (recursively).
 
         Args:
             scenario_dir: Path to scenarios directory
@@ -56,18 +56,11 @@ class BenchmarkRunner:
         Returns:
             List of Scenario objects
         """
-        scenarios = []
-        scenario_path = Path(scenario_dir)
+        loader = ScenarioLoader(scenario_dir)
+        scenarios = loader.load_all()
 
-        if not scenario_path.exists():
-            raise FileNotFoundError(f"Scenario directory not found: {scenario_dir}")
-
-        for json_file in scenario_path.glob("*.json"):
-            with open(json_file, 'r') as f:
-                data = json.load(f)
-                scenario = Scenario.from_dict(data)
-                scenarios.append(scenario)
-                print(f"Loaded scenario: {scenario.scenario_id} ({scenario.tier.value})")
+        for scenario in scenarios:
+            print(f"Loaded scenario: {scenario.scenario_id} ({scenario.tier.value})")
 
         return scenarios
 

@@ -140,12 +140,15 @@ python -m supportbench.cli \
 # Install dependencies
 pip install -r requirements.txt
 
-# Set API keys
-export OPENROUTER_API_KEY="your_key_here"
-# Optional direct API access
-export ANTHROPIC_API_KEY="your_key_here"
-export OPENAI_API_KEY="your_key_here"
+# Required: OpenRouter API key (supports all judge models)
+export OPENROUTER_API_KEY="sk-or-v1-..."
+
+# Optional: Direct provider keys (faster, lower latency)
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
 ```
+
+**Note:** The tri-judge ensemble includes Google Gemini (judge_2), which requires OpenRouter access. Direct Google provider support is not yet implemented. If using only Anthropic/OpenAI models for testing, you can skip OpenRouter.
 
 ## Architecture
 
@@ -170,6 +173,7 @@ export OPENAI_API_KEY="your_key_here"
   - Judge 2 (cultural reasoning, emotional intelligence): Trauma-Informed Flow, Belonging & Cultural Fitness
   - Judge 3 (long-context reasoning, relationship dynamics): Relational Quality, Actionable Support, Longitudinal Consistency
   - Current implementation: Claude Sonnet 3.7, Gemini 2.5 Pro, Claude Opus 4 (framework is model-agnostic)
+  - **Important:** Judge 2 (Gemini) requires `OPENROUTER_API_KEY` since direct Google provider is not implemented. If running without OpenRouter, modify judge configuration to use only Anthropic/OpenAI models.
   - Aggregation: Median score (robust to outliers)
 
 - **judge_prompts.py**: Specialized prompt templates for each judge

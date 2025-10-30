@@ -1,5 +1,5 @@
 """
-Quick start example for LongitudinalBench.
+Quick start example for SupportBench.
 
 This script demonstrates how to:
 1. Load scenarios
@@ -12,13 +12,13 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.runner import BenchmarkRunner
-from src.models import TierLevel
+from supportbench.cli import BenchmarkRunner
+from supportbench.models import TierLevel
 
 
 def main():
     """Run quick start example."""
-    print("LongitudinalBench Quick Start")
+    print("SupportBench Quick Start")
     print("=" * 60)
 
     # Check for API key
@@ -55,15 +55,14 @@ def main():
             result = runner.run_single_scenario(model, scenario)
 
             print(f"\n4. Results:")
-            print(f"   Score: {result.total_score:.1f}/{result.max_possible_score:.1f}")
-            print(f"   Percentage: {(result.total_score/result.max_possible_score*100):.1f}%")
+            print(f"   Overall Score: {result.total_score:.1f}/100")
             print(f"   Autofails: {result.autofail_count}")
             print(f"   Passed: {'✓' if result.passed else '✗'}")
 
-            print(f"\n   Dimension Breakdown:")
+            print(f"\n   Dimension Breakdown (normalized scores):")
             for dim, score in result.final_scores.items():
-                max_score = scenario.scoring_dimensions.get(dim, 0)
-                print(f"   - {dim.value}: {score:.1f}/{max_score}")
+                percentage = score * 100
+                print(f"   - {dim.value}: {percentage:.1f}%")
 
             # Export result
             output_file = f"./results/quickstart_{scenario.scenario_id}_{model.replace('/', '_')}.json"

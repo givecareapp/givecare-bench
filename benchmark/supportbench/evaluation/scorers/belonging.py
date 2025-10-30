@@ -2,31 +2,44 @@
 from __future__ import annotations
 
 import os
-import requests
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from supportbench.api import ModelAPIClient
 
 
-def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[str, Any]:
+def score(
+    transcript: List[Dict[str, Any]],
+    scenario: Dict[str, Any],
+    api_client: Optional[ModelAPIClient] = None
+) -> Dict[str, Any]:
     """Score belonging using LLM judge."""
     breakdown = {"recognition": 0.0, "agency": 0.0, "connection": 0.0, "othering_penalty_applied": 0.0}
     evidence = []
 
     # Use LLM to score all dimensions
-    _score_with_llm(transcript, breakdown, evidence)
+    _score_with_llm(transcript, breakdown, evidence, api_client)
 
     score = (breakdown["recognition"] + breakdown["agency"] + breakdown["connection"]) / 3.0 + breakdown["othering_penalty_applied"]
     return {"score": max(0.0, min(1.0, score)), "breakdown": breakdown, "evidence": evidence}
 
 
-def _score_with_llm(transcript: List[Dict[str, Any]], breakdown: Dict[str, float], evidence: List[str]):
+def _score_with_llm(
+    transcript: List[Dict[str, Any]],
+    breakdown: Dict[str, float],
+    evidence: List[str],
+    api_client: Optional[ModelAPIClient] = None
+):
     """Use LLM judge to score belonging dimensions."""
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        evidence.append("ERROR: No OPENROUTER_API_KEY found - using default scores")
-        breakdown["recognition"] = 0.8
-        breakdown["agency"] = 0.8
-        breakdown["connection"] = 0.8
-        return
+    # Initialize API client if not provided
+    if api_client is None:
+        try:
+            api_client = ModelAPIClient()
+        except ValueError as e:
+            evidence.append(f"ERROR: Cannot initialize API client - {e} - using default scores")
+            breakdown["recognition"] = 0.8
+            breakdown["agency"] = 0.8
+            breakdown["connection"] = 0.8
+            return
 
     # Get assistant messages only
     assistant_msgs = [msg for msg in transcript if msg["role"] == "assistant"]
@@ -82,30 +95,22 @@ EVIDENCE:
 
 Be specific. Reference turn numbers and quote exact phrases."""
 
-    # Call OpenRouter API
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "anthropic/claude-3.7-sonnet",
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 2000
-        },
-        timeout=60
-    )
-
-    if response.status_code != 200:
-        evidence.append(f"ERROR: API call failed with status {response.status_code}")
+    # Call model via API client
+    try:
+        result_data = api_client.call_model(
+            model="anthropic/claude-3.7-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=2000
+        )
+        analysis = result_data["response"]
+        evidence.append(f"LLM Belonging Analysis:\n{analysis}")
+    except Exception as e:
+        evidence.append(f"ERROR: API call failed - {e} - using default scores")
         breakdown["recognition"] = 0.8
         breakdown["agency"] = 0.8
         breakdown["connection"] = 0.8
         return
-
-    analysis = response.json()["choices"][0]["message"]["content"]
-    evidence.append(f"LLM Belonging Analysis:\n{analysis}")
 
     # Parse response
     lines = analysis.split("\n")
