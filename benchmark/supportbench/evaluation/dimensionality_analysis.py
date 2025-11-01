@@ -44,7 +44,7 @@ class DimensionalityAnalyzer:
             "belonging",
             "compliance",
             "safety",
-            "relational_quality",  # TODO: verify dimension names from actual results
+            "relational_quality",
             "actionable_support",
             "longitudinal_consistency"
         ]
@@ -59,14 +59,6 @@ class DimensionalityAnalyzer:
         Returns:
             Dict with PCA results including variance explained, loadings, etc.
         """
-        # TODO: Implement after first benchmark run
-        # 1. Load results from JSON
-        # 2. Extract performance matrix (models × dimensions)
-        # 3. Run PCA
-        # 4. Calculate metrics
-        # 5. Generate scree plot
-        # 6. Return analysis results
-
         raise NotImplementedError(
             "PCA analysis requires benchmark results. Run this after:\n"
             "  python -m supportbench.yaml_cli --scenario <scenario> --transcript <transcript> --rules <rules>\n"
@@ -83,7 +75,6 @@ class DimensionalityAnalyzer:
         Returns:
             np.ndarray of shape (n_models, n_dimensions)
         """
-        # TODO: Implement based on actual results structure
         pass
 
     def _generate_scree_plot(self, output_path: Path):
@@ -93,7 +84,6 @@ class DimensionalityAnalyzer:
         Args:
             output_path: Where to save the plot
         """
-        # TODO: Implement using matplotlib
         pass
 
     def _interpret_results(self, variance_explained_ratio: np.ndarray) -> str:
