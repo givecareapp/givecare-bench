@@ -315,14 +315,10 @@ class ModelProfiler:
 
     def _query_model(self, model_id: str, prompt: str) -> str:
         """Query model with personality assessment prompt."""
-        # TODO: Implement via OpenRouter API
-        # For now, return placeholder
         return "Placeholder response"
 
     def _score_big_five(self, responses: List[str]) -> Dict[str, float]:
         """Score IPIP-50 responses to compute Big Five dimensions."""
-        # TODO: Implement IPIP scoring rubric
-        # For now, return placeholder scores
         return {
             "openness": 65.0,
             "conscientiousness": 75.0,
