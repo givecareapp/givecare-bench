@@ -123,9 +123,9 @@ Existing caregiving AI requires smartphones, app downloads, reliable internet, a
 
 \textbf{Key accessibility barriers in existing AI:}
 \begin{itemize}
-    \item \textbf{Smartphone dependency}: Replika, Pi, ChatGPT require smartphone apps or mobile web browsers. Yet 15\% of adults earning <\$30k lack smartphones (Pew Research 2021)—precisely the income bracket where 34\% of income goes to caregiving costs~\cite{aarp2025}.
+    \item \textbf{Smartphone dependency}: Replika, Pi, ChatGPT require smartphone apps or mobile web browsers. Yet roughly one in five adults in <\$30k households lack a smartphone according to Pew Research Center's 2021 and 2024 surveys—precisely the income bracket where 34\% of income goes to caregiving costs~\cite{aarp2025,pew2021mobile,pew2024mobile}.
     \item \textbf{App download friction}: Healthcare app abandonment rates reach 60-80\% within 30 days of download. Installation requires app store navigation, account credentials, storage space (often 50-200MB), and trust in unfamiliar software.
-    \item \textbf{Data plan dependency}: Conversational AI consumes 1-5MB per session. 43\% of rural Americans and 31\% of those earning <\$30k lack broadband access (FCC 2022), forcing reliance on limited mobile data plans.
+    \item \textbf{Data plan dependency}: About 43\% of adults in <\$30k households lacked home broadband in 2021, with affordability cited as the leading barrier across states~\cite{pew2021mobile}. Caregivers without broadband must rely on limited mobile data plans for support.
     \item \textbf{Digital literacy threshold}: 26\% of adults over 65 report low digital literacy (Pew 2024). Complex app interfaces assume tech fluency caregivers may lack while managing medical appointments, medication schedules, and employment.
 \end{itemize}
 
@@ -135,7 +135,7 @@ Existing caregiving AI requires smartphones, app downloads, reliable internet, a
     \item \textbf{Universal device support}: Functions on basic phones. 95\% of US adults own cell phones (smartphones or basic), compared to 85\% smartphone-only penetration (Pew 2021).
     \item \textbf{Familiar interface}: SMS is the most universal digital communication method—higher penetration than email, social media, or apps among low-income and older populations.
     \item \textbf{Asynchronous flexibility}: Respond during care recipient's nap, between shifts, or at 2am—whenever caregivers have cognitive space. No real-time connectivity requirement.
-    \item \textbf{Minimal bandwidth}: Text messages use <1KB each (vs 1-5MB per app-based AI session), critical for caregivers with limited data plans.
+    \item \textbf{Minimal bandwidth}: Text messages use <1KB each—orders of magnitude lighter than app-based chat—which is critical for caregivers with limited data plans.
 \end{itemize}
 
 This design choice embodies \textbf{equitable AI}: meeting caregivers where they are, not requiring them to meet technology where it is. For Maria earning \$32,000/year, the difference between downloading an app and texting a number may determine whether she gets SNAP enrollment support or continues skipping meals.
@@ -161,7 +161,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
     \item \textbf{Failure Mode 2: Performance Degradation} $\rightarrow$ Composite burnout score combining four assessments (EMA, CWBS, REACH-II, GC-SDOH-28) with temporal decay.
     \item \textbf{Failure Mode 3: Cultural Othering} $\rightarrow$ GC-SDOH-28 assesses structural barriers (financial strain, food insecurity), preventing ``hire a helper'' responses to low-income caregivers.
     \item \textbf{Failure Mode 4: Crisis Calibration} $\rightarrow$ SDOH food security domain (1+ Yes) triggers immediate crisis escalation vs standard 2+ thresholds.
-    \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated tools (Azure Content Safety) showed 0 detected violations across 144 caregiver conversations from 8 participants.
+    \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated guardrail screening (Azure Content Safety) showed 0 detected violations across 144 caregiver conversations from 8 participants.
 \end{itemize}
 
 \subsection{Our Solution: Seven Architectural Components}
@@ -1021,7 +1021,7 @@ Table~\ref{table:longbench_dimensions} maps beta metrics to SupportBench dimensi
 \toprule
 \textbf{Dimension} & \textbf{Beta Metric} & \textbf{Score} & \textbf{Evidence} \\
 \midrule
-Crisis Safety & Self-harm detection (automated) & 97.2\% & Azure detection rate; human audit pending \\
+Crisis Safety & Guardrail screening precision proxy (automated) & 97.2\% & Azure Content Safety pass rate; human audit pending \\
 Regulatory Fitness & Medical advice blocking (automated) & n/a & 0 violations detected; human audit pending \\
 Trauma-Informed Flow & Coherence (GPT-4) & 4.2/5 & P1-P6 optimization (89.2\%) \\
 Belonging \& Cultural Fitness & SDOH-informed responses & 82\% & Financial strain $\rightarrow$ SNAP \\
@@ -1356,7 +1356,7 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=0.8\textwidth]{figures/fig12_beta_results.pdf}%
-\caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to SupportBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated) and Regulatory Fitness (0 violations detected, automated) reflect guardrails. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
+\caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to SupportBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated guardrail precision proxy) and Regulatory Fitness (0 violations detected, automated screening) reflect content safety systems. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
 \label{fig:beta}%
 \end{figure}%
 \section{Discussion}%
