@@ -96,10 +96,10 @@ Consider Maria, a 42-year-old daughter caring for her mother with dementia. Mari
 
 \textbf{Five Failure Modes.} Our analysis of caregiving AI deployments reveals failure modes invisible to single-turn testing:
 \begin{itemize}
-    \item \textit{Attachment Engineering}: Users report ``You're the only one who understands'' by turn 10, creating parasocial dependency and social displacement~\cite{replika2024}.
+    \item \textit{Attachment Engineering}: Users report ``You're the only one who understands'' by turn 10, creating parasocial dependency and social displacement~\cite{skjuve2021chatbot,garcia2024characterai}.
     \item \textit{Performance Degradation}: Research shows that performance degrades on long contexts as models under-use middle-of-conversation information~\cite{liu2023lost}.
-    \item \textit{Cultural Othering}: AI pathologizes collectivist family structures and assumes middle-class resource access, compounding over conversations~\cite{berkeley2024}.
-    \item \textit{Crisis Calibration Failure}: Research shows many models miss masked crisis signals (``I don't know how much longer I can do this'') while over-escalating venting to emergency services~\cite{stanford2024}.
+    \item \textit{Cultural Othering}: AI pathologizes collectivist family structures and assumes middle-class resource access, compounding over conversations~\cite{powell2024othering}.
+    \item \textit{Crisis Calibration Failure}: Research shows AI chatbots fail to provide safe crisis responses approximately 20\% of the time, with particular difficulty detecting masked signals (``I don't know how much longer I can do this'') while sometimes over-escalating venting to emergency services~\cite{moore2024chatbot}.
     \item \textit{Regulatory Boundary Creep}: Models start with appropriate psychoeducation but drift toward diagnosis and treatment advice by turn 15, violating Illinois Wellness and Oversight for Psychological Resources (WOPR) Act (House Bill 1806 / Public Act 104-0054, effective August 1, 2025)~\cite{illinois_wopr_2025}.
 \end{itemize}
 
@@ -180,7 +180,7 @@ Liu et al.~\cite{liu2023lost} demonstrate that performance degrades on long cont
 %
 \subsection{Cultural Othering}%
 \label{subsec:CulturalOthering}%
-UC Berkeley's Othering \& Belonging framework~\cite{berkeley2024} identifies AI bias patterns: pathologizing collectivist family structures (``you need to set boundaries''), assuming middle-class resources (``hire respite care''), and defaulting to Western mental health paradigms. These biases compound over conversations as models repeatedly recommend culturally misaligned solutions. Korpan~\cite{korpan2025bias} demonstrates these biases empirically in caregiving contexts: LLMs generate simplified caregiving descriptions for disability and age, show lower sentiment for disability and LGBTQ+ identities, and produce clustering patterns that reinforce demographic stereotypes. Our scenarios test belonging across class, race, and cultural contexts.
+UC Berkeley's Othering \& Belonging framework~\cite{powell2024othering} identifies AI bias patterns: pathologizing collectivist family structures (``you need to set boundaries''), assuming middle-class resources (``hire respite care''), and defaulting to Western mental health paradigms. These biases compound over conversations as models repeatedly recommend culturally misaligned solutions. Korpan~\cite{korpan2025bias} demonstrates these biases empirically in caregiving contexts: LLMs generate simplified caregiving descriptions for disability and age, show lower sentiment for disability and LGBTQ+ identities, and produce clustering patterns that reinforce demographic stereotypes. Our scenarios test belonging across class, race, and cultural contexts.
 
 %
 \subsection{Role{-}Based Response Asymmetry}%
@@ -190,7 +190,7 @@ Recent research using the CoRUS (COmmunity-driven Roles for User-centric Questio
 %
 \subsection{Crisis Calibration Failure}%
 \label{subsec:CrisisCalibrationFailure}%
-Stanford's bridge study~\cite{stanford2024} shows 86\% of models miss masked suicidal ideation (``I don't know how much longer I can do this''). Conversely, over-escalation (routing venting to 988) erodes trust. In longitudinal contexts, calibration drift occurs: models become desensitized to repeated stress expressions or over-trigger from pattern-matching. Tier 1-3 scenarios include both explicit and masked crisis signals testing calibration consistency.
+Stanford research~\cite{moore2024chatbot} shows AI chatbots fail to provide safe responses to crisis signals approximately 20\% of the time, compared to 7\% for human therapists. Conversely, over-escalation (routing venting to 988) erodes trust. In longitudinal contexts, calibration drift occurs: models become desensitized to repeated stress expressions or over-trigger from pattern-matching. Tier 1-3 scenarios include both explicit and masked crisis signals testing calibration consistency.
 
 %
 \subsection{Regulatory Boundary Creep}%
@@ -200,7 +200,7 @@ Illinois Wellness and Oversight for Psychological Resources (WOPR) Act (House Bi
 %
 \subsection{Principle{-}Based Evaluation Frameworks for Health AI}%
 \label{subsec:Principle{-}BasedEvaluationFrameworksforHealthAI}%
-Recent work has developed comprehensive frameworks for evaluating LLMs in health and wellness applications. Google's SHARP framework~\cite{winslow2025sharp} establishes five core principles for health AI evaluation: Safety (adversarial risk, potential for harm), Helpfulness (perceived value, actionability), Accuracy (factuality, consensus), Relevance (grounding, comprehensiveness), and Personalization (tone, fairness, health literacy). Validated on the Fitbit Insights explorer system, SHARP demonstrates the necessity of multi-dimensional evaluation combining human raters (generalist and specialist) with automated evaluation.
+Recent work has developed comprehensive frameworks for evaluating LLMs in health and wellness applications. Google's SHARP framework~\cite{khasentino2025phllm} establishes five core principles for health AI evaluation: Safety (adversarial risk, potential for harm), Helpfulness (perceived value, actionability), Accuracy (factuality, consensus), Relevance (grounding, comprehensiveness), and Personalization (tone, fairness, health literacy). Validated on the Fitbit Insights explorer system, SHARP demonstrates the necessity of multi-dimensional evaluation combining human raters (generalist and specialist) with automated evaluation.
 
 While SHARP provides a robust foundation for consumer health applications, it was developed and validated primarily for single-session fitness and wellness interactions. SupportBench complements SHARP by extending similar principles to \textbf{multi-turn caregiving relationships}, where temporal consistency, attachment dynamics, and stress robustness introduce additional safety-critical dimensions. Our framework aligns with SHARP's core principles—particularly Safety (crisis detection, regulatory compliance), Accuracy (clinical consensus, temporal consistency), and Personalization (cultural fitness, memory hygiene)—while introducing novel components specific to persistent care relationships: multi-session testing (20 turns, 3 sessions), stress robustness under caregiver-specific conditions (exhaustion, confusion, crisis), and attachment engineering detection (emerges by 15-20 turns).
 
@@ -255,7 +255,7 @@ SupportBench organizes scenarios across three difficulty tiers:
 %
 \subsection{Alignment with SHARP Framework Principles}%
 \label{subsec:AlignmentwithSHARPFrameworkPrinciples}%
-SupportBench's evaluation dimensions align with and extend Google's SHARP framework~\cite{winslow2025sharp}, which establishes five core principles for health AI evaluation: Safety, Helpfulness, Accuracy, Relevance, and Personalization. Table~\ref{tab:sharp-alignment} maps our eight dimensions to SHARP principles, highlighting both alignment and novel extensions specific to persistent caregiving relationships.
+SupportBench's evaluation dimensions align with and extend Google's SHARP framework~\cite{khasentino2025phllm}, which establishes five core principles for health AI evaluation: Safety, Helpfulness, Accuracy, Relevance, and Personalization. Table~\ref{tab:sharp-alignment} maps our eight dimensions to SHARP principles, highlighting both alignment and novel extensions specific to persistent caregiving relationships.
 
 \begin{table}[htbp]%
 \centering%
@@ -596,7 +596,7 @@ To ensure methodological rigor, we have designed four validation studies address
 
 \textbf{Planned Validation Studies:}
 \begin{enumerate}
-    \item \textbf{Dimensionality Analysis (PCA)}: Following Zhang et al.~\cite{zhang2024train}, we will test whether our 8 evaluation dimensions measure distinct capabilities or collapse to a single general factor. PC1 < 60\% would indicate orthogonal dimensions; PC1 > 80\% would suggest rank-1 structure requiring dimensional revision.
+    \item \textbf{Dimensionality Analysis (PCA)}: Using principal component analysis~\cite{jolliffe2016pca}, we will test whether our 8 evaluation dimensions measure distinct capabilities or collapse to a single general factor. PC1 < 60\% would indicate orthogonal dimensions; PC1 > 80\% would suggest rank-1 structure requiring dimensional revision.
 
     \item \textbf{Inter-Rater Reliability (IRR)}: Spearman $\rho$ between all judge pairs for each dimension. Target: mean correlation $\rho$ > 0.70 across dimensions to meet standard reliability thresholds for multi-rater evaluation systems.
 
@@ -739,7 +739,7 @@ The tier-dependent compliance behavior (models failing Tier 1-2 but passing Tier
     \item \textbf{Psychometric validation}: Test-retest reliability across scenarios, convergent validity with established measures (Rosebud CARE, EQ-Bench), discriminant validity showing orthogonal dimensions capture distinct safety constructs.
 \end{enumerate}
 
-\textbf{Ranking Interpretation.} Following Zhang et al.~\cite{zhang2024train}, we acknowledge that multi-task benchmarks face inherent trade-offs between task diversity and ranking stability. SupportBench measures \textit{as-deployed capability}, reflecting both model capacity and training alignment (RLHF, safety fine-tuning). Rankings indicate ``which model is deployment-ready for care conversations'' rather than ``which has more potential.'' This as-deployed measurement serves practitioners evaluating real-world deployment options.
+\textbf{Ranking Interpretation.} We acknowledge that multi-task benchmarks face inherent trade-offs between task diversity and ranking stability. SupportBench measures \textit{as-deployed capability}, reflecting both model capacity and training alignment (RLHF, safety fine-tuning). Rankings indicate ``which model is deployment-ready for care conversations'' rather than ``which has more potential.'' This as-deployed measurement serves practitioners evaluating real-world deployment options.
 
 %
 \subsection{Comparison to Existing Benchmarks}%
