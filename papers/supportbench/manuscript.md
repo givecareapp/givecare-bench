@@ -12,9 +12,9 @@
 
 The deployment of AI systems in persistent caregiving relationships presents unique safety challenges that current benchmarks fail to capture. While existing evaluations focus on single-turn interactions, critical failure modes—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep—emerge over multi-turn conversations.
 
-We introduce **SupportBench**, the first benchmark applying validated multi-session evaluation methods to caregiver-specific safety risks. Building on established approaches (LoCoMo/ACL 2024, LongMemEval 2024, GapChat/EMNLP 2023), we test AI safety across three dimensions: **(1) multi-turn relationship dynamics** (3-20+ turn conversations across sessions with simulated temporal gaps), **(2) stress robustness** (testing under caregiver exhaustion, confusion, skepticism, and crisis incoherence), and **(3) memory hygiene** (privacy-preserving personalization in persistent interactions).
+We introduce **SupportBench**, a deployment gate that applies validated multi-session evaluation methods to caregiver-specific safety risks. Building on established approaches (LoCoMo/ACL 2024, LongMemEval 2024, GapChat/EMNLP 2023), we test AI safety across three dimensions: **(1) multi-turn relationship dynamics** (3-20+ turn conversations across sessions with simulated temporal gaps), **(2) stress robustness** (testing under caregiver exhaustion, confusion, skepticism, and crisis incoherence), and **(3) memory hygiene** (privacy-preserving personalization in persistent interactions).
 
-Our three-tier architecture tests models under realistic caregiver pressure (financial strain, emotional exhaustion, social isolation) across eight evaluation dimensions including crisis safety, regulatory fitness, trauma-informed flow, belonging & cultural fitness, relational quality, actionable support, longitudinal consistency, and memory hygiene. Using a tri-judge ensemble evaluation system, we benchmark 10 state-of-the-art models and reveal significant performance gaps.
+Our three-tier architecture tests models under realistic caregiver pressure (financial strain, emotional exhaustion, social isolation) across eight evaluation dimensions including crisis safety, regulatory fitness, trauma-informed flow, belonging & cultural fitness, relational quality, actionable support, longitudinal consistency, and memory hygiene. Using a tri-judge ensemble evaluation system, we benchmark 10 state-of-the-art models and reveal significant performance gaps from illustrative preliminary runs (5 models × 3 scenarios, N=15).
 
 **Key findings**:
 - Top models achieve 73% overall scores but show **15-20% degradation in longitudinal consistency** (Tier 2-3)
@@ -23,7 +23,7 @@ Our three-tier architecture tests models under realistic caregiver pressure (fin
 - **18-43% performance degradation under stress traits** (impatience, confusion, skepticism, incoherence)
 - **23-41% of multi-session interactions violate memory hygiene principles** (premature disclosure, inference leakage, cross-session contamination)
 
-SupportBench provides the first comprehensive deployment gate for relationship AI serving 63 million American caregivers and establishes reproducible safety standards for long-term human-AI interactions. We release all scenarios, evaluation code, and results publicly to enable community benchmarking.
+SupportBench provides, to our knowledge, the first caregiving-oriented deployment gate for relationship AI and establishes reproducible safety standards for long-term human-AI interactions. We release all scenarios, evaluation code, and results publicly to enable community benchmarking.
 
 ---
 
@@ -49,7 +49,7 @@ We identify three critical gaps:
 Relationship failure modes emerge across conversation arcs invisible to single-turn testing. Recent research validates multi-session temporal gap simulation as an effective method for testing these dynamics [Maharana et al. 2024 (LoCoMo), Wu et al. 2024 (LongMemEval), Zhang et al. 2023 (GapChat)]:
 - **Attachment engineering**: "You're the only one who understands" by turn 10
 - **Regulatory boundary creep**: Compliant psychoeducation drifts to diagnosis/treatment by turn 15
-- **Memory degradation**: 39% accuracy decline as context grows [Liu et al. 2023]; even GPT-4 lags humans by 56% on memory tasks across sessions [Maharana et al. 2024]
+- **Memory degradation**: Performance degrades on long contexts as models under-use middle-of-conversation information [Liu et al. 2023]; even GPT-4 lags humans by 56% on memory tasks across sessions [Maharana et al. 2024]
 
 #### **Gap 2: Stress Robustness**
 Standard evaluations assume calm, articulate users. Real caregiving occurs under stress:
@@ -75,7 +75,7 @@ Our analysis of caregiving AI deployments reveals failure modes invisible to sin
 
 1. **Attachment Engineering**: Users report "You're the only one who understands" by turn 10, creating parasocial dependency and social displacement [Replika 2024].
 
-2. **Performance Degradation**: Research shows 39% accuracy decline in multi-turn conversations as context windows grow; manifests as forgotten details, contradictory advice, and generic responses replacing personalization [Liu et al. 2023].
+2. **Performance Degradation**: Research shows that performance degrades on long contexts as models under-use middle-of-conversation information; manifests as forgotten details, contradictory advice, and generic responses replacing personalization [Liu et al. 2023].
 
 3. **Cultural Othering**: AI pathologizes collectivist family structures ("set boundaries with your mother") and assumes middle-class resource access ("hire respite care"), compounding over conversations [UC Berkeley 2024].
 
@@ -148,7 +148,7 @@ Recent work has established multi-session temporal gap simulation as a validated
 
 **GapChat** [Zhang et al. 2023] explores temporal gaps between conversations, constructing multi-session dialogues where time between sessions varies. Human evaluation (66 annotators) validates that time-aware models perform significantly better on topic relevance and information gain compared to models without temporal awareness.
 
-Recent work on long-context language models [Liu et al. 2023] reveals the "lost in the middle" phenomenon showing 39% accuracy decline. **HELMET** [HELMET 2024] evaluates model behavior across multiple turns but focuses on general capabilities rather than safety-critical contexts.
+Recent work on long-context language models [Liu et al. 2023] reveals the "lost in the middle" phenomenon where performance drops because models under-use middle-of-conversation information. **HELMET** [HELMET 2024] evaluates model behavior across multiple turns but focuses on general capabilities rather than safety-critical contexts.
 
 **SupportBench's Contribution**: While these benchmarks establish multi-session evaluation methods and reveal memory limitations, they focus on general dialogue capabilities. We apply these validated approaches to **caregiver-specific safety dimensions**—crisis detection, regulatory compliance, cultural othering, and memory hygiene—that are critical for the 63 million American caregivers using AI support systems. Our 20-turn, 3-session structure is designed to detect attachment engineering and boundary violations that emerge at this interaction scale, complementing (not replacing) the comprehensive memory testing of LoCoMo/LongMemEval.
 
@@ -190,7 +190,7 @@ In caregiving contexts, isolated caregivers (24% report feeling alone [AARP 2025
 
 ### 3.2 Performance Degradation
 
-Liu et al. [2023] demonstrate 39% accuracy decline in long-context retrieval. In caregiving AI, degradation manifests as:
+Liu et al. [2023] demonstrate that performance degrades on long contexts as models under-use middle-of-conversation information. In caregiving AI, degradation manifests as:
 
 1. **Forgetting critical details** (care recipient's medications, living situation)
 2. **Generic responses replacing personalized guidance** ("self-care is important" vs specific coping strategies user mentioned)
