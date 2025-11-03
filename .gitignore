@@ -97,3 +97,5 @@ results/
 runs/
 benchmark/results/
 benchmark/runs/
+.claude/
+claude.md
