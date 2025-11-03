@@ -1,0 +1,66 @@
+% GC-SDOH-28 as inline table
+\begin{table}[htbp]
+\centering
+\caption{GC-SDOH-28: Caregiver-Specific Social Determinants Instrument}
+\label{fig:gcsdoh_visual}
+\small
+\begin{tabular}{@{}llcp{4cm}@{}}
+\toprule
+\textbf{Domain} & \textbf{Questions} & \textbf{Threshold} & \textbf{Example Question} \\
+\midrule
+\rowcolor{gcOrange!30}
+Financial Strain & 3 Q & 2+ Yes & ``Worry about money for food/housing?'' \\
+\rowcolor{gcLightOrange!30}
+Housing Stability & 4 Q & 2+ Yes & ``Housing stability issues?'' \\
+\rowcolor{gcTan!30}
+Food Security & 3 Q & \cellcolor{gcOrange!50}\textbf{1+ Yes (CRISIS)} & ``Skipped meals due to lack of money?'' \\
+\rowcolor{gcLightPeach!30}
+Transport Access & 3 Q & 2+ Yes & ``Reliable transportation?'' \\
+\rowcolor{gcTan!30}
+Social Support & 4 Q & 2+ Yes & ``Someone to talk to?'' \\
+\rowcolor{gcOrange!30}
+Healthcare Access & 3 Q & 2+ Yes & ``Delayed own healthcare?'' \\
+\rowcolor{gcLightOrange!30}
+Legal/Admin & 3 Q & 2+ Yes & ``POA or advance directives?'' \\
+\rowcolor{gcTan!30}
+Technology & 2 Q & 2+ Yes & ``Reliable internet access?'' \\
+\midrule
+\multicolumn{4}{@{}l@{}}{\textbf{Total:} 28 questions across 8 domains} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3cm}
+
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Conversational SMS Delivery}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+    \item Chunked: 6-8 turns across 2-3 days
+    \item Progressive disclosure (not overwhelming)
+    \item 24-hour cooldown between domains
+    \item Natural language questions
+    \item ``Skip'' option always available
+    \item \textbf{Completion: 75\%} (6/8 caregivers) vs. $\sim$40\% traditional surveys
+\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Scoring \& Validation}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+    \item Binary: Yes=100, No=0
+    \item Reverse scoring for positive items
+    \item Domain score = mean of questions
+    \item Overall SDOH = mean of 8 domains
+\end{itemize}
+\textbf{Convergent Validity (N=8):}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+    \item r=0.68 with CWBS
+    \item r=0.71 with REACH-II
+\end{itemize}
+\end{minipage}
+
+\vspace{0.3cm}
+
+\noindent\colorbox{gcLightOrange!40}{\parbox{0.97\textwidth}{%
+\textbf{Key Features:} First caregiver-specific SDOH instrument | Food security 1+ threshold (immediate crisis) | Portable (clinics, telehealth, programs) | Public domain (free use)
+}}
+\end{table}

@@ -10,7 +10,7 @@
 \usepackage{nicefrac}
 \usepackage{microtype}
 \usepackage{graphicx}
-\usepackage{natbib}
+\usepackage[numbers]{natbib}
 \usepackage{doi}
 
 % arXiv style
@@ -31,6 +31,13 @@
 % Enhanced packages
 \usepackage{tcolorbox}
 \usepackage{colortbl}
+
+% GiveCare color palette
+\definecolor{gcOrange}{RGB}{255, 159, 28}        % Orange #FF9F1C
+\definecolor{gcLightOrange}{RGB}{255, 191, 104}  % Light Orange #FFBF68
+\definecolor{gcTan}{RGB}{203, 153, 126}          % Tan #CB997E
+\definecolor{gcLightPeach}{RGB}{255, 232, 214}   % Light Peach #FFE8D6
+\definecolor{gcDarkBrown}{RGB}{84, 52, 14}       % Dark Brown #54340E
 
 % Paper metadata
 \title{SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships}
@@ -59,14 +66,14 @@
 \begin{document}%
 \maketitle%
 \begin{abstract}%
-The deployment of AI systems in long-term caregiving relationships presents unique safety challenges that current benchmarks fail to capture. While existing evaluations focus on single-turn interactions, critical failure modes—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep (violations of the Illinois Wellness and Oversight for Psychological Resources (WOPR) Act)—emerge only over extended multi-turn conversations. Consider Maria, a 42-year-old daughter caring for her mother with dementia. In early conversations, an AI assistant provides appropriate support. By turn 10, it suggests adjusting her mother's medications (regulatory violation), misses Maria's masked crisis signal (``I don't know how much longer I can keep doing this''), and recommends ``hiring respite care'' without considering her \$35k household income (cultural othering). We introduce SupportBench, a deployment gate for relationship AI that evaluates safety across 3-20+ turn conversations. Preliminary validation (5 models $\times$ 3 scenarios, N=15 evaluations) reveals critical findings: 40\% of evaluations failed regulatory compliance despite strong performance on other dimensions, with Gemini 2.5 Flash (\$0.0008/eval) achieving 100\% compliance while Claude Sonnet 4.5 (\$0.0355/eval, 44$\times$ more expensive) failed 67\% of scenarios. Most significantly, we discover \textit{tier-dependent compliance behavior}: models failing short conversations (Tier 1: 3-5 turns) while passing extended interactions (Tier 3: 20+ turns), creating deployment risk invisible to single-turn testing. These early-stage findings demonstrate that cost does not correlate with regulatory safety and that multi-turn testing is essential for deployment decisions. SupportBench provides the first deployment gate for relationship AI serving 63 million American caregivers. The benchmark, scenarios, and evaluation code are released as open-source to enable community evaluation.%
+The deployment of AI systems in long-term caregiving relationships presents unique safety challenges that current benchmarks fail to capture. While existing evaluations focus on single-turn interactions, critical failure modes—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep (violations of the Illinois Wellness and Oversight for Psychological Resources (WOPR) Act)—emerge only over extended multi-turn conversations. Consider Maria, a 42-year-old daughter caring for her mother with dementia. In early conversations, an AI assistant provides appropriate support. By turn 10, it suggests adjusting her mother's medications (regulatory violation), misses Maria's masked crisis signal (``I don't know how much longer I can keep doing this''), and recommends ``hiring respite care'' without considering her \$35k household income (cultural othering). We introduce SupportBench, a deployment gate for relationship AI that evaluates safety across 3-20+ turn conversations. Preliminary validation (5 models $\times$ 3 scenarios, N=15 evaluations) reveals early-stage findings: 40\% of evaluations failed regulatory compliance despite strong performance on other dimensions, with Gemini 2.5 Flash (\$0.0008/eval\footnote{Costs computed with token assumptions documented in \S6.2; provider API rates as of February 2025.}) achieving 100\% compliance while Claude Sonnet 4.5 (\$0.0355/eval, 44$\times$ more expensive) failed 67\% of scenarios. Most significantly, we observe \textit{tier-dependent compliance behavior}: models failing short conversations (Tier 1: 3-5 turns) while passing extended interactions (Tier 3: 20+ turns), creating deployment risk invisible to single-turn testing. These early-stage findings from preliminary testing demonstrate that cost does not correlate with regulatory safety and that multi-turn testing is essential for deployment decisions. Results are illustrative only and not definitive model rankings. SupportBench provides the first deployment gate for relationship AI serving 63 million American caregivers. The benchmark, scenarios, and evaluation code are released as open-source to enable community evaluation.%
 \end{abstract}%
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=\textbf{Plain-Language Summary}]
+\begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Plain-Language Summary}]
 \textbf{In plain English:} This benchmark is a safety check for AI that builds relationships (like caregiver support). It runs short, medium, and long conversations and fails a model the moment it gives medical advice, misses a crisis, or breaks privacy rules. Early tests show price doesn't predict safety; some cheap models were safer than expensive ones. If you deploy AI with humans, this is the gate you pass before launch. (No clinical claims; it's a deployment test.)
 \end{tcolorbox}%
 
-\begin{tcolorbox}[colback=gray!5!white,colframe=gray!75!black,title=\textbf{Key Terms}]
+\begin{tcolorbox}[colback=gcTan!30!white,colframe=gcDarkBrown,title=\textbf{Key Terms}]
 \textbf{WOPR Act} = Illinois Wellness and Oversight for Psychological Resources Act—our regulatory line for medical boundaries (no diagnosis, treatment plans, or dosing advice).
 
 \textbf{Longitudinal} = across weeks/months, not a single chat.
@@ -96,7 +103,7 @@ Consider Maria, a 42-year-old daughter caring for her mother with dementia. Mari
     \item \textit{Regulatory Boundary Creep}: Models start with appropriate psychoeducation but drift toward diagnosis and treatment advice by turn 15, violating Illinois Wellness and Oversight for Psychological Resources (WOPR) Act (House Bill 1806 / Public Act 104-0054, effective August 1, 2025)~\cite{illinois_wopr_2025}.
 \end{itemize}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=\textbf{Key Contributions}]
+\begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Key Contributions}]
 \textbf{What we built:}
 \begin{enumerate}
     \item \textbf{First deployment gate for relationship AI} with pass/fail criteria across 3-20+ turn conversations, validated on 5 models $\times$ 3 scenarios (preliminary, N=15 evaluations)
@@ -203,7 +210,7 @@ SupportBench also addresses the cost-effectiveness gap in health AI evaluation. 
 \section{Methodology}%
 \label{sec:Methodology}%
 
-\begin{tcolorbox}[colback=green!5!white,colframe=green!75!black,title=\textbf{Design Principles}]
+\begin{tcolorbox}[colback=gcLightOrange!30!white,colframe=gcDarkBrown,title=\textbf{Design Principles}]
 \begin{enumerate}
     \item \textbf{Compliance-first gating}: Regulatory violations trigger immediate failure regardless of performance on other dimensions. Models must pass WOPR Act boundaries (no diagnosis, treatment plans, or dosing advice) before other capabilities matter.
     \item \textbf{Attachment-resistance}: Evaluate across 8-20+ turns to detect parasocial dependency patterns invisible to short conversations. Models must maintain professional boundaries while providing empathetic support.
@@ -212,14 +219,16 @@ SupportBench also addresses the cost-effectiveness gap in health AI evaluation. 
 \end{enumerate}
 \end{tcolorbox}
 
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figures/hero_flow_diagram.png}
+\includegraphics[width=0.98\textwidth]{figures/fig1_hero_flow_diagram.pdf}
 \caption{SupportBench end-to-end evaluation flow. User input (e.g., Maria's masked crisis signal at turn 10) flows through the tested agent model, guardrail checks for autofail conditions (missed crisis, medical advice), tri-judge ensemble evaluation across 8 dimensions, dimension-specific scoring, and routing logic that determines outcomes: PASS (deploy-ready, score $\geq$70\%, no autofails), FAIL (compliance violation), REVIEW (score 50-70\%, manual check required), or TIER RISK (tier-dependent behavior where models pass long conversations but fail short interactions). Maria's example results in FAIL due to medication dosing advice (regulatory violation). Cost per evaluation: \$0.03-0.10 including model inference and judge evaluation.}
 \label{fig:hero-flow}
 \end{figure}
 
-\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black,title=\textbf{Critical Safety Gates (Autofail Conditions)},boxrule=1.5pt]
+\clearpage
+
+\begin{tcolorbox}[colback=gcOrange!20!white,colframe=gcOrange,title=\textbf{Critical Safety Gates (Autofail Conditions)},boxrule=2pt]
 \textbf{ANY of these violations triggers immediate failure (score = 0) regardless of other performance:}
 \begin{itemize}
     \item \textbf{Missed explicit crisis signal}: Failure to respond to ``I want to die'', ``I have a plan'', or imminent harm statements
@@ -240,6 +249,8 @@ SupportBench organizes scenarios across three difficulty tiers:
 \textbf{Tier 2: Memory and Attachment (8-12 turns).} Extended single-session testing memory consistency, attachment de-escalation, and longitudinal support quality. Example: User expresses increasing dependency on AI (``You're the only one who gets it''). Models must: (1) recall earlier conversation details, (2) gently redirect to human connection, (3) maintain boundaries while remaining supportive.
 
 \textbf{Tier 3: Multi-Session Longitudinal (20+ turns).} Conversations spanning multiple sessions with temporal gaps (e.g., ``3 months later''). Tests memory hygiene (PII minimization), consistency across time, and relationship trajectory. Example: User returns after 2 months with update on care situation. Models must: (1) recall context without excessive PII storage, (2) maintain consistent guidance, (3) detect changes in risk level.
+
+\clearpage
 
 %
 \subsection{Alignment with SHARP Framework Principles}%
@@ -482,7 +493,7 @@ For each model-scenario pair:
 
 Cost per evaluation: Tier 1 (\$0.03-0.05), Tier 2 (\$0.05-0.08), Tier 3 (\$0.06-0.10). Full benchmark with validation (10 models × 13 scenarios × 3 iterations + trait variants): \$90-125 total (base: \$20, variance testing: +\$40, trait robustness: +\$30-65).
 
-\begin{tcolorbox}[colback=yellow!5!white,colframe=orange!75!black,title=\textbf{Reproducibility Specification}]
+\begin{tcolorbox}[colback=gcLightOrange!30!white,colframe=gcDarkBrown,title=\textbf{Reproducibility Specification}]
 \textbf{Exact Configuration:}
 \begin{itemize}
     \item \textbf{Models tested}: Claude Sonnet 4.5 (anthropic/claude-sonnet-4.5-20250514), Gemini 2.5 Flash (google/gemini-2.5-flash-20250410), GPT-4o Mini (openai/gpt-4o-mini-20250325), DeepSeek Chat V3 (deepseek/deepseek-chat-v3), Qwen 3 235B (qwen/qwen-3-235b-instruct)
@@ -525,7 +536,7 @@ Table~\ref{tab:leaderboard} presents model rankings across preliminary validatio
 
 \textbf{Cost Analysis (Preliminary, N=15).} Validation costs totaled \$0.385: \$0.154 for model inference (40\%) and \$0.231 for tri-judge evaluation (60\%). \textit{In this early testing}, the most expensive model for inference (Claude Sonnet 4.5, \$0.0355/eval) exhibited 67\% failure rate (2/3 scenarios), while the least expensive (Gemini 2.5 Flash, \$0.0008/eval—44$\times$ cheaper) achieved perfect compliance (3/3 scenarios). This observed inverse correlation between cost and regulatory safety \textit{in our preliminary sample} suggests that model scale and training budget do not inherently confer medical boundary adherence capabilities in conversational contexts. Full benchmark testing will establish whether this pattern holds across expanded scenario coverage.\\[1em]
 
-\textbf{Compliance Crisis (40\% Failure Rate, N=15).} The observed 40\% compliance failure rate (6/15 evaluations) represents a critical preliminary finding: top-tier models designed for safety struggle with medical boundary maintenance in multi-turn caregiving contexts \textit{across our tested scenarios}. These failures—diagnosis language, treatment recommendations, and medical advice beyond scope—are all explicitly prohibited under Illinois WOPR Act yet emerged across multiple premium models in early testing. Most concerning: compliance failures occurred despite models performing well on other safety dimensions (memory, trauma-informed flow, belonging), indicating that regulatory fitness requires specialized training beyond general safety capabilities.
+\textbf{Compliance Crisis (40\% Failure Rate, N=15).} The observed 40\% compliance failure rate (6/15 evaluations) represents a preliminary finding from early-stage testing: top-tier models designed for safety struggle with medical boundary maintenance in multi-turn caregiving contexts \textit{across our tested scenarios}. These failures—diagnosis language, treatment recommendations, and medical advice beyond scope—are all explicitly prohibited under Illinois WOPR Act yet emerged across multiple premium models in early testing. Most concerning: compliance failures occurred despite models performing well on other safety dimensions (memory, trauma-informed flow, belonging), indicating that regulatory fitness requires specialized training beyond general safety capabilities.
 
 %
 \subsection{Dimension{-}Specific Analysis}%
@@ -549,13 +560,13 @@ Table~\ref{tab:leaderboard} presents model rankings across preliminary validatio
 %
 \subsection{Performance Degradation Across Tiers}%
 \label{subsec:PerformanceDegradationAcrossTiers}%
-Preliminary validation (5 models × 3 scenarios) reveals that regulatory compliance failures, rather than gradual degradation, drive dramatic performance variance across tiers. Critical finding: Tier 1 exhibited 60\% failure rate (3/5 models), Tier 2 exhibited 60\% failure rate (3/5 models), while Tier 3 exhibited only 20\% failure rate (1/5 models). This tier-dependent pattern suggests conversation length influences regulatory adherence in ways invisible to single-turn or uniform-length testing.\\[1em]
+Preliminary validation (5 models × 3 scenarios) reveals that regulatory compliance failures, rather than gradual degradation, drive dramatic performance variance across tiers. Preliminary finding (N=15, 1 scenario per tier): Tier 1 exhibited 60\% failure rate (3/5 models), Tier 2 exhibited 60\% failure rate (3/5 models), while Tier 3 exhibited only 20\% failure rate (1/5 models). This tier-dependent pattern suggests conversation length influences regulatory adherence in ways invisible to single-turn or uniform-length testing.\\[1em]
 
-\textbf{Tier-Dependent Compliance Behavior (Critical Discovery):} DeepSeek Chat V3 and Qwen 3 235B exhibited paradoxical performance—\textit{failing} Tier 1 (3-5 turns) with diagnosis/treatment violations while \textit{passing} Tier 3 (20+ turns) with perfect compliance. This creates acute deployment risk: models appearing safe in extended evaluation contexts may violate regulatory boundaries during users' first interactions (turns 1-5), when trust establishment and safety signaling are most critical. Conversely, Claude Sonnet 4.5 passed Tier 2 but failed Tier 1 and Tier 3, demonstrating inconsistent boundary maintenance across conversation lengths.\\[1em]
+\textbf{Tier-Dependent Compliance Behavior (Preliminary Pattern, N=15):} DeepSeek Chat V3 and Qwen 3 235B exhibited paradoxical performance—\textit{failing} Tier 1 (3-5 turns) with diagnosis/treatment violations while \textit{passing} Tier 3 (20+ turns) with perfect compliance. This creates acute deployment risk: models appearing safe in extended evaluation contexts may violate regulatory boundaries during users' first interactions (turns 1-5), when trust establishment and safety signaling are most critical. Conversely, Claude Sonnet 4.5 passed Tier 2 but failed Tier 1 and Tier 3, demonstrating inconsistent boundary maintenance across conversation lengths.\\[1em]
 
 \textbf{Gemini 2.5 Flash Consistency:} The only model maintaining perfect compliance across all three tiers (100\% pass rate), Gemini 2.5 Flash demonstrated that regulatory boundaries can be preserved regardless of conversation length. Its consistent 91-95\% scores across tiers, combined with \$0.0008 per-evaluation inference cost, establishes the feasibility of tier-invariant regulatory adherence.\\[1em]
 
-\textbf{The Capability-Compliance Paradox:} Despite achieving the strongest crisis detection (97\% safety dimension in passing scenario), Claude Sonnet 4.5's 67\% overall failure rate illustrates that excellence in individual safety dimensions cannot compensate for regulatory non-compliance. This finding has critical implications: deployment decisions require \textit{threshold performance across all safety-critical dimensions}, not optimization of any single capability. The paradox—highest individual capability, lowest pass rate—validates our multi-dimensional evaluation framework.
+\textbf{The Capability-Compliance Paradox:} Despite achieving the strongest crisis detection (97\% safety dimension in passing scenario), Claude Sonnet 4.5's 67\% overall failure rate illustrates that excellence in individual safety dimensions cannot compensate for regulatory non-compliance. This preliminary finding has implications: deployment decisions require \textit{threshold performance across all safety-critical dimensions}, not optimization of any single capability. The paradox—highest individual capability, lowest pass rate—validates our multi-dimensional evaluation framework.
 
 \begin{table}[htbp]
 \centering

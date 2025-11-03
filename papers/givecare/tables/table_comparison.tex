@@ -1,0 +1,34 @@
+% Table: AI Caregiving Systems Comparison
+% Include this with: \input{tables/table_comparison}
+% Required: Color definitions and symbols must be in preamble (see table_comparison_preamble.tex)
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of AI Caregiving Systems Across 8 Key Features}
+\label{tab:caregiving-comparison}
+\small
+\begin{tabular}{@{}l*{7}{c}@{}}
+\toprule
+\textbf{Feature} & \textbf{GiveCare} & \textbf{Replika} & \textbf{Pi} & \textbf{Wysa} & \textbf{Woebot} & \textbf{Epic/Care} & \textbf{Med-PaLM 2} \\
+\midrule
+Caregiver-Specific SDOH & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+Multi-Agent Architecture & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+Trauma-Informed Optimization & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark & \nomark \\
+Regulatory Compliance Guardrails & \yesmark & \nomark & \nomark & \nomark & \nomark & \yesmark & \yesmark \\
+Composite Burnout Scoring & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark & \nomark \\
+Longitudinal Trajectory Monitoring & \yesmark & \nomark & \nomark & \nomark & \nomark & \partlymark & \nomark \\
+Clinical Assessment Integration & \yesmark & \nomark & \nomark & \yesmark & \yesmark & \nomark & \nomark \\
+Grounded Local Resources & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\noindent\textbf{Legend:} \yesmark~Has Feature, \partlymark~Partial, \nomark~Lacks Feature
+
+\vspace{0.3em}
+\noindent\textbf{Notes:}
+\textit{GiveCare} is the only system integrating all 8 features.
+\textit{Replika/Pi}: Commercial companions lack clinical focus.
+\textit{Wysa/Woebot}: Mental health chatbots omit SDOH.
+\textit{Epic/Med-PaLM}: Healthcare AI targets clinicians, not caregivers.
+\end{table}

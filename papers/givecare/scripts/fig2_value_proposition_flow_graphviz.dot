@@ -1,0 +1,102 @@
+digraph value_proposition {
+    // Graph settings - clean, proportional, harmonic
+    graph [
+        bgcolor="white"
+        size="8,8"
+        ratio="1"
+        splines="curved"
+        nodesep="1.2"
+        ranksep="1.5"
+        pad="0.5"
+        fontname="Helvetica"
+    ];
+
+    // Node defaults - clean geometric shapes
+    node [
+        shape="box"
+        style="filled,rounded"
+        fontname="Helvetica"
+        fontsize="12"
+        width="2.5"
+        height="1.2"
+        penwidth="2"
+    ];
+
+    // Edge defaults - clean arrows
+    edge [
+        penwidth="2.5"
+        arrowsize="1.0"
+        fontname="Helvetica"
+        fontsize="10"
+    ];
+
+    // Define the 6 steps with harmonic gray scale
+    // Using proportional sizing and consistent gray tones
+
+    step1 [
+        label="Step 1\nComposite Burnout\nScoring"
+        fillcolor="gray90"
+        color="black"
+    ];
+
+    step2 [
+        label="Step 2\nPressure Zone\nExtraction"
+        fillcolor="gray80"
+        color="black"
+    ];
+
+    step3 [
+        label="Step 3\nGrounded Resource\nMatching"
+        fillcolor="gray70"
+        color="black"
+    ];
+
+    step4 [
+        label="Step 4\nMulti-Factor\nScoring"
+        fillcolor="gray60"
+        color="black"
+    ];
+
+    step5 [
+        label="Step 5\nLongitudinal\nAdaptation"
+        fillcolor="gray50"
+        color="black"
+    ];
+
+    step6 [
+        label="Step 6\nAnticipatory Engagement\nMaintenance"
+        fillcolor="gray30"
+        color="white"
+        penwidth="3.5"
+    ];
+
+    // Create circular flow
+    step1 -> step2 [color="gray20"];
+    step2 -> step3 [color="gray20"];
+    step3 -> step4 [color="gray20"];
+    step4 -> step5 [color="gray20"];
+    step5 -> step6 [color="gray20"];
+    step6 -> step1 [
+        color="gray20"
+        penwidth="3.5"
+        style="bold"
+        xlabel="Closes loop"
+        fontsize="11"
+    ];
+
+    // Add central concept
+    center [
+        label="Measurement →\nIntervention →\nMaintenance"
+        shape="ellipse"
+        width="2.0"
+        height="1.5"
+        fillcolor="white"
+        color="gray20"
+        penwidth="2.5"
+        fontsize="13"
+        style="filled,bold"
+    ];
+
+    // Connect center to highlight the loop concept
+    {rank=same; step2; center; step5}
+}
