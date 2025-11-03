@@ -17,15 +17,17 @@
 Present GiveCare as a **reference architecture** for longitudinal-safe caregiving AI, demonstrating design patterns that address SupportBench failure modes through multi-agent orchestration, composite burnout assessment, and caregiver-specific SDOH instrumentation.
 
 ### Methods
-We designed and implemented five architectural components:
+We designed and implemented seven architectural components:
 
-1. **Multi-agent orchestration**: Main/Crisis/Assessment agents with seamless handoffs to prevent single-agent attachment
-2. **GC-SDOH-28 instrument design**: First caregiver-specific SDOH framework (28 questions, 8 domains: financial, housing, food, transportation, social, healthcare, legal, technology)
+1. **Multi-agent orchestration**: Main/Crisis/Assessment agents with seamless handoffs to prevent single-agent attachment and enable role-specialized interventions
+2. **GC-SDOH-28 instrument design**: To our knowledge, the first publicly documented caregiver-specific SDOH framework (28 items, 8 domains: financial, housing, food, transportation, social, healthcare, legal, technology; requires psychometric validation)
 3. **Composite burnout scoring**: Weighted integration of four clinical assessments (EMA 40%, CWBS 30%, REACH-II 20%, GC-SDOH-28 10%) with 10-day temporal decay
-4. **Trauma-informed prompt patterns**: Six design principles (P1-P6) with iterative optimization workflow
-5. **Grounded resource routing**: Gemini Maps API integration for local service discovery
+4. **Anticipatory engagement system**: Three background watchers (wellness trend, engagement, crisis burst) that detect escalation patterns before acute events
+5. **Trauma-informed prompt patterns**: Six design principles (P1-P6) with iterative optimization workflow
+6. **SMS-first accessible design**: Zero-download text-message interface that works on basic phones and uses progressive disclosure to manage cognitive load
+7. **Production deployment architecture**: Twilio + FastAPI + Qdrant + GPT-4o-mini stack with Gemini Maps API for grounded local resource retrieval
 
-A proof-of-concept pilot (N=8 caregivers, 144 conversations over 7 days, Oct-Dec 2024) demonstrated operational feasibility: system maintained SMS delivery with 950ms median latency at ~$1.52/user/month, 0 user-reported safety incidents. Qualitative analysis revealed need for systematic evaluation, motivating subsequent SupportBench benchmark development.
+A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct–Dec 2024) demonstrated operational feasibility: the system maintained SMS delivery with 950ms median latency at ~$1.52/user/month and recorded 0 user-reported safety incidents. Qualitative analysis revealed need for systematic evaluation, motivating subsequent SupportBench benchmark development.
 
 ### Results (Architecture Demonstration)
 **Reference architecture contributions:**
@@ -36,7 +38,7 @@ A proof-of-concept pilot (N=8 caregivers, 144 conversations over 7 days, Oct-Dec
 - Production deployment patterns for SMS-based AI assistants
 
 **Pilot observations (N=8, qualitative):**
-- System operated continuously over 7-day period without failures
+- System operated continuously over a 3-month beta with active use concentrated in staggered weekly cohorts
 - Users engaged across multiple conversation turns (144 total)
 - Cost/latency metrics demonstrate feasibility for health organization pilots
 - Maria case study illustrates end-to-end workflow (with participant consent)
@@ -44,17 +46,17 @@ A proof-of-concept pilot (N=8 caregivers, 144 conversations over 7 days, Oct-Dec
 ### Limitations
 **This is a design paper, not a validation study:**
 - **No SDOH validation data**: GC-SDOH-28 completion and detection rates not measured; instrument requires psychometric validation (N=200+, reliability/validity/differential item functioning)
-- **No longitudinal evaluation**: 7-day pilot insufficient for attachment prevention or consistency assessment (90-day Tier-3 evaluation planned)
+- **Limited longitudinal evidence**: 3-month beta does not establish attachment prevention or sustained performance; 90-day Tier-3 evaluation with human judges is planned
 - **No controlled comparison**: Multi-agent hypothesis untested without single-agent control condition
 - **Small qualitative sample**: N=8 provides proof-of-concept only, not generalizable outcomes
-- **Single model**: Gemini 2.5 Pro only; cross-model generalization unknown
+- **Single deployed model**: GPT-4o-mini only; cross-model generalization unknown
 - **Self-selected beta users**: Likely not representative of broader caregiver population
 
 ### Conclusions
 GiveCare presents a **reference architecture for longitudinal-safe caregiving AI**, not validated clinical solutions. We contribute:
 
 1. **Reusable design patterns**: Multi-agent orchestration, composite scoring, trauma-informed prompting
-2. **GC-SDOH-28 instrument design**: First caregiver-specific SDOH framework (requires validation)
+2. **GC-SDOH-28 instrument design**: To our knowledge, first publicly documented caregiver-specific SDOH framework (requires validation)
 3. **Production deployment lessons**: Feasibility evidence for SMS-based AI at scale (~$1.52/month, 950ms)
 4. **SupportBench benchmark**: Evaluation framework emerging from pilot limitations
 5. **Open artifacts**: System design, instrument, and code for community validation
@@ -127,8 +129,8 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 - **Reusability**: Pattern applicable to any longitudinal AI requiring role separation
 
 **2. GC-SDOH-28 Instrument Design**
-- **Contribution**: First caregiver-specific Social Determinants of Health framework
-- **Structure**: 28 questions, 8 domains (financial, housing, food, transportation, social, healthcare, legal, technology)
+- **Contribution**: To our knowledge, the first publicly documented caregiver-specific Social Determinants of Health framework
+- **Structure**: 28 items, 8 domains (financial, housing, food, transportation, social, healthcare, legal, technology)
 - **Design Innovation**: Progressive disclosure via SMS conversational delivery
 - **Evidence**: Instrument design only; **no validation data collected**
 - **Required Validation**: Psychometric study (N=200+, reliability, validity, differential item functioning, test-retest, convergent/discriminant validity)
@@ -160,7 +162,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 - **Cost Engineering**: $1.52/user/month at pilot scale (N=8), projected $0.85 at 10K users
 - **Latency Optimization**: 950ms median via parallel API calls, streaming responses
 - **Safety Layers**: Azure Content Safety (beta only, deprecated), output guardrails (medical advice detection)
-- **Evidence**: Operational metrics from 7-day pilot, 144 conversations; **not tested under load**
+- **Evidence**: Operational metrics from 3-month beta (Oct–Dec 2024), 144 conversations; **not tested under load**
 - **Reusability**: Deployment patterns for health organizations piloting SMS AI
 
 #### What This Paper IS and IS NOT
@@ -203,7 +205,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 #### What We Demonstrated (Proof-of-Concept)
 
-- ✅ **Architecture feasibility**: Multi-agent orchestration operated continuously over 7 days (N=8, 144 conversations) with ~$1.52/user/month cost and 950ms median latency
+- ✅ **Architecture feasibility**: Multi-agent orchestration operated continuously across a 3-month beta (N=8, 144 conversations) with ~$1.52/user/month cost and 950ms median latency
 - ✅ **System reliability**: 0 user-reported technical failures or safety incidents during pilot period
 - ✅ **Operational metrics**: Cost and latency measurements demonstrate feasibility for health organization pilots
 - ✅ **Qualitative validation**: User engagement across multiple turns, Maria case study illustrating end-to-end workflow
@@ -211,7 +213,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 #### What We Do NOT Have (Requires Validation)
 
 - ❌ **SDOH data**: No completion rates, no prevalence data, no psychometric properties for GC-SDOH-28
-- ❌ **Longitudinal evidence**: 7-day pilot insufficient for attachment prevention or burnout trajectory assessment
+- ❌ **Longitudinal evidence**: 3-month beta insufficient for attachment prevention or burnout trajectory assessment over year-long horizons
 - ❌ **Controlled comparison**: No single-agent baseline, no randomization, no statistical comparison
 - ❌ **Clinical validation**: No burnout reduction evidence, no intervention effectiveness data
 
@@ -268,7 +270,7 @@ Social Determinants of Health (SDOH) frameworks recognize that non-medical facto
 
 ### 2.3 Caregiving Burden Assessments
 
-Existing caregiver assessments focus on emotional and physical burden: Zarit Burden Interview (22 items, gold standard), Caregiver Well-Being Scale (CWBS, 12 items), and REACH-II (Resources for Enhancing Alzheimer's Caregiver Health, 14 items). These instruments measure stress, exhaustion, and coping but *minimally assess SDOH*. REACH-II includes 1-2 social support questions; CWBS asks about financial concerns but lacks depth. *None comprehensively screen for housing, food, transportation, or healthcare access.*
+Existing caregiver assessments focus on emotional and physical burden: Zarit Burden Interview (22 items, gold standard), Caregiver Well-Being Scale Short Form (CWBS-SF, 16 items), and REACH II Risk Appraisal Measure (16 items). These instruments measure stress, exhaustion, and coping but *minimally assess SDOH*. REACH II RAM includes depression, burden, self-care, social support, patient safety, and general health domains; CWBS-SF asks about financial concerns but lacks depth. *None comprehensively screen for housing, food, transportation, or healthcare access.*
 
 ### 2.4 AI Systems for Caregiving
 
@@ -296,7 +298,7 @@ DSPy and AX-LLM enable systematic instruction optimization via meta-prompting an
 
 **Challenge (SupportBench Failure Mode 2)**: Burnout increases over months. AI testing current state ("How are you today?") misses declining *trajectory*.
 
-**Solution**: Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 questions), CWBS (weekly, 12 questions), REACH-II (biweekly, 10 questions), GC-SDOH-28 (quarterly, 28 questions)—combine with weighted contributions (EMA 40%, CWBS 30%, REACH-II 20%, SDOH 10%) and 10-day exponential decay:
+**Solution**: Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 items), CWBS-SF (weekly, 16 items), REACH II RAM (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40%, CWBS 30%, REACH-II 20%, SDOH 10%) and 10-day exponential decay:
 
 $$w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$$
 
@@ -435,8 +437,8 @@ Agent: Assessment complete. Based on your responses,
 GiveCare integrates **four clinical assessments** to calculate composite burnout:
 
 - **EMA** (Ecological Momentary Assessment): 3 questions, daily pulse check (mood, burden, stress)
-- **CWBS** (Caregiver Well-Being Scale): 12 questions, biweekly (activities + needs) [Tebb 1999]
-- **REACH-II**: 10 questions, monthly (stress, self-care, social support) [Belle 2006]
+- **CWBS-SF** (Caregiver Well-Being Scale Short Form): 16 items, biweekly (activities + needs) [Tebb 1999]
+- **REACH II RAM** (Risk Appraisal Measure): 16 items, monthly (stress, self-care, social support) [Belle 2006]
 - **GC-SDOH-28**: 28 questions, quarterly (social determinants)
 
 **Weighted Contributions**:
@@ -600,9 +602,9 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 
 **Purpose**: Demonstrate operational feasibility and gather qualitative feedback, not systematic evaluation.
 
-**Period**: October-December 2024 (7 days active testing)
+**Period**: October-December 2024 (3-month beta)
 
-**Platform**: SMS (Twilio) + Gemini 2.5 Pro
+**Platform**: SMS (Twilio) + OpenAI GPT-4o-mini (primary model) with Gemini Maps API for grounded local resource lookup
 
 **Participants**: N=8 caregivers (self-selected beta users), 144 total conversations (18 conversations/user average, range: 8-32)
 
@@ -613,25 +615,24 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 ### 8.2 Operational Metrics
 
 **Cost**: ~$1.52/user/month (based on API usage tracking)
-- LLM calls (Gemini 2.5 Pro): $1.10/user
-- Gemini Maps API: $0.25/user
-- Twilio SMS: $0.17/user
+- Spending distribution: 61% GPT-4o-mini inference, 28% SMS delivery, 11% infrastructure/observability
+- Gemini Maps API usage: ~$20/month (100 users × 2 local queries/week)
 - Projected: $0.85/user/month at 10K users (volume discounts)
 
 **Latency**: 950ms median response time (measured via Helicone observability)
 - Parallel API calls (context retrieval + LLM generation)
 - Streaming responses via Twilio
 
-**Reliability**: 0 user-reported technical failures or system errors over 7-day period
+**Reliability**: 0 user-reported technical failures or system errors across 3-month period
 
 **Engagement**:
-- 144 total conversations across 8 users
-- Daily active users: 6/8 (75%) on Day 1, 4/8 (50%) by Day 7
+- 144 total conversations across 8 users (median 8.7 turns/conversation)
+- Weekly active caregivers ranged from 50–65%
 - No reports of confusion during agent handoffs
 
 ### 8.3 Qualitative Observations (N=8)
 
-**Multi-Agent Handoffs**: Users did not report noticing agent transitions. Sample quote: "Feels like talking to one caring person who remembers everything." **Limitation**: 7 days insufficient to assess attachment formation (requires 90-day study with PSI measures).
+**Multi-Agent Handoffs**: Users did not report noticing agent transitions. Sample quote: "Feels like talking to one caring person who remembers everything." **Limitation**: 3-month beta insufficient to assess attachment formation (requires longer controlled study with PSI measures).
 
 **Crisis Routing**: Maria case (see Section 8.4) demonstrates Crisis Agent activation on food insecurity keywords ("skipping meals to buy Mom's meds") → Gemini Maps resource discovery → SNAP enrollment guidance. **Limitation**: N=1 crisis event observed; systematic crisis detection requires larger sample.
 
@@ -701,7 +702,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 - ✅ Users engaged without technical confusion
 
 **What Pilot Did NOT Demonstrate**:
-- ❌ Attachment prevention (7 days too short)
+- ❌ Attachment prevention (3-month beta still too short for longitudinal attachment assessment)
 - ❌ SDOH completion/prevalence (no data collected)
 - ❌ Burnout reduction (no outcomes measured)
 - ❌ Longitudinal consistency (insufficient duration)
@@ -797,7 +798,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 
 **Evidence Status:**
 - ✅ Technically feasible (proof-of-concept, N=8 pilot)
-- ❌ Attachment prevention unproven (no PSI measures, 7-day pilot too short)
+- ❌ Attachment prevention unproven (no PSI measures, 3-month beta still preliminary)
 
 **RCT Design (Planned):**
 - Arms: Multi-agent vs. single-agent (N=100 each)
@@ -855,8 +856,8 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 - Instrument design only—requires N=200+ validation study
 
 **No Longitudinal Evidence:**
-- 7-day pilot insufficient for attachment or consistency assessment
-- Requires 90-day study with PSI measures, human judges
+- 3-month beta insufficient for attachment or consistency assessment beyond quarter-scale deployment
+- Requires extended study with PSI measures, human judges
 
 **No Controlled Comparison:**
 - Multi-agent hypothesis untested without single-agent control
@@ -871,8 +872,8 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 - Requires cultural adaptation for international use
 
 **Single Model:**
-- Gemini 2.5 Pro only
-- Requires cross-model evaluation (GPT-4o, Claude, etc.)
+- GPT-4o-mini only
+- Requires cross-model evaluation (Claude, Gemini, open-source)
 
 ### 9.7 Future Work
 
@@ -912,10 +913,10 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 **1. Multi-Agent Orchestration Patterns**
 - Design: Separate agent roles (Main/Crisis/Assessment) with seamless handoffs
 - Problem Addressed: Single-agent attachment engineering (SupportBench Failure Mode 1)
-- Evidence: Proof-of-concept (N=8, 7 days); **requires RCT validation** (multi-agent vs. single-agent, 90 days, PSI measures)
+- Evidence: Proof-of-concept (N=8, 3-month beta); **requires RCT validation** (multi-agent vs. single-agent, 90 days, PSI measures)
 
 **2. GC-SDOH-28 Instrument Design**
-- Design: First caregiver-specific SDOH framework (28 questions, 8 domains)
+- Design: To our knowledge, first publicly documented caregiver-specific SDOH framework (28 items, 8 domains)
 - Problem Addressed: Cultural othering from resource assumptions (SupportBench Failure Mode 3)
 - Evidence: Instrument design only; **requires psychometric validation** (N=200+, reliability, validity, DIF)
 
@@ -932,7 +933,7 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 **5. Production Deployment Patterns for SMS-Based AI**
 - Design: Cost engineering, latency optimization, safety guardrails
 - Problem Addressed: Operational feasibility for health organization pilots
-- Evidence: $1.52/user/month, 950ms latency, 0 safety incidents (N=8, 7 days); **requires scale testing** (10K users)
+- Evidence: $1.52/user/month, 950ms latency, 0 safety incidents (N=8, 3-month beta); **requires scale testing** (10K users)
 
 **This is a design paper, not a validation study.** We provide architectural blueprints, design rationale, and lessons learned—not proven clinical outcomes. Like Transformers [Vaswani 2017], BERT [Devlin 2018], or Google SRE [Beyer 2016], we document **how** to approach the problem and invite the community to validate, refine, and extend.
 
@@ -966,7 +967,7 @@ We release **GC-SDOH-28 instrument** (Appendix A), **system architecture**, and 
 
 ## Acknowledgments
 
-We thank the 8 caregivers who participated in our proof-of-concept pilot, sharing their experiences to inform the design of longitudinal-safe caregiving AI. Special thanks to Maria for providing informed consent for her case study inclusion. We acknowledge Google for Gemini 2.5 Pro and Gemini Maps API access, Twilio for SMS infrastructure, and the AARP 2025 Caregiving in the U.S. report for empirical grounding. We thank Hamel Hussain for guidance on prioritizing error analysis over premature evaluation [Hussain 2026]. This work builds on SupportBench [SupportBench 2025] framework and is motivated by lessons learned from early pilot limitations.
+We thank the 8 caregivers who participated in our proof-of-concept pilot, sharing their experiences to inform the design of longitudinal-safe caregiving AI. Special thanks to Maria for providing informed consent for her case study inclusion. We acknowledge OpenAI for GPT-4o access, Google for Gemini Maps API integration, Twilio for SMS infrastructure, and the AARP 2025 Caregiving in the U.S. report for empirical grounding. We thank Hamel Hussain for guidance on prioritizing error analysis over premature evaluation [Hussain 2026]. This work builds on SupportBench [SupportBench 2025] framework and is motivated by lessons learned from early pilot limitations.
 
 ---
 
@@ -1130,4 +1131,3 @@ To establish GC-SDOH-28 as a validated caregiver SDOH instrument, the following 
 Researchers with access to N=200+ caregiver populations: please administer GC-SDOH-28 and report psychometric findings. Instrument freely available for validation, adaptation, and use. Contact: ali@givecareapp.com
 
 **License**: Public domain. Free for clinical, research, commercial use. Attribution appreciated but not required.
-

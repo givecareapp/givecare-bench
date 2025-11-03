@@ -1,0 +1,42 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#FFE8D6','primaryTextColor':'#54340E','primaryBorderColor':'#54340E','lineColor':'#54340E','secondaryColor':'#CB997E','tertiaryColor':'#FF9F1C'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 60}}}%%
+
+graph TB
+    %% Three Agents - Top Row
+    MAIN["<b>Main Agent</b><br/>Orchestrator<br/>General Conversation"]
+    CRISIS["<b>Crisis Agent</b><br/>Immediate Safety<br/>Support"]
+    ASSESS["<b>Assessment Agent</b><br/>Clinical<br/>Evaluations"]
+
+    %% Context - Middle
+    CONTEXT["<b>GiveCareContext</b><br/>23 fields: profile, burnout,<br/>pressure zones, history<br/><i>800-1200ms response time</i>"]
+
+    %% Tools - Bottom Row
+    SEND["sendMessage"]
+    GET["getCareProfile"]
+    START["assessmentStart"]
+    RECORD["recordIntervention"]
+    UPDATE["updateWorkingMemory"]
+
+    %% Connections - Agents to Context
+    MAIN --> CONTEXT
+    CRISIS --> CONTEXT
+    ASSESS --> CONTEXT
+
+    %% Connections - Context to Tools
+    CONTEXT --> SEND
+    CONTEXT --> GET
+    CONTEXT --> START
+    CONTEXT --> RECORD
+    CONTEXT --> UPDATE
+
+    %% Styling
+    classDef mainStyle fill:#FFBF68,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef crisisStyle fill:#FF9F1C,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef assessStyle fill:#CB997E,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef contextStyle fill:#FFE8D6,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef toolStyle fill:#CB997E,stroke:#54340E,stroke-width:2px,color:#54340E
+
+    class MAIN mainStyle
+    class CRISIS crisisStyle
+    class ASSESS assessStyle
+    class CONTEXT contextStyle
+    class SEND,GET,START,RECORD,UPDATE toolStyle

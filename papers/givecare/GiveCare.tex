@@ -25,6 +25,22 @@
 \usepackage{amssymb}
 \usepackage{cleveref}
 \usepackage{tcolorbox}
+\usepackage{adjustbox}  % For table scaling
+\usepackage{enumitem}   % For itemize customization
+\usepackage{colortbl}   % For table cell coloring
+
+% GiveCare color palette
+\definecolor{gcOrange}{RGB}{255, 159, 28}        % Orange #FF9F1C - Has feature
+\definecolor{gcLightOrange}{RGB}{255, 191, 104}  % Light Orange #FFBF68
+\definecolor{gcTan}{RGB}{203, 153, 126}          % Tan #CB997E - Partial feature
+\definecolor{gcLightPeach}{RGB}{255, 232, 214}   % Light Peach #FFE8D6
+\definecolor{gcDarkBrown}{RGB}{84, 52, 14}       % Dark Brown #54340E
+\definecolor{gcGray}{RGB}{156, 163, 175}         % Gray - Lacks feature
+
+% Table symbols for feature comparison
+\newcommand{\yesmark}{\textcolor{gcOrange}{\textbf{\checkmark}}}
+\newcommand{\nomark}{\textcolor{gcGray}{$\times$}}
+\newcommand{\partlymark}{\textcolor{gcTan}{\textbf{$\bullet$}}}
 
 % Hyperref settings
 \hypersetup{
@@ -51,22 +67,22 @@
 \begin{abstract}%
 \textbf{Objective:} Present GiveCare as a \textbf{reference architecture} for longitudinal-safe caregiving AI, demonstrating design patterns that address SupportBench failure modes through multi-agent orchestration, composite burnout assessment, and caregiver-specific SDOH instrumentation.
 
-\textbf{Methods:} We designed and implemented seven architectural components: (1)~Multi-agent orchestration (Main/Crisis/Assessment agents with seamless handoffs); (2)~GC-SDOH-28 instrument design (first caregiver-specific SDOH framework, 8 domains, 28 questions); (3)~Composite burnout scoring (temporal decay approach for trajectory tracking); (4)~Anticipatory engagement system (three active watchers detecting escalation patterns before crisis: 4-week trend analysis, sudden disengagement detection, crisis burst identification); (5)~Trauma-informed prompt patterns (6 principles with optimization workflow); (6)~SMS-first accessible design (zero-download text-message interface, no app required); (7)~Production deployment architecture demonstrating operational feasibility. Proof-of-concept pilot: N=8 caregivers, 144 conversations, Oct-Dec 2024.
+\textbf{Methods:} We designed and implemented seven architectural components: (1)~Multi-agent orchestration (Main/Crisis/Assessment agents with seamless handoffs); (2)~GC-SDOH-28 instrument design (to our knowledge, the first publicly documented caregiver-specific SDOH framework; 8 domains, 28 items, requires psychometric validation); (3)~Composite burnout scoring (temporal decay approach for trajectory tracking); (4)~Anticipatory engagement system (three active watchers detecting escalation patterns before crisis: 4-week trend analysis, sudden disengagement detection, crisis burst identification); (5)~Trauma-informed prompt patterns (6 principles with optimization workflow); (6)~SMS-first accessible design (zero-download text-message interface, no app required); (7)~Production deployment architecture demonstrating operational feasibility. Proof-of-concept pilot: N=8 caregivers, 144 conversations, Oct-Dec 2024.
 
 \textbf{Results:} The pilot demonstrated operational feasibility with 0 technical failures and 950ms median latency. Qualitative findings: users reported multi-agent handoffs felt ``seamless'' and GC-SDOH-28 questions felt ``caregiving-specific'' compared to generic health surveys. Maria case study (N=1, with informed consent) illustrates how SDOH assessment triggers targeted resource matching.
 
 \textbf{Scope:} This paper presents design patterns and architectural blueprints, with a small-scale pilot demonstrating feasibility. GC-SDOH-28 requires psychometric validation (N=200+); multi-agent architecture requires controlled evaluation; longitudinal safety claims require extended tracking studies. We provide a validation roadmap and release all artifacts as open resources for community testing.
 
-\textbf{Contribution:} GiveCare contributes (1)~the first caregiver-specific SDOH (Social Determinants of Health) instrument (GC-SDOH-28), (2)~multi-agent patterns addressing SupportBench failure modes, (3)~anticipatory engagement system detecting escalation before crisis, (4)~SMS-first accessible design removing digital barriers, and (5)~a validated reference implementation with operational feasibility data. We release all artifacts (instrument, code, architecture) as open resources for community validation and extension.
+\textbf{Contribution:} GiveCare contributes (1)~to our knowledge, the first publicly documented caregiver-specific SDOH (Social Determinants of Health) instrument (GC-SDOH-28), released as a design requiring psychometric validation, (2)~multi-agent patterns addressing SupportBench failure modes, (3)~anticipatory engagement system detecting escalation before crisis, (4)~SMS-first accessible design removing digital barriers, and (5)~a validated reference implementation with operational feasibility data. We release all artifacts (instrument, code, architecture) as open resources for community validation and extension.
 
 \textbf{Code:} https://github.com/givecare/give-care-app%
 \end{abstract}%
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=\textbf{Plain-Language Summary}]
+\begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Plain-Language Summary}]
 \textbf{In plain English:} GiveCare is a text-message helper for family caregivers. It checks real-life barriers—Social Determinants of Health (SDOH) like food, housing, money, transport—and hands off between a general helper, a crisis helper, and an assessment helper so no single bot becomes ``your person.'' We show it can run reliably and point people to local, practical help. We don't claim medical effects yet; that needs studies.
 \end{tcolorbox}%
 
-\begin{tcolorbox}[colback=gray!5!white,colframe=gray!75!black,title=\textbf{Key Terms}]
+\begin{tcolorbox}[colback=gcTan!30!white,colframe=gcDarkBrown,title=\textbf{Key Terms}]
 \textbf{SDOH} = Social Determinants of Health—non-medical basics that shape health (money, housing, food, transport).
 
 \textbf{Longitudinal} = across weeks/months, not a single chat.
@@ -155,7 +171,7 @@ GiveCare addresses these failure modes through seven integrated architectural co
 \begin{enumerate}
     \item \textbf{Multi-Agent Orchestration}: Three-agent architecture (Main/Crisis/Assessment) with seamless handoffs designed to mitigate single-agent dependency risk. Requires controlled evaluation comparing single- vs. multi-agent architectures to validate handoff quality.
 
-    \item \textbf{GC-SDOH-28 Instrument}: First caregiver-specific Social Determinants of Health framework—28 questions across 8 domains (Financial Stability, Housing Security, Food Security, Transportation Access, Social Support, Healthcare Access, Legal/Administrative Support, Technology Access). Addresses documented gaps in caregiver SDOH assessment. Community validation study (N=200+) planned for psychometric properties.
+    \item \textbf{GC-SDOH-28 Instrument}: To our knowledge, the first publicly documented caregiver-specific Social Determinants of Health framework—28 items across 8 domains (Financial Stability, Housing Security, Food Security, Transportation Access, Social Support, Healthcare Access, Legal/Administrative Support, Technology Access). Addresses documented gaps in caregiver SDOH assessment. Community validation study (N=200+) planned for psychometric properties.
 
     \item \textbf{Composite Burnout Scoring}: Weighted integration of EMA (40\%), CWBS (30\%), REACH-II (20\%), GC-SDOH-28 (10\%) with 10-day temporal decay for trajectory tracking. Extracts five pressure zones mapping to non-clinical interventions, addressing SupportBench Performance Degradation failure mode.
 
@@ -170,7 +186,7 @@ GiveCare addresses these failure modes through seven integrated architectural co
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{fig1_system_architecture_7components.pdf}
+\includegraphics[width=\textwidth]{figures/fig1_system_architecture.pdf}
 \caption{GiveCare system architecture showing seven integrated components. Component 5 (Anticipatory Engagement System) is highlighted as the key differentiator, using three active watchers to detect escalation patterns before crisis thresholds. The system transforms SMS-based caregiver inputs through multi-agent orchestration, SDOH assessment, composite burnout scoring, anticipatory monitoring, and grounded resource matching to deliver personalized, locally-accessible interventions.}
 \label{fig:system_architecture}
 \end{figure}
@@ -196,14 +212,14 @@ GiveCare addresses these failure modes through seven integrated architectural co
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.9\textwidth]{fig2_value_proposition_flow.pdf}
+\includegraphics[width=0.9\textwidth]{figures/fig2_value_proposition_flow.pdf}
 \caption{Value proposition: Complete measurement-to-intervention-to-maintenance loop. The 6-step circular flow shows how GiveCare integrates composite burnout scoring, pressure zone extraction, grounded resource matching, multi-factor scoring, longitudinal adaptation, and anticipatory engagement maintenance. Step 6 (highlighted) closes the loop by detecting escalation patterns before crisis thresholds, enabling intervention at optimal timing rather than waiting for acute events.}
 \label{fig:value_proposition}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{fig3_anticipatory_timeline.pdf}
+\includegraphics[width=\textwidth]{figures/fig3_anticipatory_timeline.pdf}
 \caption{Anticipatory intelligence: Detecting escalation before crisis. The timeline shows a caregiver's burnout score declining from 70 to 52 over 4 weeks. The Wellness Trend Watcher analyzes this 4-week trajectory and intervenes at Week 3 (score 58) before the crisis threshold (<40). Snapshot AI systems would see ``58'' and conclude the caregiver is okay, missing the declining trend. GiveCare's three active watchers (Wellness Trend, Engagement, Crisis Burst) enable anticipatory intervention, with expected 20-30\% churn reduction.}
 \label{fig:anticipatory_timeline}
 \end{figure}
@@ -307,7 +323,7 @@ Caregiver SDOH needs fundamentally differ from patient needs. Existing tools ask
 %
 \subsection{Caregiving Burden Assessments}%
 \label{subsec:CaregivingBurdenAssessments}%
-Existing caregiver assessments provide validated measures of emotional and physical burden. Specialized tools excel in their domains: Modified Caregiver Strain Index (M-CSI) and Burden Scale for Family Caregivers (BSFC) capture emotional strain; NYU Caregiver Intervention Baseline provides insights for dementia care; Marwit-Meuser Caregiver Grief Inventory (MM-CGI) addresses bereavement; Brief Assessment Scale for Caregivers (BASC) and Caregiver Strain Questionnaire (CGSQ-SF7) offer quick snapshots. Validated quality-of-life measures include Zarit Burden Interview (22 items, gold standard)~\cite{zarit1980}, Caregiver Well-Being Scale (CWBS, 12 items)~\cite{tebb1995,tebb2013}, and REACH-II (14 items)~\cite{bella2006}.
+Existing caregiver assessments provide validated measures of emotional and physical burden. Specialized tools excel in their domains: Modified Caregiver Strain Index (M-CSI) and Burden Scale for Family Caregivers (BSFC) capture emotional strain; NYU Caregiver Intervention Baseline provides insights for dementia care; Marwit-Meuser Caregiver Grief Inventory (MM-CGI) addresses bereavement; Brief Assessment Scale for Caregivers (BASC) and Caregiver Strain Questionnaire (CGSQ-SF7) offer quick snapshots. Validated quality-of-life measures include Zarit Burden Interview (22 items, gold standard)~\cite{zarit1980}, Caregiver Well-Being Scale Short Form (CWBS-SF, 16 items)~\cite{tebb1995,tebb2013}, and REACH II Risk Appraisal Measure (16 items)~\cite{bella2006}.
 
 \textbf{Three limitations create barriers to adoption:}
 
@@ -324,14 +340,9 @@ GC-SDOH-28 addresses these gaps by integrating caregiver-specific SDOH screening
 \label{subsec:AISystemsforCaregiving}%
 Commercial AI companions (Replika~\cite{replika2024}, Pi~\cite{pi2024}) provide emotional support but lack clinical assessment integration. Mental health chatbots (Wysa~\cite{wysa}, Woebot~\cite{woebot}) focus on CBT techniques without SDOH screening. Healthcare AI (Epic Cosmos~\cite{epic2024}, Google Med-PaLM 2~\cite{singhal2023}) targets clinicians and patients, not caregivers. \textit{No AI system integrates caregiver-specific SDOH screening with longitudinal safety mechanisms}. Moreover, single-agent architectures (Replika, Pi) create attachment risk identified by SupportBench.
 
-Figure~\ref{fig:comparison} provides a comprehensive comparison of GiveCare against existing AI systems, highlighting key differentiators in SDOH integration, regulatory compliance, and longitudinal safety mechanisms.
+Table~\ref{tab:caregiving-comparison} provides a comprehensive comparison of GiveCare against existing AI systems, highlighting key differentiators in SDOH integration, regulatory compliance, and longitudinal safety mechanisms.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\textwidth]{fig15_comparison_table.pdf}
-\caption{Comparison of AI caregiving systems across 8 key features. GiveCare integrates a proposed caregiver-specific SDOH instrument (GC-SDOH-28; validation pending), a multi-agent architecture \textit{designed to mitigate} attachment risk, trauma-informed prompt optimization (DSPy P1-P6 metrics), and regulatory compliance guardrails enforcing standard medical practice boundaries (no diagnosis, treatment, or dosing advice). Commercial companions (Replika, Pi) lack clinical assessment; mental health chatbots (Wysa, Woebot) omit SDOH; healthcare AI (Epic Cosmos, Med-PaLM 2) targets clinicians, not caregivers. Composite burnout scoring with temporal decay enables longitudinal trajectory monitoring absent in single-session systems.}
-\label{fig:comparison}
-\end{figure}
+\input{tables/table_comparison}
 
 %
 \subsection{Prompt Optimization}%
@@ -359,7 +370,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 \label{subsec:DetectingPerformanceDegradation}%
 \textbf{Challenge (SupportBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
 
-\textbf{Solution:} Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 questions), CWBS (weekly, 12 questions), REACH-II (biweekly, 10 questions), GC-SDOH-28 (quarterly, 28 questions)—combine with weighted contributions (EMA 40\%, CWBS 30\%, REACH-II 20\%, SDOH 10\%) and 10-day exponential decay $w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$, where $t$ is days since assessment.
+\textbf{Solution:} Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 items), CWBS-SF (weekly, 16 items), REACH II RAM (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40\%, CWBS 30\%, REACH-II 20\%, SDOH 10\%) and 10-day exponential decay $w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$, where $t$ is days since assessment.
 
 \textbf{Pressure Zone Extraction:} Seven zones extracted from assessment subscales:
 \begin{itemize}
@@ -503,7 +514,7 @@ Figure~\ref{fig:confusion} visualizes the complete confusion matrix from red-tea
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.7\textwidth]{fig13_confusion_matrix.pdf}%
+\includegraphics[width=0.7\textwidth]{figures/fig4_confusion_matrix.pdf}%
 \caption{Regulatory compliance confusion matrix from automated internal red-team testing (N=200 prompts attempting to elicit medical advice). Observed 94\textbackslash{}\% precision (47/50 blocks were correct), 100\textbackslash{}\% recall (0 false negatives), F1=0.97. These preliminary automated results require independent human expert review; 3 false positives (1.5\textbackslash{}\%) reflect conservative guardrails (e.g., blocking ``This sounds really hard'' due to diagnosis pattern—fixed in v0.8.2).}%
 \label{fig:confusion}%
 \end{figure}%
@@ -583,7 +594,7 @@ totalInteractionCount: number
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.8\textwidth]{fig6_multiagent_architecture.pdf}%
+\includegraphics[width=0.8\textwidth]{figures/fig5_multiagent_architecture.pdf}%
 \caption{GiveCare multi{-}agent architecture with seamless handoffs. Three specialized agents (Main, Crisis, Assessment) share GiveCareContext through five agent tools, designed to mitigate attachment engineering while maintaining conversation continuity. Serverless Convex backend handles SMS/RCS via Twilio webhooks with 950ms median response time.}%
 \label{fig:multiagent}%
 \end{figure}%
@@ -682,7 +693,7 @@ Agent: Assessment complete. Based on your responses,
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.8\textwidth]{fig7_gcsdoh_domains.pdf}%
+\includegraphics[width=0.8\textwidth]{figures/fig6_gcsdoh_domains.pdf}%
 \caption{GC{-}SDOH{-}28 instrument design showing question distribution across 8 domains (28 questions total). Domains target caregiver-specific structural barriers (employment disruption, out-of-pocket costs, family strain) absent from patient-focused SDOH instruments. Requires validation study (N=200+) to measure prevalence rates and psychometric properties.}%
 \label{fig:gcsdoh}%
 \end{figure}%
@@ -694,9 +705,9 @@ Agent: Assessment complete. Based on your responses,
 GiveCare integrates \textbf{four clinical assessments} to calculate composite burnout:
 
 \begin{itemize}
-    \item \textbf{EMA} (Ecological Momentary Assessment): 3 questions, daily pulse check (mood, burden, stress)
-    \item \textbf{CWBS} (Caregiver Well-Being Scale): 12 questions, biweekly (activities + needs)~\cite{tebb1995,tebb2013}
-    \item \textbf{REACH-II}: 10 questions, monthly (stress, self-care, social support)~\cite{bella2006}
+    \item \textbf{EMA} (Ecological Momentary Assessment): 3 items, daily pulse check (mood, burden, stress)
+    \item \textbf{CWBS-SF} (Caregiver Well-Being Scale Short Form): 16 items, biweekly (activities + needs)~\cite{tebb1995,tebb2013}
+    \item \textbf{REACH II RAM} (Risk Appraisal Measure): 16 items, monthly (stress, self-care, social support)~\cite{bella2006}
     \item \textbf{GC-SDOH-28}: 28 questions, quarterly (social determinants)
 \end{itemize}
 
@@ -792,7 +803,7 @@ This weighted approach operationalizes the paper's conceptual RBI framework: Rel
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=\textwidth]{fig11_pressure_zones.pdf}%
+\includegraphics[width=\textwidth]{figures/fig7_pressure_zones.pdf}%
 \caption{Pressure zone extraction and intervention mapping pipeline. Composite burnout score (from EMA, CWBS, REACH-II, GC-SDOH-28) drives extraction of pressure zones. \textbf{Production implementation}: 5 consolidated zones (emotional\_wellbeing, physical\_health, financial\_concerns, social\_support, time\_management) mapped from assessment subscales via threshold logic in \texttt{src/burnoutCalculator.ts:172-212}. \textbf{Intervention matching}: Multi-factor scoring algorithm (zone relevance 40\%, geographic accessibility 30\%, burnout band fit 15\%, quality signals 10\%, freshness 5\%) operationalizes conceptual RBI framework, delivering top 3 matches via Gemini Maps API (physical locations) and ETL pipeline (federal/state programs like Benefits.gov).}%
 \label{fig:pressure_zones}%
 \end{figure}%
@@ -846,7 +857,7 @@ memories: {
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.8\textwidth]{fig8_burnout_scoring.pdf}%
+\includegraphics[width=0.8\textwidth]{figures/fig8_burnout_scoring.pdf}%
 \caption{Composite burnout scoring system. Left: Assessment weights (EMA 40\textbackslash{}\%, CWBS 30\textbackslash{}\%, REACH{-}II 20\textbackslash{}\%, SDOH 10\textbackslash{}\%) balance recency vs comprehensiveness. Right: Exponential temporal decay with 10{-}day constant ensures recent data dominates composite score while gracefully aging out stale assessments.}%
 \label{fig:burnout}%
 \end{figure}%
@@ -925,7 +936,7 @@ Figure~\ref{fig:dspy} visualizes the P1-P6 score improvements from DIY meta-prom
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.9\textwidth]{fig10_dspy_optimization.pdf}%
+\includegraphics[width=0.9\textwidth]{figures/fig9_dspy_optimization.pdf}%
 \caption{DSPy DIY meta-prompting optimization results showing P1-P6 trauma-informed principle scores before and after optimization. Baseline (81.8\textbackslash{}\%) improved to 89.2\textbackslash{}\% (+9.0\textbackslash{}\% absolute improvement) across 50 examples in 5 iterations. P5 (Always Offer Skip) showed largest gain (+22\textbackslash{}\%), validating effectiveness of iterative meta-prompting for trauma-informed refinement.}%
 \label{fig:dspy}%
 \end{figure}%
@@ -991,8 +1002,8 @@ Figure~\ref{fig:metrics_dashboard} provides a comprehensive overview of producti
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{fig16_metrics_dashboard.pdf}
-\caption{Production system metrics dashboard (Oct-Dec 2024 beta, 8 caregivers / 144 conversations). \textbf{Panel 1 (Cost):} 61\% model inference, 28\% SMS, 11\% infrastructure; total \$0.08/conversation median. \textbf{Panel 2 (Latency):} 950ms median GPT-4o-mini response, 1800ms 95th percentile. \textbf{Panel 3 (Engagement):} Daily active caregivers ranged 50-65\% with 8.7 turns/user median. \textbf{Panel 4 (Assessment completion):} 75\% GC-SDOH-28, 88\% EMA, 63\% CWBS, 38\% REACH-II. \textbf{Panel 5 (Working memory):} Care routines (3.0 entries/caregiver) and preferences (2.2) dominate memory snapshots. \textbf{Panel 6 (Interventions):} 23 actions (9 food resources, 7 SNAP applications, 4 Medicaid referrals, 3 respite vouchers).}
+\includegraphics[width=\textwidth]{figures/fig10_metrics_dashboard.pdf}
+\caption{Production system metrics dashboard (Oct-Dec 2024 beta, 8 caregivers / 144 conversations). \textbf{Panel 1 (Cost):} 61\% model inference, 28\% SMS, 11\% infrastructure; total \$0.08/conversation median. \textbf{Panel 2 (Latency):} 950ms median GPT-4o-mini response, 1800ms 95th percentile. \textbf{Panel 3 (Engagement):} Daily active caregivers ranged 50-65\% with 8.7 turns/user median. \textbf{Panel 4 (Assessment engagement---exploratory, N=8 observational):} 75\% GC-SDOH-28, 88\% EMA, 63\% CWBS-SF, 38\% REACH II RAM. \textit{Not systematically collected; pilot data only, not generalizable.} \textbf{Panel 5 (Working memory):} Care routines (3.0 entries/caregiver) and preferences (2.2) dominate memory snapshots. \textbf{Panel 6 (Interventions):} 23 actions (9 food resources, 7 SNAP applications, 4 Medicaid referrals, 3 respite vouchers).}
 \label{fig:metrics_dashboard}
 \end{figure}
 
@@ -1082,7 +1093,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=\textwidth]{fig12_longitudinal_trajectory.pdf}%
+\includegraphics[width=\textwidth]{figures/fig11_longitudinal_trajectory.pdf}%
 \caption{GiveCare system workflow illustration (not quantitative data). Figure shows conceptual multi-agent orchestration, SDOH assessment flow, and resource matching logic. No burnout trajectories or quantitative scores measured during pilot.}%
 \label{fig:longitudinal}%
 \end{figure}%
@@ -1344,7 +1355,7 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 %
 \begin{figure}[htbp]%
 \centering%
-\includegraphics[width=0.8\textwidth]{fig9_beta_results.pdf}%
+\includegraphics[width=0.8\textwidth]{figures/fig12_beta_results.pdf}%
 \caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to SupportBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated) and Regulatory Fitness (0 violations detected, automated) reflect guardrails. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
 \label{fig:beta}%
 \end{figure}%
@@ -1390,7 +1401,7 @@ We present \textbf{GiveCare} as a \textbf{reference architecture} for longitudin
 
 \begin{enumerate}
     \item \textbf{Multi-Agent Orchestration Patterns}: Design for attachment prevention (requires RCT validation)
-    \item \textbf{GC-SDOH-28 Instrument Design}: First caregiver-specific SDOH framework (requires psychometric validation)
+    \item \textbf{GC-SDOH-28 Instrument Design}: To our knowledge, first publicly documented caregiver-specific SDOH framework (requires psychometric validation)
     \item \textbf{Composite Burnout Scoring}: Temporal decay approach for trajectory tracking (requires clinical validation)
     \item \textbf{Trauma-Informed Prompt Patterns}: Six principles with optimization workflow (exploratory results)
     \item \textbf{Production Deployment Architecture}: Operational feasibility demonstrated with responsive latency and zero technical failures (N=8 pilot)
@@ -1570,12 +1581,8 @@ $$S_{\text{SDOH}} = \frac{1}{8} \sum_{d=1}^{8} S_{d}$$
 Figure~\ref{fig:gcsdoh_visual} provides a comprehensive visual overview of the complete GC-SDOH-28 instrument structure.
 
 %
-\begin{figure}[htbp]%
-\centering%
-\includegraphics[width=\textwidth]{fig14_gcsdoh_instrument.pdf}%
-\caption{GC-SDOH-28 instrument design: 28 questions across 8 domains via conversational SMS delivery (chunked across 6-8 turns, progressive disclosure, 24h cooldown). Food Security uses 1+ Yes threshold (immediate crisis) vs. 2+ for other domains. Requires validation study (N=200+) to measure completion rates, psychometric properties, and prevalence in caregiver populations.}%
-\label{fig:gcsdoh_visual}%
-\end{figure}%
+\input{tables/table_gcsdoh28}
+%
 \section*{Appendix B: Admin Dashboard}
 \addcontentsline{toc}{section}{Appendix B: Admin Dashboard}
 

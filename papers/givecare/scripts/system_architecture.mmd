@@ -1,0 +1,48 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#FFE8D6','primaryTextColor':'#54340E','primaryBorderColor':'#54340E','lineColor':'#54340E','secondaryColor':'#CB997E','tertiaryColor':'#FF9F1C'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 40}}}%%
+
+graph TB
+    %% Box 1: Input Layer
+    SMS["<b>1. SMS Interface</b><br/>Zero-download, text message access"]
+
+    %% Box 2-4: Processing Pipeline
+    MULTI["<b>2. Multi-Agent</b><br/>Main•Crisis•Assessment"]
+    SDOH["<b>3. GC-SDOH-28</b><br/>28 questions•8 domains"]
+    BURN["<b>4. Burnout Scoring</b><br/>EMA•CWBS•REACH-II•SDOH"]
+
+    %% Box 5-6: Key Features
+    ANTIC["<b>5. ANTICIPATORY SYSTEM [KEY]</b><br/>•Wellness Trend (4-week)<br/>•Engagement Detector<br/>•Crisis Burst Detector"]
+    RESOURCE["<b>6. Resource Match</b><br/>Gemini Maps API<br/>Real-time local resources"]
+
+    %% Box 7: Infrastructure
+    PROD["<b>7. Production Deploy</b><br/>Convex•950ms•0 failures (N=8)•Stripe•RRULE"]
+
+    %% Box 8: Outcomes
+    OUTCOMES["<b>OUTCOMES</b><br/>Reduce Burnout | Personalized•Local•Adaptive<br/><i>Detect BEFORE crisis</i>"]
+
+    %% Connections
+    SMS --> MULTI
+    SMS --> SDOH
+    SMS --> BURN
+
+    MULTI --> SDOH
+    SDOH --> BURN
+
+    BURN ==> ANTIC
+    BURN --> RESOURCE
+
+    ANTIC ==> PROD
+    RESOURCE --> PROD
+
+    PROD --> OUTCOMES
+
+    %% Styling
+    classDef inputStyle fill:#FFE8D6,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef processStyle fill:#CB997E,stroke:#54340E,stroke-width:2px,color:#54340E
+    classDef keyStyle fill:#FF9F1C,stroke:#54340E,stroke-width:4px,color:#54340E
+    classDef supportStyle fill:#FFBF68,stroke:#54340E,stroke-width:2px,color:#54340E
+
+    class SMS inputStyle
+    class MULTI,SDOH,BURN,PROD processStyle
+    class ANTIC keyStyle
+    class RESOURCE supportStyle
+    class OUTCOMES inputStyle

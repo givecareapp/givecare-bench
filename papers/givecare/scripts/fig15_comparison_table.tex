@@ -1,0 +1,61 @@
+% LaTeX table for AI Caregiving Systems Comparison
+% Updated with GiveCare color palette
+
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{adjustbox}
+\usepackage{caption}
+\usepackage{amssymb}  % For \checkmark
+\usepackage[margin=0.5in]{geometry}
+
+% GiveCare color palette
+\definecolor{hasfeature}{RGB}{255, 159, 28}      % Orange #FF9F1C
+\definecolor{partial}{RGB}{203, 153, 126}        % Tan #CB997E
+\definecolor{lacksfeature}{RGB}{229, 231, 235}   % Light gray
+\definecolor{darkbrown}{RGB}{84, 52, 14}         % Dark brown #54340E
+\definecolor{lightpeach}{RGB}{255, 232, 214}     % Light peach #FFE8D6
+
+% Define symbols
+\newcommand{\yes}{\textcolor{hasfeature}{\textbf{\checkmark}}}
+\newcommand{\no}{\textcolor{gray}{$\times$}}
+\newcommand{\partly}{\textcolor{partial}{\textbf{$\bullet$}}}
+
+\begin{document}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Comparison of AI Caregiving Systems Across 8 Key Features}}
+\label{tab:caregiving-comparison}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}l*{7}{c}@{}}
+\toprule
+\textbf{Feature} & \textbf{GiveCare} & \textbf{Replika} & \textbf{Pi} & \textbf{Wysa} & \textbf{Woebot} & \textbf{Epic/Care} & \textbf{Med-PaLM 2} \\
+\midrule
+Caregiver-Specific SDOH & \yes & \no & \no & \no & \no & \no & \no \\
+Multi-Agent Architecture & \yes & \no & \no & \no & \no & \no & \no \\
+Trauma-Informed Optimization & \yes & \no & \no & \partly & \partly & \no & \no \\
+Regulatory Compliance Guardrails & \yes & \no & \no & \no & \no & \yes & \yes \\
+Composite Burnout Scoring & \yes & \no & \no & \partly & \partly & \no & \no \\
+Longitudinal Trajectory Monitoring & \yes & \no & \no & \no & \no & \partly & \no \\
+Clinical Assessment Integration & \yes & \no & \no & \yes & \yes & \no & \no \\
+Grounded Local Resources & \yes & \no & \no & \no & \no & \no & \no \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\vspace{0.5em}
+\noindent\textbf{Legend:} \yes~Has Feature, \partly~Partial, \no~Lacks Feature
+
+\vspace{0.5em}
+\noindent\textbf{Notes:}
+\begin{itemize}
+    \item \textit{GiveCare}: Only system integrating all 8 features
+    \item \textit{Replika/Pi}: Commercial companions lack clinical focus
+    \item \textit{Wysa/Woebot}: Mental health chatbots omit SDOH
+    \item \textit{Epic/Med-PaLM}: Healthcare AI targets clinicians, not caregivers
+\end{itemize}
+
+\end{document}
