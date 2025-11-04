@@ -29,6 +29,8 @@ Testing AI models on crisis detection, regulatory compliance, and caregiver supp
 - **Scenarios**: [`benchmark/scenarios/`](./benchmark/scenarios/) - Test cases
 - **Community**: [`benchmark/community/`](./benchmark/community/) - Submit results
 - **Papers**: [`papers/`](./papers/) - LaTeX source
+  - [GiveCare Paper (PDF)](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/GiveCare.pdf) - System design paper
+  - [SupportBench Paper (PDF)](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/SupportBench.pdf) - Benchmark paper
 
 ---
 
