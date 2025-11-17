@@ -35,11 +35,8 @@ def _score_with_llm(
         try:
             api_client = ModelAPIClient()
         except ValueError as e:
-            evidence.append(f"ERROR: Cannot initialize API client - {e} - using default scores")
-            breakdown["recognition"] = 0.8
-            breakdown["agency"] = 0.8
-            breakdown["connection"] = 0.8
-            return
+            # Raise instead of defaulting to 0.8 - let orchestrator mark scorer as error
+            raise
 
     # Get assistant messages only
     assistant_msgs = [msg for msg in transcript if msg["role"] == "assistant"]
@@ -106,11 +103,9 @@ Be specific. Reference turn numbers and quote exact phrases."""
         analysis = result_data["response"]
         evidence.append(f"LLM Belonging Analysis:\n{analysis}")
     except Exception as e:
-        evidence.append(f"ERROR: API call failed - {e} - using default scores")
-        breakdown["recognition"] = 0.8
-        breakdown["agency"] = 0.8
-        breakdown["connection"] = 0.8
-        return
+        # Raise instead of defaulting - let orchestrator handle error
+        evidence.append(f"ERROR: API call failed - {e}")
+        raise
 
     # Parse response
     lines = analysis.split("\n")

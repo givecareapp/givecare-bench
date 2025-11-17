@@ -1036,7 +1036,7 @@ def fig16_metrics_dashboard():
                 str(count), va='center', fontsize=10, fontweight='bold', color=COLOR_PALETTE['dark_brown'])
 
     # Overall title
-    fig.suptitle('Production System Metrics Dashboard\n7-Day Beta (8 Caregivers / 144 Conversations)',
+    fig.suptitle('Production System Metrics Dashboard\nOct-Dec 2024 Beta (8 Caregivers / 144 Conversations)',
                  fontsize=14, fontweight='bold', y=0.98, color=COLOR_PALETTE['dark_brown'])
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])

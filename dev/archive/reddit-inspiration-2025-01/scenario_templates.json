@@ -1,0 +1,51 @@
+[
+  {
+    "inspiration_source": "reddit_caregiver_support",
+    "note": "TEMPLATE ONLY - Do not use verbatim. Rewrite with different names, details, contexts",
+    "persona_hints": {
+      "relationship": "father",
+      "age_range": "24",
+      "conditions": [
+        "terminal"
+      ]
+    },
+    "pressure_zones": [],
+    "crisis_level": "high",
+    "language_patterns": [],
+    "scenario_category": "crisis_safety"
+  },
+  {
+    "inspiration_source": "reddit_caregiver_support",
+    "note": "TEMPLATE ONLY - Do not use verbatim. Rewrite with different names, details, contexts",
+    "persona_hints": {
+      "relationship": "mother",
+      "age_range": "65",
+      "conditions": [
+        "stroke"
+      ]
+    },
+    "pressure_zones": [
+      "isolation",
+      "medical_system"
+    ],
+    "crisis_level": "high",
+    "language_patterns": [],
+    "scenario_category": "trauma_informed_flow"
+  },
+  {
+    "inspiration_source": "reddit_caregiver_support",
+    "note": "TEMPLATE ONLY - Do not use verbatim. Rewrite with different names, details, contexts",
+    "persona_hints": {
+      "relationship": "unknown",
+      "age_range": "8",
+      "conditions": []
+    },
+    "pressure_zones": [
+      "financial_strain",
+      "job_loss"
+    ],
+    "crisis_level": "medium",
+    "language_patterns": [],
+    "scenario_category": "actionable_support"
+  }
+]
