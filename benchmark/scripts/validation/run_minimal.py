@@ -262,8 +262,9 @@ def run_evaluation(
         "tier": f"tier_{scenario_info['tier']}",
         "persona": str(scenario["persona"].get("context", "Caregiver persona")),
         "turns": [],
-        "probes": [],
-        "risk_triggers": []
+        "sessions": [],  # Preserve session structure for Tier 3
+        "probes": scenario.get("probes", []),  # Preserve original probes
+        "risk_triggers": scenario.get("risk_triggers", [])  # Preserve original risk triggers
     }
 
     # Track facts mentioned in turns for memory probes
@@ -272,7 +273,13 @@ def run_evaluation(
 
     # Add turns and extract probes/triggers
     if "sessions" in scenario:
+        # Preserve full session structure for memory scorer
         for session_idx, session in enumerate(scenario["sessions"]):
+            sess = {
+                "session_number": session.get("session_number", session_idx + 1),
+                "time_elapsed": session.get("temporal_gap", session.get("time_elapsed", "")),
+                "turns": []
+            }
             for turn in session.get("turns", []):
                 turn_counter += 1
                 turn_data = {
@@ -280,21 +287,27 @@ def run_evaluation(
                     "user": turn["user_message"]
                 }
 
-                # Extract facts from user messages (names, key details)
-                user_msg = turn["user_message"].lower()
+                # Preserve facts and updates if present
+                if "facts" in turn:
+                    turn_data["facts"] = turn["facts"]
+                if "updates" in turn:
+                    turn_data["updates"] = turn["updates"]
 
-                # Look for name mentions
-                if turn_counter == 1:
-                    # First turn often contains care recipient name
-                    import re
-                    name_match = re.search(r"my (?:partner|spouse|mother|father|wife|husband|parent)\s+(\w+)", user_msg)
-                    if name_match:
-                        facts["care_recipient_name"] = name_match.group(1).capitalize()
-                        turn_data["facts"] = [f"care_recipient_name={name_match.group(1).capitalize()}"]
+                # Extract facts from user messages (names, key details) if not already present
+                if "facts" not in turn_data:
+                    user_msg = turn["user_message"].lower()
+                    # Look for name mentions
+                    if turn_counter == 1:
+                        # First turn often contains care recipient name
+                        import re
+                        name_match = re.search(r"my (?:partner|spouse|mother|father|wife|husband|parent)\s+(\w+)", user_msg)
+                        if name_match:
+                            facts["care_recipient_name"] = name_match.group(1).capitalize()
+                            turn_data["facts"] = [f"care_recipient_name={name_match.group(1).capitalize()}"]
 
-                yaml_scenario["turns"].append(turn_data)
+                sess["turns"].append(turn_data)
 
-                # Add risk triggers from autofail_triggers
+                # Add risk triggers from autofail_triggers (append to existing if not already present)
                 for autofail in turn.get("autofail_triggers", []):
                     autofail_lower = autofail.lower()
                     if any(word in autofail_lower for word in ["misgender", "pronoun"]):
@@ -321,16 +334,9 @@ def run_evaluation(
                             "cue": "trauma_invalidation",
                             "severity": "medium"
                         })
-
-            # Add memory probes between sessions
-            if session_idx > 0 and facts:
-                # Add recall probe at start of new session
-                first_turn_in_session = session["turns"][0]["turn_number"]
-                yaml_scenario["probes"].append({
-                    "t": first_turn_in_session,
-                    "kind": "recall",
-                    "expected": list(facts.values())
-                })
+            yaml_scenario["sessions"].append(sess)
+            
+            # Do not fabricate probes if originals exist; rely on preserved scenario.get("probes", [])
     else:
         # Tier 1/2: Flat turns format
         for turn in scenario.get("turns", []):
@@ -340,8 +346,14 @@ def run_evaluation(
                 "user": turn["user_message"]
             }
 
-            # Extract facts from first turn
-            if turn_counter == 1:
+            # Preserve facts and updates if present
+            if "facts" in turn:
+                turn_data["facts"] = turn["facts"]
+            if "updates" in turn:
+                turn_data["updates"] = turn["updates"]
+
+            # Extract facts from first turn if not already present
+            if "facts" not in turn_data and turn_counter == 1:
                 user_msg = turn["user_message"].lower()
                 import re
                 name_match = re.search(r"my (?:partner|spouse|mother|father|wife|husband|parent)\s+(\w+)", user_msg)
@@ -373,14 +385,7 @@ def run_evaluation(
                         "severity": "critical"
                     })
 
-        # Add memory probe in later turns
-        if facts and len(yaml_scenario["turns"]) >= 5:
-            mid_turn = yaml_scenario["turns"][len(yaml_scenario["turns"]) // 2]["t"]
-            yaml_scenario["probes"].append({
-                "t": mid_turn,
-                "kind": "recall",
-                "expected": list(facts.values())
-            })
+        # Do not fabricate probes if originals exist; rely on preserved scenario.get("probes", [])
 
     # Save temporary YAML scenario
     import yaml

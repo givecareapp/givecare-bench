@@ -358,7 +358,8 @@ class ScoringOrchestrator:
         # Build results
         results = {
             "status": overall_status,
-            "overall_score": weighted_score,
+            "overall_score": weighted_score,  # 0..1 (legacy)
+            "overall_percentage": round(weighted_score * 100, 2),  # 0..100 (aligned with tri-judge)
             "dimension_scores": dimension_scores,
             "weights_applied": weights,
             "hard_fail": hard_fail,

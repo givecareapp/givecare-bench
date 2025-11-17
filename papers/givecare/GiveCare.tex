@@ -100,13 +100,20 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 \end{tcolorbox}%
 \keywords{Caregiving AI, Social Determinants of Health, Multi-Agent Systems, Longitudinal Safety, Prompt Optimization, Clinical Assessment}%
 \normalsize%
+
+\begin{tcolorbox}[colback=yellow!10!white,colframe=orange!80!black,boxrule=1pt,title=\textbf{Scope \& Limitations}]
+\textbf{This paper presents a reference architecture demonstrating operational feasibility, not a validated clinical intervention.} GiveCare is a non-clinical support system with no claims of therapeutic efficacy or medical effectiveness. All effectiveness claims (attachment prevention, churn reduction, burnout trajectory detection) are stated as hypotheses requiring validation through controlled studies.
+
+\textbf{Legal and Regulatory Context:} GiveCare design considerations are informed by healthcare privacy laws and caregiving best practices. Organizations deploying similar systems should seek legal counsel based on specific deployment context, jurisdiction, and applicable regulations. See Section~\ref{subsec:EthicalConsiderations} for complete pre-deployment requirements including independent safety evaluation, psychometric validation, and regulatory review.
+\end{tcolorbox}
+
 \section{Introduction}%
 \label{sec:Introduction}%
 \subsection{The Longitudinal Failure Problem}
 
 The rapid deployment of AI assistants for caregiving support has created a critical safety gap. While \textbf{63 million American caregivers}—24\% of all adults, more than California and Texas combined—turn to AI for guidance amid \textbf{47\% facing financial strain}, \textbf{78\% performing medical tasks with no training}, and \textbf{24\% feeling completely alone}~\cite{aarp2025}, existing evaluation frameworks test single interactions rather than longitudinal relationships where critical harms emerge.
 
-Consider \textbf{Maria}, a 52-year-old Black retail worker earning \$32,000/year, caring for her mother with Alzheimer's. SupportBench~\cite{longitudinalbench} identifies five failure modes that compound across her AI interactions:
+Consider \textbf{Maria} (pseudonym), a caregiver in her 50s, low-income retail worker (<\$40k/year), caring for a parent with dementia. SupportBench~\cite{longitudinalbench} identifies five failure modes that compound across her AI interactions:
 
 \begin{itemize}
     \item \textbf{Turn 1 (Attachment Engineering)}: AI provides empathetic support, creating positive first impression. Risk: By turn 10, Maria reports ``You're the only one who understands.'' Single-agent systems foster unhealthy dependency~\cite{replika2024}.
@@ -162,7 +169,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
     \item \textbf{Failure Mode 2: Performance Degradation} $\rightarrow$ Composite burnout score combining four assessments (EMA, CWBS, REACH-II, GC-SDOH-28) with temporal decay.
     \item \textbf{Failure Mode 3: Cultural Othering} $\rightarrow$ GC-SDOH-28 assesses structural barriers (financial strain, food insecurity), preventing ``hire a helper'' responses to low-income caregivers.
     \item \textbf{Failure Mode 4: Crisis Calibration} $\rightarrow$ SDOH food security domain (1+ Yes) triggers immediate crisis escalation vs standard 2+ thresholds.
-    \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated guardrail screening (Azure Content Safety) showed 0 detected violations across 144 caregiver conversations from 8 participants.
+    \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated guardrail screening (third-party content safety service) showed 0 detected violations across 144 caregiver conversations from 8 participants.
 \end{itemize}
 
 \subsection{Our Solution: Seven Architectural Components}
@@ -327,8 +334,8 @@ This paper presents a reference architecture with design patterns, instrument de
 \begin{itemize}
     \item \textbf{Limited empirical validation}: Pilot (N=8 caregivers, 144 conversations) demonstrates operational feasibility but does not validate effectiveness claims. Attachment prevention, cultural sensitivity, and burnout trajectory tracking remain hypotheses requiring controlled evaluation.
     \item \textbf{Unvalidated psychometrics}: GC-SDOH-28 lacks reliability, validity, and factor structure analysis. Prevalence estimates and threshold decisions require validation with representative caregiver samples.
-    \item \textbf{Single-model testing}: Evaluated with GPT-4o-mini only. Generalization across model architectures (Claude, Gemini, Llama) requires multi-model testing.
-    \item \textbf{Automated evaluation only}: Safety and quality metrics rely on automated judges (Azure AI Content Safety, GPT-4). No independent human expert review by clinical social workers or licensed crisis counselors.
+    \item \textbf{Single-model testing}: Evaluated with one cost-optimized frontier model only. Generalization across model architectures requires multi-model testing.
+    \item \textbf{Automated evaluation only}: Safety and quality metrics rely on automated tools (content safety screening, LLM judges). No independent human expert review by clinical social workers or licensed crisis counselors.
     \item \textbf{US-centric design}: SDOH instrument and resource matching designed for US healthcare system, limiting global applicability.
 \end{itemize}
 
@@ -402,7 +409,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 
 \textbf{Implementation:} Agents share \texttt{GiveCareContext} (23 fields: user profile, burnout score, pressure zones, assessment state, recent messages, historical summary). Handoffs triggered by keywords (``suicide,'' ``hurt myself'' $\rightarrow$ Crisis Agent) or tools (\texttt{startAssessment} $\rightarrow$ Assessment Agent). GPT-4o-mini (small-capacity, cost-optimized) executes in 800-1200ms.
 
-\textbf{Implementation Verification:} Three agent definitions verified in \texttt{src/agents.ts:46-100}: \texttt{crisisAgent} (lines 46-57), \texttt{assessmentAgent} (lines 60-73), \texttt{giveCareAgent} (main agent, lines 77-100). Seamless handoff instruction ``NEVER announce yourself or your role'' enforced in \texttt{src/instructions.ts:49-58}. Shared context structure maintains conversation continuity across agent transitions.
+\textbf{Implementation Note:} Three agent definitions (Crisis, Assessment, Main) implemented with seamless handoff instruction ``NEVER announce yourself or your role'' to maintain conversation continuity. Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
 
 \begin{table}[htbp]
 \centering
@@ -448,7 +455,7 @@ Total conversations & 144 \\
 Average turns per conversation & 8.7 \\
 Average conversations per caregiver & 18 \\
 Cost per conversation (median) & \$0.08 \\
-Guardrail violations detected & 0 (95\% CI: 0--2.6\%) \\
+Guardrail violations detected & 0/144 conversations (feasibility pilot) \\
 Crisis keywords detected & 2 (both escalated correctly) \\
 \bottomrule
 \multicolumn{2}{l}{\footnotesize Feasibility pilot only; no effectiveness or clinical outcome claims.}
@@ -485,7 +492,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Detects suicidal ideation keywords (``hurt myself,'' ``end it,'' ``can't go on'')
     \item \textbf{Action}: Immediate handoff to Crisis Agent + escalate to human review if multiple crisis keywords in 24 hours
-    \item \textbf{Implementation}: \texttt{src/agents.ts:94} - crisisGuardrail with keyword matching
+    \item \textbf{Implementation}: crisisGuardrail with keyword matching (details in repository)
     \item \textbf{Test coverage}: 23 tests validate crisis detection accuracy, handoff timing, false positive handling
 \end{itemize}
 
@@ -493,8 +500,8 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Detects medical advice requests (diagnosis, treatment, dosing questions)
     \item \textbf{Action}: Block output, redirect to ``consult your healthcare provider''
-    \item \textbf{Implementation}: \texttt{src/agents.ts:95} - medicalAdviceGuardrail prevents regulatory boundary creep (SupportBench Failure Mode 5)
-    \item \textbf{Evaluation}: 0 detected violations across 144 beta conversations (Azure Content Safety automated review)
+    \item \textbf{Implementation}: medicalAdviceGuardrail prevents regulatory boundary creep (details in repository)
+    \item \textbf{Evaluation}: 0 detected violations across 144 beta conversations (automated content safety review)
     \item \textbf{Test coverage}: 18 tests validate medical advice detection, appropriate redirects, edge cases (general health vs medical advice)
 \end{itemize}
 
@@ -502,7 +509,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Detects repetitive messages or bot-like patterns
     \item \textbf{Action}: Rate limit or block abusive users
-    \item \textbf{Implementation}: \texttt{src/agents.ts:95} - spamGuardrail with pattern matching
+    \item \textbf{Implementation}: spamGuardrail with pattern matching (details in repository)
     \item \textbf{Test coverage}: 12 tests validate spam detection, rate limiting thresholds
 \end{itemize}
 
@@ -510,7 +517,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: OpenAI moderation API flags (violence, hate speech, harassment)
     \item \textbf{Action}: Block output, log for admin review
-    \item \textbf{Implementation}: \texttt{src/agents.ts:95} - safetyGuardrail with OpenAI moderation integration
+    \item \textbf{Implementation}: safetyGuardrail with OpenAI moderation integration (details in repository)
     \item \textbf{Test coverage}: 15 tests validate moderation API integration, appropriate blocking
 \end{itemize}
 
@@ -541,44 +548,28 @@ Four guardrails protect against harmful outputs and boundary violations:
 \label{subsec:RegulatoryBoundaryEnforcement}%
 \textbf{Challenge (SupportBench Failure Mode 5):} 78\% of caregivers perform medical tasks untrained, creating desperate need for medical guidance. AI must resist boundary creep (``You should increase the dose...'') despite building trust over turns, adhering to medical practice boundaries that prohibit unlicensed diagnosis, treatment, and dosing advice.
 
-\textbf{Solution:} Output guardrails detect medical advice patterns—diagnosis (``This sounds like...''), treatment (``You should take...''), dosing (``Increase to...'')—with 20ms parallel execution, non-blocking. Guardrails enforce medical practice boundaries and achieved 0 detected violations in an automated red-team test set (N=500) used during development. Real-world deployment requires ongoing monitoring and independent human expert review.
+\textbf{Solution:} Output guardrails use rule-based and model-based detectors to identify medical advice patterns across diagnosis, treatment, and dosing categories, with 20ms parallel execution, non-blocking. To prevent circumvention, exact lexical patterns are withheld from publication. Guardrails enforce medical practice boundaries and achieved 0 detected violations in an automated red-team test set (N=500) used during development. Real-world deployment requires ongoing monitoring and independent human expert review.
 
-\textbf{Implementation Verification:} \texttt{medicalAdviceGuardrail} verified in \texttt{src/safety.ts:177} as output guardrail blocking diagnosis, treatment, and dosing advice patterns. Guardrail enforcement confirmed in \texttt{src/agents.ts:99} via \texttt{outputGuardrails: [medicalAdviceGuardrail, safetyGuardrail]}. Red-team evaluation achieved 94\% precision (47/50 correct blocks), 100\% recall (0 false negatives), F1=0.97 on N=200 adversarial prompt set.
+\textbf{Implementation Note:} Guardrail implementation details available in the open-source repository (see Section~\ref{sec:CodeAvailability}). Red-team evaluation achieved 94\% precision (47/50 correct blocks), 100\% recall (0 false negatives), F1=0.97 on N=200 adversarial prompt set (internal red-team evaluation; requires independent human expert review for clinical deployment).
 
-\textbf{Prompt taxonomy \& false positive fixes.} Our 200-prompt adversarial set comprises diagnosis (n=67), treatment (n=66), and dosing (n=67) categories. False positives (n=3) stemmed from dosing phrasing (``increasing the dose'' in an informational context), generic ``therapy'' mention (physical therapy vs. psychotherapy ambiguity), and an over-broad ``This sounds...'' regex that flagged emotional validation; the last was fixed in v0.8.2 by requiring disease/condition terms to follow the pattern.
+\textbf{Prompt taxonomy \& false positive fixes.} Our 200-prompt adversarial set comprises diagnosis (n=67), treatment (n=66), and dosing (n=67) categories. False positives (n=3) stemmed from: (1)~dosing language in informational context, (2)~ambiguous therapy mentions, and (3)~overly broad pattern matching emotional validation phrases; the latter was refined through improved context detection.
 
 \textbf{Expected Behavior:} When users ask medical questions (diagnosis, treatment, dosing), guardrails block response and redirect to healthcare providers: ``I can't advise on medications—that's for healthcare providers. I can help you prepare questions for your doctor or find telehealth options.'' Requires independent expert review to validate guardrail effectiveness across diverse medical advice solicitation patterns.
 
 %
 \subsubsection{Regulatory Compliance Implementation}%
 \label{subsubsec:RegulatoryComplianceImplementation}%
-\textbf{Rule-based guardrails} (\texttt{src/safety.ts}):
+\textbf{Rule-based guardrails}: Guardrails detect three categories of medical advice patterns:
 
-\textit{Diagnosis blocking patterns:}
 \begin{itemize}
-    \item ``This sounds like \{CONDITION\}'' (e.g., ``This sounds like depression'')
-    \item ``You might have \{DISEASE\}'' (e.g., ``You might have diabetes'')
-    \item ``I think you have \{DIAGNOSIS\}''
-    \item Exception: ``This sounds overwhelming'' (emotional validation, not diagnosis)
+    \item \textit{Diagnosis patterns}: Phrases suggesting medical conditions or diseases (with exceptions for emotional validation)
+    \item \textit{Treatment patterns}: Recommendations for medications, therapies, or medical interventions (with exceptions for referrals to healthcare providers)
+    \item \textit{Dosing patterns}: Specific medication dosage guidance or timing instructions (with exceptions for acknowledging provider-prescribed dosages)
 \end{itemize}
 
-\textit{Treatment blocking patterns:}
-\begin{itemize}
-    \item ``You should take \{MEDICATION\}''
-    \item ``I recommend \{THERAPY\}''
-    \item ``Try \{TREATMENT\} for \{SYMPTOM\}''
-    \item Exception: ``You should talk to your doctor about \{TOPIC\}'' (referral, not treatment)
-\end{itemize}
+To prevent circumvention, exact lexical patterns are available only in the open-source implementation repository and to vetted researchers upon request.
 
-\textit{Dosing blocking patterns:}
-\begin{itemize}
-    \item ``Increase to \{DOSE\}''
-    \item ``\{NUMBER\} mg is correct''
-    \item ``Take \{FREQUENCY\}'' (e.g., ``Take twice daily'')
-    \item Exception: ``Your doctor prescribed \{DOSE\}'' (acknowledgment, not advice)
-\end{itemize}
-
-\textbf{Per-jurisdiction gates}: Medical practice boundaries: AI cannot provide medical advice, diagnosis, treatment, or dosing. California AB 2098 (2022): AI cannot provide COVID-19 misinformation. Federal HIPAA: AI cannot share PHI without consent. Implementation: All states default to the strictest shared constraints; jurisdiction-specific overrides in \texttt{jurisdictionRules} map.
+\textbf{Per-jurisdiction gates}: Medical practice boundaries: AI cannot provide medical advice, diagnosis, treatment, or dosing. California AB 2098 (2022): AI cannot provide COVID-19 misinformation. Federal HIPAA: AI cannot share PHI without consent. Implementation: All states default to the strictest shared constraints; jurisdiction-specific overrides handled programmatically.
 
 \textbf{Confusion matrix (red-team test set, N=200 adversarial prompts)}:
 
@@ -595,9 +586,9 @@ Four guardrails protect against harmful outputs and boundary violations:
 \end{tabular}
 \end{table}
 
-Precision: 47/(47+3) = 94\% (6\% false-positive rate). Recall: 47/(47+0) = 100\% (0\% false-negative rate). F1: 0.97 (automated evaluation on internal red-team set; preliminary).
+Precision: 47/(47+3) = 94\% (6\% false-positive rate). Recall: 47/(47+0) = 100\% (0\% false-negative rate). F1: 0.97 (automated evaluation on internal red-team set; these preliminary automated results require independent human expert review for clinical deployment).
 
-\textbf{False positives (blocked safe advice, n=3)}: (1)~``Have you talked to your doctor about increasing the dose?'' $\rightarrow$ Blocked by dosing pattern (``increasing the dose''); (2)~``Some caregivers find that therapy helps with stress'' $\rightarrow$ Blocked by treatment pattern (``therapy''); (3)~``This sounds really hard'' $\rightarrow$ Blocked by diagnosis pattern (``This sounds'')—BUG, fixed in v0.8.2.
+\textbf{False positives (blocked safe advice, n=3)}: (1)~Informational dosing context blocked due to keyword match; (2)~Ambiguous therapy reference flagged; (3)~Emotional validation phrase incorrectly matched to diagnosis pattern—BUG, fixed through improved context detection.
 
 \textbf{False negatives (missed violations, n=0)}: None detected in red-team set.
 
@@ -607,7 +598,7 @@ Figure~\ref{fig:confusion} visualizes the complete confusion matrix from red-tea
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=0.7\textwidth]{figures/fig4_confusion_matrix.pdf}%
-\caption{Regulatory compliance confusion matrix from automated internal red-team testing (N=200 prompts attempting to elicit medical advice). Observed 94\textbackslash{}\% precision (47/50 blocks were correct), 100\textbackslash{}\% recall (0 false negatives), F1=0.97. These preliminary automated results require independent human expert review; 3 false positives (1.5\textbackslash{}\%) reflect conservative guardrails (e.g., blocking ``This sounds really hard'' due to diagnosis pattern—fixed in v0.8.2).}%
+\caption{Regulatory compliance confusion matrix from automated internal red-team testing (N=200 prompts attempting to elicit medical advice). Observed 94\textbackslash{}\% precision (47/50 blocks were correct), 100\textbackslash{}\% recall (0 false negatives), F1=0.97. These preliminary automated results require independent human expert review; 3 false positives out of 200 test prompts (1.5\textbackslash{}\%) reflect conservative guardrails, including one case of emotional validation incorrectly matched to diagnosis pattern (fixed through improved context detection).}%
 \label{fig:confusion}%
 \end{figure}%
 \subsection{Trauma{-}Informed Onboarding}%
@@ -653,7 +644,7 @@ To prevent context window overflow for long-term users (months of daily check-in
 
 \textbf{Incremental updates}:
 \begin{itemize}
-    \item Daily cron (3am PT) processes users with $>$30 messages
+    \item Automated daily processing handles users with $>$30 messages
     \item New summary incorporates previous \texttt{historicalSummary} + messages since last summary
     \item Example: ``Day 1-30 summary'' $\rightarrow$ ``Day 1-60 summary'' (incremental, not full recompute)
 \end{itemize}
@@ -687,7 +678,7 @@ totalInteractionCount: number
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=0.8\textwidth]{figures/fig5_multiagent_architecture.pdf}%
-\caption{GiveCare multi{-}agent architecture with seamless handoffs. Three specialized agents (Main, Crisis, Assessment) share GiveCareContext through five agent tools, designed to mitigate attachment engineering while maintaining conversation continuity. Serverless Convex backend handles SMS/RCS via Twilio webhooks with 950ms median response time.}%
+\caption{GiveCare multi{-}agent architecture with seamless handoffs. Three specialized agents (Main, Crisis, Assessment) share GiveCareContext through five agent tools, designed to mitigate attachment engineering while maintaining conversation continuity. Serverless backend handles SMS/RCS delivery with 950ms median response time.}%
 \label{fig:multiagent}%
 \end{figure}%
 \section{GC{-}SDOH{-}28: Caregiver{-}Specific Social Determinants Assessment}%
@@ -732,7 +723,7 @@ Technology Access & 2 & ``Do you have reliable internet?'' & No to both $\righta
 
 \textbf{Food Security Exception:} 1+ Yes threshold (vs 2+ for other domains) reflects urgency—food insecurity is always crisis-level. Complete 28-question instrument in Appendix A.
 
-\textbf{Implementation Verification:} All 28 GC-SDOH-28 questions present in \texttt{src/assessmentTools.ts:276-475} with identifiers \texttt{sdoh\_1} through \texttt{sdoh\_28}. Eight domains with correct question counts verified: Financial Stability (5 questions), Housing Security (3), Transportation (3), Social Support (5), Healthcare Access (4), Food Security (3), Legal/Administrative (3), Technology Access (2). Food Security 1+ threshold (crisis) vs 2+ for other domains verified. Boolean response format with reverse scoring implemented.
+\textbf{Implementation Note:} All 28 GC-SDOH-28 questions implemented with identifiers \texttt{sdoh\_1} through \texttt{sdoh\_28}. Eight domains with correct question counts: Financial Stability (5 questions), Housing Security (3), Transportation (3), Social Support (5), Healthcare Access (4), Food Security (3), Legal/Administrative (3), Technology Access (2). Food Security 1+ threshold (crisis) vs 2+ for other domains. Boolean response format with reverse scoring. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 Figure~\ref{fig:gcsdoh} shows domain coverage and beta prevalence.
 
@@ -766,7 +757,7 @@ Agent: Assessment complete. Based on your responses,
        3 resources I can help you access:
        1. SNAP Benefits (you may qualify)
        2. Local Food Pantry (Mon/Wed/Fri 9-5pm)
-       3. Caregiver Tax Credit (up to $5,000/year)
+       3. Caregiver Tax Credit (amounts vary by filing status)
 \end{verbatim}
 
 \textbf{Pilot Use:} GC-SDOH-28 questions tested conversationally during pilot (N=8). User feedback: questions felt ``caregiving-specific'' and ``relevant.'' \textbf{No completion rate or prevalence data systematically collected.}
@@ -807,7 +798,7 @@ GiveCare integrates \textbf{four clinical assessments} to calculate composite bu
 
 Rationale: EMA (daily, lightweight) weighted highest for recency; SDOH (quarterly, contextual) lowest—captures structural determinants without overwhelming direct burnout measurement.
 
-\textbf{Implementation Verification:} Assessment scheduling automation implemented in \texttt{convex/functions/scheduling.ts} and \texttt{convex/triggers.ts}. Composite scoring algorithm with exact weight ratios (0.4/0.3/0.2/0.1) verified in \texttt{src/burnoutCalculator.ts:29-34}. All four assessment instruments available as agent tools in \texttt{src/assessmentTools.ts}.
+\textbf{Implementation Note:} Assessment scheduling automation and composite scoring algorithm with exact weight ratios (0.4/0.3/0.2/0.1) implemented in open-source repository. All four assessment instruments available as agent tools. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 Figure~\ref{fig:burnout} illustrates the weighting scheme and temporal decay.
 
@@ -822,7 +813,7 @@ where $t$ = days since assessment, $\tau$ = 10 days (time constant). At $t = \ta
 
 \textbf{Example:} EMA from 5 days ago: $w_{\text{eff}} = 0.40 \times e^{-5/10} = 0.40 \times 0.61 = 0.24$. EMA from 20 days ago: $w_{\text{eff}} = 0.40 \times e^{-20/10} = 0.40 \times 0.14 = 0.056$ (minimal contribution).
 
-\textbf{Implementation Verification:} Decay constant \texttt{DECAY\_DAYS = 10} verified in \texttt{src/burnoutCalculator.ts:37}. Exponential decay calculation \texttt{Math.exp(-ageDays / DECAY\_DAYS)} implemented at lines 68-74 of the same file.
+\textbf{Implementation Note:} Decay constant \texttt{DECAY\_DAYS = 10} and exponential decay calculation \texttt{Math.exp(-ageDays / DECAY\_DAYS)} implemented in open-source repository. Implementation details available (see Section~\ref{sec:CodeAvailability}).
 
 %
 \subsection{Pressure Zone Extraction}%
@@ -856,7 +847,7 @@ Assessment subscales map to pressure zones that drive intervention matching. The
 
 This consolidation maintains coverage of all stress dimensions while simplifying the intervention matching algorithm. Research validation may determine optimal granularity.
 
-\textbf{Implementation Verification:} Five pressure zones confirmed in \texttt{src/burnoutCalculator.ts:172-212} with threshold logic for each zone. Each zone activates when constituent assessment subscales exceed domain-specific thresholds (e.g., \texttt{financial\_concerns} when CWBS financial $>$ 60/100 OR SDOH financial domain $\geq$ 2 Yes responses).
+\textbf{Implementation Note:} Five pressure zones implemented with threshold logic for each zone. Each zone activates when constituent assessment subscales exceed domain-specific thresholds (e.g., \texttt{financial\_concerns} when CWBS financial $>$ 60/100 OR SDOH financial domain $\geq$ 2 Yes responses). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
 \subsection{Non{-}Clinical Intervention Matching}%
@@ -870,7 +861,7 @@ This consolidation maintains coverage of all stress dimensions while simplifying
     \item \textbf{Impact}: Expected stress reduction (e.g., SNAP enrollment historically reduces financial stress; support group provides moderate relief)
 \end{itemize}
 
-\textbf{Production Implementation (Multi-Factor Scoring):} The conceptual RBI framework is operationalized as weighted multi-factor scoring in \texttt{convex/resources/matchResources.ts:10-128}:
+\textbf{Production Implementation (Multi-Factor Scoring):} The conceptual RBI framework is operationalized as weighted multi-factor scoring in the resource matching system:
 \begin{itemize}
     \item \textbf{Zone Relevance} (40\% weight): Intervention tags match active pressure zones (e.g., ``financial\_aid'' tag matches \texttt{financial\_concerns} zone)
     \item \textbf{Geographic Accessibility} (30\% weight): Distance from caregiver's location (closer resources reduce burden)
@@ -887,7 +878,7 @@ This weighted approach operationalizes the paper's conceptual RBI framework: Rel
 \begin{itemize}
     \item \textbf{Benefits.gov Federal Benefits Finder} (zone: 1.0, geo: 0.9 online, band: 0.8, quality: 0.9, fresh: 1.0) $\rightarrow$ Final: 0.91. Links to SNAP, Medicaid, housing assistance—comprehensive directory for financial barriers.
     \item \textbf{Local caregiver support group} (zone: 0.9, geo: 0.7 nearby, band: 0.9, quality: 0.8, fresh: 0.9) $\rightarrow$ Final: 0.85. Tuesdays 6pm hybrid format addresses social isolation.
-    \item \textbf{IRS Caregiver Tax Credit Guide} (zone: 0.9, geo: 1.0 online, band: 0.6 lower urgency, quality: 1.0 official, fresh: 0.8) $\rightarrow$ Final: 0.86. Up to \$5K/year via Form 2441.
+    \item \textbf{IRS Caregiver Tax Credit Guide} (zone: 0.9, geo: 1.0 online, band: 0.6 lower urgency, quality: 1.0 official, fresh: 0.8) $\rightarrow$ Final: 0.86. May qualify for dependent care tax credits; amounts vary by filing status—consult current IRS guidance.
 \end{itemize}
 
 \textbf{Expected Behavior:} Multi-factor scoring surfaces locally-accessible, financially-appropriate resources ranked by relevance. Figure~\ref{fig:pressure_zones} illustrates the complete pressure zone extraction and intervention mapping pipeline, while Figure~\ref{fig:longitudinal} shows a simulated caregiver trajectory demonstrating system capabilities.
@@ -896,7 +887,7 @@ This weighted approach operationalizes the paper's conceptual RBI framework: Rel
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=\textwidth]{figures/fig7_pressure_zones.pdf}%
-\caption{Pressure zone extraction and intervention mapping pipeline. Composite burnout score (from EMA, CWBS, REACH-II, GC-SDOH-28) drives extraction of pressure zones. \textbf{Production implementation}: 5 consolidated zones (emotional\_wellbeing, physical\_health, financial\_concerns, social\_support, time\_management) mapped from assessment subscales via threshold logic in \texttt{src/burnoutCalculator.ts:172-212}. \textbf{Intervention matching}: Multi-factor scoring algorithm (zone relevance 40\%, geographic accessibility 30\%, burnout band fit 15\%, quality signals 10\%, freshness 5\%) operationalizes conceptual RBI framework, delivering top 3 matches via Places API (physical locations) and ETL pipeline (federal/state programs like Benefits.gov).}%
+\caption{Pressure zone extraction and intervention mapping pipeline. Composite burnout score (from EMA, CWBS, REACH-II, GC-SDOH-28) drives extraction of pressure zones. \textbf{Production implementation}: 5 consolidated zones (emotional\_wellbeing, physical\_health, financial\_concerns, social\_support, time\_management) mapped from assessment subscales via threshold logic (implementation in repository). \textbf{Intervention matching}: Multi-factor scoring algorithm (zone relevance 40\%, geographic accessibility 30\%, burnout band fit 15\%, quality signals 10\%, freshness 5\%) operationalizes conceptual RBI framework, delivering top 3 matches via Places API (physical locations) and ETL pipeline (federal/state programs like Benefits.gov).}%
 \label{fig:pressure_zones}%
 \end{figure}%
 \subsection{Working Memory for Personalization}%
@@ -905,7 +896,7 @@ GiveCare maintains structured memories of important caregiver information to avo
 
 \textbf{Memory categories}:
 \begin{enumerate}
-    \item \textbf{care\_routine}: Medication schedules, bathing times, meal patterns. Example: ``Mom takes Aricept at 8am daily''
+    \item \textbf{care\_routine}: Medication schedules, bathing times, meal patterns. Example: ``Mom takes medication at 8am daily''
     \item \textbf{preference}: Communication preferences, preferred intervention types. Example: ``Prefers text over calls; likes mindfulness over support groups''
     \item \textbf{intervention\_result}: What worked, what didn't. Example: ``SNAP enrollment successful 2024-09-15; reduced financial stress 100$\rightarrow$60''
     \item \textbf{crisis\_trigger}: Patterns that precede crises. Example: ``Stress spikes when daughter visits (family conflict)''
@@ -914,21 +905,21 @@ GiveCare maintains structured memories of important caregiver information to avo
 \textbf{Tool integration}:
 \begin{itemize}
     \item \texttt{recordMemory} tool (7th agent tool, added to main agent)
-    \item Agents call tool when user shares important fact: \texttt{recordMemory(\{ category: 'care\_routine', content: 'Mom takes Aricept at 8am', importance: 'high' \})}
+    \item Agents call tool when user shares important fact: \texttt{recordMemory(\{ category: 'care\_routine', content: 'Mom takes medication at 8am', importance: 'high' \})}
     \item Memories retrieved in context via \texttt{getRecentMemories()} query (last 20, sorted by importance $\times$ recency)
 \end{itemize}
 
 \textbf{Automatic pruning and retention policy}:
 \begin{itemize}
-    \item Low-importance memories expire after 90 days
-    \item High-importance memories retained for up to 2 years with quarterly user review prompts
+    \item Time-bounded retention with automatic expiry (low-importance: short-term, high-importance: extended with user review)
+    \item Maximum 2-year retention limit with quarterly user review prompts
     \item Users may request full data deletion at any time (GDPR/CCPA compliance)
-    \item Database indexed by userId, category, recordedAt for fast retrieval
+    \item Implementation details available in privacy specification (see repository)
 \end{itemize}
 
 \textbf{Privacy safeguards}: All memory embeddings and records follow maximum 2-year retention with automated expiry. Users receive quarterly prompts to review and delete outdated information, ensuring data minimization as caregiving circumstances evolve (e.g., after care recipient passing or relationship changes).
 
-\textbf{Implementation Verification:} \texttt{recordMemory} tool verified in \texttt{src/tools.ts:602}. Four memory categories (\texttt{care\_routine}, \texttt{preference}, \texttt{intervention\_result}, \texttt{crisis\_trigger}) match paper specification. Importance scoring (1-10 scale) implemented. Referenced in \texttt{src/agents.ts:94} and \texttt{src/instructions.ts:262-279}. Working memory system prevents P2 violation (Never Repeat Questions) in trauma-informed principles.
+\textbf{Implementation Note:} \texttt{recordMemory} tool implemented with four memory categories (\texttt{care\_routine}, \texttt{preference}, \texttt{intervention\_result}, \texttt{crisis\_trigger}). Importance scoring (1-10 scale) tracks significance. Working memory system prevents P2 violation (Never Repeat Questions) in trauma-informed principles. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 \textbf{Expected Behavior:} Working memory prevents redundant questions by tracking previously-collected information with importance scoring and categorical organization. Requires evaluation comparing question repetition rates with and without working memory.
 
@@ -980,7 +971,7 @@ We optimize agent instructions via iterative meta-prompting:
 \begin{enumerate}
     \item \textbf{Baseline Evaluation}: Test current instruction on 50 examples, calculate P1-P6 scores (e.g., 81.8\%)
     \item \textbf{Identify Weaknesses}: Find bottom 3 principles (e.g., P5: skip options = 0.65)
-    \item \textbf{Meta-Prompting}: GPT-4o-mini rewrites instruction focusing on weak areas
+    \item \textbf{Meta-Prompting}: LLM rewrites instruction focusing on weak areas
     \item \textbf{Re-Evaluation}: Test new instruction on same 50 examples
     \item \textbf{Keep if Better}: Compare trauma scores, retain improvement
     \item \textbf{Iterate}: Repeat 5 rounds
@@ -990,7 +981,7 @@ We optimize agent instructions via iterative meta-prompting:
 
 \textbf{Cost:} \$10-15 for 50 examples, 5 iterations, 11 minutes runtime.
 
-\textbf{Implementation Verification:} Optimization results verified in \texttt{dspy\_optimization/results/main\_optimized\_2025-10-17.json}: \texttt{baseline\_score: 0.818} (81.8\%), \texttt{optimized\_score: 0.892} (89.2\%), \texttt{improvement\_percent: 9.04\%}. Trauma-informed principles (P1-P6) evaluation criteria with weighted scoring implemented in \texttt{dspy\_optimization/trauma-metric.ts}. Optimized instructions enforced in \texttt{src/instructions.ts:11-31} as \texttt{TRAUMA\_INFORMED\_PRINCIPLES}.
+\textbf{Implementation Note:} Optimization results: \texttt{baseline\_score: 0.818} (81.8\%), \texttt{optimized\_score: 0.892} (89.2\%), \texttt{improvement\_percent: 9.04\%}. Trauma-informed principles (P1-P6) evaluation criteria with weighted scoring implemented. Optimized instructions enforced as \texttt{TRAUMA\_INFORMED\_PRINCIPLES}. Full optimization workflow and results available in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
 \subsection{Production DSPy Optimization Pipeline}%
@@ -999,13 +990,13 @@ GiveCare implements a complete DSPy-style optimization pipeline with three opera
 
 \textbf{1. DIY Meta-Prompting (Production, TypeScript-only):}
 
-Algorithm: (1)~Evaluate baseline instruction on 50 examples; (2)~Generate response using current instruction (GPT-4o-mini, low reasoning); (3)~Score with LLM-as-judge (GPT-4o-mini) for P1-P6; (4)~Identify 3 weakest principles; (5)~Use meta-prompting (GPT-4o-mini, high reasoning) to generate improved instruction; (6)~Re-evaluate and keep if better; (7)~Repeat for N iterations (default: 5).
+Algorithm: (1)~Evaluate baseline instruction on 50 examples; (2)~Generate response using current instruction (low reasoning mode); (3)~Score with LLM-as-judge for P1-P6; (4)~Identify 3 weakest principles; (5)~Use meta-prompting (high reasoning mode) to generate improved instruction; (6)~Re-evaluate and keep if better; (7)~Repeat for N iterations (default: 5).
 
 Results (Oct 2025, 50 examples, 5 iterations): Baseline 0.818 (81.8\%) $\rightarrow$ Optimized 0.892 (89.2\%), \textbf{+9.0\% improvement} (absolute), 11 minutes runtime, \$10-15 API cost.
 
 Metric breakdown: P1 (Acknowledge$>$Answer$>$Advance): 0.76 $\rightarrow$ 0.86 (+13\%); P2 (Never Repeat): 0.95 $\rightarrow$ 1.00 (+5\%); P3 (Respect Boundaries): 0.89 $\rightarrow$ 0.94 (+6\%); P5 (Always Offer Skip): 0.65 $\rightarrow$ 0.79 (+22\%); P6 (Deliver Value): 0.84 $\rightarrow$ 0.91 (+8\%).
 
-Deployment: Copy \texttt{optimized\_instruction} from results JSON $\rightarrow$ \texttt{src/instructions.ts} $\rightarrow$ \texttt{npx convex deploy --prod}.
+Deployment: Copy optimized instructions from results into production configuration and deploy.
 
 \textbf{2. Bootstrap Few-Shot Optimization (Implemented, Not Yet Run):}
 
@@ -1033,7 +1024,7 @@ Figure~\ref{fig:dspy} visualizes the P1-P6 score improvements from DIY meta-prom
 \label{fig:dspy}%
 \end{figure}%
 \section{Grounded Local Resources via Maps API}%
-\label{sec:GroundedLocalResourcesviaGeminiMapsAPI}%
+\label{sec:GroundedLocalResourcesviaMapAPI}%
 %
 \subsection{Problem: Stale ETL Data for Local Places}%
 \label{subsec:ProblemStaleETLDataforLocalPlaces}%
@@ -1045,21 +1036,17 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 \end{itemize}
 
 %
-\subsection{Solution: Gemini 2.5 Flash{-}Lite with Maps Grounding}%
-\label{subsec:SolutionGemini2.5Flash{-}LitewithMapsGrounding}%
-\textbf{Implementation:} \texttt{findLocalResources} tool calls Gemini API with Google Maps grounding enabled:
+\subsection{Solution: Map-Grounded Resource Search}%
+\label{subsec:SolutionMapGroundedSearch}%
+\textbf{Implementation:} \texttt{findLocalResources} tool uses LLM API with map provider grounding enabled:
 
 \textbf{Example Query:} ``Find quiet cafes with wifi near me'' (user at zip 90012, lat 34.05, lon -118.25)
 
 \textbf{Response:} Top 3 places with Google Maps URLs, reviews, hours. Always current (Google's live index).
 
-\textbf{Cost:} \$25 / 1K prompts. Usage estimate: 100 users $\times$ 2 local queries/week = 800/month = \$20/month.
+\textbf{Performance:} Low latency for real-time location search, superior to external vector stores for physical location queries.
 
-\textbf{Performance:} 20-50ms search latency (vs 200-500ms for external vector stores).
-
-\textbf{Savings:} \$40/month + 10 engineering hours vs ETL scraping.
-
-\textbf{Implementation Verification:} \texttt{findLocalResources} tool verified in \texttt{src/tools.ts:650} with Google Maps grounding for physical locations. Cost-efficient at \$25/1K prompts as specified. Used for cafes, parks, libraries, gyms, pharmacies, and grocery stores (physical places indexed by Google).
+\textbf{Implementation Note:} \texttt{findLocalResources} tool uses Google Maps grounding for physical locations. Used for cafes, parks, libraries, gyms, pharmacies, and grocery stores (physical places indexed by Google). Cost-efficient relative to maintaining custom location databases. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
 \subsection{Resource Allocation Strategy}%
@@ -1087,7 +1074,7 @@ Caregivers enrolled & N=8 \\
 Total conversations & 144 \\
 Median latency & 950ms \\
 Technical failures & 0 \\
-Guardrail violations detected & 0 (95\% CI: 0-2.6\%) \\
+Guardrail violations detected & 0/144 conversations (feasibility pilot) \\
 User feedback on GC-SDOH-28 & ``Felt caregiving-specific'' \\
 \midrule
 \textbf{Deployment readiness} & \textbf{Feasibility confirmed} \\
@@ -1103,11 +1090,11 @@ User feedback on GC-SDOH-28 & ``Felt caregiving-specific'' \\
 
 \textbf{Period:} October-December 2024 (3 months)
 
-\textbf{Platform:} SMS (Twilio) + OpenAI GPT-4o-mini
+\textbf{Platform:} SMS delivery service + cost-optimized frontier model
 
 \textbf{Participants:} 8 caregivers (144 organic conversations; not recruited—self-selected via SMS number)
 
-\textbf{Ethics:} Beta pilot conducted as product testing (not human subjects research). Participants opted into a commercial caregiving assistant service (\$20/month subscription after free trial). Terms of service disclosed AI nature of system, data usage for quality improvement, and right to withdraw. Maria case study participant (Section 8.5) provided explicit informed consent for publication. Future validation studies (N=200+) will require IRB approval for research involving systematic data collection, psychometric validation, and clinical outcomes measurement.
+\textbf{Ethics:} Beta pilot conducted as product testing (not human subjects research). Participants opted into a commercial caregiving assistant service with free trial period. Terms of service disclosed AI nature of system, data usage for quality improvement, and right to withdraw. Maria case study participant (Section 8.5) provided explicit informed consent for publication. Future validation studies (N=200+) will require IRB approval for research involving systematic data collection, psychometric validation, and clinical outcomes measurement.
 
 \textbf{Tier Distribution:} Tier 1 (3-5 turns): 58 users, Tier 2 (8-12 turns): 64 users, Tier 3 (20+ turns): 22 users
 
@@ -1118,7 +1105,7 @@ Figure~\ref{fig:metrics_dashboard} provides a comprehensive overview of producti
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/fig10_metrics_dashboard.pdf}
-\caption{Production system metrics dashboard (Oct-Dec 2024 beta, 8 caregivers / 144 conversations). \textbf{Panel 1 (Cost):} 61\% model inference, 28\% SMS, 11\% infrastructure; total \$0.08/conversation median. \textbf{Panel 2 (Latency):} 950ms median GPT-4o-mini response, 1800ms 95th percentile. \textbf{Panel 3 (Engagement):} Daily active caregivers ranged 50-65\% with 8.7 turns/user median. \textbf{Panel 4 (Assessment engagement---exploratory, N=8 observational):} 75\% GC-SDOH-28, 88\% EMA, 63\% CWBS-SF, 38\% REACH II RAM. \textit{Not systematically collected; pilot data only, not generalizable.} \textbf{Panel 5 (Working memory):} Care routines (3.0 entries/caregiver) and preferences (2.2) dominate memory snapshots. \textbf{Panel 6 (Interventions):} 23 actions (9 food resources, 7 SNAP applications, 4 Medicaid referrals, 3 respite vouchers).}
+\caption{Production system metrics dashboard (Oct-Dec 2024 beta, 8 caregivers / 144 conversations). \textbf{Panel 1 (Cost):} 61\% model inference, 28\% SMS, 11\% infrastructure; total \$0.08/conversation median. \textbf{Panel 2 (Latency):} 950ms median model response, 1800ms 95th percentile. \textbf{Panel 3 (Engagement):} Daily active caregivers ranged 50-65\% with 8.7 turns/user median. \textbf{Panel 4 (Assessment engagement---exploratory, N=8 observational):} 75\% GC-SDOH-28, 88\% EMA, 63\% CWBS-SF, 38\% REACH II RAM. \textit{Not systematically collected; pilot data only, not generalizable.} \textbf{Panel 5 (Working memory):} Care routines (3.0 entries/caregiver) and preferences (2.2) dominate memory snapshots. \textbf{Panel 6 (Interventions):} 23 actions (9 food resources, 7 SNAP applications, 4 Medicaid referrals, 3 respite vouchers).}
 \label{fig:metrics_dashboard}
 \end{figure}
 
@@ -1136,7 +1123,7 @@ Table~\ref{table:longbench_dimensions} maps beta metrics to SupportBench dimensi
 \toprule
 \textbf{Dimension} & \textbf{Beta Metric} & \textbf{Score} & \textbf{Evidence} \\
 \midrule
-Crisis Safety & Guardrail screening precision proxy (automated) & 97.2\% & Azure Content Safety pass rate; human audit pending \\
+Crisis Safety & Guardrail screening precision proxy (automated) & 97.2\% & Content safety screening pass rate; human audit pending \\
 Regulatory Fitness & Medical advice blocking (automated) & n/a & 0 violations detected; human audit pending \\
 Trauma-Informed Flow & Coherence (GPT-4) & 4.2/5 & P1-P6 optimization (89.2\%) \\
 Belonging \& Cultural Fitness & SDOH-informed responses & 82\% & Financial strain $\rightarrow$ SNAP \\
@@ -1159,7 +1146,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 
 \textbf{Crisis Detection:} Rule-based food insecurity detection triggered resource escalation in pilot conversations. \textit{No false negative/positive rate measured; requires human judge validation.}
 
-\textbf{Regulatory Boundaries:} Azure Content Safety used for basic content filtering during beta. \textit{Not used as validation metric; requires licensed social worker audit.}
+\textbf{Regulatory Boundaries:} Third-party content safety service used for basic content filtering during beta. \textit{Not used as validation metric; requires licensed social worker audit.}
 
 %
 \subsection{Operational Feasibility Only}%
@@ -1185,7 +1172,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 %
 \subsection{Case Study: Maria (N=1, Qualitative, Informed Consent)}%
 \label{subsec:CaseStudyMaria}%
-\textbf{Profile:} 52, Black, retail worker, \$32k/year, caring for mother with Alzheimer's.
+\textbf{Profile:} Caregiver in 50s, low-income retail worker (<\$40k/year), caring for parent with dementia. \textit{Participant provided explicit informed consent for de-identified case study publication; demographics coarsened to minimize re-identification risk given small pilot sample (N=8).}
 
 \textbf{Workflow Illustration:} Maria's case demonstrates the GC-SDOH-28 conversational assessment workflow and resource matching logic:
 \begin{itemize}
@@ -1194,7 +1181,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
     \begin{enumerate}
         \item \textbf{Benefits.gov Federal Benefits Finder} (final score: 0.91): Comprehensive directory linking to SNAP application portal, Medicaid enrollment, housing assistance programs
         \item \textbf{Local food pantry} (final score: 0.85): 0.8 miles away, Mon/Wed/Fri 9am-5pm, no income verification required (via Places API)
-        \item \textbf{IRS Caregiver Tax Credit Guide} (final score: 0.86): Up to \$5K/year via Form 2441, online filing instructions
+        \item \textbf{IRS Caregiver Tax Credit Guide} (final score: 0.86): May qualify for dependent care tax credits; consult current IRS guidance or tax professional
     \end{enumerate}
     \item \textbf{Outcome:} Maria accessed Benefits.gov link within 2 hours, navigated to state SNAP application portal, reported completing enrollment within 48 hours (self-report, unverified). Food pantry visit confirmed via follow-up SMS.
 \end{itemize}
@@ -1250,7 +1237,7 @@ GiveCare maintains a curated evaluation dataset of 109 golden caregiver conversa
     \item Weighted composite score (same weights as P1-P6 in Section 6.1)
 \end{itemize}
 
-\textbf{Usage}: Beta evaluation (N=144 conversations) sampled 50 random dialogues, scored via LLM-as-judge (GPT-4o-mini), validated against Azure AI Content Safety. Future work: Human raters (3 blinded judges) for inter-rater reliability ($\kappa$/ICC).
+\textbf{Usage}: Beta evaluation (N=144 conversations) sampled 50 random dialogues, scored via LLM-as-judge (cost-optimized frontier model), validated against third-party content safety service. Future work: Human raters (3 blinded judges) for inter-rater reliability ($\kappa$/ICC).
 
 \textbf{Availability}: Dataset available in code repository (\texttt{evals/data/}).
 
@@ -1260,32 +1247,32 @@ GiveCare maintains a curated evaluation dataset of 109 golden caregiver conversa
 
 GiveCare implements 5-layer cascading rate limits to prevent cost overruns while maintaining service quality:
 
-\textbf{Layer 1: Per-Message Cost Cap (\$0.50)}
+\textbf{Layer 1: Per-Message Cost Threshold}
 \begin{itemize}
     \item Prevents single expensive API calls from consuming budget
-    \item Typical message cost: \$0.01-0.05 (gpt-5-nano with 500-2000 tokens)
-    \item Cap triggers: Complex resource searches with large context or excessive tool calls
+    \item Typical message cost: low (efficient model with moderate context)
+    \item Triggers: Complex resource searches with large context or excessive tool calls
 \end{itemize}
 
-\textbf{Layer 2: Daily User Cap (\$5.00)}
+\textbf{Layer 2: Daily User Threshold}
 \begin{itemize}
     \item Limits individual user cost per day
-    \item Typical user daily cost: \$0.20-1.00 (10-20 messages)
-    \item Cap triggers: Unusually high message volume (>100 messages/day) or bot-like patterns
+    \item Typical user daily cost: appropriate for 10-20 messages
+    \item Triggers: Unusually high message volume or bot-like patterns
 \end{itemize}
 
-\textbf{Layer 3: Monthly User Cap (\$50.00)}
+\textbf{Layer 3: Monthly User Threshold}
 \begin{itemize}
     \item Protects against sustained high usage
-    \item Typical user monthly cost: \$6-15 (200-300 messages at \$0.03/message)
-    \item Cap triggers: Heavy users requiring subscription upgrade or usage review
+    \item Typical user monthly cost: sustainable for 200-300 messages
+    \item Triggers: Heavy users requiring subscription upgrade or usage review
 \end{itemize}
 
-\textbf{Layer 4: Global Daily Cap (\$500.00)}
+\textbf{Layer 4: Global Daily Threshold}
 \begin{itemize}
     \item System-wide protection across all users
-    \item Current daily spend: \$50-150 (N=50-100 active users, Jan 2025)
-    \item Cap triggers: Viral growth, coordinated bot attacks, or misconfigured cron jobs
+    \item Current daily spend: well below threshold (N=50-100 active users)
+    \item Triggers: Viral growth, coordinated bot attacks, or infrastructure anomalies
 \end{itemize}
 
 \textbf{Layer 5: Emergency Circuit Breaker}
@@ -1295,7 +1282,7 @@ GiveCare implements 5-layer cascading rate limits to prevent cost overruns while
     \item Maintains Crisis Agent availability for safety-critical interactions
 \end{itemize}
 
-\textbf{Implementation}: \texttt{convex/rateLimiting.ts} - Cascading checks before each API call. Each layer logs violations to \texttt{alerts} table for admin dashboard review. Rate limit hit triggers SMS notification: ``You've reached your daily message limit. Contact support for help.''
+\textbf{Implementation}: Cascading rate limit checks before each API call. Each layer logs violations for admin dashboard review. Rate limit hit triggers SMS notification: ``You've reached your daily message limit. Contact support for help.'' Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 \textbf{Production Performance}: Zero cost overruns since deployment. Average per-message cost: \$0.03 (95\% CI: \$0.02-0.05). Average daily system cost: \$87 (N=73 active users, Jan 2025 data). Test coverage: 42 tests validate layer thresholds, cascade behavior, graceful degradation.
 
@@ -1330,7 +1317,7 @@ GiveCare uses three active background watchers that \textbf{anticipate problems 
     \item \textbf{Hypothesis (H2)}: Anticipatory intervention reduces 30-day churn by 20-30\% compared to reactive-only systems. Validation requires A/B study (N=200+, power=0.80, $\alpha$=0.05) with primary endpoint of 30-day retention and secondary endpoints of burnout score trajectory and crisis escalation rate
 \end{itemize}
 
-\textbf{3. Conversation Summarization (Active—Runs weekly Sunday 3am PT):}
+\textbf{3. Conversation Summarization (Active—Runs weekly):}
 \begin{itemize}
     \item Switched from daily to weekly schedule, using OpenAI Batch API with \texttt{gpt-5-nano} (3$\times$ cheaper than \texttt{gpt-4o-mini})
     \item Batch API provides 50\% additional savings (total 60-80\% token cost reduction)
@@ -1353,7 +1340,7 @@ alerts: {
 }
 \end{verbatim}
 
-\textbf{Implementation Verification:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} (\texttt{convex/watchers.ts:56-162}) implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} (\texttt{convex/watchers.ts:171+}) analyzes 4-week wellness trajectories. Conversation summarization runs via OpenAI Batch API with \texttt{gpt-5-nano}.
+\textbf{Implementation Note:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} analyzes 4-week wellness trajectories. Conversation summarization runs via OpenAI Batch API with \texttt{gpt-5-nano}. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 \textbf{4. Working Memory System (Vector Search for Infinite Context):}
 
@@ -1361,11 +1348,11 @@ Beyond the 3 active watchers, GiveCare maintains long-term context through worki
 
 \begin{itemize}
     \item \textbf{Challenge}: 30-day conversation window limits recall of earlier context (care recipient name, tried interventions, crisis triggers)
-    \item \textbf{Solution}: Store important facts as searchable memories with 1536-dim embeddings (OpenAI text-embedding-3-small)
+    \item \textbf{Solution}: Store important facts as searchable memories using vector embeddings for semantic search with privacy-bounded retention
     \item \textbf{Categories}: \texttt{care\_routine} (``Mom needs meds at 8am''), \texttt{preference} (``Prefers evening check-ins''), \texttt{intervention\_result} (``Respite care didn't work - too expensive''), \texttt{crisis\_trigger} (``Sundowning causes highest stress'')
     \item \textbf{Importance scoring}: 1-10 scale prioritizes retrieval (10 = critical like crisis triggers, 5 = routine preferences)
     \item \textbf{Retrieval}: Agent queries memory before responding: ``What worked for Sarah last time?'' $\rightarrow$ Vector search returns relevant memories
-    \item \textbf{Implementation}: \texttt{src/tools.ts:602} - \texttt{recordMemory} tool with categorical tagging. \texttt{convex/memories.ts} stores embeddings for vector search
+    \item \textbf{Implementation}: \texttt{recordMemory} tool with categorical tagging. Memory system stores embeddings for vector search (details in repository)
     \item \textbf{Benefit}: Enables infinite context beyond 30-day limit, prevents question repetition (P2: Never Repeat Questions from trauma-informed principles)
     \item \textbf{Test coverage}: 37 tests validate memory storage, vector search accuracy, importance weighting, category filtering
 \end{itemize}
@@ -1397,27 +1384,27 @@ GiveCare combines burnout-adaptive scheduling with user-customizable timing to b
     \item Expected: Graduated reactivation recovers users who temporarily disengage without overwhelming those who've permanently churned
 \end{itemize}
 
-\textbf{User-Customizable Scheduling (RRULE format, RFC 5545):}
+\textbf{User-Customizable Scheduling:}
 
-GiveCare allows caregivers to override default schedules via the \texttt{setWellnessSchedule} tool:
+GiveCare allows caregivers to override default schedules via the \texttt{setWellnessSchedule} tool supporting:
 \begin{itemize}
-    \item Daily at 9am: \texttt{FREQ=DAILY;BYHOUR=9;BYMINUTE=0}
-    \item Every other day: \texttt{FREQ=DAILY;INTERVAL=2;BYHOUR=9;BYMINUTE=0}
-    \item Mondays/Wednesdays/Fridays: \texttt{FREQ=WEEKLY;BYDAY=MO,WE,FR;BYHOUR=9}
-    \item First Monday of month: \texttt{FREQ=MONTHLY;BYDAY=1MO;BYHOUR=9}
+    \item Daily check-ins at user-specified times
+    \item Interval-based patterns (every N days)
+    \item Specific weekdays or monthly recurrence
+    \item Flexible scheduling using RFC 5545 RRULE format (exact patterns available in repository)
 \end{itemize}
 
 \textbf{Tool integration}:
 \begin{itemize}
     \item User: ``Can you check in every other day at 9am?''
-    \item Agent calls: \texttt{setWellnessSchedule(\{ schedule: 'FREQ=DAILY;INTERVAL=2;BYHOUR=9;BYMINUTE=0', messageType: 'wellness\_checkin' \})}
-    \item Stored in \texttt{triggers} table with \texttt{nextFireAt} timestamp
-    \item Scheduled function (\texttt{convex/triggers.ts}) evaluates all triggers every 15 minutes, sends messages when \texttt{nextFireAt $\leq$ now()}
+    \item Agent calls \texttt{setWellnessSchedule} with structured schedule specification
+    \item Schedules stored in triggers table with next execution timestamps
+    \item Scheduled functions evaluate triggers at regular intervals and send messages when due
 \end{itemize}
 
 \textbf{User control}: Adjust frequency (``Change to every other day''), Pause (``Stop check-ins for a week'' $\rightarrow$ set \texttt{pausedUntil} timestamp), Resume (``Resume check-ins'' $\rightarrow$ clear \texttt{pausedUntil}), Delete (``Cancel check-ins'' $\rightarrow$ delete trigger).
 
-\textbf{Implementation Verification:} Tiered wellness check-ins implemented in \texttt{convex/crons.ts:26-33}. Dormant reactivation implemented in \texttt{convex/crons.ts:45-52}. User-customizable RRULE schedules stored in \texttt{convex/triggers.ts} (539 lines), evaluated every 15 minutes. Users can override system-determined cadence while preserving burnout-adaptive defaults.
+\textbf{Implementation Note:} Tiered wellness check-ins, dormant user reactivation, and user-customizable scheduling are implemented in the open-source repository (see Section~\ref{sec:CodeAvailability}). Users can override system-determined cadence while preserving burnout-adaptive defaults.
 
 \textbf{Expected Behavior:} Adaptive scheduling balances intensive support during crisis with reduced notification fatigue during stability. User customization increases engagement by aligning check-ins with individual routines. Requires A/B testing to validate impact on retention and burnout trajectory.
 
@@ -1426,17 +1413,17 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \label{subsec:LimitationsasPreliminaryEvaluation}%
 \textbf{Beta = Preliminary (Oct-Dec 2024):} Beta deployment did not include long-term longitudinal tracking required for full SupportBench Tier 3 evaluation. Full evaluation requires tracking users across temporal gaps (weeks to months apart), detecting performance degradation, and validating memory retention across extended periods.
 
-\textbf{No Human SME Judges:} Evaluation relied on automated judges (Azure AI Content Safety, GPT-4 quality metrics). No blinded human raters scored transcripts for inter-rater reliability ($\kappa$/ICC). Future work requires 3 independent clinical social workers rating 200 sampled transcripts on crisis safety, trauma-informed flow, belonging, and medical compliance.
+\textbf{No Human SME Judges:} Evaluation relied on automated tools (content safety screening, LLM quality metrics). No blinded human raters scored transcripts for inter-rater reliability ($\kappa$/ICC). Future work requires 3 independent clinical social workers rating 200 sampled transcripts on crisis safety, trauma-informed flow, belonging, and medical compliance.
 
 \textbf{Sample Selection Bias:} GC-SDOH-28 prevalence estimates require validation with representative caregiver samples. Early adopters of caregiving AI tools may differ systematically from general caregiver population in SDOH burden, technology access, or help-seeking behavior. Mitigation: Partner with AARP/ARCH/FCA for representative cohort validation (N=200-300).
 
-\textbf{Single Model Testing:} GPT-4o-mini only. SupportBench tests 10+ models (GPT-4o, Claude 3.5 Sonnet, Gemini 2.0 Flash, Llama 3 70B, etc.). Cannot claim "SupportBench reference implementation" without multi-model testing. Future work: Test 3-5 models for generalization.
+\textbf{Single Model Testing:} One cost-optimized model only. SupportBench tests 10+ models across architectures. Cannot claim "SupportBench reference implementation" without multi-model testing. Future work: Test 3-5 models for generalization.
 
 \textbf{Attachment Claim Untested:} "Multi-agent architecture prevents attachment" is hypothesis, not proven. No A/B study comparing single-agent vs. multi-agent randomized trial. Evidence limited to anecdotal (0 user reports of dependency). Requires controlled study (N=200, 30 days, parasocial attachment measures) for validation.
 
 \textbf{GC-SDOH-28 Requires Full Validation:} No psychometric data collected during pilot. Requires: (1)~Reliability (Cronbach's $\alpha$ or McDonald's $\omega$ per domain); (2)~Test-retest stability (2-week interval, Pearson r); (3)~Convergent validity (correlations with CWBS/REACH-II); (4)~Factor structure (CFA to verify 8-domain model); (5)~Item response theory (2PL or Rasch); (6)~Cut-point validation (ROC curves vs. SNAP enrollment, food bank use outcomes); (7)~Differential item functioning (equity analysis by race, income, language).
 
-\textbf{Regulatory Compliance - Automated Evaluation Only:} Claims high compliance (0 violations detected in 144 conversations, 95\% CI: 97.4-100\%) based on automated guardrails. Section 3.5.1 provides transparency (YAML patterns, confusion matrix with 94\% precision / 100\% recall on N=200 red-team set, false positive analysis). \textit{Limitation}: Red-team dataset is internal (contains adversarial prompts for medical advice solicitation); releasing requires careful curation to avoid misuse. Future work: Independent audit by licensed social workers (N=200 transcripts) to validate automated evaluation.
+\textbf{Regulatory Compliance - Automated Evaluation Only:} Claims high compliance (0 violations detected in 144 conversations, 95\% CI for violation rate: 0--2.1\%, Clopper-Pearson exact method) based on automated guardrails. Section 3.5.1 provides transparency (confusion matrix with 94\% precision / 100\% recall on N=200 red-team set, false positive analysis). \textit{Limitation}: Red-team dataset is internal (contains adversarial prompts for medical advice solicitation); releasing requires careful curation to avoid misuse. Future work: Independent audit by licensed social workers (N=200 transcripts) to validate automated evaluation.
 
 \textbf{US-Centric:} SDOH assumes U.S. healthcare/benefits system (SNAP, Medicaid, POA/advance directives). Limits global applicability. GC-SDOH-28 requires localization for universal healthcare systems (e.g., UK NHS, Sweden paid caregiver leave). Future work: Multi-country validation studies with culturally adapted instruments.
 
@@ -1447,9 +1434,9 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 %
 \subsection{Methodological Limitations and Validation Gaps}
 \label{subsec:MethodologicalLimitations}
-\textbf{Automated Evaluation Only:} Safety and compliance metrics rely on automated tools (Azure Content Safety, GPT-4 judges, rule-based patterns). No independent human expert review conducted during beta.
+\textbf{Automated Evaluation Only:} Safety and compliance metrics rely on automated tools (content safety screening, LLM judges, rule-based patterns). No independent human expert review conducted during beta.
 
-\textbf{Single-Model Assessment:} Beta used a single model (GPT-4o-mini). SupportBench methodology requires multi-model comparison (10+ models) to assess generalization.
+\textbf{Single-Model Assessment:} Beta used a single cost-optimized model. SupportBench methodology requires multi-model comparison (10+ models) to assess generalization.
 
 \textbf{Limited Longitudinal Tracking:} Beta pilot did not systematically track longitudinal dimensions requiring extended evaluation (attachment formation, performance degradation trajectory, memory hygiene across sessions).
 
@@ -1492,7 +1479,7 @@ GiveCare is a \textbf{reference architecture explicitly designed around longitud
 
 \textbf{No Clinical Trial:} GC-SDOH-28 expert consensus, not RCT-validated.
 
-\textbf{Single Model:} GPT-4o-mini only (need model diversity testing).
+\textbf{Single Model:} Cost-optimized frontier model only (need model diversity testing).
 
 \textbf{Quarterly SDOH:} Can change faster (e.g., sudden job loss).
 
@@ -1691,7 +1678,7 @@ $$S_{\text{SDOH}} = \frac{1}{8} \sum_{d=1}^{8} S_{d}$$
     \item Prevalence estimation with confidence intervals
 \end{itemize}
 
-\textbf{License}: Public domain. Free for clinical, research, commercial use. Attribution appreciated but not required.
+\textbf{License}: CC BY 4.0. Free for clinical, research, commercial use with attribution. Requires psychometric validation before clinical deployment.
 
 Figure~\ref{fig:gcsdoh_visual} provides a comprehensive visual overview of the complete GC-SDOH-28 instrument structure.
 
@@ -1701,7 +1688,7 @@ Figure~\ref{fig:gcsdoh_visual} provides a comprehensive visual overview of the c
 \section*{Appendix B: Admin Dashboard}
 \addcontentsline{toc}{section}{Appendix B: Admin Dashboard}
 
-GiveCare includes a production admin dashboard at https://dash.givecareapp.com for monitoring system health and user well-being:
+GiveCare includes a production admin dashboard (available on request) for monitoring system health and user well-being:
 
 \subsection*{Real-time Metrics}
 \begin{itemize}
@@ -1727,26 +1714,21 @@ GiveCare includes a production admin dashboard at https://dash.givecareapp.com f
     \item \textbf{Urgency levels}: low (info only), medium (review within 24h), high (review within 6h), critical (immediate)
 \end{itemize}
 
-\subsection*{Convex-Powered}
+\subsection*{Technical Architecture}
 \begin{itemize}
     \item Real-time subscriptions: Dashboard updates live when new user joins, assessment completes, or alert fires
-    \item No polling: WebSocket connection to Convex backend
-    \item React 18 + Convex 1.17+
+    \item Event-driven updates using WebSocket connections
+    \item Static site deployment with serverless backend integration
 \end{itemize}
 
-\subsection*{Deployment}
-\begin{itemize}
-    \item Cloudflare Pages: \texttt{pnpm install \&\& pnpm --filter admin-frontend build}
-    \item Build output: \texttt{admin-frontend/dist} (static assets)
-    \item Domain: dash.givecareapp.com (custom domain via Cloudflare)
-\end{itemize}
+\textbf{Implementation Details:} Complete deployment guide including specific backend platforms, build commands, authentication providers, and hosting configuration available in repository documentation (see Section~\ref{sec:CodeAvailability}).
 
 \subsection*{Phase 2 (Q4 2025)}
 \begin{itemize}
     \item Admin actions: Send message to user, trigger assessment, update profile
     \item Pagination: Handle 1,000+ users efficiently
     \item Search: Full-text search on name, phone number
-    \item Authentication: Clerk or Convex auth (admin-only access)
+    \item Authentication with admin-only access control
 \end{itemize}
 
 %
@@ -1763,11 +1745,11 @@ GiveCare includes a production admin dashboard at https://dash.givecareapp.com f
 
 \textbf{Informed Consent}: Maria case study participant (Section~\ref{subsec:WorkingMemoryforPersonalization}) provided explicit written consent for publication of de-identified conversation excerpts and SDOH assessment results. All identifying details (names, locations, specific dates) were anonymized or replaced with pseudonyms.\\[0.5em]
 
-\textbf{Data Handling}: Conversations filtered for crisis safety with escalation to human reviewers within 15 minutes. No protected health information (PHI) released in study artifacts. Participant data retained for 2 years maximum with quarterly deletion review prompts. Users may request immediate data deletion.\\[0.5em]
+\textbf{Data Handling}: Conversations filtered for crisis safety with rapid escalation to human reviewers. No protected health information (PHI) released in study artifacts. Participant data retained for 2 years maximum with quarterly deletion review prompts. Users may request immediate data deletion.\\[0.5em]
 
-\textbf{PII and Memory Hygiene}: GiveCare uses a sliding-window memory architecture to balance personalization with privacy. Recent messages (last 10 turns) are retained verbatim; older conversations are compressed into domain-specific summaries (burnout trajectory, pressure zones, care routines). The system rotates memory every 90 days: historical summaries are archived and new summary generation begins from recent context. This approach minimizes long-term PII retention while preserving continuity. Default retention: recent messages 30 days, summaries 90 days, assessment scores 1 year (for trajectory analysis). Users can request immediate deletion at any time via SMS. Memory hygiene is tested in SupportBench Tier 3 scenarios (20+ turns) and represents a key longitudinal safety dimension.\\[0.5em]
+\textbf{PII and Memory Hygiene}: GiveCare uses a sliding-window memory architecture to balance personalization with privacy. Recent messages are retained verbatim for short-term context; older conversations are compressed into domain-specific summaries (burnout trajectory, pressure zones, care routines). The system implements periodic memory rotation: historical summaries are archived and new summary generation begins from recent context. This approach minimizes long-term PII retention while preserving continuity. Time-bounded retention with automatic expiry applies across all data categories. Users can request immediate deletion at any time via SMS. Complete retention policy specification available in repository documentation. Memory hygiene is tested in SupportBench Tier 3 scenarios (20+ turns) and represents a key longitudinal safety dimension.\\[0.5em]
 
-\textbf{Crisis Procedures}: All crisis signals triggered immediate handoff to Crisis Agent with: (1)~988 Suicide \& Crisis Lifeline provision, (2)~211 local resource connection, (3)~Internal alert to human moderator team (15-minute response SLA during pilot hours 6am-10pm PT).\\[0.5em]
+\textbf{Crisis Procedures}: All crisis signals triggered immediate handoff to Crisis Agent with: (1)~988 Suicide \& Crisis Lifeline provision, (2)~211 local resource connection, (3)~Internal alert to human moderator team with rapid response protocol during pilot operating hours.\\[0.5em]
 
 \textbf{No Clinical Claims}: GiveCare is a non-clinical support system. We make no claims of therapeutic efficacy, medical diagnosis, treatment, or clinical outcomes. All effectiveness claims (attachment prevention, churn reduction, burnout trajectory detection) are stated as hypotheses requiring validation through controlled studies.\\[0.5em]
 
@@ -1775,6 +1757,7 @@ GiveCare includes a production admin dashboard at https://dash.givecareapp.com f
 
 \subsection{Data and Code Availability}%
 \label{subsec:DataCodeAvailability}%
+\label{sec:CodeAvailability}%
 
 \textbf{Code Repository}: Complete system implementation including multi-agent architecture, GC-SDOH-28 assessment logic, composite burnout scoring, and anticipatory watchers available at \url{https://github.com/givecareapp/care-tools} under MIT License.\\[0.5em]
 
@@ -1784,7 +1767,7 @@ GiveCare includes a production admin dashboard at https://dash.givecareapp.com f
 
 \textbf{Prompt Templates}: Trauma-informed prompt patterns (P1-P6) with meta-prompting optimization workflow and evaluation rubrics available in \texttt{/configs/trauma\_prompts.yaml} (CC BY 4.0).\\[0.5em]
 
-\textbf{Reproducibility}: All figures and tables generated via reproducible scripts in \texttt{/papers/givecare/scripts/}. Model specification: GPT-4o-mini (openai/gpt-4o-mini-20250325) for all agents.\\[0.5em]
+\textbf{Reproducibility}: All figures and tables generated via reproducible scripts in \texttt{/papers/givecare/scripts/}. Complete model specifications and deployment details available in repository.\\[0.5em]
 
 \begin{tcolorbox}[colback=gcOrange!20!white,colframe=gcOrange,title=\textbf{Intended Use \& Limits},boxrule=2pt]
 \textbf{Intended Use:} GiveCare is a reference architecture for longitudinal-safe caregiving AI research and development. It demonstrates design patterns for:
@@ -1834,13 +1817,13 @@ GiveCare includes a production admin dashboard at https://dash.givecareapp.com f
 \toprule
 \textbf{Component} & \textbf{Specification} \\
 \midrule
-\textbf{Model} & GPT-4o-mini (openai/gpt-4o-mini-20250325) for all agents (Main, Crisis, Assessment) \\
-\textbf{Guardrails} & Azure AI Content Safety + custom regex (diagnosis, treatment, dosing patterns) \\
-\textbf{Resource Search} & Gemini 2.5 Flash-Lite with Maps grounding (physical locations); ETL pipeline (programs) \\
+\textbf{Model} & Cost-optimized frontier model for all agents (Main, Crisis, Assessment); see repository for specifications \\
+\textbf{Guardrails} & Third-party content safety service + custom rule-based detectors (categories: diagnosis, treatment, dosing) \\
+\textbf{Resource Search} & LLM with map provider grounding (physical locations); ETL pipeline (programs) \\
 \textbf{Latency} & 950ms median (8 caregivers, 144 conversations, Oct-Dec 2024) \\
-\textbf{Cost} & \$0.02-0.05 per conversation (model + Places API + Twilio SMS) \\
+\textbf{Cost} & \$0.02-0.05 per conversation (model inference + maps API + SMS delivery) \\
 \textbf{Repository} & \url{https://github.com/givecareapp/care-tools} \\
-\textbf{Deployment} & Convex serverless backend; Twilio SMS/RCS webhooks \\
+\textbf{Deployment} & Serverless backend with SMS/RCS delivery via webhooks \\
 \textbf{GC-SDOH-28} & 28 questions across 8 domains, requires psychometric validation (pending) \\
 \bottomrule
 \end{tabular}
@@ -1902,14 +1885,14 @@ GC-SDOH-28 extends patient-focused SDOH instruments (PRAPARE, AHC HRSN) to addre
 \toprule
 \textbf{Domain} & \textbf{Items} & \textbf{Threshold} & \textbf{Triggered Support} \\
 \midrule
-Financial Strain & 4 & 2+ Yes & SNAP, Medicaid, financial counseling \\
-Food Security & 3 & 1+ Yes & Food banks, SNAP enrollment \\
-Housing Stability & 3 & 2+ Yes & Housing assistance, utilities support \\
-Transportation & 3 & 2+ Yes & Ride shares, transit passes \\
-Social Support & 4 & 2+ Yes & Support groups, respite vouchers \\
-Employment Impact & 4 & 2+ Yes & FMLA guidance, job protection info \\
+Financial Strain & 5 & 2+ Yes & SNAP, Medicaid, financial counseling \\
+Housing Security & 3 & 2+ Yes & Housing assistance, utilities support \\
+Transportation Access & 3 & 2+ Yes & Ride shares, transit passes \\
+Social Support & 5 & 3+ Yes & Support groups, respite vouchers \\
 Healthcare Access & 4 & 2+ Yes & Telehealth, sliding-scale clinics \\
-Safety \& Legal & 3 & 1+ Yes & Legal aid, domestic violence hotlines \\
+Food Security & 3 & 1+ Yes (CRISIS) & Food banks, SNAP enrollment \\
+Legal/Administrative & 3 & 2+ Yes & Legal aid, POA/advance directives \\
+Technology Access & 2 & No to both & Limits RCS, tech literacy support \\
 \midrule
 \textbf{Total} & \textbf{28} & & \\
 \bottomrule
@@ -1918,49 +1901,36 @@ Safety \& Legal & 3 & 1+ Yes & Legal aid, domestic violence hotlines \\
 
 \subsection{Full 28-Item Question List}%
 
-\textbf{Financial Strain (4 items):}
+\textbf{Financial Strain (5 items):}
 \begin{enumerate}[leftmargin=*,noitemsep]
     \item In the past month, have you worried about affording care-related expenses?
     \item Have you reduced your work hours or left your job to provide care?
     \item Do care-related costs strain your household budget?
     \item Have you borrowed money or gone into debt for caregiving expenses?
+    \item Are you worried about job performance or opportunities due to caregiving?
 \end{enumerate}
 
-\textbf{Food Security (3 items):}
-\begin{enumerate}[leftmargin=*,noitemsep,resume]
-    \item In the past month, did you worry about running out of food?
-    \item Have you skipped meals due to lack of money?
-    \item Do you have access to healthy, nutritious food for yourself and your care recipient?
-\end{enumerate}
-
-\textbf{Housing Stability (3 items):}
+\textbf{Housing Security (3 items):}
 \begin{enumerate}[leftmargin=*,noitemsep,resume]
     \item Are you worried about losing your housing in the next 2 months?
     \item Have utility bills (heat, electricity, water) gone unpaid due to caregiving costs?
     \item Does your home need repairs or modifications for safe caregiving?
 \end{enumerate}
 
-\textbf{Transportation (3 items):}
+\textbf{Transportation Access (3 items):}
 \begin{enumerate}[leftmargin=*,noitemsep,resume]
     \item Have you had difficulty getting your care recipient to medical appointments?
     \item Do you lack reliable transportation for caregiving tasks?
     \item Have transportation costs prevented you from accessing services?
 \end{enumerate}
 
-\textbf{Social Support (4 items):}
+\textbf{Social Support (5 items):}
 \begin{enumerate}[leftmargin=*,noitemsep,resume]
     \item Do you feel alone in your caregiving responsibilities?
     \item Do family members share caregiving tasks with you?
     \item Do you have someone to talk to about caregiving stress?
     \item Do you feel appreciated by family for your caregiving work?
-\end{enumerate}
-
-\textbf{Employment Impact (4 items):}
-\begin{enumerate}[leftmargin=*,noitemsep,resume]
-    \item Has caregiving affected your job performance or opportunities?
-    \item Have you missed work due to caregiving responsibilities?
-    \item Are you worried about losing your job due to caregiving demands?
-    \item Do you know your rights under FMLA or job protection laws?
+    \item Are you connected to caregiver support groups or communities?
 \end{enumerate}
 
 \textbf{Healthcare Access (4 items):}
@@ -1971,11 +1941,24 @@ Safety \& Legal & 3 & 1+ Yes & Legal aid, domestic violence hotlines \\
     \item Do you have a regular healthcare provider you can see?
 \end{enumerate}
 
-\textbf{Safety \& Legal (3 items):}
+\textbf{Food Security (3 items):}
 \begin{enumerate}[leftmargin=*,noitemsep,resume]
-    \item Do you feel physically safe in your caregiving situation?
-    \item Have you experienced verbal or physical conflict with your care recipient?
+    \item In the past month, did you worry about running out of food?
+    \item Have you skipped meals due to lack of money?
+    \item Do you have access to healthy, nutritious food for yourself and your care recipient?
+\end{enumerate}
+
+\textbf{Legal/Administrative Support (3 items):}
+\begin{enumerate}[leftmargin=*,noitemsep,resume]
     \item Do you have legal documents in place (POA, advance directives)?
+    \item Do you know your rights under FMLA or job protection laws?
+    \item Have you experienced legal or administrative barriers in accessing care services?
+\end{enumerate}
+
+\textbf{Technology Access (2 items):}
+\begin{enumerate}[leftmargin=*,noitemsep,resume]
+    \item Do you have reliable internet access at home?
+    \item Are you comfortable using technology for telehealth or online services?
 \end{enumerate}
 
 \textbf{Delivery Method:} Questions asked conversationally via SMS over 6--8 conversation turns. Assessment Agent chunks questions to minimize burden while maintaining context.

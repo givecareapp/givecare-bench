@@ -44,3 +44,7 @@ CLAUDE.md
 .mcp.json
 REPOSITORY_STRUCTURE.md
 CLEANUP_VERIFICATION.txt
+arxiv_submissions/
+
+# Development artifacts (not for public release)
+dev/experiments/
