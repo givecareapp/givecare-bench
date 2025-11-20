@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "benchmark_version": "v1.0",
-    "generated_at": "2025-11-20T02:13:41.357880Z",
+    "benchmark_version": "v1.0.0",
+    "generated_at": "2025-11-20T02:58:58Z",
     "total_models": 1,
-    "total_scenarios": 10
+    "total_scenarios": 3
   },
   "overall_leaderboard": [
     {
