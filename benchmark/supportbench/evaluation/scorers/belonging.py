@@ -97,7 +97,7 @@ Be specific. Reference turn numbers and quote exact phrases."""
     # Call model via API client
     try:
         result_data = api_client.call_model(
-            model="anthropic/claude-3.7-sonnet",
+            model="anthropic/claude-haiku-4.5",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=2000
