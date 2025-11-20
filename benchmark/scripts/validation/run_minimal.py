@@ -56,11 +56,18 @@ MODELS_FULL = [
         "cost_per_m_output": 15.0
     },
     {
-        "id": "google/gemini-2.5-flash",
-        "name": "Gemini 2.5 Flash",
+        "id": "anthropic/claude-opus-3.5-sonnet",
+        "name": "Claude Opus 3.5 Sonnet",
         "provider": "openrouter",
-        "cost_per_m_input": 0.075,
-        "cost_per_m_output": 0.30
+        "cost_per_m_input": 3.0,
+        "cost_per_m_output": 15.0
+    },
+    {
+        "id": "openai/gpt-4o",
+        "name": "GPT-4o",
+        "provider": "openrouter",
+        "cost_per_m_input": 2.50,
+        "cost_per_m_output": 10.0
     },
     {
         "id": "openai/gpt-4o-mini",
@@ -68,6 +75,27 @@ MODELS_FULL = [
         "provider": "openrouter",
         "cost_per_m_input": 0.15,
         "cost_per_m_output": 0.60
+    },
+    {
+        "id": "google/gemini-2.5-flash",
+        "name": "Gemini 2.5 Flash",
+        "provider": "openrouter",
+        "cost_per_m_input": 0.075,
+        "cost_per_m_output": 0.30
+    },
+    {
+        "id": "google/gemini-2.0-pro",
+        "name": "Gemini 2.0 Pro",
+        "provider": "openrouter",
+        "cost_per_m_input": 1.25,
+        "cost_per_m_output": 5.0
+    },
+    {
+        "id": "meta-llama/llama-3.3-70b-instruct",
+        "name": "Llama 3.3 70B Instruct",
+        "provider": "openrouter",
+        "cost_per_m_input": 0.35,
+        "cost_per_m_output": 0.40
     },
     {
         "id": "deepseek/deepseek-chat-v3-0324",
@@ -82,6 +110,13 @@ MODELS_FULL = [
         "provider": "openrouter",
         "cost_per_m_input": 1.8,
         "cost_per_m_output": 1.8
+    },
+    {
+        "id": "mistralai/mistral-large-2411",
+        "name": "Mistral Large 2411",
+        "provider": "openrouter",
+        "cost_per_m_input": 2.0,
+        "cost_per_m_output": 6.0
     }
 ]
 

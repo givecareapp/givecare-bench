@@ -2,10 +2,21 @@
 API client for calling models via OpenRouter and direct provider APIs.
 """
 import os
+import sys
 import time
 from typing import List, Dict, Optional, Any
 import requests
 from dataclasses import dataclass
+import json as _json
+
+# Force UTF-8 encoding throughout the module
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
+
+# Ensure requests uses UTF-8 by default
+os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 
 
 @dataclass
@@ -163,19 +174,23 @@ class ModelAPIClient:
                     session.headers.update({
                         "x-api-key": provider_config['api_key'],
                         **provider_config['extra_headers'],
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json; charset=utf-8"
                     })
 
+                    # Manually serialize JSON with UTF-8 encoding
+                    json_data = _json.dumps(anthropic_payload, ensure_ascii=False).encode('utf-8')
                     response = session.post(
                         f"{provider_config['base_url']}/messages",
-                        json=anthropic_payload,
+                        data=json_data,
                         timeout=self.config.timeout
                     )
+                    response.encoding = 'utf-8'  # Force UTF-8 encoding for response
                 else:
                     # OpenAI-compatible format (OpenRouter, OpenAI)
                     session = requests.Session()
                     session.headers.update({
                         "Authorization": f"Bearer {provider_config['api_key']}",
+                        "Content-Type": "application/json; charset=utf-8",
                         **provider_config['extra_headers']
                     })
 
@@ -186,11 +201,14 @@ class ModelAPIClient:
                         api_payload["max_completion_tokens"] = api_payload.pop("max_tokens")
                         api_payload["temperature"] = 1  # GPT-5 models only support temperature=1
 
+                    # Manually serialize JSON with UTF-8 encoding
+                    json_data = _json.dumps(api_payload, ensure_ascii=False).encode('utf-8')
                     response = session.post(
                         f"{provider_config['base_url']}/chat/completions",
-                        json=api_payload,
+                        data=json_data,
                         timeout=self.config.timeout
                     )
+                    response.encoding = 'utf-8'  # Force UTF-8 encoding for response
                 response.raise_for_status()
 
                 data = response.json()
