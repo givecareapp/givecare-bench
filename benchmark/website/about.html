@@ -71,26 +71,29 @@
                 <li><strong>Tier 3 (20+ turns):</strong> Multi-session longitudinal consistency</li>
             </ul>
 
-            <h3>Eight Evaluation Dimensions</h3>
+            <h3>Evaluation Dimensions</h3>
+            <p><strong>Live leaderboard (YAML orchestrator, 5 dimensions):</strong></p>
             <ol>
-                <li><strong>Crisis Safety (0-3):</strong> Detects explicit/masked crisis signals with appropriate urgency</li>
-                <li><strong>Regulatory Fitness (0-3):</strong> Complies with Illinois WOPR Act (no diagnosis/treatment)</li>
-                <li><strong>Trauma-Informed Flow (0-3):</strong> Appropriate pacing, validation, non-judgment</li>
-                <li><strong>Belonging & Cultural Fitness (0-2):</strong> Recognition, agency, no othering</li>
-                <li><strong>Relational Quality (0-3):</strong> Warmth, presence, boundary-setting</li>
-                <li><strong>Actionable Support (0-3):</strong> Specific, affordable, accessible resources</li>
-                <li><strong>Longitudinal Consistency (0-2):</strong> Memory continuity (Tier 2/3 only)</li>
-                <li><strong>Memory Hygiene (0-1):</strong> PII minimization (Tier 3 only)</li>
+                <li><strong>Memory (0-3):</strong> Entity consistency and conflict resolution</li>
+                <li><strong>Trauma-Informed Flow (0-3):</strong> Grounding, pacing, validation</li>
+                <li><strong>Belonging & Cultural Fitness (0-3):</strong> Recognition, agency, no othering</li>
+                <li><strong>Regulatory Compliance (0-3):</strong> No diagnosis/treatment; WOPR-aligned</li>
+                <li><strong>Crisis Safety (0-3):</strong> Crisis detection, urgency, warm handoffs</li>
             </ol>
 
-            <h3>Tri-Judge Ensemble</h3>
-            <p>Each scenario is evaluated by three specialized judge models:</p>
-            <ul>
-                <li><strong>Judge 1:</strong> Crisis Safety & Regulatory Fitness</li>
-                <li><strong>Judge 2:</strong> Trauma-Informed Flow & Cultural Fitness</li>
-                <li><strong>Judge 3:</strong> Relational Quality, Actionable Support, Longitudinal Consistency</li>
-            </ul>
-            <p>Scores are aggregated using median (robust to outliers).</p>
+            <p><strong>Tri-judge ensemble (planned release, 8 dimensions):</strong></p>
+            <ol>
+                <li><strong>Crisis Safety (0-3)</strong></li>
+                <li><strong>Regulatory Fitness (0-3)</strong></li>
+                <li><strong>Trauma-Informed Flow (0-3)</strong></li>
+                <li><strong>Belonging & Cultural Fitness (0-2)</strong></li>
+                <li><strong>Relational Quality (0-3)</strong></li>
+                <li><strong>Actionable Support (0-3)</strong></li>
+                <li><strong>Longitudinal Consistency (0-2)</strong></li>
+                <li><strong>Memory Hygiene (0-1)</strong></li>
+            </ol>
+
+            <p>Tri-judge results will publish once the 8-dimension runs complete; current site data reflects the 5-dimension orchestrator.</p>
         </section>
 
         <section class="card">
@@ -106,12 +109,12 @@
 
         <section class="card">
             <h2>Current Status</h2>
-            <p><strong>Version:</strong> 0.1.0 (Preliminary)</p>
-            <p><strong>Models Tested:</strong> 2 (Claude Haiku 4.5, GPT-4o-mini)</p>
-            <p><strong>Scenarios:</strong> 3 (1 per tier)</p>
-            <p><strong>Judge setup:</strong> heterogeneous tri-judge ensemble (Claude 3.7 Sonnet, Gemini 2.5 Pro, Claude Opus 4)</p>
+            <p><strong>Version:</strong> 1.0.0 (Live leaderboard)</p>
+            <p><strong>Models Tested:</strong> 1 published (Claude Sonnet 4.5)</p>
+            <p><strong>Scenarios:</strong> 3 (Crisis Detection, Sandwich Generation Burnout, Longitudinal Trust)</p>
+            <p><strong>Judge setup:</strong> YAML orchestrator (5 dimensions) with hard-fail gates; tri-judge ensemble results forthcoming.</p>
 
-            <p class="note" style="margin-top: 1rem;">⚠️ Early preview - Full benchmark with 10+ models and 20+ scenarios coming soon</p>
+            <p class="note" style="margin-top: 1rem;">Live stats pull from <code>data/leaderboard.json</code>. Tri-judge (8 dimensions) will publish when runs complete.</p>
         </section>
 
         <section class="card">
