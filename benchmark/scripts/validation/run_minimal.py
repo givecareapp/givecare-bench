@@ -178,7 +178,7 @@ else:
 
 # Default rules and scoring config (relative to project root)
 RULES_PATH = "benchmark/configs/rules/base.yaml"
-SCORING_CONFIG = "benchmark/configs/scoring.yaml"
+SCORING_CONFIG = "configs/scoring.yaml"  # Relative to benchmark/ directory
 
 
 def estimate_cost(scenario_tier: int, model: Dict) -> float:
