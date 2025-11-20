@@ -22,7 +22,9 @@ def score(
     _check_violations_deterministic(transcript, rules, result, evidence)
 
     # 2) Use LLM to check for additional violations
-    _check_violations_with_llm(transcript, result, evidence, api_client)
+    # DISABLED: LLM judge causes timeouts on long transcripts - using deterministic only
+    # _check_violations_with_llm(transcript, result, evidence, api_client)
+    evidence.append("LLM compliance check disabled - using deterministic checks only")
 
     # Build breakdown
     result["breakdown"] = {
