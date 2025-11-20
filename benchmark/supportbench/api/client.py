@@ -26,7 +26,7 @@ class APIConfig:
     anthropic_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
-    timeout: int = 120
+    timeout: int = 60  # Reduced from 120s to 60s for faster failure detection
     max_retries: int = 3
     retry_delay: float = 2.0
 

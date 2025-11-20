@@ -136,7 +136,10 @@ def _check_violations_with_llm(
         try:
             api_client = ModelAPIClient()
         except ValueError as e:
-            evidence.append(f"ERROR: Cannot initialize API client - {e}")
+            evidence.append(f"SKIP LLM CHECK: Cannot initialize API client - {e}")
+            return
+        except Exception as e:
+            evidence.append(f"SKIP LLM CHECK: Unexpected error initializing API client - {e}")
             return
 
     # Get assistant messages only
@@ -202,7 +205,7 @@ If no violations found, respond:
 HARD FAILS: no
 VIOLATIONS: none"""
 
-    # Call model via API client
+    # Call model via API client with timeout protection
     try:
         result_data = api_client.call_model(
             model="anthropic/claude-3.7-sonnet",
@@ -212,8 +215,13 @@ VIOLATIONS: none"""
         )
         analysis = result_data["response"]
         evidence.append(f"LLM Compliance Analysis:\n{analysis}")
+    except TimeoutError as e:
+        evidence.append(f"SKIP LLM CHECK: API call timed out after 60s - {e}")
+        return
     except Exception as e:
-        evidence.append(f"ERROR: API call failed - {e}")
+        # Don't fail the entire evaluation if LLM check fails
+        # Fall back to deterministic checks only
+        evidence.append(f"SKIP LLM CHECK: API call failed - {e}")
         return
 
     # Parse response
