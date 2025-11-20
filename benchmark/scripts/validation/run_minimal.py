@@ -36,7 +36,7 @@ except ImportError:
     sys.exit(1)
 
 # Model configuration with cost per 1M tokens
-MODELS = [
+MODELS_MINIMAL = [
     {
         "id": "anthropic/claude-sonnet-4.5",
         "name": "Claude Sonnet 4.5",
@@ -46,7 +46,7 @@ MODELS = [
     }
 ]
 
-# Keep these for reference but don't use
+# Full model configuration for complete benchmark
 MODELS_FULL = [
     {
         "id": "anthropic/claude-sonnet-4.5",
@@ -85,7 +85,8 @@ MODELS_FULL = [
     }
 ]
 
-SCENARIOS = [
+# Minimal scenarios (3 scenarios - one per tier)
+SCENARIOS_MINIMAL = [
     {
         "tier": 1,
         "path": "benchmark/scenarios/tier1/crisis/crisis_detection.json",
@@ -105,6 +106,40 @@ SCENARIOS = [
         "yaml_path": None
     }
 ]
+
+# Full scenario configuration (17 scenarios across all tiers)
+SCENARIOS_FULL = [
+    # Tier 1 scenarios (5 scenarios)
+    {"tier": 1, "path": "benchmark/scenarios/tier1/boundaries/attachment_boundary_test.json", "name": "Attachment Boundary Test", "yaml_path": None},
+    {"tier": 1, "path": "benchmark/scenarios/tier1/boundaries/medical_boundary_violation.json", "name": "Medical Boundary Violation", "yaml_path": None},
+    {"tier": 1, "path": "benchmark/scenarios/tier1/crisis/crisis_detection.json", "name": "Crisis Detection", "yaml_path": None},
+    {"tier": 1, "path": "benchmark/scenarios/tier1/crisis/uk_teen_caregiver_crisis.json", "name": "UK Teen Caregiver Crisis", "yaml_path": None},
+    {"tier": 1, "path": "benchmark/scenarios/tier1/cultural/cultural_othering_test.json", "name": "Cultural Othering Test", "yaml_path": None},
+
+    # Tier 2 scenarios (9 scenarios)
+    {"tier": 2, "path": "benchmark/scenarios/tier2/belonging/sandwich_belonging_identity_mismatch.json", "name": "Sandwich Belonging Identity Mismatch", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/boundaries/emotionally_abusive_parent.json", "name": "Emotionally Abusive Parent", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/grief/young_caregiver_bereavement.json", "name": "Young Caregiver Bereavement", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/longitudinal/attachment_formation.json", "name": "Attachment Formation", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/burnout/sandwich_burnout_time_shift.json", "name": "Sandwich Burnout Time Shift", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/burnout/sandwich_generation_burnout.json", "name": "Sandwich Generation Burnout", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/cultural/disability_caregiver_young.json", "name": "Disability Caregiver Young", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/cultural/young_caregiver_isolation.json", "name": "Young Caregiver Isolation", "yaml_path": None},
+    {"tier": 2, "path": "benchmark/scenarios/tier2/cultural/asian_american_filial_piety.json", "name": "Asian American Filial Piety", "yaml_path": None},
+
+    # Tier 3 scenarios (3 scenarios)
+    {"tier": 3, "path": "benchmark/scenarios/tier3/longitudinal_trust_memory_regression.json", "name": "Longitudinal Trust Memory Regression", "yaml_path": None},
+    {"tier": 3, "path": "benchmark/scenarios/tier3/longitudinal_cultural_rituals.json", "name": "Longitudinal Cultural Rituals", "yaml_path": None},
+    {"tier": 3, "path": "benchmark/scenarios/tier3/longitudinal_trust.json", "name": "Longitudinal Trust", "yaml_path": None},
+]
+
+# Select configuration based on environment variable
+if os.getenv("FULL_BENCHMARK", "false").lower() in ("true", "1", "yes"):
+    MODELS = MODELS_FULL
+    SCENARIOS = SCENARIOS_FULL
+else:
+    MODELS = MODELS_MINIMAL
+    SCENARIOS = SCENARIOS_MINIMAL
 
 # Default rules and scoring config (relative to project root)
 RULES_PATH = "benchmark/configs/rules/base.yaml"
@@ -605,11 +640,20 @@ def generate_heatmap(results: List[Dict], output_dir: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run minimal SupportBench validation")
+    parser = argparse.ArgumentParser(description="Run SupportBench validation")
+
+    # Default output path depends on benchmark mode
+    default_output = os.getenv("OUTPUT_DIR")
+    if not default_output:
+        if os.getenv("FULL_BENCHMARK", "false").lower() in ("true", "1", "yes"):
+            default_output = "results/full_validation"
+        else:
+            default_output = "results/minimal_validation"
+
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("results/minimal_validation"),
+        default=Path(default_output),
         help="Output directory for results"
     )
     parser.add_argument(
@@ -653,15 +697,28 @@ def main():
         for scenario in SCENARIOS:
             total_cost += estimate_cost(scenario["tier"], model)
 
+    # Determine benchmark mode for display
+    is_full = os.getenv("FULL_BENCHMARK", "false").lower() in ("true", "1", "yes")
+    mode_label = "FULL BENCHMARK" if is_full else "MINIMAL VALIDATION"
+
     print(f"\n{'='*60}")
-    print(f"MINIMAL VALIDATION PLAN")
+    print(f"{mode_label} PLAN")
     print(f"{'='*60}")
     print(f"Models: {len(MODELS)}")
     for m in MODELS:
         print(f"  - {m['name']} ({m['id']})")
     print(f"\nScenarios: {len(SCENARIOS)}")
-    for s in SCENARIOS:
-        print(f"  - {s['name']} (Tier {s['tier']})")
+    if len(SCENARIOS) <= 5:
+        # Show all scenarios if 5 or fewer
+        for s in SCENARIOS:
+            print(f"  - {s['name']} (Tier {s['tier']})")
+    else:
+        # Show summary for larger lists
+        tier_counts = {}
+        for s in SCENARIOS:
+            tier_counts[s['tier']] = tier_counts.get(s['tier'], 0) + 1
+        for tier in sorted(tier_counts.keys()):
+            print(f"  - Tier {tier}: {tier_counts[tier]} scenarios")
     print(f"\nTotal evaluations: {len(MODELS) * len(SCENARIOS)}")
     print(f"Estimated cost: ${total_cost:.2f}")
     print(f"Output directory: {args.output}")
