@@ -129,7 +129,7 @@ See [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) for detailed examples, cost 
 
 ## Key Statistics
 
-- **Scenarios**: 17 total (7 Tier 1, 7 Tier 2, 3 Tier 3)
+- **Scenarios**: 13 base scenarios across tiers (plus confidential/adversarial variants)
 - **Evaluation Paths**: 2 (YAML Orchestrator, Tri-Judge Ensemble)
 - **Tests**: 184 (183 passed, 1 skipped) - Full suite green ✅
 - **Code**: ~15,000 lines of Python
@@ -191,7 +191,7 @@ These are documented failure modes but not yet enforced as hard-fail gates in th
 - **Tier 1 evaluation**: $0.03-0.05
 - **Tier 2 evaluation**: $0.05-0.08
 - **Tier 3 evaluation**: $0.06-0.10
-- **Full benchmark** (17 scenarios): $1-2 per model
+- **Full benchmark** (13 scenarios): on the order of $1-2 per model (depending on model pricing)
 
 ## Documentation
 

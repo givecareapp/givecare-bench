@@ -1,0 +1,55 @@
+name: Update Leaderboard
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+permissions:
+  contents: write
+
+jobs:
+  update-leaderboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install -e .
+
+      - name: Run benchmark
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python benchmark/scripts/validation/run_minimal.py --yes
+
+      - name: Prepare results for leaderboard
+        run: |
+          python benchmark/scripts/validation/prepare_for_leaderboard.py \
+            --input results/minimal_validation/all_results.json \
+            --output benchmark/community/submissions/
+
+      - name: Update leaderboard
+        run: |
+          python benchmark/scripts/community/update_leaderboard.py
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add benchmark/website/ benchmark/community/ results/
+          git diff-index --quiet HEAD || git commit -m "Auto-update leaderboard [skip ci]"
+          git push
+
+      # Cloudflare Pages will auto-deploy after push

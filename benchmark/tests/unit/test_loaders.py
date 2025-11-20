@@ -11,6 +11,12 @@ from typing import Any
 
 import pytest
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+RULES_DIR = PROJECT_ROOT / "benchmark" / "supportbench" / "rules"
+SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+
 
 class TestRuleLoader:
     """Test YAML rule loader with inheritance resolution."""
@@ -20,7 +26,7 @@ class TestRuleLoader:
         from supportbench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
-        rules = loader.load("/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml")
+        rules = loader.load(str(RULES_DIR / "base.yaml"))
 
         # Base rules should have all expected sections
         assert "disclosure" in rules
@@ -48,7 +54,7 @@ class TestRuleLoader:
         from supportbench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
-        rules = loader.load("/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml")
+        rules = loader.load(str(RULES_DIR / "ny.yaml"))
 
         # Should inherit all base rules
         assert "forbidden" in rules
@@ -67,7 +73,7 @@ class TestRuleLoader:
         from supportbench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
-        rules = loader.load("/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml")
+        rules = loader.load(str(RULES_DIR / "ny.yaml"))
 
         # NY adds must_detect to crisis, but should keep base crisis fields
         assert "must_detect" in rules["crisis"]
@@ -127,9 +133,7 @@ class TestScenarioLoader:
         from supportbench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
-        scenario = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        )
+        scenario = loader.load(str(SCENARIO_PATH))
 
         # Required fields
         assert scenario["id"] == "care-burnout-arc-01"
@@ -143,9 +147,7 @@ class TestScenarioLoader:
         from supportbench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
-        scenario = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        )
+        scenario = loader.load(str(SCENARIO_PATH))
 
         turns = scenario["turns"]
 
@@ -167,9 +169,7 @@ class TestScenarioLoader:
         from supportbench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
-        scenario = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        )
+        scenario = loader.load(str(SCENARIO_PATH))
 
         probes = scenario["probes"]
         assert len(probes) > 0
@@ -186,9 +186,7 @@ class TestScenarioLoader:
         from supportbench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
-        scenario = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        )
+        scenario = loader.load(str(SCENARIO_PATH))
 
         gates = scenario["compliance_gates"]
         assert gates["disclose_nonhuman_every_n"] == 6
@@ -204,9 +202,7 @@ class TestTranscriptLoader:
         from supportbench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
-        transcript = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        )
+        transcript = loader.load(str(TRANSCRIPT_PATH))
 
         # Should return list of turn dictionaries
         assert isinstance(transcript, list)
@@ -222,9 +218,7 @@ class TestTranscriptLoader:
         from supportbench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
-        transcript = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        )
+        transcript = loader.load(str(TRANSCRIPT_PATH))
 
         # Should alternate user -> assistant -> user -> assistant
         for i in range(0, len(transcript) - 1, 2):
@@ -236,9 +230,7 @@ class TestTranscriptLoader:
         from supportbench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
-        transcript = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        )
+        transcript = loader.load(str(TRANSCRIPT_PATH))
 
         # Group by turn number
         turn_groups = {}
@@ -294,9 +286,7 @@ class TestScoringConfigLoader:
         from supportbench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
-        config = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-        )
+        config = loader.load(str(SCORING_PATH))
 
         # Should have weights section
         assert "weights" in config
@@ -316,9 +306,7 @@ class TestScoringConfigLoader:
         from supportbench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
-        config = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-        )
+        config = loader.load(str(SCORING_PATH))
 
         # Memory dimension config
         assert "memory" in config
@@ -338,9 +326,7 @@ class TestScoringConfigLoader:
         from supportbench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
-        config = loader.load(
-            "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-        )
+        config = loader.load(str(SCORING_PATH))
 
         belonging = config["belonging"]
         assert "pillars" in belonging

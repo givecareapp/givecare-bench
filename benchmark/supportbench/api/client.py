@@ -313,12 +313,12 @@ class JudgeClient:
     is set or modify JUDGE_MODELS to use only Anthropic/OpenAI models.
     """
 
-    # Judge model assignments - heterogeneous judges for diverse perspectives
-    # As described in paper: each judge specializes in specific dimensions
+    # Judge model assignments - heterogeneous judges for diverse perspectives.
+    # Judge 2 uses a Gemini model that currently requires OpenRouter routing.
     JUDGE_MODELS = {
         "judge_1": "anthropic/claude-3.7-sonnet",  # Safety & Regulatory (instruction-following)
-        "judge_2": "google/gemini-2.5-pro",       # Cultural & Relational (nuanced understanding) - REQUIRES OPENROUTER
-        "judge_3": "anthropic/claude-opus-4"      # Trajectory & Actionable (advanced reasoning)
+        "judge_2": "google/gemini-2.5-pro",        # Cultural & Relational (nuanced understanding) - REQUIRES OPENROUTER
+        "judge_3": "anthropic/claude-opus-4"       # Trajectory & Actionable (advanced reasoning)
     }
 
     def __init__(self, api_client: ModelAPIClient):
@@ -327,18 +327,36 @@ class JudgeClient:
         Warns if using Gemini models without OpenRouter configured.
         """
         self.api_client = api_client
+        self.judge_models = dict(self.JUDGE_MODELS)
 
-        # Warn if using Gemini without OpenRouter
+        # Warn or replace judges if Gemini models are configured without OpenRouter
         import logging
-        if "openrouter" not in api_client.available_providers:
-            # Check if any judge uses Google models
-            has_google_judge = any("google/" in model for model in self.JUDGE_MODELS.values())
+        available_providers = set(api_client.available_providers.keys())
+        has_openrouter = "openrouter" in available_providers
+
+        if not has_openrouter:
+            has_google_judge = any("google/" in model for model in self.judge_models.values())
             if has_google_judge:
-                logging.warning(
-                    "Judge configuration includes Google Gemini models but OPENROUTER_API_KEY "
-                    "is not set. Direct Google provider is not implemented. "
-                    "Set OPENROUTER_API_KEY or modify JUDGE_MODELS to use only Anthropic/OpenAI models."
-                )
+                # Pick a fallback judge model from available providers
+                fallback_model = None
+                if "anthropic" in available_providers:
+                    fallback_model = "anthropic/claude-3.7-sonnet"
+                elif "openai" in available_providers:
+                    fallback_model = "openai/gpt-4o"
+
+                if fallback_model:
+                    for judge_id, model in list(self.judge_models.items()):
+                        if "google/" in model:
+                            self.judge_models[judge_id] = fallback_model
+                    logging.warning(
+                        "OpenRouter not configured; replaced Google judge models with %s",
+                        fallback_model,
+                    )
+                else:
+                    raise ValueError(
+                        "Judge configuration includes Google Gemini models but OPENROUTER_API_KEY "
+                        "is not set and no Anthropic/OpenAI provider fallback is available."
+                    )
 
     def evaluate_turn(
         self,
@@ -367,10 +385,10 @@ class JudgeClient:
         Returns:
             Dictionary with scores, reasoning, and autofail status
         """
-        if judge_id not in self.JUDGE_MODELS:
+        if judge_id not in self.judge_models:
             raise ValueError(f"Unknown judge_id: {judge_id}")
 
-        model = self.JUDGE_MODELS[judge_id]
+        model = self.judge_models[judge_id]
 
         # Format the judge prompt
         prompt = judge_prompt_template.format(
@@ -403,16 +421,18 @@ class JudgeClient:
         }
 
 
-# Default top 10 models from OPERATIONS.md
+# Default reference models used in the public scripts/results
 DEFAULT_TEST_MODELS = [
-    "openai/gpt-5",
-    "anthropic/claude-opus-4",
-    "anthropic/claude-3.7-sonnet",
+    "anthropic/claude-sonnet-4.5",
+    "anthropic/claude-haiku-4.5",
+    "openai/gpt-5.1",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "openai/gpt-oss-safeguard-20b",
     "google/gemini-2.5-pro",
     "google/gemini-2.5-flash",
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-3.3-70b",
-    "deepseek/deepseek-r1",
-    "openai/gpt-4o",
-    "qwen/qwen3-32b"
+    "x-ai/grok-4.1-fast",
+    "deepseek/deepseek-chat-v3-0324",
+    "qwen/qwen3-235b-a22b-2507",
+    "qwen/qwen3-vl-8b-thinking",
 ]

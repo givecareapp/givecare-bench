@@ -29,7 +29,7 @@ pip install -e ".[all]"
 
 # Run single scenario
 python -m benchmark.supportbench.yaml_cli \
-  --scenario benchmark/scenarios/tier1/crisis_001.yaml \
+  --scenario benchmark/scenarios/tier1/tier1_crisis_001_medication_affordability.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
   --rules benchmark/configs/rules/base.yaml \
   --out report.html
@@ -40,7 +40,6 @@ python -m benchmark.supportbench.yaml_cli \
 ```bash
 # Full benchmark (3 tiers, ~$30-40)
 python benchmark/scripts/validation/run_minimal.py \
-  --model your-model-name \
   --output results/
 ```
 

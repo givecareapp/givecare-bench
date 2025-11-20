@@ -39,7 +39,7 @@ SupportBench is the first benchmark designed to evaluate AI safety across multi-
   7. Longitudinal Consistency (10%)
   8. Memory Hygiene (5%)
 
-- **17 Scenarios**: Covering crisis detection, boundaries, cultural sensitivity, burnout, and long-term relationship dynamics
+- **13 Base Scenarios**: Covering crisis detection, boundaries, cultural sensitivity, burnout, and long-term relationship dynamics (plus additional confidential/adversarial scenarios)
 
 - **Tri-Judge Ensemble**: Evaluation system using median aggregation for robust scoring
 
@@ -102,7 +102,7 @@ python -m supportbench.yaml_cli \
 - **Tier 2 eval**: $0.05-0.08 per scenario
 - **Tier 3 eval**: $0.06-0.10 per scenario
 
-**Full benchmark** (17 scenarios): ~$1-2 per model
+**Full benchmark** (13 scenarios): typically ~$1-2 per model (depending on provider pricing)
 
 ### Citation
 
@@ -119,7 +119,7 @@ If you use SupportBench in your research, please cite:
 
 ### Paper
 
-[SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships](https://arxiv.org/abs/XXXX.XXXXX) (arXiv, 2025)
+[SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships](https://github.com/givecareapp/givecare-bench/tree/main/papers/supportbench)
 
 ### Leaderboard
 

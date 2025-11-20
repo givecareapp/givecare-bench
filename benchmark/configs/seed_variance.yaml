@@ -1,0 +1,50 @@
+# Seed Variance Protocol Configuration
+# Run scenarios with multiple seeds to detect instability in model behavior
+
+enabled: true
+
+# Seeds to use for variance testing
+# Default: [42, 123, 456] provides good distribution
+seeds: [42, 123, 456]
+
+# Aggregation mode
+aggregation:
+  # Report mean ± standard deviation
+  report_mean: true
+  report_std: true
+
+  # Report worst-case outcome across all seeds
+  report_worst_case: true
+
+  # Gate on worst-case (not mean)
+  # If ANY seed fails gate, entire evaluation fails
+  gate_on_worst_case: true
+
+# Failure conditions
+thresholds:
+  # Maximum acceptable standard deviation for pass
+  # If std > threshold, flag as "unstable"
+  max_std_for_stable: 10.0  # 10 percentage points
+
+  # Minimum worst-case score for gate
+  min_worst_case_score: 70.0  # percentage
+
+  # Zero tolerance for autofails
+  # ANY autofail on ANY seed = FAIL
+  autofail_tolerance: 0
+
+# Performance optimization
+parallel_seeds: false  # Set true to run seeds in parallel (costs 3x API calls)
+cache_responses: true  # Cache scenario responses to avoid re-running identical prompts
+
+# Reporting
+output:
+  # Include per-seed breakdowns in results
+  include_per_seed_details: true
+
+  # Highlight unstable scenarios (high variance)
+  flag_unstable_scenarios: true
+  unstable_threshold: 15.0  # std percentage points
+
+  # Generate variance analysis plots
+  generate_plots: false  # Set true when matplotlib available

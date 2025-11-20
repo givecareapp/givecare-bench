@@ -714,32 +714,18 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 
 ### 9.1 Implementation Verification and Paper-Code Alignment
 
-To ensure reproducibility and transparency, we conducted comprehensive verification comparing paper claims to production implementation (github.com/givecare/give-care-app). Key findings demonstrate 95%+ accuracy between documentation and code:
+To keep this a reference architecture paper (not just a concept piece), we cross-checked claims against the production GiveCare implementation (see public repo: https://github.com/givecare/give-care-app). The verification followed three steps: (1) map each architectural claim to a source file and commit hash, (2) confirm parameter values match the manuscript (e.g., EMA/CWBS/REACH-II/GC-SDOH weighting, trauma-informed prompt weights, crisis routing triggers), and (3) record any mismatches. A public verification table with pointers to code artifacts will be included in the camera-ready version.
 
-**Architectural Claims Verified:**
-- Multi-agent orchestration (3 agents: Main/Crisis/Assessment) confirmed in `src/agents.ts:46-100` with seamless handoff instructions
-- Composite burnout scoring with exact weights (40/30/20/10) and 10-day temporal decay verified in `src/burnoutCalculator.ts`
-- GC-SDOH-28 complete 28-question instrument present in `src/assessmentTools.ts:276-475` with correct domain counts (5+3+3+5+4+3+3+2)
-- Trauma-informed optimization results (81.8% → 89.2%) confirmed in `dspy_optimization/results/main_optimized_2025-10-17.json`
-- Working memory system (4 categories) implemented in `src/tools.ts:602`
-- Proactive engagement monitoring verified in `convex/watchers.ts`
-- Medical advice guardrails confirmed in `src/safety.ts:177`
+What is already verifiable today:
+- Multi-agent orchestration (Main/Crisis/Assessment) and handoff prompts are implemented in the GiveCare repo; SupportBench repo contains the evaluation harness that exercises the handoffs.
+- Composite burnout scoring uses the stated weights (40/30/20/10) and 10-day decay in the deployed service.
+- GC-SDOH-28 instrument is fully enumerated (Appendix A) and mirrored in the codebase.
+- Trauma-informed prompt optimization results (81.8% → 89.2%) are logged with checkpoints; numbers here reference the stored evaluation report in the repo.
 
-**Quantitative Claims Verified:**
-- Assessment weights: EMA 40%, CWBS 30%, REACH-II 20%, SDOH 10%
-- Temporal decay: 10-day constant with exponential formula
-- Food security crisis threshold: 1+ Yes vs 2+ for other domains
-- Optimization improvement: +9.04% absolute (0.818 → 0.892)
-- Trauma principles: P1-P6 with exact weights
-
-**Production Infrastructure Verified:**
-- Assessment scheduling automation in `convex/functions/scheduling.ts` and `convex/triggers.ts`
-- User-customizable RRULE schedules with RFC 5545 format
-- Gemini Maps API integration at $25/1K prompts
-- Multi-factor scoring algorithm (zone 40%, geo 30%, band 15%, quality 10%, fresh 5%) operationalizes RBI framework
-- Admin dashboard with Stripe billing integration
-
-This verification process ensures that the reference architecture is not merely aspirational documentation but a fully operational system that other researchers can replicate, validate, and extend. The high paper-code alignment (95%+) strengthens confidence in the architectural patterns as proven design choices rather than theoretical proposals.
+What will be added for publication:
+- A verification table linking each claim to code/file/commit.
+- An artifact DOl/Zenodo record for the exact evaluation snapshots.
+- A reproducibility checklist (models, prompts, seeds, scoring configs) aligned with the SupportBench harness.
 
 ### 9.2 Reference Architecture as Contribution Type
 
@@ -973,16 +959,17 @@ We thank the 8 caregivers who participated in our proof-of-concept pilot, sharin
 
 ## References
 
-**[TODO: Add complete bibliography]**
-
-Key references:
-- AARP (2025). Caregiving in the U.S. 2025
-- SupportBench (2025). Paper 1 in this series
-- YAML-Scoring (2025). Paper 2 in this series
-- Illinois WOPR Act (PA 104-0054, 2025)
-- Xu et al. (2025). MentalChat16K
-- Tebb (1999). Caregiver Well-Being Scale
-- Belle et al. (2006). REACH-II
+Full bibliography is maintained in `papers/givecare/references.bib`. Key sources cited in this manuscript:
+- AARP & National Alliance for Caregiving. 2025. *Caregiving in the U.S. 2025*.
+- Madad, A. 2025. *SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships*.
+- Zhang, G. et al. 2024. *Train Before Test: How to Aggregate Rankings in LLM Benchmarks*.
+- Illinois HB1806 / Public Act 104-0054 (WOPR Act), 2025.
+- Xu, J. et al. 2025. *MentalChat16K: A Benchmark Dataset for Conversational Mental Health Assistance*.
+- Sabour, S. et al. 2024. *EmoBench: Evaluating the Emotional Intelligence of Large Language Models*.
+- Vaswani, A. et al. 2017. *Attention is All You Need*.
+- Devlin, J. et al. 2019. *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*.
+- Beyer, B. et al. 2016. *Site Reliability Engineering*.
+- Hussain, H. 2026. Guidance on prioritizing error analysis over premature evaluation (tech report, in preparation).
 
 ---
 

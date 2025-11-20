@@ -167,7 +167,7 @@ def main():
         "--models",
         type=str,
         nargs="+",
-        help="Models to test (defaults to top 10)"
+        help="Models to test (defaults to reference set used in public runs)"
     )
     parser.add_argument(
         "--output",

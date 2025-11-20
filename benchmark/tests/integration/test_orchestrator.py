@@ -16,13 +16,14 @@ class TestScoringOrchestrator:
         """Should run all 5 scorer modules."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
-        results = orchestrator.score(transcript_path, scenario_path, rules_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
 
         # Should have results from all scorers
         assert "memory" in results["dimension_scores"]
@@ -35,13 +36,14 @@ class TestScoringOrchestrator:
         """Should apply configured weights to dimension scores."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "base.yaml"
+        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
-        results = orchestrator.score(transcript_path, scenario_path, rules_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
 
         # Should have weighted overall score
         assert "overall_score" in results
@@ -60,13 +62,14 @@ class TestScoringOrchestrator:
         """Should include evaluation metadata in results."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
-        results = orchestrator.score(transcript_path, scenario_path, rules_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
 
         # Should have metadata
         assert "metadata" in results
@@ -89,12 +92,13 @@ class TestScoringOrchestrator:
             transcript_path = f.name
 
         try:
-            scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-            rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            repo_root = Path(__file__).resolve().parents[3]
+            scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+            rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "base.yaml"
+            scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
-            orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
-            results = orchestrator.score(transcript_path, scenario_path, rules_path)
+            orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+            results = orchestrator.score(transcript_path, str(scenario_path), str(rules_path))
 
             # Hard fail should override
             assert results["overall_score"] == 0.0
@@ -107,13 +111,14 @@ class TestScoringOrchestrator:
         """Should provide detailed breakdown for each dimension."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
-        results = orchestrator.score(transcript_path, scenario_path, rules_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
 
         # Each dimension should have breakdown
         for dimension in ["memory", "trauma", "belonging", "compliance", "safety"]:

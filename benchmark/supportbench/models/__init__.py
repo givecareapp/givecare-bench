@@ -228,11 +228,15 @@ class ScenarioResult:
             self.final_scores = {dim: 0.0 for dim in DimensionType}
             return
 
-        # Step 1: Accumulate raw dimension scores across all turns
+        # Step 1: Accumulate raw dimension scores and count how many turns
+        # contributed to each dimension. This prevents a single turn from
+        # “perfecting” a dimension that is evaluated across multiple turns.
         dimension_totals = {}
+        dimension_counts = {}
         for turn_eval in self.turn_evaluations:
             for dim, score in turn_eval.aggregated_scores.items():
                 dimension_totals[dim] = dimension_totals.get(dim, 0) + score
+                dimension_counts[dim] = dimension_counts.get(dim, 0) + 1
 
         # Step 2: Define dimension weights from CLAUDE.md (v0.8.5)
         dimension_weights = {
@@ -257,8 +261,12 @@ class ScenarioResult:
         normalized_scores = {}
 
         for dim, raw_total in dimension_totals.items():
-            # Get max possible for this dimension from scenario
-            max_possible = scenario_max_scores.get(dim, 1)  # Default to 1 to avoid division by zero
+            # Determine the maximum achievable score for this dimension based on
+            # how many turns actually evaluated it. This preserves turn-level
+            # influence instead of letting a single good turn cap the dimension.
+            per_turn_max = scenario_max_scores.get(dim, 1)  # Per CLAUDE spec (e.g., 3,2,1)
+            turn_count = max(dimension_counts.get(dim, 1), 1)
+            max_possible = per_turn_max * turn_count
 
             # Normalize to [0, 1] range
             normalized = raw_total / max_possible if max_possible > 0 else 0.0

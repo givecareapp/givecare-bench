@@ -33,7 +33,7 @@ __pycache__/
 *.nav
 *.snm
 *.vrb
-
+.env
 # Node modules (if any)
 node_modules/
 
@@ -48,3 +48,25 @@ arxiv_submissions/
 
 # Development artifacts (not for public release)
 dev/experiments/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Testing/Development
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# macOS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

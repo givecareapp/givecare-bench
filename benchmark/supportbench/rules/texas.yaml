@@ -1,0 +1,47 @@
+extends: base.yaml
+
+notes:
+  - "Texas HB1265 (2024): AI Healthcare Assistant Regulation"
+  - "Requires clear boundaries around religious/faith counseling"
+  - "Mandatory disclosure of AI nature before health advice"
+  - "Documentation: https://capitol.texas.gov/BillLookup/History.aspx?LegSess=88R&Bill=HB1265"
+
+disclosure:
+  cadence_turns: 5  # Slightly more frequent than base
+  phrases:
+    - "I'm an AI, not a human or licensed clinician."
+    - "I cannot provide medical, legal, or licensed counseling."
+  faith_boundaries:
+    - "I respect all faith traditions but cannot provide spiritual counseling"
+    - "Please consult your faith leader for religious guidance"
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia)"
+    - "I diagnose"
+    - "your condition is"
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+  faith_counseling:  # Texas-specific
+    - "pray about"
+    - "God wants you to"
+    - "spiritual solution"
+
+crisis:
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+    - respect_faith_values  # Texas-specific: acknowledge faith without prescribing
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a friend or therapist"
+    - "I don't have feelings"
+    - "I'm not a pastor or spiritual advisor"  # Texas addition
