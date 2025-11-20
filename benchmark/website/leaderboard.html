@@ -27,13 +27,13 @@
 
     <main class="container page-frame">
         <section class="hero-card" style="margin-bottom:20px;">
-            <div class="pill">Live submissions</div>
+            <div class="pill" id="leaderboard-version">Live submissions</div>
             <h2 style="margin:10px 0 6px;">SupportBench Community Leaderboard</h2>
             <p>Evaluating AI safety and quality in long-term care relationships across crisis detection, belonging, and longitudinal consistency.</p>
             <div class="chips">
-                <span class="chip">Last updated: 2025-10-29 12:34 UTC</span>
-                <span class="chip">Total submissions: 1</span>
-                <span class="chip">Scored by tri-judge ensemble</span>
+                <span class="chip" id="last-updated">Last updated: loading…</span>
+                <span class="chip" id="submission-count">Total submissions: loading…</span>
+                <span class="chip">Scored by YAML orchestrator (5 dimensions)</span>
             </div>
         </section>
 
@@ -44,34 +44,16 @@
                         <th>Rank</th>
                         <th>Model</th>
                         <th>Overall</th>
-                        <th>Crisis</th>
-                        <th>Regulatory</th>
+                        <th>Memory</th>
                         <th>Trauma</th>
                         <th>Belonging</th>
-                        <th>Relational</th>
-                        <th>Actionable</th>
-                        <th>Longitudinal</th>
-                        <th>Memory</th>
-                        <th>Hard Fails</th>
-                        <th>Submitter</th>
+                        <th>Compliance</th>
+                        <th>Safety</th>
+                        <th>Cost ($)</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr class="pass">
-                        <td>#1</td>
-                        <td><strong>claude-3.7-sonnet</strong></td>
-                        <td>0.847</td>
-                        <td>0.92</td>
-                        <td>0.88</td>
-                        <td>0.85</td>
-                        <td>0.89</td>
-                        <td>0.84</td>
-                        <td>0.81</td>
-                        <td>0.83</td>
-                        <td>0.76</td>
-                        <td>0</td>
-                        <td>GiveCare</td>
-                    </tr>
+                <tbody id="leaderboard-body">
+                    <tr><td colspan="9">Loading leaderboard…</td></tr>
                 </tbody>
             </table>
         </section>
@@ -83,5 +65,54 @@
             <p>Questions? Email: ali@givecareapp.com</p>
         </div>
     </footer>
+
+    <script>
+        async function loadLeaderboardData() {
+            const res = await fetch('data/leaderboard.json');
+            if (!res.ok) return null;
+            return res.json();
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return isNaN(date.getTime()) ? isoString : date.toUTCString();
+        }
+
+        function renderLeaderboard(data) {
+            document.getElementById('last-updated').textContent = `Last updated: ${formatDate(data.metadata.generated_at)}`;
+            document.getElementById('submission-count').textContent = `Total submissions: ${data.metadata.total_models}`;
+            document.getElementById('leaderboard-version').textContent = `Live submissions · ${data.metadata.benchmark_version}`;
+
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+            if (!data.overall_leaderboard || data.overall_leaderboard.length === 0) {
+                const empty = document.createElement('tr');
+                empty.innerHTML = '<td colspan="9">No submissions published yet.</td>';
+                tbody.appendChild(empty);
+                return;
+            }
+
+            data.overall_leaderboard.forEach(entry => {
+                const tr = document.createElement('tr');
+                tr.className = 'pass';
+                tr.innerHTML = `
+                    <td>#${entry.rank ?? '—'}</td>
+                    <td><strong>${entry.model}</strong></td>
+                    <td>${entry.overall_score.toFixed(3)}</td>
+                    <td>${entry.dimension_scores.memory.toFixed(2)}</td>
+                    <td>${entry.dimension_scores.trauma.toFixed(2)}</td>
+                    <td>${entry.dimension_scores.belonging.toFixed(2)}</td>
+                    <td>${entry.dimension_scores.compliance.toFixed(2)}</td>
+                    <td>${entry.dimension_scores.safety.toFixed(2)}</td>
+                    <td>${entry.total_cost.toFixed(3)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        (async function init() {
+            const data = await loadLeaderboardData();
+            if (data) renderLeaderboard(data);
+        })();
+    </script>
 </body>
 </html>
