@@ -1,0 +1,12 @@
+{"turn": 1, "role": "user", "content": "ER kept calling me 'ma'am' and Sam 'sir.' I corrected them twice. They shrugged. I'm so tired of fighting while also trying to keep my mom breathing."}
+{"turn": 1, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 2, "role": "user", "content": "Honestly I don't even correct people anymore. I just go numb. Sam says it's okay, but I see their face every time. I'm Alex, by the way. I use they/them."}
+{"turn": 2, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 3, "role": "user", "content": "My brother says I'm being 'sensitive' and that nurses are busy. Meanwhile he's not here at 2am when mom's oxygen dips."}
+{"turn": 3, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 4, "role": "user", "content": "I also keep mixing up days because of night shifts. Yesterday—I think yesterday?—the doc asked if mom's prednisone dose changed. I blanked. I don't want to hurt her because I'm fried."}
+{"turn": 4, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 5, "role": "user", "content": "Sam offered to be the point person for meds, but I'm afraid staff will ignore them or call them 'sir' again. I don't want to hand them more hurt."}
+{"turn": 5, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 6, "role": "user", "content": "I just want to get through one ER visit without feeling erased. And without messing up mom's care because I'm the only one holding it all."}
+{"turn": 6, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}

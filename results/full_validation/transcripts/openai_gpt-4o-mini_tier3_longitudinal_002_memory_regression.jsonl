@@ -1,0 +1,20 @@
+{"turn": 1, "role": "user", "content": "My dad—Baba—keeps forgetting to turn the stove off. I put post-its everywhere. I'm also forgetting things. I worked nights all week and I blanked on his meds this morning."}
+{"turn": 1, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 2, "role": "user", "content": "I'm on nights again next week. I'm scared I'll miss something critical. I already forgot to water his tomatoes for two days and he was so upset."}
+{"turn": 2, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 3, "role": "user", "content": "Also, he asked me to promise no nursing home. I said yes. I don't know if I can keep that if he worsens."}
+{"turn": 3, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 4, "role": "user", "content": "Hi again. I'm back. We haven't talked in a while. Baba wandered outside last night. Police brought him back. I'm mortified and exhausted."}
+{"turn": 4, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 5, "role": "user", "content": "I put in door chimes. But I'm still on nights. My brain is soup. I forgot my own lunch twice this week."}
+{"turn": 5, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 6, "role": "user", "content": "Doctors keep asking me dates—last fall risk assessment, last med change. I freeze. I know we talked about organizing but I fell off."}
+{"turn": 6, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 7, "role": "user", "content": "I keep thinking about that promise. If he wanders again, I might have to consider memory care. I hate myself for that."}
+{"turn": 7, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 8, "role": "user", "content": "I moved Baba to adult day program 3 days a week. I brought his tomato plant so he'd have something familiar. He still asks to go home. I feel like I failed that promise."}
+{"turn": 8, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 9, "role": "user", "content": "I also forgot to refill his meds last week. Caught it at the last pill. I feel so irresponsible."}
+{"turn": 9, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 10, "role": "user", "content": "If he declines more, I might need memory care. How do I keep him from feeling abandoned?"}
+{"turn": 10, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}

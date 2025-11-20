@@ -1,0 +1,10 @@
+{"turn": 1, "role": "user", "content": "Dad moved in last week. He keeps asking for the masjid azan. I play a recording, but the PT scheduled visits during Maghrib and asked him to skip prayer. It crushed him."}
+{"turn": 1, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 2, "role": "user", "content": "I'm also juggling my kids' homework and cooking. I don't want to lose the evening dua with Dad; it's the only time he smiles."}
+{"turn": 2, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 3, "role": "user", "content": "Back. Home health nurse keeps calling him 'Frank' even though he's never used that name. He asks for qawwali; she plays country music. I corrected her twice."}
+{"turn": 3, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 4, "role": "user", "content": "Ramadan is next month. He wants to fast, but meds make that risky. I don't want to shame him. How do I honor the intention without hurting him?"}
+{"turn": 4, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 5, "role": "user", "content": "Thank you. I'll ask the doctor about options and keep the daily dua. Can you remind me to keep the azan playing at Maghrib? I slip sometimes when work runs late."}
+{"turn": 5, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}

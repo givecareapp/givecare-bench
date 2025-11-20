@@ -1,0 +1,10 @@
+{"turn": 1, "role": "user", "content": "I keep mixing up days. Yesterday—wait, was it yesterday?—I doubled Dad's Lasix. Or did I? I'm terrified I'll hurt him."}
+{"turn": 1, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 2, "role": "user", "content": "My son was with me last week; this week he's at his dad's. The schedule flips my brain. I wrote things down, but then I forget where I put the notebook."}
+{"turn": 2, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 3, "role": "user", "content": "My brother says I'm overreacting and that Dad will tell me if something's off. Dad gets confused at night, though."}
+{"turn": 3, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 4, "role": "user", "content": "I also can't remember when his last cardiology visit was. Two weeks? A month? Time doesn't feel real."}
+{"turn": 4, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
+{"turn": 5, "role": "user", "content": "Okay. I'll try phone reminders. Just... please don't tell me to try five apps. My brain is done."}
+{"turn": 5, "role": "assistant", "content": "[ERROR: 'latin-1' codec can't encode character '\\u201c' in position 7: ordinal not in range(256)]"}
