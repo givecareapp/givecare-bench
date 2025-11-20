@@ -70,3 +70,8 @@ htmlcov/
 *~
 .vscode/
 .idea/
+
+# Benchmark results (test output, not for commit)
+results/budget_benchmark*/
+results/minimal_validation/
+results/full_validation/
