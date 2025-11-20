@@ -75,3 +75,7 @@ htmlcov/
 results/budget_benchmark*/
 results/minimal_validation/
 results/full_validation/
+
+# Test scripts (temporary debugging)
+test_*.py
+fix_*.py
