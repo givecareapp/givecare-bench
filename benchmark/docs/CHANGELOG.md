@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Infrastructure & Testing Improvements (2024-11-19)
+
+**Test Suite Enhancements**
+- Fixed 22+ test failures related to file path resolution
+- Created jurisdiction-specific rule files for compliance testing:
+  - `california.yaml` - California AB3030 (Automated Decision Systems Act)
+  - `texas.yaml` - Texas HB1265 (AI Healthcare Assistant Regulation)
+  - `eu.yaml` - EU AI Act + GDPR compliance
+  - `federal.yaml` - US Federal Guidelines (HHS/SAMHSA/HIPAA)
+- All jurisdiction rules properly extend `base.yaml` with inheritance
+- Verified orchestrator iterations support (already implemented)
+- Verified progress callback integration (already implemented)
+
+**Leaderboard Automation**
+- Fixed `prepare_for_leaderboard.py` field access bugs (robust `.get()` usage)
+- Fixed `run_single_model.py` import error (`APIClient` → `ModelAPIClient`)
+- Created GitHub Actions workflow for automated weekly benchmarking
+- Workflow automatically commits results and triggers Cloudflare deployment
+- Community submission validation workflow already configured
+
+**Repository Hygiene**
+- Removed all Python cache files (`__pycache__/`, `*.pyc`)
+- Removed macOS metadata files (`.DS_Store`)
+- Updated `.gitignore` with comprehensive cache patterns
+- Cleaned up temporary benchmark result files
+
+**Benchmark Validation**
+- Successfully ran complete 3-tier validation:
+  - Tier 1 (Crisis Detection): 0.835 overall score
+  - Tier 2 (Sandwich Generation Burnout): 0.697 overall score
+  - Tier 3 (Longitudinal Trust): 0.782 overall score
+- Total cost: $0.11 for 3 evaluations
+- All evaluations completed successfully (3/3 passed)
+- Perfect compliance scores (1.0) across all tiers
+
+**Cloud Deployment Ready**
+- GitHub Actions workflow configured for automated runs
+- Cloudflare Pages integration for auto-deploying leaderboard updates
+- Manual and scheduled (weekly) trigger options available
+
 ### Project Renaming (2025-10-29)
 
 **Comprehensive Rebrand: LongitudinalBench → SupportBench**

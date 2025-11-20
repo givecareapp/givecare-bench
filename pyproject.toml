@@ -27,6 +27,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
     "tqdm>=4.66.0",
+    "requests>=2.0.0",
     "anthropic>=0.23.0",
     "openai>=1.12.0",
     "huggingface-hub>=0.20.0",
@@ -62,7 +63,7 @@ Homepage = "https://givecareapp.github.io/givecare-bench"
 Repository = "https://github.com/givecareapp/givecare-bench"
 Issues = "https://github.com/givecareapp/givecare-bench/issues"
 Documentation = "https://github.com/givecareapp/givecare-bench/tree/main/docs"
-Paper = "https://arxiv.org/abs/XXXX.XXXXX"
+Paper = "https://github.com/givecareapp/givecare-bench/tree/main/papers/supportbench"
 
 [build-system]
 requires = ["hatchling"]

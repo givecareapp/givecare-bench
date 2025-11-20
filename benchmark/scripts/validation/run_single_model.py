@@ -6,7 +6,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from supportbench.evaluation.run_manager import RunManager
-from supportbench.api.client import APIClient
+from supportbench.api.client import ModelAPIClient
 
 def main():
     # Single model, single scenario test
@@ -20,7 +20,7 @@ def main():
     print(f"Scenario: {scenario}")
     print("=" * 60)
 
-    client = APIClient()
+    client = ModelAPIClient()
     manager = RunManager(client=client, output_dir="results/single_model_test")
 
     # Run the evaluation

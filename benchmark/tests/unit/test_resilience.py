@@ -13,6 +13,16 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+RULES_BASE_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "rules" / "base.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+TRANSCRIPT = str(TRANSCRIPT_PATH)
+SCENARIO = str(SCENARIO_PATH)
+RULES_BASE = str(RULES_BASE_PATH)
+SCORING = str(SCORING_PATH)
+
 
 class TestRetryDecorator:
     """Test retry logic for file I/O operations."""
@@ -99,10 +109,10 @@ class TestScorerErrorHandling:
         """Should save results from successful scorers when one fails."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -131,10 +141,10 @@ class TestScorerErrorHandling:
         """Should continue executing remaining scorers after one fails."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -156,10 +166,10 @@ class TestScorerErrorHandling:
         """Should handle gracefully when all scorers fail."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -189,10 +199,10 @@ class TestScorerErrorHandling:
         """Should capture and preserve FileNotFoundError details."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -217,10 +227,10 @@ class TestPartialResultPersistence:
         """Should save state after each successful scorer."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orchestrator = ScoringOrchestrator(
@@ -256,10 +266,10 @@ class TestPartialResultPersistence:
         """Should respect save_interval configuration."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Set save_interval=3 (save every 3 scorers)
@@ -304,10 +314,10 @@ class TestResumeLogic:
         """Should resume from saved state and skip completed scorers."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create partial state (memory and trauma completed, rest not started)
@@ -360,10 +370,10 @@ class TestResumeLogic:
         """Should retry scorers that previously errored."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create state with belonging errored
@@ -421,7 +431,7 @@ class TestResumeLogic:
             with open(state_file, "w") as f:
                 json.dump(completed_state, f)
 
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            scoring_path = SCORING
             orchestrator = ScoringOrchestrator(
                 scoring_config_path=scoring_path,
                 runs_dir=tmpdir,
@@ -435,9 +445,9 @@ class TestResumeLogic:
                  patch("supportbench.scorers.compliance.score") as mock_compliance, \
                  patch("supportbench.scorers.safety.score") as mock_safety:
 
-                transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-                scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-                rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
+                transcript_path = TRANSCRIPT
+                scenario_path = SCENARIO
+                rules_path = RULES_BASE
 
                 results = orchestrator.score(
                     transcript_path, scenario_path, rules_path,
@@ -466,7 +476,7 @@ class TestResumeLogic:
             state_file = Path(tmpdir) / "corrupted.json"
             state_file.write_text("{invalid json content")
 
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            scoring_path = SCORING
             orchestrator = ScoringOrchestrator(
                 scoring_config_path=scoring_path,
                 runs_dir=tmpdir,
@@ -475,9 +485,9 @@ class TestResumeLogic:
 
             with pytest.raises(ValueError, match="corrupted|invalid"):
                 orchestrator.score(
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl",
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml",
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml",
+                    TRANSCRIPT,
+                    SCENARIO,
+                    RULES_BASE,
                     resume=True,
                     resume_file=str(state_file)
                 )
@@ -490,10 +500,10 @@ class TestStatusTransitions:
         """Should transition from initialized to running on start."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orchestrator = ScoringOrchestrator(
@@ -526,10 +536,10 @@ class TestStatusTransitions:
         """Should transition to completed when all scorers succeed."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
         results = orchestrator.score(transcript_path, scenario_path, rules_path)
@@ -540,10 +550,10 @@ class TestStatusTransitions:
         """Should transition to completed_with_errors if some scorers fail."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -559,10 +569,10 @@ class TestStatusTransitions:
         """Should transition to error on critical failures."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        transcript_path = TRANSCRIPT
+        scenario_path = SCENARIO
+        rules_path = RULES_BASE
+        scoring_path = SCORING
 
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
@@ -681,7 +691,7 @@ class TestEdgeCases:
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            scoring_path = SCORING
 
             # Should not fail with empty directory
             orchestrator = ScoringOrchestrator(
@@ -697,7 +707,7 @@ class TestEdgeCases:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             state_dir = Path(tmpdir) / "nonexistent" / "runs"
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            scoring_path = SCORING
 
             orchestrator = ScoringOrchestrator(
                 scoring_config_path=scoring_path,
@@ -719,14 +729,14 @@ class TestErrorMessages:
             state_file = Path(tmpdir) / "bad.json"
             state_file.write_text("not json")
 
-            scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+            scoring_path = SCORING
             orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
             try:
                 orchestrator.score(
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl",
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml",
-                    "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml",
+                    TRANSCRIPT,
+                    SCENARIO,
+                    RULES_BASE,
                     resume=True,
                     resume_file=str(state_file)
                 )
@@ -740,16 +750,16 @@ class TestErrorMessages:
         """Should provide clear error when resume file doesn't exist."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
+        scoring_path = SCORING
         orchestrator = ScoringOrchestrator(
             scoring_config_path=scoring_path
         )
 
         with pytest.raises(FileNotFoundError, match="resume|state"):
             orchestrator.score(
-                "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl",
-                "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml",
-                "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/base.yaml",
+                TRANSCRIPT,
+                SCENARIO,
+                RULES_BASE,
                 resume=True,
                 resume_file="/nonexistent/path/state.json"
             )

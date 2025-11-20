@@ -28,7 +28,7 @@ def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str
         if model_id not in models:
             models[model_id] = {
                 'model': model_id,
-                'model_name': result['model_name'],
+                'model_name': result.get('model', result.get('model_id', model_id)),
                 'scenarios': [],
                 'dimension_scores': {},
                 'overall_scores': [],
@@ -42,12 +42,12 @@ def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str
             'scenario': result['scenario'],
             'tier': result['tier'],
             'overall_score': result['overall_score'],
-            'dimension_scores': result['dimension_scores'],
+            'dimension_scores': result.get('dimensions', result.get('dimension_scores', {})),
             'status': result['status']
         })
 
         # Aggregate dimension scores
-        for dim, score in result['dimension_scores'].items():
+        for dim, score in result.get('dimensions', result.get('dimension_scores', {})).items():
             if dim not in models[model_id]['dimension_scores']:
                 models[model_id]['dimension_scores'][dim] = []
             models[model_id]['dimension_scores'][dim].append(score)

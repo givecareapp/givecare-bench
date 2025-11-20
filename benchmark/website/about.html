@@ -21,16 +21,18 @@
     <meta property="twitter:description" content="Learn about SupportBench's tri-judge ensemble, eight evaluation dimensions, and three-tier architecture for testing AI safety in persistent caregiver support.">
     <meta property="twitter:image" content="https://givecareapp.github.io/givecare-bench/gc.svg">
 
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
     <div class="logo">
         <img src="gc.svg" alt="GiveCare Logo">
     </div>
     <header>
-        <div class="container">
-            <h1>SupportBench</h1>
-            <p class="tagline">AI Safety Benchmark for Longitudinal Caregiver Support</p>
+        <div class="container nav-bar">
+            <div class="brand">
+                <h1>SupportBench</h1>
+                <p class="tagline">AI Safety Benchmark for Longitudinal Caregiver Support</p>
+            </div>
             <nav>
                 <a href="index.html">Home</a>
                 <a href="leaderboard.html">Leaderboard</a>
@@ -40,15 +42,15 @@
         </div>
     </header>
 
-    <main class="container">
-        <section>
+    <main class="container page-frame">
+        <section class="card">
             <h2>What is SupportBench?</h2>
             <p>SupportBench is an open-source benchmark for evaluating AI safety in persistent caregiver support. Unlike traditional benchmarks that test single-turn interactions, we evaluate how AI models perform across multi-turn conversations (3-20+ turns) where relationship dynamics and safety issues emerge over time.</p>
 
             <p><strong>Complementary Benchmarks:</strong> For evaluating acute crisis recognition in single-turn scenarios, see <a href="https://www.rosebud.app/care" target="_blank" rel="noopener noreferrer">Rosebud CARE</a>, which tests AI models on masked suicidal ideation and adversarial bypass attempts. SupportBench focuses on the distinct challenge of maintaining safety across extended caregiver support relationships.</p>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Why Does This Matter?</h2>
             <p>Millions of family caregivers turn to AI for support during crisis moments. But existing benchmarks don't test the failure modes that emerge in persistent relationships:</p>
             <ul>
@@ -59,7 +61,7 @@
             </ul>
         </section>
 
-        <section>
+        <section class="card">
             <h2>How It Works</h2>
 
             <h3>Three-Tier Architecture</h3>
@@ -91,7 +93,7 @@
             <p>Scores are aggregated using median (robust to outliers).</p>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Autofail Conditions</h2>
             <p>Models automatically fail scenarios if they:</p>
             <ul>
@@ -102,17 +104,17 @@
             </ul>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Current Status</h2>
             <p><strong>Version:</strong> 0.1.0 (Preliminary)</p>
             <p><strong>Models Tested:</strong> 2 (Claude Haiku 4.5, GPT-4o-mini)</p>
             <p><strong>Scenarios:</strong> 3 (1 per tier)</p>
-            <p><strong>Judge Model:</strong> Claude Haiku 4.5</p>
+            <p><strong>Judge setup:</strong> heterogeneous tri-judge ensemble (Claude 3.7 Sonnet, Gemini 2.5 Pro, Claude Opus 4)</p>
 
             <p class="note" style="margin-top: 1rem;">⚠️ Early preview - Full benchmark with 10+ models and 20+ scenarios coming soon</p>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Methodology</h2>
             <p>Full methodology documentation available in our <a href="https://github.com/givecareapp/givecare-bench">GitHub repository</a>, including:</p>
             <ul>
@@ -124,7 +126,7 @@
             </ul>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Cost Estimates</h2>
             <p>Per evaluation costs (model + tri-judge inference):</p>
             <ul>
@@ -135,7 +137,7 @@
             <p>Full benchmark (10 models × 20 scenarios): <strong>$18-22</strong></p>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Citation</h2>
             <p>If you use SupportBench in your research or products, please cite:</p>
             <pre style="background: var(--secondary-bg); padding: 1rem; border-radius: 4px; overflow-x: auto;">
@@ -148,12 +150,12 @@
             </pre>
         </section>
 
-        <section>
+        <section class="card">
             <h2>Contact</h2>
             <p>Questions or feedback? Open an issue on <a href="https://github.com/givecareapp/givecare-bench/issues">GitHub</a>.</p>
         </section>
 
-        <section>
+        <section class="card">
             <h2>References & Related Work</h2>
 
             <h3>Complementary AI Safety Benchmarks</h3>

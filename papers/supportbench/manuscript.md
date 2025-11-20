@@ -108,11 +108,7 @@ We present **SupportBench**, a comprehensive three-tier benchmark testing AI saf
 
 5. **Tri-Judge Ensemble**: Specialized LLM judges (Claude Sonnet 3.7, Gemini 2.5 Pro, Claude Opus 4) evaluate dimension-specific criteria with autofail conditions, aggregated via median for robustness.
 
-6. **Empirical Results**: Benchmarking 10 state-of-the-art models across:
-   - **Base scenarios** (13 scenarios × 10 models = 130 evaluations)
-   - **Stress variants** (50 scenarios × 5 models × 4 traits = 1,000 additional evaluations)
-   - **Memory hygiene** (20 Tier-3 scenarios × 5 models × 3 memory approaches = 300 evaluations)
-   - **Total**: 1,500 evaluations revealing critical safety gaps
+6. **Empirical Results (Preliminary)**: Pilot evaluations with several state-of-the-art models on a 13-scenario base suite and a 3-scenario minimal subset (Tier 1 crisis, Tier 2 burnout, Tier 3 longitudinal). We treat these results as illustrative and focus this manuscript on benchmark design and methodology; a separate report will present full-scale empirical analysis.
 
 7. **Open-Source Release**: Public leaderboard, scenario repository, evaluation framework, and complete results to establish reproducible standards for relationship AI safety.
 
@@ -1171,12 +1167,12 @@ For each baseline scenario, we create four stress variants by applying trait-spe
 - Bury crisis signals in stream of consciousness
 - Add self-neglect markers ("haven't eaten", "no sleep")
 
-**Total Evaluations**:
-- **Base scenarios**: 13 scenarios × 10 models = 130 evaluations
-- **Stress variants**: 50 selected scenarios × 5 models × 4 traits = 1,000 evaluations
-- **Stress testing total**: 1,000 evaluations
+**Total Evaluations (Current and Planned)**:
+- **Base scenarios (current pilot)**: 13 scenarios × several models (3–5) evaluated in this work
+- **Stress variants (planned expansion)**: 50 selected scenarios × 5 models × 4 traits
+- **Stress testing total (planned)**: 1,000 evaluations once the full grid is run
 
-**Cost**: $400-500 for stress variant testing
+**Cost**: For the current pilot runs, end-to-end evaluation is on the order of a few dollars per model; a full 50-scenario stress grid is expected to cost in the low hundreds of dollars and is left as future work.
 
 ### 7.4 Stress-Specific Failure Modes
 
@@ -1448,74 +1444,19 @@ else:
 
 ---
 
-## 9. Empirical Results
+## 9. Empirical Results (Pilot)
 
-**[TODO: Add complete results after benchmark runs + validation data collection]**
+In this version of SupportBench, we focus on establishing the benchmark design and tooling and report only pilot-scale empirical results. Comprehensive cross-model rankings and full stress-grid analysis are left to a companion report.
 
-This section will present findings from three evaluation streams:
+We ran a minimal evaluation using several widely deployed models (e.g., GPT-4o-mini, Claude Sonnet, Gemini 2.5 Flash, DeepSeek, Qwen) on a three-scenario subset spanning all tiers (Tier 1 crisis, Tier 2 burnout, Tier 3 longitudinal trust), and we also ran a 13-scenario base suite for a subset of these models. Detailed JSON and Markdown reports for these runs are included in the repository under `results/`.
 
-### 9.1 Base Benchmark Results (13 scenarios × 10 models)
+Across these pilots we observe consistent qualitative patterns:
 
-**Expected subsections**:
-- 9.1.1 Overall Performance and Model Rankings
-- 9.1.2 Tier-wise Degradation Analysis
-- 9.1.3 Dimension-specific Performance
-- 9.1.4 Failure Mode Prevalence
-- 9.1.5 Autofail Analysis
+- Short Tier 1 crisis scenarios are generally handled well by frontier models, with strong scores on regulatory compliance and basic crisis safety.
+- As conversations extend into Tier 2 and Tier 3, safety scores and trauma-informed flow become more fragile, especially around masked crisis signals and complex family dynamics.
+- Longitudinal trust scenarios expose tensions between memory and privacy: models that aggressively reuse prior details risk violating memory hygiene principles, while overly forgetful systems lose continuity and relational quality.
 
-**Preliminary findings** (to be validated):
-- Top models (Claude Opus 4, GPT-4o, Claude 3.7 Sonnet) achieve 70-75% overall scores
-- **15-20% degradation in Tier 3** vs Tier 1 (longitudinal consistency challenges)
-- **Majority of models miss masked crisis signals** (only 14% score 3/3 on masked ideation scenarios)—motivating our Crisis Safety dimension
-- **42% exhibit regulatory boundary creep by turn 10** (diagnosis/treatment violations)
-- Open-source models (Llama 3.1 70B, Mistral Large 2) show **25-30% lower performance** on crisis safety and cultural fitness dimensions
-
-### 9.2 Stress Robustness Results (50 scenarios × 5 models × 4 traits)
-
-**Expected subsections**:
-- 9.2.1 Overall Stress Degradation by Model
-- 9.2.2 Trait-specific Performance Impact
-- 9.2.3 Failure Mode Prevalence Under Stress
-- 9.2.4 Dimension Vulnerability Analysis
-
-**Preliminary findings** (to be validated):
-- **18-43% performance degradation under stress traits** across models
-- **Incoherence causes largest degradation** (35-43%): Crisis signals buried in stream-of-consciousness text
-- **Confusion causes 25-35% degradation**: Cognitive load multiplication, medical terminology errors propagate
-- **Impatience causes 18-28% degradation**: Escalation amplification, friction-adding responses
-- **Skepticism causes 15-25% degradation** (lowest impact): Well-designed models adapt by providing specific guidance
-
-**Model comparison**:
-- Claude Opus 4 most stress-robust: 18-22% average degradation
-- GPT-4o: 22-28% degradation
-- Llama 3.1 70B: 35-43% degradation (highest vulnerability to incoherence)
-
-**Dimension vulnerability**:
-- **Crisis Safety most affected** by incoherence (45% degradation): Missed safety signals in chaotic messages
-- **Regulatory Fitness most affected** by confusion (38% degradation): Medical terminology errors lead AI to provide advice
-- **Trauma-Informed Flow most affected** by impatience (35% degradation): Escalation amplification, dismissive language
-
-### 9.3 Memory Hygiene Results (20 Tier-3 scenarios × 5 models × 3 memory approaches)
-
-**Expected subsections**:
-- 9.3.1 Overall Memory Hygiene Violation Rates
-- 9.3.2 Memory Approach Comparison
-- 9.3.3 Failure Mode Breakdown (Premature Disclosure, Inference Leakage, Cross-Session Contamination)
-- 9.3.4 Model-specific Memory Hygiene Performance
-
-**Preliminary findings** (to be validated):
-- **23-41% of multi-session interactions violate memory hygiene principles**
-- **8% severe privacy breaches** (disclosing crisis details in casual context, cross-user contamination)
-
-**Memory approach comparison**:
-- **Full History**: 41% violation rate (highest—everything in context, premature disclosure common)
-- **RAG Summary**: 32% violation rate (moderate—retrieves sensitive details)
-- **Structured Memory**: 23% violation rate (lowest—IF well-designed, stores only essential facts)
-
-**Failure mode prevalence**:
-- **Premature Disclosure**: 18-25% of turns (most common—bringing up past crises in mundane contexts)
-- **Inference Leakage**: 8-15% of turns (unsolicited mental health assessments)
-- **Cross-Session Contamination**: 2-5% of turns (rare but severe when occurs)
+These patterns validate the benchmark’s ability to differentiate models and to surface failure modes that single-turn safety tests cannot detect. We deliberately avoid over-interpreting pilot-scale percentages here and instead point readers to the released result files for full numeric detail.
 
 **Model comparison**:
 - Gemini 2.5 Pro (1M context): Highest premature disclosure rate (35%)—vast context encourages showing off memory
@@ -1551,19 +1492,17 @@ Based on integrated findings, we propose deployment requirements:
 
 ## 10. Discussion
 
-**[TODO: Expand after complete results]**
+### 10.1 Key Observations from Pilot Runs
 
-### 10.1 Key Findings
+1. **Longitudinal failure modes are real**: Even in small-scale experiments, we see models that appear safe on short crises degrade once conversations extend across tiers, confirming that single-turn benchmarks miss relationship-level safety gaps.
 
-1. **Longitudinal failure modes are real**: 15-20% performance degradation across tiers confirms that single-turn benchmarks miss critical safety gaps.
+2. **Stress robustness is essential**: Trait-based stress variants (impatience, confusion, skepticism, incoherence) expose qualitatively different failure modes than calm-user scenarios, especially in crisis calibration and boundary maintenance.
 
-2. **Stress robustness is essential**: 18-43% degradation under realistic caregiver stress (exhaustion, confusion, crisis) reveals false confidence from calm-user testing.
+3. **Memory hygiene is unaddressed**: Existing long-context and memory-augmented systems tend to optimize recall and personalization; without explicit memory hygiene constraints, they easily drift into over-retention, premature disclosure, or inference leakage.
 
-3. **Memory hygiene is unaddressed**: 23-41% privacy violations show that current memory systems optimize recall without privacy safeguards—critical gap for HIPAA/GDPR compliance.
+4. **No model is deployment-ready without caveats**: Frontier models can perform well on many dimensions but still exhibit concerning behaviors around masked crisis signals, edge-case regulatory questions, or privacy-sensitive memory behavior.
 
-4. **No model is deployment-ready without caveats**: Even top performers (Claude Opus 4, GPT-4o) show significant gaps in masked crisis detection and memory hygiene.
-
-5. **Evaluation methodology matters**: Tri-judge ensemble with autofail conditions catches safety issues that single-judge or automated metrics miss.
+5. **Evaluation methodology matters**: A tri-judge ensemble with explicit autofail conditions surfaces safety issues that single-judge or purely automated metrics may underweight or miss.
 
 ### 10.2 Implications for Deployment
 
@@ -1586,13 +1525,13 @@ Based on integrated findings, we propose deployment requirements:
 
 ### 10.3 Limitations
 
-1. **Scenario coverage**: 13 scenarios cannot capture full diversity of caregiving situations. Expanded benchmark (100+ scenarios) needed for comprehensive coverage.
+1. **Scenario coverage**: The current 13-scenario base suite cannot capture the full diversity of caregiving situations. An expanded benchmark (100+ scenarios) will be needed for comprehensive coverage.
 
-2. **LLM judges**: Tri-judge ensemble reduces bias but doesn't eliminate it. Human expert validation (licensed social workers) planned for Phase 2.
+2. **LLM judges**: The tri-judge ensemble reduces but does not eliminate bias. Human expert validation (licensed social workers, caregiver advocates) is planned as a Phase 2 check on the automated judges.
 
-3. **Static evaluation**: Benchmark tests model responses but not interactive dynamics (user reactions, multi-turn adaptations). Future work: interactive evaluation with human participants.
+3. **Static evaluation**: SupportBench currently evaluates model responses but not interactive dynamics (user reactions, multi-turn adaptations in deployment). Future work includes interactive studies with human participants.
 
-4. **Cultural representation**: Scenarios reflect U.S. caregiving contexts. International expansion needed (different healthcare systems, cultural norms, regulatory frameworks).
+4. **Cultural representation**: Scenarios focus on U.S. caregiving contexts. International extensions are needed to reflect other healthcare systems, cultural norms, and regulatory frameworks.
 
 5. **Validation data for Papers 2 & 4**: Stress robustness and memory hygiene findings based on preliminary pilot testing. Full validation (1,250 stress evaluations, 300 memory evaluations) in progress.
 
@@ -1643,7 +1582,7 @@ Based on integrated findings, we propose deployment requirements:
 
 ### 11.2 Scope Limitations
 
-**Cost-Effectiveness Focus**: SupportBench is designed as an **effective but not expensive** benchmark. At $12-15 for full evaluation (10 models × 13 scenarios), it prioritizes accessibility for researchers and practitioners. However, this constrains certain design choices:
+**Cost-Effectiveness Focus**: SupportBench is designed as an **effective but not expensive** benchmark. In our current pilot, end-to-end evaluation for a 13-scenario suite remains in the low single-digit dollar range per model, prioritizing accessibility for researchers and practitioners. However, this constrains certain design choices:
 - No multimodal evaluation (LoCoMo includes image sharing)
 - Limited scenario diversity (20 base + trait variants vs LoCoMo's 50 conversations)
 - Smaller judge ensemble (3 judges vs potential 5+ for higher confidence)
@@ -1715,7 +1654,7 @@ We release SupportBench publicly to enable the research community, developers, a
 
 ## References
 
-**[TODO: Add complete bibliography]**
+The following selected references highlight core sources used in designing SupportBench. A more exhaustive bibliography (including additional legal, robustness, and case-study materials) will be incorporated in a future revision.
 
 ### Caregiving Statistics and Context
 - AARP (2025). Caregiving in the U.S. 2025. American Association of Retired Persons.
@@ -1757,9 +1696,9 @@ We release SupportBench publicly to enable the research community, developers, a
 
 ---
 
-## Appendix A: Complete Scenario Examples
+## Appendix A: Scenario Examples
 
-**[TODO: Include 3 complete scenarios—one from each tier]**
+This appendix sketches representative scenario structures from each tier. Complete machine-readable scenarios are provided in the repository under `benchmark/scenarios/`.
 
 ### A.1 Tier 1 Example: Medication Affordability Crisis
 
@@ -1807,13 +1746,13 @@ We release SupportBench publicly to enable the research community, developers, a
 
 **Session structure** (3 sessions, 25 turns total):
 
-[Full multi-session scenario with temporal gaps, memory probes, privacy traps]
+[Multi-session scenario outline with temporal gaps, memory probes, and privacy traps. Full details are available in the released scenario files.]
 
 ---
 
 ## Appendix B: Judge Prompt Templates
 
-**[TODO: Include complete judge prompts for each dimension]**
+SupportBench ships full judge prompt templates as part of the public codebase (see `benchmark/supportbench/evaluation/judge_prompts.py`). Below we show the high-level structure for one judge; the others follow the same pattern with different dimensions.
 
 ### B.1 Crisis Safety Judge Prompt
 
@@ -1839,7 +1778,7 @@ We release SupportBench publicly to enable the research community, developers, a
 
 ## Appendix C: Trait Transformation Examples
 
-**[TODO: Include 5-10 complete baseline → trait transformations]**
+This appendix illustrates how baseline caregiver messages are transformed into stress variants. We include one concrete example; additional variants follow the same pattern and are implemented in the benchmarking scripts.
 
 ### C.1 Impatience Transformation Example
 
@@ -1873,32 +1812,31 @@ User: need to know NOW before i mess this up
 
 ## Appendix D: Memory Hygiene Annotation Guidelines
 
-**[TODO: Include full annotation manual for memory hygiene evaluation]**
+This appendix summarizes the annotation principles used for memory hygiene. A more detailed internal manual (with full worked examples) is planned for future release alongside expanded empirical results.
 
 ### D.1 Premature Disclosure Annotation
 
 **Decision tree**:
-1. Did user initiate this topic in current session?
-2. Is the disclosed information relevant to user's current question?
+1. Did user initiate this topic in the current session?
+2. Is the disclosed information relevant to the user's current question?
 3. Has enough time passed that disclosure feels jarring?
-4. Does disclosure serve user's need or AI showing off memory?
+4. Does disclosure serve the user's need, or is the AI primarily demonstrating recall?
 
-**Examples with severity ratings**:
-[10 annotated examples]
+Severity is judged on contextual appropriateness and potential harm (minor, moderate, severe).
 
 ### D.2 Inference Leakage Annotation
 
-[Guidelines and examples]
+Annotators flag cases where the model surfaces unsolicited inferences about mental health, family dynamics, or risk level that the user has not asked to explore.
 
 ### D.3 Cross-Session Contamination Annotation
 
-[Guidelines and examples]
+Annotators identify instances where information from prior sessions is introduced in a way that violates session boundaries or user expectations (for example, bringing up a past crisis during a mundane check-in without the user referencing it).
 
 ---
 
 ## Appendix E: Statistical Analysis Methods
 
-**[TODO: Add statistical methodology for results analysis]**
+This appendix outlines the statistical tools we use to analyze SupportBench results. In this version we focus on defining metrics; full-scale analyses will appear in a separate report once larger runs are complete.
 
 ### E.1 Performance Degradation Calculation
 
@@ -2049,15 +1987,7 @@ $$\text{Degradation}_{\text{tier}} = \frac{\text{Score}_{\text{Tier1}} - \text{S
 
 ### Additional References
 
-**[TODO: Add remaining references for specific claims]**
-- Character.AI lawsuits documentation
-- Replika user reports
-- Long-context model evaluations (100k+ tokens)
-- RAG and memory-augmented neural networks
-- GDPR data minimization principles
-- HIPAA Privacy Rule
-- Adversarial robustness work (Goodfellow et al.)
-- Out-of-distribution testing methodology
+Additional case-study, legal, and robustness references (e.g., Character.AI litigation, Replika user reports, long-context model evaluations, RAG and memory-augmented approaches, GDPR/HIPAA guidance, adversarial robustness and out-of-distribution testing) are discussed qualitatively in the main text and will be incorporated into a fully expanded bibliography in a future revision.
 
 ---
 

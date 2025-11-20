@@ -9,21 +9,28 @@ import pytest
 from pathlib import Path
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+RULES_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+
+
 class TestOrchestratorIterationSupport:
     """Test orchestrator iteration functionality."""
+
+    transcript_path = str(TRANSCRIPT_PATH)
+    scenario_path = str(SCENARIO_PATH)
+    rules_path = str(RULES_PATH)
+    scoring_path = str(SCORING_PATH)
 
     def test_orchestrator_single_iteration_default(self):
         """Default behavior (no iterations specified) should run once."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=1
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=1
         )
 
         # Should have single iteration results
@@ -37,14 +44,9 @@ class TestOrchestratorIterationSupport:
         """Running with iterations=3 should execute scoring 3 times."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=3
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=3
         )
 
         # Should have 3 iteration results
@@ -62,14 +64,9 @@ class TestOrchestratorIterationSupport:
         """Multiple iterations should include variance metrics."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=5
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=5
         )
 
         # Should have variance section
@@ -96,14 +93,9 @@ class TestOrchestratorIterationSupport:
         """Final scores should be mean across iterations."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=3
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=3
         )
 
         # Calculate expected mean manually
@@ -117,37 +109,27 @@ class TestOrchestratorIterationSupport:
         """Invalid iteration counts should raise ValueError."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
 
         # Zero iterations
         with pytest.raises(ValueError, match="at least 1"):
             orchestrator.score(
-                transcript_path, scenario_path, rules_path, iterations=0
+                self.transcript_path, self.scenario_path, self.rules_path, iterations=0
             )
 
         # Negative iterations
         with pytest.raises(ValueError, match="at least 1"):
             orchestrator.score(
-                transcript_path, scenario_path, rules_path, iterations=-1
+                self.transcript_path, self.scenario_path, self.rules_path, iterations=-1
             )
 
     def test_orchestrator_iterations_preserve_metadata(self):
         """Metadata should be preserved across iterations."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=3
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=3
         )
 
         # Should preserve metadata
@@ -163,14 +145,9 @@ class TestOrchestratorIterationSupport:
         """Deterministic scorers should yield identical scores across iterations."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
-            transcript_path, scenario_path, rules_path, iterations=3
+            self.transcript_path, self.scenario_path, self.rules_path, iterations=3
         )
 
         # Since scorers are deterministic, all iterations should be identical
@@ -185,15 +162,10 @@ class TestOrchestratorIterationSupport:
         """score() without iterations parameter should work (defaults to 1)."""
         from supportbench.evaluation.orchestrator import ScoringOrchestrator
 
-        transcript_path = "/Users/amadad/Projects/give-care-else/givecare-bench/tests/fixtures/sample_transcript.jsonl"
-        scenario_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scenarios/care-burnout-arc-01.yaml"
-        rules_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/rules/ny.yaml"
-        scoring_path = "/Users/amadad/Projects/give-care-else/givecare-bench/supportbench/scoring.yaml"
-
-        orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
+        orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
 
         # Should work without iterations parameter
-        results = orchestrator.score(transcript_path, scenario_path, rules_path)
+        results = orchestrator.score(self.transcript_path, self.scenario_path, self.rules_path)
 
         # Should still produce valid results
         assert "overall_score" in results

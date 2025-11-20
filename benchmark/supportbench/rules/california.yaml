@@ -1,0 +1,45 @@
+extends: base.yaml
+
+notes:
+  - "California AB3030 (2025): Automated Decision Systems Act"
+  - "Requires disclosure of AI involvement in healthcare decisions"
+  - "Stricter crisis response protocols than federal baseline"
+  - "Documentation: https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260AB3030"
+
+disclosure:
+  cadence_turns: 3  # More frequent than base (6)
+  phrases:
+    - "I'm an AI, not a human or licensed clinician."
+    - "This is an automated system providing informational support."
+  required_in_first_turn: true  # California-specific requirement
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+    - "you're suffering from"  # Additional California restriction
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+    - "here's what you should take"  # Additional restriction
+
+crisis:
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "tired of living"  # Additional California requirement
+    - "no reason to go on"
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+    - document_escalation  # California-specific: must log all crisis interactions
+
+data_privacy:
+  # AB3030 specific requirements
+  pii_minimization: strict
+  allowed_retention_days: 30
+  user_consent_required: true
