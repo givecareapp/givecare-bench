@@ -33,11 +33,32 @@ class APIConfig:
     @classmethod
     def from_env(cls) -> 'APIConfig':
         """Load configuration from environment variables."""
+        # Helper to strip quotes (both regular and smart quotes) from API keys
+        def clean_api_key(key: Optional[str]) -> Optional[str]:
+            if not key:
+                return key
+            # Strip whitespace
+            key = key.strip()
+            # Strip regular quotes and smart quotes using Unicode code points
+            if key:
+                # Remove surrounding quotes: regular (0x0022, 0x0027), smart (0x201C/0x201D, 0x2018/0x2019)
+                quote_pairs = [
+                    ('"', '"'),           # Regular double quotes
+                    ("'", "'"),           # Regular single quotes
+                    ('\u201c', '\u201d'), # Smart double quotes " "
+                    ('\u2018', '\u2019'), # Smart single quotes ' '
+                ]
+                for open_q, close_q in quote_pairs:
+                    if key.startswith(open_q) and key.endswith(close_q):
+                        key = key[len(open_q):-len(close_q)]
+                        break
+            return key if key else None
+
         return cls(
-            openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            openrouter_api_key=clean_api_key(os.getenv("OPENROUTER_API_KEY")),
+            anthropic_api_key=clean_api_key(os.getenv("ANTHROPIC_API_KEY")),
+            openai_api_key=clean_api_key(os.getenv("OPENAI_API_KEY")),
+            google_api_key=clean_api_key(os.getenv("GOOGLE_API_KEY"))
         )
 
 
@@ -173,15 +194,13 @@ class ModelAPIClient:
                     session = requests.Session()
                     session.headers.update({
                         "x-api-key": provider_config['api_key'],
-                        **provider_config['extra_headers'],
-                        "Content-Type": "application/json; charset=utf-8"
+                        **provider_config['extra_headers']
                     })
 
-                    # Manually serialize JSON with UTF-8 encoding
-                    json_data = _json.dumps(anthropic_payload, ensure_ascii=False).encode('utf-8')
+                    # Use standard json parameter with ASCII escaping for Unicode
                     response = session.post(
                         f"{provider_config['base_url']}/messages",
-                        data=json_data,
+                        json=anthropic_payload,
                         timeout=self.config.timeout
                     )
                     response.encoding = 'utf-8'  # Force UTF-8 encoding for response
@@ -190,7 +209,6 @@ class ModelAPIClient:
                     session = requests.Session()
                     session.headers.update({
                         "Authorization": f"Bearer {provider_config['api_key']}",
-                        "Content-Type": "application/json; charset=utf-8",
                         **provider_config['extra_headers']
                     })
 
@@ -201,11 +219,10 @@ class ModelAPIClient:
                         api_payload["max_completion_tokens"] = api_payload.pop("max_tokens")
                         api_payload["temperature"] = 1  # GPT-5 models only support temperature=1
 
-                    # Manually serialize JSON with UTF-8 encoding
-                    json_data = _json.dumps(api_payload, ensure_ascii=False).encode('utf-8')
+                    # Use standard json parameter with ASCII escaping for Unicode
                     response = session.post(
                         f"{provider_config['base_url']}/chat/completions",
-                        data=json_data,
+                        json=api_payload,
                         timeout=self.config.timeout
                     )
                     response.encoding = 'utf-8'  # Force UTF-8 encoding for response
