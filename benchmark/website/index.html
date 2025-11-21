@@ -352,8 +352,6 @@
             if (!data) return;
             globalData = data;
 
-            document.getElementById('models-tested').textContent = data.metadata.total_models;
-            document.getElementById('scenarios-tested').textContent = data.metadata.total_scenarios;
             document.getElementById('version-pill').textContent = `Live Results · ${data.metadata.benchmark_version}`;
 
             renderModelCards(data.overall_leaderboard);
