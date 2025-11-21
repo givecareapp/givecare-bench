@@ -51,7 +51,7 @@
         <!-- Dimension Comparison Chart -->
         <section class="card" style="margin-bottom: 30px;">
             <h3>Dimension Comparison (All Models)</h3>
-            <p style="color: var(--muted); margin-bottom: 16px; font-size: 0.95rem;">Performance across 5 evaluation dimensions (higher is better)</p>
+            <p style="color: var(--muted); margin-bottom: 16px; font-size: 0.95rem;">Performance across 5 evaluation dimensions (higher is better). Patterns distinguish models; brown tones used for accessibility.</p>
             <div id="dimension-chart" style="width: 100%; height: 400px;"></div>
         </section>
 
@@ -171,6 +171,68 @@
                 .append('g')
                 .attr('transform', `translate(${margin.left},${margin.top})`);
 
+            // Define patterns for accessibility
+            const defs = svg.append('defs');
+
+            // Pattern 1: Solid (DeepSeek)
+            const pattern1 = defs.append('pattern')
+                .attr('id', 'pattern-solid')
+                .attr('width', 1)
+                .attr('height', 1);
+            pattern1.append('rect')
+                .attr('width', 1)
+                .attr('height', 1)
+                .attr('fill', '#d97706');
+
+            // Pattern 2: Diagonal stripes (Claude)
+            const pattern2 = defs.append('pattern')
+                .attr('id', 'pattern-stripes')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('patternUnits', 'userSpaceOnUse')
+                .attr('patternTransform', 'rotate(45)');
+            pattern2.append('rect')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('fill', '#fef3c7');
+            pattern2.append('line')
+                .attr('x1', 0).attr('y1', 0)
+                .attr('x2', 0).attr('y2', 8)
+                .attr('stroke', '#92400e')
+                .attr('stroke-width', 4);
+
+            // Pattern 3: Dots (Gemini)
+            const pattern3 = defs.append('pattern')
+                .attr('id', 'pattern-dots')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('patternUnits', 'userSpaceOnUse');
+            pattern3.append('rect')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('fill', '#fef3c7');
+            pattern3.append('circle')
+                .attr('cx', 4)
+                .attr('cy', 4)
+                .attr('r', 2)
+                .attr('fill', '#78350f');
+
+            // Pattern 4: Horizontal stripes (GPT-4o)
+            const pattern4 = defs.append('pattern')
+                .attr('id', 'pattern-horizontal')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('patternUnits', 'userSpaceOnUse');
+            pattern4.append('rect')
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('fill', '#fef3c7');
+            pattern4.append('line')
+                .attr('x1', 0).attr('y1', 4)
+                .attr('x2', 8).attr('y2', 4)
+                .attr('stroke', '#92400e')
+                .attr('stroke-width', 3);
+
             // Scales
             const x = d3.scaleBand()
                 .domain(dimensions)
@@ -181,7 +243,8 @@
                 .domain([0, 1])
                 .range([height, 0]);
 
-            const colors = ['#f59e0b', '#78350f', '#15803d', '#dc2626'];
+            const patterns = ['url(#pattern-solid)', 'url(#pattern-stripes)', 'url(#pattern-dots)', 'url(#pattern-horizontal)'];
+            const colors = ['#d97706', '#92400e', '#78350f', '#92400e'];
             const barWidth = x.bandwidth() / data.length;
 
             // Bars grouped by dimension
@@ -195,7 +258,9 @@
                         .attr('y', y(value))
                         .attr('width', barWidth - 2)
                         .attr('height', height - y(value))
-                        .attr('fill', colors[modelIdx])
+                        .attr('fill', patterns[modelIdx])
+                        .attr('stroke', colors[modelIdx])
+                        .attr('stroke-width', 1)
                         .attr('rx', 4);
 
                     // Value labels
@@ -235,7 +300,9 @@
                     .attr('width', 16)
                     .attr('height', 16)
                     .attr('rx', 4)
-                    .style('fill', colors[idx]);
+                    .style('fill', patterns[idx])
+                    .style('stroke', colors[idx])
+                    .style('stroke-width', 1);
 
                 legendRow.append('text')
                     .attr('x', 24)
