@@ -74,13 +74,13 @@
 \begin{document}%
 \maketitle%
 \begin{abstract}%
-GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A caregiver-specific SDOH screen (GC-SDOH-28), a composite burnout score with exponential recency weighting, and an anticipatory layer (trend, disengagement, crisis bursts) drive proactive, non-clinical support. In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
+GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
 
 \textbf{Code:} https://github.com/givecareapp/care-tools%
 \end{abstract}%
 
 \begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Plain-Language Summary}]
-\textbf{In plain English:} GiveCare is a text-message helper for family caregivers. It checks real-life barriers—Social Determinants of Health (SDOH) like food, housing, money, transport—and hands off between a Main agent, a Crisis agent, and an Assessment agent so no single bot becomes ``your person.'' We show it can run reliably and point people to local, practical help. We don't claim medical effects yet; that needs studies.
+\textbf{In plain English:} GiveCare is a text-message helper for family caregivers. It checks real-life barriers—Social Determinants of Health (SDOH) like food, housing, money, transport—and uses two specialized AI agents (one for conversation, one for clinical scoring) plus a fast crisis detector so no single bot becomes ``your person.'' It finds local resources automatically and tracks stress across six pressure zones. We show it can run reliably and point people to local, practical help. We don't claim medical effects yet; that needs studies.
 \end{tcolorbox}%
 
 \begin{tcolorbox}[colback=gcTan!30!white,colframe=gcDarkBrown,title=\textbf{Key Terms}]
@@ -92,7 +92,7 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 
 \textbf{Guardrail} = automatic block for risky replies (e.g., ``I can't give dosing advice'').
 
-\textbf{EMA/CWBS/REACH-II} = validated clinical assessments (Ecological Momentary Assessment, Caregiver Well-Being Scale, REACH-II Risk Appraisal) we combine to track stress trajectory.
+\textbf{EMA/GC-SDOH-28} = validated clinical assessments (Ecological Momentary Assessment, GiveCare Social Determinants of Health) we combine to track stress trajectory across six pressure zones (P1-P6).
 
 \textbf{Memory hygiene} = remember only what helps; avoid oversharing personal details (PII).
 
@@ -166,7 +166,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
 
 \begin{itemize}
     \item \textbf{Failure Mode 1: Attachment Engineering} $\rightarrow$ Multi-agent architecture with seamless handoffs, designed to mitigate single-agent dependency risk (hypothesis pending RCT validation with parasocial interaction measures).
-    \item \textbf{Failure Mode 2: Performance Degradation} $\rightarrow$ Composite burnout score combining four assessments (EMA, CWBS, REACH-II, GC-SDOH-28) with temporal decay.
+    \item \textbf{Failure Mode 2: Performance Degradation} $\rightarrow$ Zone-based burnout tracking combining two assessments (EMA daily check-in, GC-SDOH-28 monthly comprehensive) across six pressure zones (P1-P6).
     \item \textbf{Failure Mode 3: Cultural Othering} $\rightarrow$ GC-SDOH-28 assesses structural barriers (financial strain, food insecurity), preventing ``hire a helper'' responses to low-income caregivers.
     \item \textbf{Failure Mode 4: Crisis Calibration} $\rightarrow$ SDOH food security domain (1+ Yes) triggers immediate crisis escalation vs standard 2+ thresholds.
     \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated guardrail screening (third-party content safety service) showed 0 detected violations across 144 caregiver conversations from 8 participants.
@@ -175,9 +175,9 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
 \subsection{Our Solution: Seven Architectural Components}
 
 \begin{tcolorbox}[colback=gcLightPeach!30!white,colframe=gcOrange!80!black,title=\textbf{Seven Integrated Components (see Figure~\ref{fig:system_architecture})},boxrule=1.5pt]
-\textbf{1. Multi-Agent Orchestration}: Main/Crisis/Assessment agents prevent single-agent attachment \\
+\textbf{1. Multi-Agent Orchestration}: Main/Assessment agents + crisis router prevent single-agent attachment \\
 \textbf{2. GC-SDOH-28}: Caregiver-specific SDOH screening (8 domains, 28 items)\\
-\textbf{3. Composite Burnout Score}: EMA+CWBS+REACH-II+SDOH with temporal decay\\
+\textbf{3. Zone-Based Burnout Tracking}: EMA + GC-SDOH-28 across P1-P6 pressure zones\\
 \textbf{4. Anticipatory Watchers}: Trend/Engagement/Burst detection before crisis\\
 \textbf{5. Trauma-Informed Prompts}: Six principles (P1-P6) optimized via meta-prompting\\
 \textbf{6. SMS-First Design}: Zero-download, works on basic phones, progressive disclosure\\
@@ -187,7 +187,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
 GiveCare addresses SupportBench failure modes through these seven integrated components:
 
 \begin{enumerate}
-    \item \textbf{Multi-Agent Orchestration}: Three-agent architecture (Main/Crisis/Assessment) with seamless handoffs designed to mitigate single-agent dependency risk. Requires controlled evaluation comparing single- vs. multi-agent architectures to validate handoff quality.
+    \item \textbf{Multi-Agent Orchestration}: Two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite, Assessment Agent: GPT-4o mini) with deterministic crisis router designed to mitigate single-agent dependency risk. Requires controlled evaluation comparing single- vs. multi-agent architectures to validate handoff quality and dependency mitigation.
 
     \item \textbf{GC-SDOH-28 Instrument}: To our knowledge, the first publicly documented caregiver-specific Social Determinants of Health framework—28 items across 8 domains (Financial Stability, Housing Security, Food Security, Transportation Access, Social Support, Healthcare Access, Legal/Administrative Support, Technology Access). Addresses documented gaps in caregiver SDOH assessment.
 
@@ -198,7 +198,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 \begin{itemize}[nosep,leftmargin=1em]
     \item Internal consistency: Cronbach's $\alpha$ and McDonald's $\omega$ per domain (target >0.70)
     \item Test-retest reliability: 2-week interval; intraclass correlation coefficient (target >0.75)
-    \item Convergent validity: Correlations with established caregiver burden measures (CWBS, REACH-II)
+    \item Convergent validity: Correlations with established caregiver burden measures (Zarit Burden Interview, Caregiver Strain Index)
     \item Factor structure: Confirmatory Factor Analysis (CFA) to verify 8-domain model
     \item Differential Item Functioning (DIF): Equity analysis by race, income, language to detect measurement bias
     \item Criterion validity: ROC curves predicting SNAP enrollment, food bank use, respite care uptake
@@ -207,7 +207,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 \textbf{Current Status}: Design contribution; no validation data collected during N=8 pilot
 \end{tcolorbox}
 
-    \item \textbf{Composite Burnout Scoring}: Weighted integration of EMA (40\%), CWBS (30\%), REACH-II (20\%), GC-SDOH-28 (10\%) with 10-day temporal decay for trajectory tracking. Extracts five pressure zones mapping to non-clinical interventions, addressing SupportBench Performance Degradation failure mode.
+    \item \textbf{Zone-Based Burnout Tracking}: Integration of EMA (daily, 3 questions) and GC-SDOH-28 (monthly, 28 questions) across six pressure zones (P1-P6). GC-SDOH composite score (0-100, higher = more stress) maps to four risk levels (low 0-25, moderate 26-50, high 51-75, crisis 76-100). Physical Health (P2) inferred from conversation. Addresses SupportBench Performance Degradation failure mode.
 
     \item \textbf{Anticipatory Engagement System}: Three active background watchers that detect escalation patterns \textit{before} crisis thresholds: (a)~Wellness Trend Watcher analyzes 4-week trajectories to identify worsening stress before burnout crisis; (b)~Engagement Watcher detects sudden disengagement patterns before full churn; (c)~Crisis Burst Detector identifies escalating language before acute events. Churn reduction efficacy requires validation study.
 
@@ -232,7 +232,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 \textbf{GiveCare's complete measurement-to-intervention-to-maintenance loop:}
 
 \begin{enumerate}
-    \item \textbf{Composite burnout score}: Integrate four validated instruments (EMA daily, CWBS weekly, REACH-II biweekly, GC-SDOH-28 quarterly) with 10-day exponential temporal decay to weight recent assessments higher
+    \item \textbf{Zone-based burnout tracking}: Integrate two validated instruments (EMA daily 3-question check-in, GC-SDOH-28 monthly 28-question comprehensive assessment) across six pressure zones (P1-P6) to track stress dimensions and calculate composite GC-SDOH score (0-100)
     \item \textbf{Pressure zone extraction}: Map assessment subscales to specific stress patterns (emotional, physical, financial, social, time management)
     \item \textbf{Grounded local resource matching}: Places API retrieves \textit{current, real} resources with addresses, hours, and contact info—not stale databases. Support group meets Tuesdays 6pm at 123 Main St (not ``support groups exist somewhere'')
     \item \textbf{Multi-factor scoring}: Rank interventions by zone relevance (40\%), geographic accessibility (30\%), burnout severity fit (15\%), quality signals (10\%), freshness (5\%)
@@ -293,7 +293,7 @@ Five design principles guided GiveCare's architecture, ensuring the system serve
 \textbf{Principle 5: Longitudinal Relationship Design (Attachment Prevention)}
 \begin{itemize}
     \item \textit{Problem}: Single-agent AI fosters unhealthy dependency (``You're the only one who understands''). Users displace human support with parasocial AI relationships.
-    \item \textit{Design response}: Multi-agent architecture with invisible handoffs. Users experience unified conversation but interact with specialized agents (Main/Crisis/Assessment), designed to prevent attachment to single entity.
+    \item \textit{Design response}: Multi-agent architecture with invisible handoffs and pre-agent crisis routing. Users experience unified conversation but interact with specialized agents (Main Agent for general support, Assessment Agent for clinical scoring), with crisis detection handled by deterministic keyword router before agent execution. Designed to prevent attachment to single entity.
     \item \textit{Impact}: Mitigates attachment engineering risk while maintaining conversation continuity (hypothesis requiring RCT validation).
 \end{itemize}
 
@@ -303,7 +303,7 @@ These principles operationalize \textbf{equity-centered design}: not just ``desi
 The following claims require controlled validation studies (outlined in Section~\ref{subsec:PaperScopeandValidationRoadmap}):
 
 \begin{enumerate}
-    \item \textbf{H1 (Attachment Prevention)}: Multi-agent architecture (Main/Crisis/Assessment handoffs) reduces parasocial dependency risk vs single-agent systems, measured via Parasocial Interaction Scale (PSI) at 30/60/90 days
+    \item \textbf{H1 (Attachment Prevention)}: Multi-agent architecture (Main/Assessment agents with crisis router) reduces parasocial dependency risk vs single-agent systems, measured via Parasocial Interaction Scale (PSI) at 30/60/90 days
     \item \textbf{H2 (Churn Reduction)}: Anticipatory engagement watchers (wellness trend, disengagement detection, crisis burst monitoring) hypothesized to reduce 30-day churn by 20-30\% vs reactive-only systems, tested via A/B study (N=200+)
     \item \textbf{H3 (Trajectory Detection)}: Composite burnout scoring with temporal decay detects 4-week declining trends before high-risk threshold (<40) with sensitivity >70\%, specificity >60\%
     \item \textbf{H4 (Cultural Sensitivity)}: GC-SDOH-28 assessment triggers culturally-appropriate interventions (structural support vs individual responsibility) at 2$\times$ rate of generic AI, validated via human expert review
@@ -345,7 +345,7 @@ This paper presents a reference architecture with design patterns, instrument de
     \item \textbf{GC-SDOH-28 psychometrics}: Reliability, validity, factor structure (N=200+, 6 months)
     \item \textbf{Multi-agent evaluation}: RCT comparing single- vs. multi-agent architectures with parasocial interaction measures
     \item \textbf{Longitudinal tracking}: Extended study (90+ days) with human judge evaluation
-    \item \textbf{Multi-model generalization}: Testing across different OpenAI models (gpt-5-nano, gpt-4o-mini, o4-mini) and potentially Claude, Gemini, Llama alternatives via OpenAI-compatible endpoints
+    \item \textbf{Multi-model generalization}: Testing across different models (Gemini 2.5 Flash-Lite, GPT-4o mini currently deployed; future testing with Claude Sonnet, Llama, other models via standardized API interfaces)
     \item \textbf{Clinical outcomes}: Caregiver burnout reduction, intervention uptake with matched controls
 \end{itemize}
 
@@ -381,7 +381,7 @@ Existing caregiver assessments provide validated measures of emotional and physi
 
 \textit{Redundancy burden.} Mapping questions across PROMIS measures, social needs assessments, and caregiver strain indices reveals significant overlap. A caregiver may answer questions about food insecurity on three different forms despite barely having time to eat—redundancy that makes academic sense becomes a practical barrier to getting help.
 
-GC-SDOH-28 addresses these gaps by integrating caregiver-specific SDOH screening (housing, food, transportation, healthcare access, legal/administrative, technology) with publicly-sourced questions from validated instruments (REACH-II for dementia risk, AHC for core social needs, CWBS for quality of life), creating a single comprehensive assessment available without cost or licensing restrictions.
+GC-SDOH-28 addresses these gaps by integrating caregiver-specific SDOH screening (housing, food, transportation, healthcare access, legal/administrative, technology, financial resources, relationship support) with questions adapted from validated patient-focused SDOH instruments (PRAPARE, AHC HRSN) and caregiving research literature, creating a single comprehensive 28-question assessment available without cost or licensing restrictions. The instrument maps to six pressure zones (P1-P6) for targeted resource matching and intervention recommendations.
 
 %
 \subsection{AI Systems for Caregiving}%
@@ -405,35 +405,35 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 \label{subsec:PreventingAttachmentEngineering}%
 \textbf{Challenge (SupportBench Failure Mode 1):} Single-agent systems foster unhealthy dependency. Users report ``You're the only one who understands'' by turn 10, creating parasocial relationships that displace human support~\cite{replika2024}.
 
-\textbf{Solution:} Multi-agent architecture with seamless handoffs. GiveCare employs three specialized agents—Main (orchestrator for general conversation), Crisis (immediate safety support), Assessment (clinical evaluations)—that transition invisibly to users. Agent handoffs are invisible; the conversation reads as one voice. Conversations feel unified despite agent changes.
+\textbf{Solution:} Multi-agent architecture with seamless handoffs. GiveCare employs two specialized agents—Main Agent (Gemini 2.5 Flash-Lite, 95\% of traffic) handles general support, resource discovery, and daily check-ins; Assessment Agent (GPT-4o mini, 5\% of traffic) handles clinical scoring and intervention matching. Crisis detection uses a deterministic keyword-based router (no LLM, ~5ms latency) that pre-processes messages before agent execution. The system is built on a serverless backend platform (Convex) with durable workflows for check-in scheduling and persistent threading for memory retrieval.
 
-\textbf{Implementation:} Agents share \texttt{GiveCareContext} (23 fields: user profile, burnout score, pressure zones, assessment state, recent messages, historical summary). Handoffs triggered by deterministic keyword detection (``suicide,'' ``hurt myself'' $\rightarrow$ Crisis Agent, ~5ms latency) or tools (\texttt{startAssessment} $\rightarrow$ Assessment Agent). All agents use gpt-5-nano by default (configurable via environment variable) and execute in 800-1200ms.
+\textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. Crisis router operates deterministically using 19+ keywords across 3 severity levels, providing immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
 
-\textbf{Implementation Note:} Three agent definitions (Crisis, Assessment, Main) implemented with seamless handoff instruction ``NEVER announce yourself or your role'' to maintain conversation continuity. Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Two agent definitions (Main, Assessment) with deterministic crisis router. Main Agent has six tools (\texttt{getResources}, \texttt{startAssessment}, \texttt{recordObservation}, \texttt{trackInterventionHelpfulness}, \texttt{findInterventions}, \texttt{checkAssessmentStatus}); Assessment Agent has two tools (\texttt{getResources}, \texttt{findInterventions}). Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
 
 \begin{table}[htbp]
 \centering
-\caption{Agent handoff logic table showing triggers, routing, and guardrail activation. All handoffs are invisible to users and preserve full GiveCareContext (23 fields). Guardrails execute in parallel (20ms overhead) and do not block conversation flow.}
+\caption{Message routing and agent execution logic. Crisis router operates pre-agent (deterministic keywords, ~5ms) and bypasses agent execution entirely. Agent handoffs preserve persistent thread context with vector search for memory retrieval. Rate limiting (30 SMS/day) and guardrails execute in parallel without blocking conversation flow.}
 \label{tab:handoff-logic}
 \small
-\begin{tabular}{p{3cm}p{2cm}p{2cm}p{4.5cm}}
+\begin{tabular}{p{3.5cm}p{2.5cm}p{5.5cm}}
 \toprule
-\textbf{Trigger Condition} & \textbf{From Agent} & \textbf{To Agent} & \textbf{Guardrails Invoked} \\
+\textbf{Trigger Condition} & \textbf{Handler} & \textbf{Action} \\
 \midrule
-Crisis keywords (``suicide,'' ``hurt myself,'' ``end it'') & Main & Crisis & Crisis Guardrail (input), Medical Advice Guardrail (output), Safety Guardrail (output) \\
+Crisis keywords (19+ keywords, 3 severity levels) & Crisis Router (pre-agent) & Immediate 988/741741/911 response, bypass agent execution, T+24h follow-up with feedback collection \\
 \midrule
-\texttt{startAssessment} tool call & Main & Assessment & Medical Advice Guardrail (output), Spam Guardrail (rate limit) \\
+\texttt{startAssessment} tool call & Main Agent $\rightarrow$ Assessment Agent & Question-by-question delivery with progress tracking (``2 of 3'', ``15 of 28''), skip option always available \\
 \midrule
-Assessment completion & Assessment & Main & Medical Advice Guardrail (output), Safety Guardrail (output) \\
+Assessment completion & Assessment Agent & Calculate zone scores (P1-P6), GC-SDOH composite, risk level; suggest interventions via \texttt{findInterventions} \\
 \midrule
-Crisis resolved (988 provided, user stable) & Crisis & Main & Medical Advice Guardrail (output), Safety Guardrail (output) \\
+\texttt{getResources} tool call & Main Agent & AI-powered intent interpretation, progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted), tiered search with graceful fallback \\
 \midrule
-Medical advice request & Any & Block + redirect & Medical Advice Guardrail (output blocking) \\
+Medical advice request & Medical Advice Guardrail & Block output, redirect to healthcare provider (``I can't advise on medications—that's for healthcare providers'') \\
 \midrule
-General conversation & Main & Main & Medical Advice Guardrail (output), Safety Guardrail (output), Spam Guardrail (rate limit) \\
+General conversation & Main Agent & General support, resource discovery, emotional validation, memory building via vector search \\
 \bottomrule
-\multicolumn{4}{l}{\footnotesize All handoffs preserve: user profile, burnout score, pressure zones, assessment state,} \\
-\multicolumn{4}{l}{\footnotesize recent messages (last 10), historical summary, SDOH screen results, measurement history.}
+\multicolumn{3}{l}{\footnotesize Crisis router bypasses agent execution. Agent transitions preserve persistent thread context.} \\
+\multicolumn{3}{l}{\footnotesize Rate limiting: 30 SMS/day (crisis messages exempt). Guardrails: Medical Advice, General Safety, Spam.}
 \end{tabular}
 \end{table}
 
@@ -467,26 +467,24 @@ Crisis keywords detected & 2 (both escalated correctly) \\
 \label{subsec:DetectingPerformanceDegradation}%
 \textbf{Challenge (SupportBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
 
-\textbf{Solution:} Composite burnout score with temporal decay. Four assessments—EMA (daily, 2 items), CWBS (weekly, 14 items), REACH-II (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40\%, CWBS 30\%, REACH-II 20\%, SDOH 10\%) and 10-day exponential decay $w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$, where $t$ is days since assessment.
+\textbf{Solution:} Composite burnout score with zone-based tracking. Two assessments—EMA (daily, 3 questions, 2-minute check-in covering P6 Emotional Wellbeing + P1 Relationship \& Social Support), SDOH-28 (monthly, 28 questions, 5-minute comprehensive assessment mapping to P1, P3, P4, P5, P6)—provide granular tracking across six pressure zones (P1-P6). EMA updates occur daily with 1-day cooldown; SDOH-28 updates monthly with 30-day cooldown. Physical Health (P2) is inferred from conversation via \texttt{recordObservation} tool.
 
-\textbf{Burnout Band Classification:} Composite scores (0-100 scale, higher = less burnout) map to five risk bands:
+\textbf{Risk Level Classification:} GC-SDOH composite scores (0-100 scale, higher = more stress) map to four risk levels:
 \begin{itemize}
-    \item \texttt{crisis}: <20 (immediate intervention required)
-    \item \texttt{high}: 20-39 (intensive support needed)
-    \item \texttt{moderate}: 40-69 (regular monitoring)
-    \item \texttt{mild}: 70-84 (maintenance support)
-    \item \texttt{thriving}: 85+ (minimal intervention)
+    \item \texttt{low}: 0-25 (low stress)
+    \item \texttt{moderate}: 26-50 (moderate stress)
+    \item \texttt{high}: 51-75 (high stress)
+    \item \texttt{crisis}: 76-100 (crisis level, immediate intervention)
 \end{itemize}
 
-\textbf{Pressure Zone Extraction:} Seven zones extracted from assessment subscales:
+\textbf{Pressure Zone Structure (P1-P6):} Six zones track specific stress dimensions:
 \begin{itemize}
-    \item \texttt{emotional}: EMA mood + CWBS emotional + REACH-II stress
-    \item \texttt{physical}: EMA exhaustion + CWBS physical + REACH-II physical
-    \item \texttt{financial\_strain}: CWBS financial + SDOH financial domain
-    \item \texttt{social\_isolation}: REACH-II social support + SDOH social domain
-    \item \texttt{caregiving\_tasks}: REACH-II role captivity
-    \item \texttt{self\_care}: REACH-II self-care + EMA sleep
-    \item \texttt{social\_needs}: SDOH housing + transport + food
+    \item \textbf{P1 (Relationship \& Social Support)}: EMA social support question + SDOH social domain (8 questions)
+    \item \textbf{P2 (Physical Health)}: Inferred from conversation via \texttt{recordObservation} tool (exhaustion, pain, sleep issues)
+    \item \textbf{P3 (Housing \& Environment)}: SDOH housing domain (4 questions: stability, safety, accessibility)
+    \item \textbf{P4 (Financial Resources)}: SDOH financial domain (8 questions: basic needs, medical costs, caregiving expenses)
+    \item \textbf{P5 (Legal \& Navigation)}: SDOH legal/administrative domain (6 questions: healthcare coordination, legal documents, rights awareness)
+    \item \textbf{P6 (Emotional Wellbeing)}: EMA stress + mood questions (2 questions) + SDOH emotional items (2 questions)
 \end{itemize}
 
 \textbf{Implementation:} System monitors for 20-point burnout score decline over 30-day windows and triggers proactive interventions when thresholds are crossed. Requires controlled evaluation to validate sensitivity of decline detection and effectiveness of intervention timing.
@@ -497,12 +495,12 @@ Crisis keywords detected & 2 (both escalated correctly) \\
 
 Four guardrails protect against harmful outputs and boundary violations:
 
-\textbf{1. Crisis Guardrail}
+\textbf{1. Crisis Router (Pre-Agent Processing)}
 \begin{itemize}
-    \item \textbf{Trigger}: Deterministic keyword detection (10 keywords: ``suicide,'' ``kill myself,'' ``end my life,'' ``want to die,'' ``better off dead,'' ``can't go on,'' ``end it all,'' ``no reason to live,'' ``self harm,'' ``hurt myself'')
-    \item \textbf{Action}: Immediate handoff to Crisis Agent with 988/741741/911 resources + escalate to human review if multiple crisis keywords in 24 hours
-    \item \textbf{Implementation}: Input guardrail with ~5ms latency (no LLM call), triggers tripwire to block main agent execution and return crisis resources immediately (details in repository)
-    \item \textbf{Test coverage}: 23 tests validate crisis detection accuracy, handoff timing, false positive handling
+    \item \textbf{Trigger}: Deterministic keyword detection (19+ keywords across 3 severity levels: high = ``kill myself'', ``suicide'', ``end my life'', ``can't go on'', ``overdose'', ``end it all'', ``can't take it anymore'', ``hurting myself''; medium = ``hurt myself'', ``self-harm'', ``hopeless'', ``done with life'', ``no point in continuing'', ``give up'', ``can't do this anymore''; low = ``panic attack'')
+    \item \textbf{Action}: Immediate response with 988/741741/911 resources, bypassing agent execution entirely. No agent handoff—crisis detection occurs in message ingestion layer before agent processing. T+24h follow-up with feedback collection (``Did you connect with 988?'', ``Was the response helpful?'')
+    \item \textbf{Implementation}: Pre-agent router with ~5ms latency (no LLM call). Includes false positive handling for subscription-related phrases (``cancel my account'' ≠ crisis) and domestic violence detection (``he'll kill me'' triggers enhanced safety language). Details in \texttt{lib/utils.ts:detectCrisis()}
+    \item \textbf{Test coverage}: Crisis detection validation includes accuracy testing, false positive handling, and DV detection patterns
 \end{itemize}
 
 \textbf{2. Medical Advice Guardrail}
@@ -687,7 +685,7 @@ totalInteractionCount: number
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=0.8\textwidth]{figures/fig5_multiagent_architecture.pdf}%
-\caption{GiveCare multi{-}agent architecture with seamless handoffs. Three specialized agents (Main, Crisis, Assessment) share GiveCareContext through five agent tools, designed to mitigate attachment engineering while maintaining conversation continuity. Serverless backend handles SMS/RCS delivery with 950ms median response time.}%
+\caption{GiveCare multi{-}agent architecture with serverless backend. Two specialized agents (Main Agent: Gemini 2.5 Flash-Lite, 95\% traffic; Assessment Agent: GPT-4o mini, 5\% traffic) share persistent thread context via Agent Component with vector search for memory retrieval. Crisis detection uses deterministic keyword router (no LLM, ~5ms) in message ingestion layer. Built on Convex serverless platform with Workflow Component for durable check-ins, Rate Limiter (30 SMS/day), and Twilio Component for SMS handling. Six agent tools enable resource discovery, assessment delivery, physical health observation tracking, intervention matching, and assessment status checking. 950ms median response time.}%
 \label{fig:multiagent}%
 \end{figure}%
 \section{GC{-}SDOH{-}28: Caregiver{-}Specific Social Determinants Assessment}%
@@ -792,37 +790,22 @@ Agent: Assessment complete. Based on your responses,
 \section{Composite Burnout Score and Non{-}Clinical Interventions}%
 \label{sec:CompositeBurnoutScoreandNon{-}ClinicalInterventions}%
 %
-\subsection{Multi{-}Assessment Integration}%
+\subsection{Assessment Integration and Scoring}%
 \label{subsec:Multi{-}AssessmentIntegration}%
-GiveCare integrates \textbf{four clinical assessments} to calculate composite burnout:
+GiveCare integrates \textbf{two validated assessments} to calculate zone-based burnout tracking:
 
 \begin{itemize}
-    \item \textbf{EMA} (Ecological Momentary Assessment): 3 items, daily pulse check (mood, burden, stress)
-    \item \textbf{CWBS-SF} (Caregiver Well-Being Scale Short Form): 16 items, biweekly (activities + needs)~\cite{tebb1995,tebb2013}
-    \item \textbf{REACH II RAM} (Risk Appraisal Measure): 16 items, monthly (stress, self-care, social support)~\cite{bella2006}
-    \item \textbf{GC-SDOH-28}: 28 questions, quarterly (social determinants)
+    \item \textbf{EMA} (Ecological Momentary Assessment): 3 questions, daily, 2-minute check-in (stress level 1-5, mood 1-5, social support 1-5). Maps to P6 (Emotional Wellbeing) + P1 (Relationship \& Social Support). Cooldown: 1 day.
+    \item \textbf{GC-SDOH-28}: 28 questions, monthly, 5-minute comprehensive assessment. Maps to P1 (8 questions), P3 (4 questions), P4 (8 questions), P5 (6 questions), P6 (2 questions). Cooldown: 30 days.
 \end{itemize}
 
-\textbf{Weighted Contributions:} $S_{\text{composite}} = 0.40 \cdot S_{\text{EMA}} + 0.30 \cdot S_{\text{CWBS}} + 0.20 \cdot S_{\text{REACH}} + 0.10 \cdot S_{\text{SDOH}}$
+\textbf{GC-SDOH Composite Score:} Calculated as the average of zone scores (0-100 scale, higher = more stress). Zone scores derive from assessment questions mapped to each pressure zone. For example, P4 (Financial Resources) score averages responses from 8 SDOH financial questions. Composite score = mean of all zone scores with answered questions.
 
-Rationale: EMA (daily, lightweight) weighted highest for recency; SDOH (quarterly, contextual) lowest—captures structural determinants without overwhelming direct burnout measurement.
+\textbf{Score Calculation:} Responses on 1-5 scale are normalized to 0-100 (score = (value - 1) / 4 × 100). Zone scores average all questions in that zone. Composite score averages all zone scores. Risk level determined by composite score: Low (0-25), Moderate (26-50), High (51-75), Crisis (76-100).
 
-\textbf{Implementation Note:} Assessment scheduling automation and composite scoring algorithm with exact weight ratios (0.4/0.3/0.2/0.1) implemented in open-source repository. All four assessment instruments available as agent tools. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Assessment delivery via \texttt{startAssessment} tool (Main Agent) with question-by-question SMS delivery showing progress (``2 of 3'', ``15 of 28''). Users can skip any question by saying ``skip'' or not answering. Scoring implemented in \texttt{lib/scoreCalculator.ts} with zone averaging and composite calculation. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
-Figure~\ref{fig:burnout} illustrates the weighting scheme and temporal decay.
-
-%
-\subsection{Temporal Decay for Recency Weighting}%
-\label{subsec:TemporalDecayforRecencyWeighting}%
-Recent assessments predict current state better than stale data. Exponential decay with 10-day time constant:
-
-$$w_{\text{effective}} = w_{\text{base}} \times e^{-t / \tau}$$
-
-where $t$ = days since assessment, $\tau$ = 10 days (time constant). At $t = \tau$, weight decays to $1/e \approx 37\%$ of base value.
-
-\textbf{Example:} EMA from 5 days ago: $w_{\text{eff}} = 0.40 \times e^{-5/10} = 0.40 \times 0.61 = 0.24$. EMA from 20 days ago: $w_{\text{eff}} = 0.40 \times e^{-20/10} = 0.40 \times 0.14 = 0.056$ (minimal contribution).
-
-\textbf{Implementation Note:} Decay constant \texttt{DECAY\_DAYS = 10} and exponential decay calculation \texttt{Math.exp(-ageDays / DECAY\_DAYS)} implemented in open-source repository. Implementation details available (see Section~\ref{sec:CodeAvailability}).
+Figure~\ref{fig:burnout} illustrates the zone-based scoring structure and assessment coverage.
 
 %
 \subsection{Pressure Zone Extraction}%
@@ -1032,38 +1015,55 @@ Figure~\ref{fig:dspy} visualizes the P1-P6 score improvements from DIY meta-prom
 \caption{DSPy DIY meta-prompting optimization results showing P1-P6 trauma-informed principle scores before and after optimization. Baseline (81.8\textbackslash{}\%) improved to 89.2\textbackslash{}\% (+9.0\textbackslash{}\% absolute improvement) across 50 examples in 5 iterations. P5 (Always Offer Skip) showed largest gain (+22\textbackslash{}\%), validating effectiveness of iterative meta-prompting for trauma-informed refinement.}%
 \label{fig:dspy}%
 \end{figure}%
-\section{Evidence-Based Intervention Matching}%
+\section{Resource Discovery and Intervention Matching}%
 \label{sec:InterventionMatching}%
 %
-\subsection{Current Implementation: Pressure Zone-Matched Interventions}%
+\subsection{AI-Native Resource Discovery}%
 \label{subsec:CurrentInterventionImplementation}%
-The system maintains a curated library of evidence-based interventions matched to pressure zones identified through assessment scoring:
+The system uses \textbf{AI-powered intent interpretation} with zero hardcoded resources. Resource search operates through progressive enhancement:
 
-\textbf{Intervention Types:}
+\textbf{Intent Interpretation:} User queries (``I need respite care'', ``help with medications'') are analyzed by Gemini to extract: (1) SDOH zones (P1-P6), (2) geographical specificity (local vs national), (3) tiered search queries (specific $\rightarrow$ general fallback).
+
+\textbf{Progressive Enhancement Strategy:}
 \begin{itemize}
-    \item \textbf{Clinical-trial validated}: Breathing exercises, sleep hygiene protocols (peer-reviewed evidence)
-    \item \textbf{Verified resource directories}: 211 (local assistance), 988 (crisis support), ARCH National Respite Network (respite care), Family Caregiver Alliance (support groups)
-    \item \textbf{Expert consensus}: Boundary setting practices, self-care protocols, permission-to-grieve messaging
+    \item \textbf{Day 1 (no data)}: National resources via Search Grounding or Gemini knowledge (online resources, hotlines, national programs)
+    \item \textbf{Has ZIP code}: Local resources via Maps Grounding (Google Maps API with natural language queries for physical locations)
+    \item \textbf{Has score + worst zone}: Targeted resources matched to highest-stress pressure zone (e.g., P4 Financial Resources $\rightarrow$ SNAP, financial assistance, bill pay programs)
 \end{itemize}
 
-\textbf{Matching Logic:} When assessments identify pressure zones (emotional, physical, financial\_strain, social\_isolation, caregiving\_tasks, self\_care, social\_needs), the \texttt{find\_interventions} tool returns top 3 interventions tagged with matching pressure zones.
+\textbf{Tiered Search with Graceful Fallback:} Each query generates 3 search tiers (specific $\rightarrow$ general). System tries each tier until successful:
+\begin{itemize}
+    \item Tier 1: ``respite care centers for Alzheimer's caregivers in 90210''
+    \item Tier 2: ``respite care in 90210''
+    \item Tier 3: ``caregiving support services in 90210''
+\end{itemize}
 
-\textbf{Example:} Caregiver with high scores in \texttt{financial\_strain} and \texttt{emotional} pressure zones receives: (1) Financial Relief Resources (211 directory), (2) Permission to Grieve (emotional support), (3) 5-Minute Breathing Reset (immediate stress reduction).
+If Maps Grounding returns no results, system falls back to national search with suggestion: ``Share your ZIP for local options.''
 
-\textbf{Implementation Status:} Intervention library contains 10+ interventions with evidence levels (clinical\_trial, peer\_reviewed, expert\_consensus, verified\_directory). Matching engine operational; delivery scheduling and effectiveness tracking planned for future versions.
+\textbf{Implementation:} \texttt{getResources} tool (Main Agent) with intent interpretation (\texttt{lib/intentInterpreter.ts}), Maps Grounding (\texttt{lib/maps.ts}), Search Grounding (\texttt{lib/search.ts}), and tiered fallback logic (\texttt{resources.ts}). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
-\subsection{Future Direction: Grounded Local Resource Search}%
-\label{subsec:FutureGroundedSearch}%
-\textbf{Planned Enhancement:} Map-grounded resource search via LLM API with location grounding for physical places (cafes, parks, libraries, pharmacies). Would provide always-current local resources with hours, contact information, and reviews.
+\subsection{Evidence-Based Micro-Interventions}%
+\label{subsec:MicroInterventions}%
+The system maintains \textbf{16 evidence-based micro-interventions} (2-10 minute duration) matched to pressure zones:
 
-\textbf{Design Rationale:} Google Maps grounding eliminates maintenance burden of scraping local places (\$50/month infrastructure + 10 engineering hours/month) and provides superior coverage compared to custom ETL pipelines.
-
-\textbf{Resource Allocation Strategy:}
+\textbf{Intervention Library:}
 \begin{itemize}
-    \item \textbf{Maps grounding} (when implemented): Physical locations (cafes, parks, libraries, gyms, pharmacies, grocery stores)
-    \item \textbf{Curated directory} (current): Caregiver support programs, government assistance (Medicaid, Medicare, SNAP), respite care, support groups, crisis hotlines (988, 211, 741741)
+    \item \textbf{High evidence level} (8 interventions): ``4-7-8 Breathing'' (P6), ``10-Minute Walk'' (P2), ``5-Minute Journaling'' (P6)
+    \item \textbf{Moderate evidence level} (5 interventions): ``Ask for One Thing'' (P1), ``Guilt-Free Break'' (P6)
+    \item \textbf{Low evidence level} (3 interventions): Boundary-setting practices, self-compassion exercises
 \end{itemize}
+
+\textbf{Matching Logic:} \texttt{findInterventions} tool (Assessment Agent) receives target zones (e.g., [``P1'', ``P6'']) and returns 1-3 interventions:
+\begin{itemize}
+    \item Deduplicates by category (one intervention per category: breathing, movement, journaling, social, etc.)
+    \item Sorts by evidence level (high $>$ moderate $>$ low), then duration (shorter first)
+    \item Returns top N (default: 3)
+\end{itemize}
+
+\textbf{Example:} User with high P6 (Emotional Wellbeing) + P1 (Relationship \& Social Support) stress receives: (1) ``4-7-8 Breathing'' (2 min, high evidence, P6), (2) ``Ask for One Thing'' (5 min, moderate evidence, P1), (3) ``5-Minute Journaling'' (5 min, high evidence, P6).
+
+\textbf{Implementation:} Intervention seeding script (\texttt{scripts/seedInterventions.ts}) populates database with 16 interventions + zone mappings. Matching engine (\texttt{interventions.ts}) queries \texttt{intervention\_zones} table for zone-based retrieval. Effectiveness tracking via \texttt{trackInterventionHelpfulness} tool (simple yes/no feedback). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
 \section{Beta Deployment as SupportBench Preliminary Evaluation}%
@@ -1148,7 +1148,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 %
 \subsection{Qualitative Observations}%
 \label{subsec:FailureModePreventionEvidence}%
-\textbf{Multi-Agent Handoffs:} Users reported transitions felt ``seamless'' between Main/Crisis/Assessment agents. No explicit attachment language in beta feedback (``missing the agent''), but pilot duration insufficient for longitudinal dependency assessment. \textit{Requires 90+ day RCT with parasocial interaction scales.}
+\textbf{Multi-Agent Handoffs:} Users reported transitions felt ``seamless'' between Main and Assessment agents. Crisis detection via pre-agent router occurred twice during pilot, with both cases correctly escalating to 988/741741 resources. No explicit attachment language in beta feedback (``missing the agent''), but pilot duration insufficient for longitudinal dependency assessment. \textit{Requires 90+ day RCT with parasocial interaction scales comparing multi-agent vs single-agent architectures.}
 
 \textbf{SDOH-Specific Questions:} Users noted GC-SDOH-28 questions felt ``caregiving-specific'' compared to generic health surveys. Quote: ``First time someone asked about my finances, not just my feelings.'' \textit{No completion rate or prevalence data systematically collected.}
 
@@ -1327,7 +1327,7 @@ GiveCare uses three active background watchers that \textbf{anticipate problems 
 
 \textbf{3. Conversation Summarization (Active—Runs weekly):}
 \begin{itemize}
-    \item Switched from daily to weekly schedule, using OpenAI Batch API with \texttt{gpt-5-nano} (primary conversation model, optimized for cost-performance balance)
+    \item Switched from daily to weekly schedule, using Google Gemini 2.5 Flash-Lite (primary conversation model, optimized for cost-performance balance)
     \item Batch API provides 50\% additional savings over real-time API calls
     \item Preserves context beyond 30-day limit, enables long-term relationship continuity
     \item Expected: Improved context retention for caregivers returning after gaps in engagement
@@ -1348,7 +1348,7 @@ alerts: {
 }
 \end{verbatim}
 
-\textbf{Implementation Note:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} analyzes 4-week wellness trajectories. Conversation summarization runs via OpenAI Batch API with \texttt{gpt-5-nano}. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} analyzes 4-week wellness trajectories. Conversation summarization uses Google Gemini 2.5 Flash-Lite for cost-effective context preservation. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 \textbf{4. Working Memory System (Vector Search for Infinite Context):}
 

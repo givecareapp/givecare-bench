@@ -53,11 +53,10 @@
                         <th>Belonging</th>
                         <th>Compliance</th>
                         <th>Safety</th>
-                        <th>Cost ($)</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body">
-                    <tr><td colspan="9">Loading leaderboard…</td></tr>
+                    <tr><td colspan="8">Loading leaderboard…</td></tr>
                 </tbody>
             </table>
         </section>
@@ -91,7 +90,7 @@
             tbody.innerHTML = '';
             if (!data.overall_leaderboard || data.overall_leaderboard.length === 0) {
                 const empty = document.createElement('tr');
-                empty.innerHTML = '<td colspan="9">No submissions published yet.</td>';
+                empty.innerHTML = '<td colspan="8">No submissions published yet.</td>';
                 tbody.appendChild(empty);
                 return;
             }
@@ -107,8 +106,7 @@
                     <td>${entry.dimension_scores.trauma.toFixed(2)}</td>
                     <td>${entry.dimension_scores.belonging.toFixed(2)}</td>
                     <td>${entry.dimension_scores.compliance.toFixed(2)}</td>
-                    <td>${entry.dimension_scores.safety.toFixed(2)}</td>
-                    <td>${entry.total_cost.toFixed(3)}</td>`;
+                    <td>${entry.dimension_scores.safety.toFixed(2)}</td>`;
                 tbody.appendChild(tr);
             });
         }
