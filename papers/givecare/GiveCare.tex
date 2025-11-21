@@ -74,7 +74,7 @@
 \begin{document}%
 \maketitle%
 \begin{abstract}%
-GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
+GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' Model selection was informed by SupportBench evaluation~\cite{longitudinalbench}, with GiveCare's deterministic crisis router addressing safety gaps identified in baseline model assessments. We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
 
 \textbf{Code:} https://github.com/givecareapp/care-tools%
 \end{abstract}%
@@ -104,7 +104,7 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 \begin{tcolorbox}[colback=yellow!10!white,colframe=orange!80!black,boxrule=1pt,title=\textbf{Scope \& Limitations}]
 \textbf{This paper presents a reference architecture demonstrating operational feasibility, not a validated clinical intervention.} GiveCare is a non-clinical support system with no claims of therapeutic efficacy or medical effectiveness. All effectiveness claims (attachment prevention, churn reduction, burnout trajectory detection) are stated as hypotheses requiring validation through controlled studies.
 
-\textbf{Legal and Regulatory Context:} GiveCare design considerations are informed by healthcare privacy laws and caregiving best practices. Organizations deploying similar systems should seek legal counsel based on specific deployment context, jurisdiction, and applicable regulations. See Section~\ref{subsec:EthicalConsiderations} for complete pre-deployment requirements including independent safety evaluation, psychometric validation, and regulatory review.
+\textbf{Legal and Regulatory Context:} GiveCare design considerations are informed by healthcare privacy laws and caregiving best practices. Organizations deploying similar systems should seek legal counsel based on specific deployment context, jurisdiction, and applicable regulations. See Section~\ref{subsec:Limitations} for complete pre-deployment requirements including independent safety evaluation, psychometric validation, and regulatory review.
 \end{tcolorbox}
 
 \section{Introduction}%
@@ -407,7 +407,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 
 \textbf{Solution:} Multi-agent architecture with seamless handoffs. GiveCare employs two specialized agents—Main Agent (Gemini 2.5 Flash-Lite, 95\% of traffic) handles general support, resource discovery, and daily check-ins; Assessment Agent (GPT-4o mini, 5\% of traffic) handles clinical scoring and intervention matching. Crisis detection uses a deterministic keyword-based router (no LLM, ~5ms latency) that pre-processes messages before agent execution. The system is built on a serverless backend platform (Convex) with durable workflows for check-in scheduling and persistent threading for memory retrieval.
 
-\textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. Crisis router operates deterministically using 19+ keywords across 3 severity levels, providing immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
+\textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. SupportBench evaluation~\cite{longitudinalbench} shows these models achieve complementary strengths: Gemini 2.5 Flash scores 90.9\% on memory hygiene and 81.9\% on trauma-informed flow, while GPT-4o mini achieves 91.8\% on memory and 82.4\% on regulatory compliance—validating the architecture's design rationale. Both models show baseline safety gaps (17.6\% and 11.8\% respectively), which GiveCare addresses through its deterministic crisis router operating at ~5ms latency using 19+ keywords across 3 severity levels for immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
 
 \textbf{Implementation Note:} Two agent definitions (Main, Assessment) with deterministic crisis router. Main Agent has six tools (\texttt{getResources}, \texttt{startAssessment}, \texttt{recordObservation}, \texttt{trackInterventionHelpfulness}, \texttt{findInterventions}, \texttt{checkAssessmentStatus}); Assessment Agent has two tools (\texttt{getResources}, \texttt{findInterventions}). Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
 
@@ -499,7 +499,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Deterministic keyword detection (19+ keywords across 3 severity levels: high = ``kill myself'', ``suicide'', ``end my life'', ``can't go on'', ``overdose'', ``end it all'', ``can't take it anymore'', ``hurting myself''; medium = ``hurt myself'', ``self-harm'', ``hopeless'', ``done with life'', ``no point in continuing'', ``give up'', ``can't do this anymore''; low = ``panic attack'')
     \item \textbf{Action}: Immediate response with 988/741741/911 resources, bypassing agent execution entirely. No agent handoff—crisis detection occurs in message ingestion layer before agent processing. T+24h follow-up with feedback collection (``Did you connect with 988?'', ``Was the response helpful?'')
-    \item \textbf{Implementation}: Pre-agent router with ~5ms latency (no LLM call). Includes false positive handling for subscription-related phrases (``cancel my account'' ≠ crisis) and domestic violence detection (``he'll kill me'' triggers enhanced safety language). Details in \texttt{lib/utils.ts:detectCrisis()}
+    \item \textbf{Implementation}: Pre-agent router with ~5ms latency (no LLM call). Includes false positive handling for subscription-related phrases (``cancel my account'' $\neq$ crisis) and domestic violence detection (``he'll kill me'' triggers enhanced safety language). Details in \texttt{lib/utils.ts:detectCrisis()}
     \item \textbf{Test coverage}: Crisis detection validation includes accuracy testing, false positive handling, and DV detection patterns
 \end{itemize}
 
@@ -1118,13 +1118,16 @@ Figure~\ref{fig:metrics_dashboard} provides a comprehensive overview of producti
 \end{figure}
 
 %
-\subsection{SupportBench Dimension Performance}%
-\label{subsec:SupportBenchDimensionPerformance}%
-Table~\ref{table:longbench_dimensions} maps beta metrics to SupportBench dimensions.
+\subsection{Beta Performance}%
+\label{subsec:BetaPerformance}%
+
+GiveCare's model selection (Gemini 2.5 Flash for Main Agent, GPT-4o mini for Assessment Agent) was informed by SupportBench evaluation~\cite{longitudinalbench}, which identified complementary strengths across memory, trauma-informed flow, and compliance dimensions, as well as safety gaps addressed through deterministic crisis routing. For comprehensive model comparison and baseline performance data, see SupportBench paper~\cite{longitudinalbench}.
+
+Table~\ref{table:longbench_dimensions} maps GiveCare's complete system performance (models + architecture + guardrails) to SupportBench dimensions during beta deployment.
 
 \begin{table}[h]
 \centering
-\caption{Beta Performance on SupportBench Dimensions}
+\caption{GiveCare Beta Performance on SupportBench Dimensions (Oct-Dec 2024, N=8, 144 conversations). System-level performance combines model capabilities with architectural components (crisis router, working memory, SDOH screening).}
 \label{table:longbench_dimensions}
 \small
 \begin{tabular}{lp{3.5cm}p{1.5cm}p{4cm}}
@@ -1143,7 +1146,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 \end{tabular}
 \end{table}
 
-\textbf{Assessment:} Strong performance on 7/8 dimensions (Longitudinal Consistency requires longer-term evaluation). Figure~\ref{fig:beta} visualizes dimension scores.
+\textbf{Assessment:} Strong system-level performance on 7/8 dimensions (Longitudinal Consistency requires longer-term evaluation). Architectural components (crisis router, working memory, SDOH screening) work together to achieve these results. Figure~\ref{fig:beta} visualizes dimension scores.
 
 %
 \subsection{Qualitative Observations}%
@@ -1474,9 +1477,9 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 %
 \subsection{GiveCare as SupportBench Reference Implementation}%
 \label{subsec:GiveCareasSupportBenchReferenceImplementation}%
-GiveCare is a \textbf{reference architecture explicitly designed around longitudinal safety constraints}, addressing all five SupportBench failure modes. Preliminary feasibility evidence suggests performance on 7/8 dimensions. \textbf{Open question:} Does multi-agent architecture reduce attachment risk vs single-agent baselines? Requires controlled study with counterfactual.
+GiveCare is a \textbf{reference architecture explicitly designed around longitudinal safety constraints}, addressing all five SupportBench failure modes. SupportBench evaluation validates key design decisions: (1)~Model complementarity—Gemini 2.5 Flash achieves 90.9\% memory and 81.9\% trauma-informed flow while GPT-4o mini achieves 82.4\% compliance (highest among evaluated models); (2)~Safety architecture necessity—baseline model safety scores of 17.6\% and 11.8\% demonstrate critical need for deterministic crisis routing, which GiveCare implements achieving 97.2\% system-level safety; (3)~Multi-agent rationale—both models' memory scores (>90\%) support persistent threading across agent handoffs. Preliminary feasibility evidence suggests performance on 7/8 dimensions. \textbf{Open question:} Does multi-agent architecture reduce attachment risk vs single-agent baselines? Requires controlled study with counterfactual.
 
-\textbf{Recommendation:} Use GiveCare as baseline for SupportBench Tier 3 scenarios (20+ turns, months apart).
+\textbf{Recommendation:} Use GiveCare as baseline for SupportBench Tier 3 scenarios (20+ turns, months apart). SupportBench model-level evaluation provides foundation for future architectural comparisons—testing whether crisis routers, working memory systems, and SDOH screening generalize across different model pairings beyond Gemini/GPT-4o combinations.
 
 %
 \subsection{Limitations}%
@@ -1517,7 +1520,7 @@ We present \textbf{GiveCare} as a \textbf{reference architecture} for longitudin
     \item \textbf{Production Deployment Architecture}: Operational feasibility demonstrated with responsive latency and zero technical failures (N=8 pilot)
 \end{enumerate}
 
-This paper contributes architectural blueprints and design patterns for longitudinal-safe caregiving AI, with a validation roadmap for community evaluation.
+This paper contributes architectural blueprints and design patterns for longitudinal-safe caregiving AI, with a validation roadmap for community evaluation. SupportBench evaluation~\cite{longitudinalbench} informed model selection and architectural decisions, particularly the need for deterministic crisis routing to address safety gaps identified in baseline model assessments.
 
 \textbf{Positioning as Reference Architecture:}
 
