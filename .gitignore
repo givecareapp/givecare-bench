@@ -48,6 +48,7 @@ arxiv_submissions/
 
 # Development artifacts (not for public release)
 dev/experiments/
+results/
 # Python cache
 __pycache__/
 *.pyc
@@ -70,3 +71,4 @@ htmlcov/
 *~
 .vscode/
 .idea/
+docs/

@@ -1,26 +1,12 @@
 # SupportBench Examples
 
-Example scripts demonstrating how to use SupportBench.
-
 ## Quick Start
 
 ```bash
-# Run basic evaluation
-python examples/basic_evaluation.py
-
-# Run with specific model
-python examples/evaluate_model.py --model anthropic/claude-3.7-sonnet
-
-# Generate preference pairs
-python examples/export_preference_pairs.py
+python examples/quick_start.py
 ```
 
-## Examples
+Minimal example demonstrating basic benchmark usage with BenchmarkRunner.
 
-- `quick_start.py` - Minimal working example
-- `basic_evaluation.py` - Standard benchmark run
-- `evaluate_model.py` - Evaluate single model
-- `export_preference_pairs.py` - Generate training data
-
-See main README.md for detailed documentation.
+See `../README.md` and `../docs/VALIDATION_GUIDE.md` for detailed documentation.
 

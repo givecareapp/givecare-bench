@@ -12,7 +12,7 @@ class TestJurisdictionRules:
     def test_california_rules_load(self):
         """California AB 3030 rules load correctly."""
         loader = RuleLoader()
-        rules = loader.load("longbench/rules/ca.yaml")
+        rules = loader.load("benchmark/configs/rules/ca.yaml")
 
         # CA requires more frequent disclosure (every 3 turns vs base 6)
         assert rules["disclosure"]["cadence_turns"] == 3
@@ -30,7 +30,7 @@ class TestJurisdictionRules:
     def test_texas_rules_load(self):
         """Texas HB 1265 (proposed) rules load correctly."""
         loader = RuleLoader()
-        rules = loader.load("longbench/rules/tx.yaml")
+        rules = loader.load("benchmark/configs/rules/tx.yaml")
 
         # TX requires informed consent
         assert rules["disclosure"]["informed_consent_required"] is True
@@ -42,7 +42,7 @@ class TestJurisdictionRules:
     def test_eu_rules_load(self):
         """EU AI Act rules load correctly."""
         loader = RuleLoader()
-        rules = loader.load("longbench/rules/eu.yaml")
+        rules = loader.load("benchmark/configs/rules/eu.yaml")
 
         # EU requires transparency (Article 52)
         assert rules["disclosure"]["transparency_required"] is True
@@ -56,7 +56,7 @@ class TestJurisdictionRules:
     def test_federal_rules_load(self):
         """Federal (FDA/HIPAA/APA) rules load correctly."""
         loader = RuleLoader()
-        rules = loader.load("longbench/rules/federal.yaml")
+        rules = loader.load("benchmark/configs/rules/federal.yaml")
 
         # Federal requires HIPAA compliance
         assert rules["disclosure"]["hipaa_compliance"] is True
@@ -74,7 +74,7 @@ class TestJurisdictionRules:
         loader = RuleLoader()
 
         for jurisdiction in jurisdictions:
-            rules = loader.load(f"longbench/rules/{jurisdiction}.yaml")
+            rules = loader.load(f"benchmark/configs/rules/{jurisdiction}.yaml")
 
             # All should inherit base crisis cues
             assert "cues_indirect" in rules["crisis"]
@@ -86,8 +86,8 @@ class TestJurisdictionRules:
     def test_california_stricter_than_base(self):
         """California rules are stricter than base (more frequent disclosure)."""
         loader = RuleLoader()
-        base_rules = loader.load("longbench/rules/base.yaml")
-        ca_rules = loader.load("longbench/rules/ca.yaml")
+        base_rules = loader.load("benchmark/configs/rules/base.yaml")
+        ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
         # CA requires disclosure more frequently
         assert ca_rules["disclosure"]["cadence_turns"] < base_rules["disclosure"]["cadence_turns"]
@@ -98,7 +98,7 @@ class TestJurisdictionRules:
         loader = RuleLoader()
 
         for jurisdiction in jurisdictions:
-            rules = loader.load(f"longbench/rules/{jurisdiction}.yaml")
+            rules = loader.load(f"benchmark/configs/rules/{jurisdiction}.yaml")
             assert "notes" in rules
             assert len(rules["notes"]) > 0
 
@@ -109,7 +109,7 @@ class TestRuleInheritanceChains:
     def test_base_provides_foundation(self):
         """Base.yaml provides foundation for all jurisdictions."""
         loader = RuleLoader()
-        base_rules = loader.load("longbench/rules/base.yaml")
+        base_rules = loader.load("benchmark/configs/rules/base.yaml")
 
         # Base has core sections
         assert "disclosure" in base_rules
@@ -120,7 +120,7 @@ class TestRuleInheritanceChains:
     def test_jurisdictions_merge_not_replace(self):
         """Jurisdictions merge with base, don't replace entirely."""
         loader = RuleLoader()
-        ca_rules = loader.load("longbench/rules/ca.yaml")
+        ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
         # Should have CA-specific sections
         assert "mental_health_specifics" in ca_rules
@@ -131,8 +131,8 @@ class TestRuleInheritanceChains:
     def test_jurisdiction_overrides_work(self):
         """Jurisdiction-specific values override base values."""
         loader = RuleLoader()
-        base_rules = loader.load("longbench/rules/base.yaml")
-        ca_rules = loader.load("longbench/rules/ca.yaml")
+        base_rules = loader.load("benchmark/configs/rules/base.yaml")
+        ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
         # CA overrides cadence_turns
         assert base_rules["disclosure"]["cadence_turns"] == 6
@@ -145,7 +145,7 @@ class TestRuleDocumentation:
     def test_california_ab3030_documented(self):
         """California rules reference AB 3030 specifically."""
         loader = RuleLoader()
-        ca_rules = loader.load("longbench/rules/ca.yaml")
+        ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
         notes_text = " ".join(ca_rules["notes"])
         assert "AB 3030" in notes_text
@@ -153,7 +153,7 @@ class TestRuleDocumentation:
     def test_eu_ai_act_documented(self):
         """EU rules reference AI Act regulation number."""
         loader = RuleLoader()
-        eu_rules = loader.load("longbench/rules/eu.yaml")
+        eu_rules = loader.load("benchmark/configs/rules/eu.yaml")
 
         notes_text = " ".join(eu_rules["notes"])
         assert "EU AI Act" in notes_text or "Regulation" in notes_text
@@ -161,7 +161,7 @@ class TestRuleDocumentation:
     def test_texas_hb1265_documented(self):
         """Texas rules document HB 1265 (even though it died)."""
         loader = RuleLoader()
-        tx_rules = loader.load("longbench/rules/tx.yaml")
+        tx_rules = loader.load("benchmark/configs/rules/tx.yaml")
 
         notes_text = " ".join(tx_rules["notes"])
         assert "HB" in notes_text and "1265" in notes_text
@@ -169,7 +169,7 @@ class TestRuleDocumentation:
     def test_federal_guidelines_documented(self):
         """Federal rules document FDA, HIPAA, and APA sources."""
         loader = RuleLoader()
-        federal_rules = loader.load("longbench/rules/federal.yaml")
+        federal_rules = loader.load("benchmark/configs/rules/federal.yaml")
 
         notes_text = " ".join(federal_rules["notes"])
         assert "FDA" in notes_text
