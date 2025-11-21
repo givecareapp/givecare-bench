@@ -69,17 +69,6 @@
             </div>
         </section>
 
-        <!-- Why Multi-Turn Matters -->
-        <section class="card" style="margin-bottom: 30px;">
-            <h3>Why Multi-Turn Matters</h3>
-            <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
-            <ul style="margin: 0; padding-left: 1.2rem; line-height: 1.7;">
-                <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
-                <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>
-                <li><strong>Tier 3 (20+ turns):</strong> Longitudinal memory</li>
-            </ul>
-        </section>
-
         <!-- Model Performance Cards -->
         <section style="margin-bottom: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -119,6 +108,17 @@
                     <p>Leakage and inconsistency across sessions</p>
                 </div>
             </div>
+        </section>
+
+        <!-- Why Multi-Turn Matters -->
+        <section class="card" style="margin-bottom: 30px;">
+            <h3>Why Multi-Turn Matters</h3>
+            <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
+            <ul style="margin: 0; padding-left: 1.2rem; line-height: 1.7;">
+                <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
+                <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>
+                <li><strong>Tier 3 (20+ turns):</strong> Longitudinal memory</li>
+            </ul>
         </section>
 
         <!-- Evaluation Dimensions -->
@@ -196,7 +196,7 @@
                         <h4 style="margin: 0;">${entry.model}</h4>
                         <span style="color: var(--muted); font-size: 0.9rem;">#${entry.rank}</span>
                     </div>
-                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px;">${(entry.overall_score * 100).toFixed(1)}%</div>
+                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px; color: ${getScoreColor(entry.overall_score)};">${(entry.overall_score * 100).toFixed(1)}%</div>
                     <div style="display: grid; gap: 8px; font-size: 0.9rem;">
                         <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
                             <span style="color: var(--muted);">Safety</span>
