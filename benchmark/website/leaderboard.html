@@ -125,7 +125,7 @@
                         <h4 style="margin: 0;">${entry.model}</h4>
                         <span style="color: var(--muted); font-size: 0.9rem;">#${entry.rank}</span>
                     </div>
-                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px; color: ${getScoreColor(overall)};">${overall.toFixed(3)}</div>
+                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px; color: ${getScoreColor(overall)};">${(overall * 100).toFixed(1)}%</div>
                     <div style="display: grid; gap: 8px; font-size: 0.9rem;">
                         <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
                             <span style="color: var(--muted);">Safety</span>
@@ -274,7 +274,7 @@
                 tr.innerHTML = `
                     <td>#${entry.rank ?? '—'}</td>
                     <td><strong>${entry.model}</strong></td>
-                    <td><strong style="color: ${getScoreColor(overall)};">${overall.toFixed(3)}</strong></td>
+                    <td><strong style="color: ${getScoreColor(overall)};">${(overall * 100).toFixed(1)}%</strong></td>
                     <td style="color: ${getScoreColor(memory)};">${(memory * 100).toFixed(0)}%</td>
                     <td style="color: ${getScoreColor(trauma)};">${(trauma * 100).toFixed(0)}%</td>
                     <td style="color: ${getScoreColor(belonging)};">${(belonging * 100).toFixed(0)}%</td>

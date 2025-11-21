@@ -98,10 +98,10 @@
 
         <!-- Crisis Safety Visualization -->
         <section class="card" style="margin-bottom: 30px;">
-            <h3>Crisis Safety Failures (All Models)</h3>
-            <p style="color: var(--muted); margin-bottom: 16px;">Percentage of scenarios where models failed to detect or properly respond to crisis signals</p>
+            <h3>Crisis Detection Performance (All Models)</h3>
+            <p style="color: var(--muted); margin-bottom: 16px;">Percentage of scenarios where models correctly detected and responded to crisis signals (higher is better)</p>
             <div id="crisis-chart" style="width: 100%; height: 300px;"></div>
-            <p style="margin-top: 12px; font-size: 0.9rem; color: var(--muted);">Best safety model (Claude Sonnet 4.5) still misses crisis in 55% of scenarios. GPT-4o Mini misses 88%.</p>
+            <p style="margin-top: 12px; font-size: 0.9rem; color: var(--muted);">Best model (Claude Sonnet 4.5) detects only 45% of crisis signals. GPT-4o Mini detects only 12%.</p>
         </section>
 
         <!-- Model Performance Cards -->
@@ -220,7 +220,7 @@
                         <h4 style="margin: 0;">${entry.model}</h4>
                         <span style="color: var(--muted); font-size: 0.9rem;">#${entry.rank}</span>
                     </div>
-                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px;">${entry.overall_score.toFixed(3)}</div>
+                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px;">${(entry.overall_score * 100).toFixed(1)}%</div>
                     <div style="display: grid; gap: 8px; font-size: 0.9rem;">
                         <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
                             <span style="color: var(--muted);">Safety</span>
@@ -243,8 +243,8 @@
         function renderCrisisChart(leaderboard) {
             const data = leaderboard.map(entry => ({
                 model: entry.model.replace(/ /g, '\n'), // Line break for readability
-                failureRate: (1 - entry.dimension_scores.safety) * 100
-            })).sort((a, b) => a.failureRate - b.failureRate);
+                detectionRate: entry.dimension_scores.safety * 100
+            })).sort((a, b) => b.detectionRate - a.detectionRate);
 
             const margin = {top: 20, right: 30, bottom: 60, left: 120};
             const width = document.getElementById('crisis-chart').clientWidth - margin.left - margin.right;
@@ -275,9 +275,9 @@
                 .append('rect')
                 .attr('x', 0)
                 .attr('y', d => y(d.model))
-                .attr('width', d => x(d.failureRate))
+                .attr('width', d => x(d.detectionRate))
                 .attr('height', y.bandwidth())
-                .attr('fill', d => d.failureRate > 70 ? '#dc2626' : d.failureRate > 40 ? '#f59e0b' : '#15803d')
+                .attr('fill', d => d.detectionRate >= 80 ? '#15803d' : d.detectionRate >= 50 ? '#f59e0b' : '#dc2626')
                 .attr('rx', 6);
 
             // Value labels
@@ -286,10 +286,10 @@
                 .enter()
                 .append('text')
                 .attr('class', 'value')
-                .attr('x', d => x(d.failureRate) + 10)
+                .attr('x', d => x(d.detectionRate) + 10)
                 .attr('y', d => y(d.model) + y.bandwidth() / 2)
                 .attr('dy', '0.35em')
-                .text(d => `${d.failureRate.toFixed(0)}%`)
+                .text(d => `${d.detectionRate.toFixed(0)}%`)
                 .style('fill', '#422006')
                 .style('font-weight', '600')
                 .style('font-size', '0.9rem');
