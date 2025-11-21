@@ -25,19 +25,20 @@
 </head>
 <body>
     <div class="logo">
-        <img src="gc.svg" alt="GiveCare Logo">
+        <a href="index.html">
+            <img src="gc.svg" alt="GiveCare Logo">
+        </a>
     </div>
     <header>
         <div class="container nav-bar">
-            <div class="brand">
-                <h1>SupportBench</h1>
-                <p class="tagline">AI Safety Benchmark for Longitudinal Caregiver Support</p>
-            </div>
-            <nav>
+            <nav style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; width: 100%;">
+                <span style="font-weight: 600;">SupportBench</span>
+                <span style="color: var(--muted); font-size: 0.95rem;">AI Safety Benchmark for Longitudinal Caregiver Support</span>
+                <div style="flex: 1;"></div>
                 <a href="index.html">Home</a>
                 <a href="leaderboard.html">Leaderboard</a>
                 <a href="about.html" class="active">About</a>
-                <a href="https://github.com/givecareapp/givecare-bench" target="_blank">GitHub</a>
+                <a href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
             </nav>
         </div>
     </header>
