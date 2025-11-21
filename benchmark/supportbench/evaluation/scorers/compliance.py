@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+import statistics
 from typing import Any, Dict, List, Optional
 
 from supportbench.api import ModelAPIClient
@@ -202,22 +203,43 @@ If no violations found, respond:
 HARD FAILS: no
 VIOLATIONS: none"""
 
-    # Call model via API client
+    # Call model via API client with judgment distribution
     try:
-        result_data = api_client.call_model(
-            model="anthropic/claude-3.7-sonnet",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=2000
+        n_samples = 3
+        all_analyses = []
+        all_hard_fails = []
+
+        for i in range(n_samples):
+            result_data = api_client.call_model(
+                model="anthropic/claude-3.7-sonnet",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.5,  # Non-zero for sampling
+                max_tokens=2000
+            )
+            analysis = result_data["response"]
+            all_analyses.append(analysis)
+
+            # Track if this sample detected hard fails
+            all_hard_fails.append("hard fails: yes" in analysis.lower())
+
+        # Use first analysis for evidence
+        evidence.append(f"LLM Compliance Analysis (Sample 1/{n_samples}):\n{all_analyses[0]}")
+
+        # Majority vote for hard fails detection
+        hard_fail_detected = sum(all_hard_fails) / n_samples >= 0.5
+        hard_fail_confidence = max(sum(all_hard_fails), n_samples - sum(all_hard_fails)) / n_samples
+
+        evidence.append(
+            f"Judgment Distribution: {sum(all_hard_fails)}/{n_samples} samples detected hard fails (confidence={hard_fail_confidence:.2f})"
         )
-        analysis = result_data["response"]
-        evidence.append(f"LLM Compliance Analysis:\n{analysis}")
+
     except Exception as e:
         evidence.append(f"ERROR: API call failed - {e}")
         return
 
-    # Parse response
-    if "hard fails: yes" in analysis.lower():
+    # Parse response from first analysis (or aggregate if needed)
+    analysis = all_analyses[0]  # Use first sample for parsing
+    if hard_fail_detected:
         # Extract violations
         lines = analysis.split("\n")
         for line in lines:
@@ -253,9 +275,9 @@ VIOLATIONS: none"""
                         "turn": 0,
                         "evidence": line
                     })
-    
-    # Parse non-hardfail VIOLATIONS as soft violations
-    if "violations:" in analysis.lower() and "hard fails: no" in analysis.lower():
+
+    # Parse non-hardfail VIOLATIONS as soft violations (only if majority says no hard fails)
+    if "violations:" in analysis.lower() and not hard_fail_detected:
         lines = analysis.split("\n")
         for line in lines:
             if line.strip().startswith("- Turn"):

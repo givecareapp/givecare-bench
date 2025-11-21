@@ -18,8 +18,8 @@ class TestScoringOrchestrator:
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
-        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
         scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
@@ -38,8 +38,8 @@ class TestScoringOrchestrator:
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
-        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "base.yaml"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
         scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
@@ -64,8 +64,8 @@ class TestScoringOrchestrator:
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
-        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
         scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
@@ -93,8 +93,8 @@ class TestScoringOrchestrator:
 
         try:
             repo_root = Path(__file__).resolve().parents[3]
-            scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-            rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "base.yaml"
+            scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+            rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
             scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
             orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
@@ -113,8 +113,8 @@ class TestScoringOrchestrator:
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
-        scenario_path = repo_root / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-        rules_path = repo_root / "benchmark" / "supportbench" / "rules" / "ny.yaml"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
         scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))

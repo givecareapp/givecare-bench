@@ -82,9 +82,9 @@ def validate_structure():
 
     # Check rules directory
     print("\n3. Checking rules directory...")
-    rules_path = base_path / "supportbench" / "rules"
+    rules_path = base_path / "configs" / "rules"
     if rules_path.exists():
-        print(f"   ✅ supportbench/rules/ exists")
+        print(f"   ✅ configs/rules/ exists")
 
         rule_files = list(rules_path.glob("*.yaml"))
         print(f"      - Found {len(rule_files)} rule files:")
@@ -100,8 +100,8 @@ def validate_structure():
                 errors.append(f"Invalid YAML in {rule_file.name}: {e}")
                 print(f"          ❌ Invalid YAML: {e}")
     else:
-        errors.append("supportbench/rules/ directory not found")
-        print(f"   ❌ supportbench/rules/ - MISSING")
+        errors.append("configs/rules/ directory not found")
+        print(f"   ❌ configs/rules/ - MISSING")
 
     # Check configs
     print("\n4. Checking configs...")

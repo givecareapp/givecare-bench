@@ -92,7 +92,7 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 
 \textbf{Guardrail} = automatic block for risky replies (e.g., ``I can't give dosing advice'').
 
-\textbf{EMA/CWBS/REACH-II} = short check-ins / quality-of-life scales we combine to track stress trajectory.
+\textbf{EMA/CWBS/REACH-II} = validated clinical assessments (Ecological Momentary Assessment, Caregiver Well-Being Scale, REACH-II Risk Appraisal) we combine to track stress trajectory.
 
 \textbf{Memory hygiene} = remember only what helps; avoid oversharing personal details (PII).
 
@@ -181,7 +181,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
 \textbf{4. Anticipatory Watchers}: Trend/Engagement/Burst detection before crisis\\
 \textbf{5. Trauma-Informed Prompts}: Six principles (P1-P6) optimized via meta-prompting\\
 \textbf{6. SMS-First Design}: Zero-download, works on basic phones, progressive disclosure\\
-\textbf{7. Production Pipeline}: 950ms latency, grounded resources (Places API)
+\textbf{7. Production Pipeline}: 950ms latency, evidence-based intervention library matched to pressure zones
 \end{tcolorbox}
 
 GiveCare addresses SupportBench failure modes through these seven integrated components:
@@ -215,19 +215,19 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 
     \item \textbf{SMS-First Accessible Design}: Zero-download text-message interface removes barriers to access (no app installation, works on basic phones, no data plan required). Progressive disclosure across 6-8 SMS turns transforms overwhelming 28-question assessments into conversational exchanges. Addresses digital divide where 47\% of low-income caregivers lack reliable internet~\cite{aarp2025}.
 
-    \item \textbf{Production Deployment Architecture}: Demonstrated operational feasibility with 950ms median latency and 0 technical failures (N=8 pilot). Grounded resource search via Places API provides always-current local resources with addresses, hours, and contact information.
+    \item \textbf{Production Deployment Architecture}: Demonstrated operational feasibility with 950ms median latency and 0 technical failures (N=8 pilot). Evidence-based intervention library (10+ interventions) matched to pressure zones provides immediate support with verified resource directories (211, 988, caregiver.org) and clinical-trial-validated techniques (breathing exercises, boundary setting).
 \end{enumerate}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figures/fig1_system_architecture.pdf}
-\caption{GiveCare system architecture showing seven integrated components. Component 5 (Anticipatory Engagement System) is highlighted as the key differentiator, using three active watchers to detect escalation patterns before crisis thresholds. The system transforms SMS-based caregiver inputs through multi-agent orchestration, SDOH assessment, composite burnout scoring, anticipatory monitoring, and grounded resource matching to deliver personalized, locally-accessible interventions.}
+\caption{GiveCare system architecture showing seven integrated components. Component 5 (Anticipatory Engagement System) is highlighted as the key differentiator, using three active watchers to detect escalation patterns before crisis thresholds. The system transforms SMS-based caregiver inputs through multi-agent orchestration, SDOH assessment, composite burnout scoring, anticipatory monitoring, and pressure zone-matched intervention delivery to provide personalized, evidence-based support.}
 \label{fig:system_architecture}
 \end{figure}
 
 \subsection{The Value Proposition: Anticipatory Trajectory Monitoring}
 
-\textbf{Core insight:} Existing AI asks caregivers ``How are you today?'' (snapshot) but misses burnout declining from 70 to 45 over three months (trajectory). Snapshots can't \textit{anticipate}—a caregiver reporting ``I'm okay'' at score 58 might be 4 weeks from crisis (<40), but single-session AI has no way to detect the trend. Generic advice (``Try meditation'') ignores what actually lowers burnout: accessible respite care, financial support, social connection—personalized to individual pressure zones and \textit{actually available locally}. National resource lists go stale; ETL pipelines provide outdated addresses and hours. One-time interventions fail without sustained engagement—caregivers need systems that \textit{anticipate problems before escalation} and adapt as stress evolves.
+\textbf{Core insight:} Existing AI asks caregivers ``How are you today?'' (snapshot) but misses burnout declining from 70 to 45 over three months (trajectory). Snapshots can't \textit{anticipate}—a caregiver reporting ``I'm okay'' at score 58 might be trending toward high-risk (<40) or crisis (<20), but single-session AI has no way to detect the trend. Generic advice (``Try meditation'') ignores what actually lowers burnout: accessible respite care, financial support, social connection—personalized to individual pressure zones and \textit{actually available locally}. National resource lists go stale; ETL pipelines provide outdated addresses and hours. One-time interventions fail without sustained engagement—caregivers need systems that \textit{anticipate problems before escalation} and adapt as stress evolves.
 
 \textbf{GiveCare's complete measurement-to-intervention-to-maintenance loop:}
 
@@ -254,7 +254,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figures/fig3_anticipatory_timeline.pdf}
-\caption{\textbf{Illustrative Example}: Anticipatory intelligence concept. The timeline shows a hypothetical caregiver's burnout score declining from 70 to 52 over 4 weeks (lower score = higher burnout). The Wellness Trend Watcher would analyze this 4-week trajectory and intervene at Week 3 (score 58) before the crisis threshold (<40). Snapshot AI systems would see ``58'' and conclude the caregiver is okay, missing the declining trend. GiveCare's three active watchers (Wellness Trend, Engagement, Crisis Burst) are designed for anticipatory intervention; churn reduction efficacy requires A/B validation (H2 in Section~\ref{subsec:PaperScopeandValidationRoadmap}).}
+\caption{\textbf{Illustrative Example}: Anticipatory intelligence concept. The timeline shows a hypothetical caregiver's burnout score declining from 70 to 52 over 4 weeks (lower score = higher burnout). The Wellness Trend Watcher would analyze this 4-week trajectory and intervene at Week 3 (score 58) before entering high-risk territory (<40) or potential crisis (<20). Snapshot AI systems would see ``58'' and conclude the caregiver is okay, missing the declining trend. GiveCare's three active watchers (Wellness Trend, Engagement, Crisis Burst) are designed for anticipatory intervention; churn reduction efficacy requires A/B validation (H2 in Section~\ref{subsec:PaperScopeandValidationRoadmap}).}
 \label{fig:anticipatory_timeline}
 \end{figure}
 
@@ -305,7 +305,7 @@ The following claims require controlled validation studies (outlined in Section~
 \begin{enumerate}
     \item \textbf{H1 (Attachment Prevention)}: Multi-agent architecture (Main/Crisis/Assessment handoffs) reduces parasocial dependency risk vs single-agent systems, measured via Parasocial Interaction Scale (PSI) at 30/60/90 days
     \item \textbf{H2 (Churn Reduction)}: Anticipatory engagement watchers (wellness trend, disengagement detection, crisis burst monitoring) hypothesized to reduce 30-day churn by 20-30\% vs reactive-only systems, tested via A/B study (N=200+)
-    \item \textbf{H3 (Trajectory Detection)}: Composite burnout scoring with temporal decay detects 4-week declining trends before crisis threshold (<40) with sensitivity >70\%, specificity >60\%
+    \item \textbf{H3 (Trajectory Detection)}: Composite burnout scoring with temporal decay detects 4-week declining trends before high-risk threshold (<40) with sensitivity >70\%, specificity >60\%
     \item \textbf{H4 (Cultural Sensitivity)}: GC-SDOH-28 assessment triggers culturally-appropriate interventions (structural support vs individual responsibility) at 2$\times$ rate of generic AI, validated via human expert review
 \end{enumerate}
 
@@ -345,7 +345,7 @@ This paper presents a reference architecture with design patterns, instrument de
     \item \textbf{GC-SDOH-28 psychometrics}: Reliability, validity, factor structure (N=200+, 6 months)
     \item \textbf{Multi-agent evaluation}: RCT comparing single- vs. multi-agent architectures with parasocial interaction measures
     \item \textbf{Longitudinal tracking}: Extended study (90+ days) with human judge evaluation
-    \item \textbf{Multi-model generalization}: Testing across Claude, Gemini, Llama, open-source alternatives
+    \item \textbf{Multi-model generalization}: Testing across different OpenAI models (gpt-5-nano, gpt-4o-mini, o4-mini) and potentially Claude, Gemini, Llama alternatives via OpenAI-compatible endpoints
     \item \textbf{Clinical outcomes}: Caregiver burnout reduction, intervention uptake with matched controls
 \end{itemize}
 
@@ -357,7 +357,7 @@ This approach follows the model of influential architecture papers (Transformers
 %
 \subsection{Longitudinal AI Safety Evaluation}%
 \label{subsec:LongitudinalAISafetyEvaluation}%
-SupportBench~\cite{longitudinalbench} introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid YAML scoring system~\cite{yaml-scoring} combines deterministic rule-based gates (compliance, crisis, PII) with LLM tri-judge ensemble for subjective assessment. However, \textit{no reference implementations} exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
+SupportBench~\cite{longitudinalbench} introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid evaluation system~\cite{yaml-scoring} combines deterministic rule-based gates (compliance, crisis, PII) with LLM-as-judge evaluation using multi-sample judgment distribution for subjective assessment. However, \textit{no reference implementations} exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
 
 %
 \subsection{SDOH Instruments}%
@@ -407,7 +407,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 
 \textbf{Solution:} Multi-agent architecture with seamless handoffs. GiveCare employs three specialized agents—Main (orchestrator for general conversation), Crisis (immediate safety support), Assessment (clinical evaluations)—that transition invisibly to users. Agent handoffs are invisible; the conversation reads as one voice. Conversations feel unified despite agent changes.
 
-\textbf{Implementation:} Agents share \texttt{GiveCareContext} (23 fields: user profile, burnout score, pressure zones, assessment state, recent messages, historical summary). Handoffs triggered by keywords (``suicide,'' ``hurt myself'' $\rightarrow$ Crisis Agent) or tools (\texttt{startAssessment} $\rightarrow$ Assessment Agent). GPT-4o-mini (small-capacity, cost-optimized) executes in 800-1200ms.
+\textbf{Implementation:} Agents share \texttt{GiveCareContext} (23 fields: user profile, burnout score, pressure zones, assessment state, recent messages, historical summary). Handoffs triggered by deterministic keyword detection (``suicide,'' ``hurt myself'' $\rightarrow$ Crisis Agent, ~5ms latency) or tools (\texttt{startAssessment} $\rightarrow$ Assessment Agent). All agents use gpt-5-nano by default (configurable via environment variable) and execute in 800-1200ms.
 
 \textbf{Implementation Note:} Three agent definitions (Crisis, Assessment, Main) implemented with seamless handoff instruction ``NEVER announce yourself or your role'' to maintain conversation continuity. Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
 
@@ -467,7 +467,16 @@ Crisis keywords detected & 2 (both escalated correctly) \\
 \label{subsec:DetectingPerformanceDegradation}%
 \textbf{Challenge (SupportBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
 
-\textbf{Solution:} Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 items), CWBS-SF (weekly, 16 items), REACH II RAM (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40\%, CWBS 30\%, REACH-II 20\%, SDOH 10\%) and 10-day exponential decay $w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$, where $t$ is days since assessment.
+\textbf{Solution:} Composite burnout score with temporal decay. Four assessments—EMA (daily, 2 items), CWBS (weekly, 14 items), REACH-II (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40\%, CWBS 30\%, REACH-II 20\%, SDOH 10\%) and 10-day exponential decay $w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$, where $t$ is days since assessment.
+
+\textbf{Burnout Band Classification:} Composite scores (0-100 scale, higher = less burnout) map to five risk bands:
+\begin{itemize}
+    \item \texttt{crisis}: <20 (immediate intervention required)
+    \item \texttt{high}: 20-39 (intensive support needed)
+    \item \texttt{moderate}: 40-69 (regular monitoring)
+    \item \texttt{mild}: 70-84 (maintenance support)
+    \item \texttt{thriving}: 85+ (minimal intervention)
+\end{itemize}
 
 \textbf{Pressure Zone Extraction:} Seven zones extracted from assessment subscales:
 \begin{itemize}
@@ -490,9 +499,9 @@ Four guardrails protect against harmful outputs and boundary violations:
 
 \textbf{1. Crisis Guardrail}
 \begin{itemize}
-    \item \textbf{Trigger}: Detects suicidal ideation keywords (``hurt myself,'' ``end it,'' ``can't go on'')
-    \item \textbf{Action}: Immediate handoff to Crisis Agent + escalate to human review if multiple crisis keywords in 24 hours
-    \item \textbf{Implementation}: crisisGuardrail with keyword matching (details in repository)
+    \item \textbf{Trigger}: Deterministic keyword detection (10 keywords: ``suicide,'' ``kill myself,'' ``end my life,'' ``want to die,'' ``better off dead,'' ``can't go on,'' ``end it all,'' ``no reason to live,'' ``self harm,'' ``hurt myself'')
+    \item \textbf{Action}: Immediate handoff to Crisis Agent with 988/741741/911 resources + escalate to human review if multiple crisis keywords in 24 hours
+    \item \textbf{Implementation}: Input guardrail with ~5ms latency (no LLM call), triggers tripwire to block main agent execution and return crisis resources immediately (details in repository)
     \item \textbf{Test coverage}: 23 tests validate crisis detection accuracy, handoff timing, false positive handling
 \end{itemize}
 
@@ -861,33 +870,33 @@ This consolidation maintains coverage of all stress dimensions while simplifying
     \item \textbf{Impact}: Expected stress reduction (e.g., SNAP enrollment historically reduces financial stress; support group provides moderate relief)
 \end{itemize}
 
-\textbf{Production Implementation (Multi-Factor Scoring):} The conceptual RBI framework is operationalized as weighted multi-factor scoring in the resource matching system:
+\textbf{Current Implementation (Tag-Based Matching):} The system implements simplified tag-based matching where interventions are pre-tagged with pressure zones:
 \begin{itemize}
-    \item \textbf{Zone Relevance} (40\% weight): Intervention tags match active pressure zones (e.g., ``financial\_aid'' tag matches \texttt{financial\_concerns} zone)
-    \item \textbf{Geographic Accessibility} (30\% weight): Distance from caregiver's location (closer resources reduce burden)
-    \item \textbf{Burnout Band Fit} (15\% weight): Intervention urgency matches burnout level (crisis $\rightarrow$ immediate support; moderate $\rightarrow$ skill-building)
-    \item \textbf{Quality Signals} (10\% weight): Program trust score, evidence base, user ratings (proxy for impact)
-    \item \textbf{Freshness} (5\% weight): Recently updated resources prioritized (ensures current contact info)
+    \item \textbf{Zone Matching}: Agent calls \texttt{find\_interventions(pressure\_zones=["emotional", "financial\_strain"])} tool
+    \item \textbf{Filtering}: Returns interventions where tags overlap with requested zones
+    \item \textbf{Ranking}: Top 3 by relevance (number of matching tags) and evidence level (clinical\_trial > peer\_reviewed > expert\_consensus > verified\_directory)
+    \item \textbf{Delivery}: Agent receives intervention titles and descriptions to share conversationally
 \end{itemize}
 
-$$\text{Final Score} = 0.40 \cdot S_{\text{zone}} + 0.30 \cdot S_{\text{geo}} + 0.15 \cdot S_{\text{band}} + 0.10 \cdot S_{\text{quality}} + 0.05 \cdot S_{\text{fresh}}$$
+\textbf{Future Enhancement (Multi-Factor Scoring):} The conceptual RBI framework could be extended with weighted multi-factor scoring:
+$$\text{Score} = 0.40 \cdot S_{\text{zone}} + 0.30 \cdot S_{\text{geo}} + 0.15 \cdot S_{\text{band}} + 0.10 \cdot S_{\text{quality}} + 0.05 \cdot S_{\text{fresh}}$$
 
-This weighted approach operationalizes the paper's conceptual RBI framework: Relevance (zone + band matching), Burden (geographic accessibility), Impact (quality signals). Physical locations retrieved via Places API; federal/state programs from ETL pipeline.
+This would operationalize Relevance (zone matching), Burden (geographic accessibility via ZIP code proximity), and Impact (quality signals from evidence level). Current implementation focuses on zone relevance only.
 
-\textbf{Example:} Burnout score 45 (moderate-high) with active pressure zones \texttt{financial\_concerns}, \texttt{social\_support}:
+\textbf{Example:} Burnout score 45 (moderate-high) with active pressure zones \texttt{financial\_strain}, \texttt{emotional}:
 \begin{itemize}
-    \item \textbf{Benefits.gov Federal Benefits Finder} (zone: 1.0, geo: 0.9 online, band: 0.8, quality: 0.9, fresh: 1.0) $\rightarrow$ Final: 0.91. Links to SNAP, Medicaid, housing assistance—comprehensive directory for financial barriers.
-    \item \textbf{Local caregiver support group} (zone: 0.9, geo: 0.7 nearby, band: 0.9, quality: 0.8, fresh: 0.9) $\rightarrow$ Final: 0.85. Tuesdays 6pm hybrid format addresses social isolation.
-    \item \textbf{IRS Caregiver Tax Credit Guide} (zone: 0.9, geo: 1.0 online, band: 0.6 lower urgency, quality: 1.0 official, fresh: 0.8) $\rightarrow$ Final: 0.86. May qualify for dependent care tax credits; amounts vary by filing status—consult current IRS guidance.
+    \item \textbf{Financial Relief Resources} (tags: financial\_strain, social\_needs; evidence: verified\_directory). "211 connects you to local assistance programs. Text your ZIP code to 898211 for help with bills, food, housing."
+    \item \textbf{Permission to Grieve} (tags: emotional; evidence: peer\_reviewed). "It's normal to grieve losses while caregiving. You can love someone and still feel sad about what's changed."
+    \item \textbf{5-Minute Breathing Reset} (tags: emotional, physical; evidence: clinical\_trial). "Quick breathing exercise: Breathe in for 4, hold for 4, out for 6. Repeat 5 times."
 \end{itemize}
 
-\textbf{Expected Behavior:} Multi-factor scoring surfaces locally-accessible, financially-appropriate resources ranked by relevance. Figure~\ref{fig:pressure_zones} illustrates the complete pressure zone extraction and intervention mapping pipeline, while Figure~\ref{fig:longitudinal} shows a simulated caregiver trajectory demonstrating system capabilities.
+\textbf{Current Behavior:} Tag-based matching returns top 3 interventions with evidence levels and direct instructions. Figure~\ref{fig:pressure_zones} illustrates the complete pressure zone extraction and intervention mapping pipeline, while Figure~\ref{fig:longitudinal} shows a simulated caregiver trajectory demonstrating system capabilities.
 
 %
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=\textwidth]{figures/fig7_pressure_zones.pdf}%
-\caption{Pressure zone extraction and intervention mapping pipeline. Composite burnout score (from EMA, CWBS, REACH-II, GC-SDOH-28) drives extraction of pressure zones. \textbf{Production implementation}: 5 consolidated zones (emotional\_wellbeing, physical\_health, financial\_concerns, social\_support, time\_management) mapped from assessment subscales via threshold logic (implementation in repository). \textbf{Intervention matching}: Multi-factor scoring algorithm (zone relevance 40\%, geographic accessibility 30\%, burnout band fit 15\%, quality signals 10\%, freshness 5\%) operationalizes conceptual RBI framework, delivering top 3 matches via Places API (physical locations) and ETL pipeline (federal/state programs like Benefits.gov).}%
+\caption{Pressure zone extraction and intervention mapping pipeline. Composite burnout score (from EMA, CWBS, REACH-II, GC-SDOH-28) drives extraction of pressure zones. \textbf{Current implementation}: 7 pressure zones (emotional, physical, financial\_strain, social\_isolation, caregiving\_tasks, self\_care, social\_needs) mapped from assessment subscales via threshold logic. \textbf{Intervention matching}: Tag-based matching returns top 3 interventions where pressure zone tags overlap, ranked by number of matches and evidence level (clinical\_trial > peer\_reviewed > expert\_consensus > verified\_directory). Implementation in repository.}%
 \label{fig:pressure_zones}%
 \end{figure}%
 \subsection{Working Memory for Personalization}%
@@ -1023,39 +1032,38 @@ Figure~\ref{fig:dspy} visualizes the P1-P6 score improvements from DIY meta-prom
 \caption{DSPy DIY meta-prompting optimization results showing P1-P6 trauma-informed principle scores before and after optimization. Baseline (81.8\textbackslash{}\%) improved to 89.2\textbackslash{}\% (+9.0\textbackslash{}\% absolute improvement) across 50 examples in 5 iterations. P5 (Always Offer Skip) showed largest gain (+22\textbackslash{}\%), validating effectiveness of iterative meta-prompting for trauma-informed refinement.}%
 \label{fig:dspy}%
 \end{figure}%
-\section{Grounded Local Resources via Maps API}%
-\label{sec:GroundedLocalResourcesviaMapAPI}%
+\section{Evidence-Based Intervention Matching}%
+\label{sec:InterventionMatching}%
 %
-\subsection{Problem: Stale ETL Data for Local Places}%
-\label{subsec:ProblemStaleETLDataforLocalPlaces}%
-Initial architecture scraped local places (cafes, parks, libraries) via ETL pipeline. \textbf{Problems:}
+\subsection{Current Implementation: Pressure Zone-Matched Interventions}%
+\label{subsec:CurrentInterventionImplementation}%
+The system maintains a curated library of evidence-based interventions matched to pressure zones identified through assessment scoring:
+
+\textbf{Intervention Types:}
 \begin{itemize}
-    \item \textbf{Stale data}: Hours, closures change weekly
-    \item \textbf{Maintenance burden}: \$50/month infrastructure + 10 engineering hours/month
-    \item \textbf{Coverage gaps}: Scraping incomplete (missing new businesses)
+    \item \textbf{Clinical-trial validated}: Breathing exercises, sleep hygiene protocols (peer-reviewed evidence)
+    \item \textbf{Verified resource directories}: 211 (local assistance), 988 (crisis support), ARCH National Respite Network (respite care), Family Caregiver Alliance (support groups)
+    \item \textbf{Expert consensus}: Boundary setting practices, self-care protocols, permission-to-grieve messaging
 \end{itemize}
 
-%
-\subsection{Solution: Map-Grounded Resource Search}%
-\label{subsec:SolutionMapGroundedSearch}%
-\textbf{Implementation:} \texttt{findLocalResources} tool uses LLM API with map provider grounding enabled:
+\textbf{Matching Logic:} When assessments identify pressure zones (emotional, physical, financial\_strain, social\_isolation, caregiving\_tasks, self\_care, social\_needs), the \texttt{find\_interventions} tool returns top 3 interventions tagged with matching pressure zones.
 
-\textbf{Example Query:} ``Find quiet cafes with wifi near me'' (user at zip 90012, lat 34.05, lon -118.25)
+\textbf{Example:} Caregiver with high scores in \texttt{financial\_strain} and \texttt{emotional} pressure zones receives: (1) Financial Relief Resources (211 directory), (2) Permission to Grieve (emotional support), (3) 5-Minute Breathing Reset (immediate stress reduction).
 
-\textbf{Response:} Top 3 places with Google Maps URLs, reviews, hours. Always current (Google's live index).
-
-\textbf{Performance:} Low latency for real-time location search, superior to external vector stores for physical location queries.
-
-\textbf{Implementation Note:} \texttt{findLocalResources} tool uses Google Maps grounding for physical locations. Used for cafes, parks, libraries, gyms, pharmacies, and grocery stores (physical places indexed by Google). Cost-efficient relative to maintaining custom location databases. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Status:} Intervention library contains 10+ interventions with evidence levels (clinical\_trial, peer\_reviewed, expert\_consensus, verified\_directory). Matching engine operational; delivery scheduling and effectiveness tracking planned for future versions.
 
 %
-\subsection{Resource Allocation Strategy}%
-\label{subsec:ResourceAllocationStrategy}%
-\textbf{Places API} (physical locations): Cafes, parks, libraries, gyms, pharmacies, grocery stores.
+\subsection{Future Direction: Grounded Local Resource Search}%
+\label{subsec:FutureGroundedSearch}%
+\textbf{Planned Enhancement:} Map-grounded resource search via LLM API with location grounding for physical places (cafes, parks, libraries, pharmacies). Would provide always-current local resources with hours, contact information, and reviews.
 
-\textbf{ETL Pipeline} (programs/services): Caregiver support programs (NFCSP, OAA Title III-E), government assistance (Medicaid, Medicare, SNAP), respite care, support groups, hotlines (988, 211).
+\textbf{Design Rationale:} Google Maps grounding eliminates maintenance burden of scraping local places (\$50/month infrastructure + 10 engineering hours/month) and provides superior coverage compared to custom ETL pipelines.
 
-\textbf{Rationale:} Google indexes physical places; programs require specialized databases.
+\textbf{Resource Allocation Strategy:}
+\begin{itemize}
+    \item \textbf{Maps grounding} (when implemented): Physical locations (cafes, parks, libraries, gyms, pharmacies, grocery stores)
+    \item \textbf{Curated directory} (current): Caregiver support programs, government assistance (Medicaid, Medicare, SNAP), respite care, support groups, crisis hotlines (988, 211, 741741)
+\end{itemize}
 
 %
 \section{Beta Deployment as SupportBench Preliminary Evaluation}%
@@ -1313,14 +1321,14 @@ GiveCare uses three active background watchers that \textbf{anticipate problems 
 \begin{itemize}
     \item \textbf{Anticipatory pattern}: Analyzes last 4 weeks of wellness scores, flags consistently increasing scores (worsening stress) \textit{before} caregiver reaches crisis threshold
     \item Action: Proactive SMS (``I've noticed your stress levels trending up over the past few weeks...'') + admin alert (urgency: medium)
-    \item \textbf{Why anticipatory matters}: Catches Maria's burnout declining from 70 → 65 → 58 → 52 over 4 weeks (trending toward crisis <40) and intervenes at 52, not after she hits crisis. Snapshots miss this—only longitudinal trend analysis anticipates escalation.
+    \item \textbf{Why anticipatory matters}: Catches Maria's burnout declining from 70 → 65 → 58 → 52 over 4 weeks (trending toward high-risk <40 and potential crisis <20) and intervenes at 52, not after she hits crisis. Snapshots miss this—only longitudinal trend analysis anticipates escalation.
     \item \textbf{Hypothesis (H2)}: Anticipatory intervention reduces 30-day churn by 20-30\% compared to reactive-only systems. Validation requires A/B study (N=200+, power=0.80, $\alpha$=0.05) with primary endpoint of 30-day retention and secondary endpoints of burnout score trajectory and crisis escalation rate
 \end{itemize}
 
 \textbf{3. Conversation Summarization (Active—Runs weekly):}
 \begin{itemize}
-    \item Switched from daily to weekly schedule, using OpenAI Batch API with \texttt{gpt-5-nano} (3$\times$ cheaper than \texttt{gpt-4o-mini})
-    \item Batch API provides 50\% additional savings (total 60-80\% token cost reduction)
+    \item Switched from daily to weekly schedule, using OpenAI Batch API with \texttt{gpt-5-nano} (primary conversation model, optimized for cost-performance balance)
+    \item Batch API provides 50\% additional savings over real-time API calls
     \item Preserves context beyond 30-day limit, enables long-term relationship continuity
     \item Expected: Improved context retention for caregivers returning after gaps in engagement
 \end{itemize}
@@ -1449,7 +1457,7 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \textbf{Planned Validation Studies:}
 \begin{enumerate}
     \item Human expert review (licensed social workers, crisis counselors) on a 20\% random sample (N~30)
-    \item Multi-model SupportBench Tier-3 (90-day, tri-judge ensemble)
+    \item Multi-model SupportBench Tier-3 (90-day, LLM-as-judge with multi-sample evaluation)
     \item Multi-agent vs single-agent RCT (N=200, parasocial interaction scales)
     \item GC{-}SDOH{-}28 psychometric validation (N=200+, reliability/validity/DIF)
 \end{enumerate}
@@ -1487,7 +1495,7 @@ GiveCare is a \textbf{reference architecture explicitly designed around longitud
 \subsection{Future Work}%
 \label{subsec:FutureWork}%
 \begin{enumerate}
-    \item \textbf{Full SupportBench Evaluation:} Tri-judge ensemble (Paper 2 methodology), Tier 3 (months apart), 10+ models.
+    \item \textbf{Full SupportBench Evaluation:} LLM-as-judge with multi-sample judgment distribution (SupportBench methodology), Tier 3 (months apart), 10+ models.
     \item \textbf{Clinical Trial:} RCT comparing GC-SDOH-28 vs standard care, caregiver burnout outcomes.
     \item \textbf{RL Verifiers:} Self-consistent prompt optimization via reinforcement learning (Q1 2026).
     \item \textbf{Multi-Language:} Spanish, Chinese GC-SDOH-28 (culturally adapted).

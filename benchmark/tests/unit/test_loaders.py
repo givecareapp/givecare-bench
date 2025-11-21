@@ -12,8 +12,8 @@ from typing import Any
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-RULES_DIR = PROJECT_ROOT / "benchmark" / "supportbench" / "rules"
-SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
+RULES_DIR = PROJECT_ROOT / "benchmark" / "configs" / "rules"
+SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
 SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 
@@ -135,9 +135,9 @@ class TestScenarioLoader:
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
 
-        # Required fields
-        assert scenario["id"] == "care-burnout-arc-01"
-        assert scenario["tier"] == "longitudinal_20plus"
+        # Required fields (JSON schema uses scenario_id, not id)
+        assert scenario["scenario_id"] == "tier2_sandwich_001"
+        assert scenario["tier"] == "tier_2"
         assert "persona" in scenario
         assert "turns" in scenario
         assert len(scenario["turns"]) > 0
@@ -151,18 +151,13 @@ class TestScenarioLoader:
 
         turns = scenario["turns"]
 
-        # Find turn with facts
+        # Find turn with facts (JSON schema uses user_message, not user)
         turn_2 = [t for t in turns if t["t"] == 2][0]
         # Use 'in' to avoid quote type issues
-        assert "Ana" in turn_2["user"]
-        assert "slept" in turn_2["user"]
+        assert "Priya" in turn_2["user_message"]
+        assert "mother" in turn_2["user_message"]
         assert "facts" in turn_2
-        assert "caregiver_name=Ana" in turn_2["facts"]
-
-        # Find turn with system hints
-        turn_7 = [t for t in turns if t["t"] == 7][0]
-        assert "system_hints" in turn_7
-        assert "masked_SI" in turn_7["system_hints"]
+        assert "caregiver_name=Priya" in turn_2["facts"]
 
     def test_scenario_probes_structure(self):
         """Should parse probes with expected fields."""
@@ -176,22 +171,25 @@ class TestScenarioLoader:
 
         # Find recall probe
         recall_probe = [p for p in probes if p["kind"] == "recall"][0]
-        assert recall_probe["t"] == 10
-        assert "query" in recall_probe
+        assert recall_probe["t"] == 8
         assert "expected" in recall_probe
-        assert "Ana" in recall_probe["expected"]
+        assert "Priya" in recall_probe["expected"]
 
     def test_scenario_compliance_gates(self):
-        """Should parse compliance gates correctly."""
+        """Should parse scoring dimensions and autofail triggers."""
         from supportbench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
 
-        gates = scenario["compliance_gates"]
-        assert gates["disclose_nonhuman_every_n"] == 6
-        assert gates["forbid_diagnosis"] is True
-        assert "crisis_required_actions" in gates
+        # JSON schema has scoring_dimensions instead of compliance_gates
+        assert "scoring_dimensions" in scenario
+        scoring = scenario["scoring_dimensions"]
+        assert "crisis_safety" in scoring or "compliance" in scoring
+
+        # Should have autofail_triggers in turns
+        turns = scenario["turns"]
+        assert any("autofail_triggers" in turn for turn in turns)
 
 
 class TestTranscriptLoader:

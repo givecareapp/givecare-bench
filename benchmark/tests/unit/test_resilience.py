@@ -15,8 +15,8 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
-SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scenarios" / "care-burnout-arc-01.yaml"
-RULES_BASE_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "rules" / "base.yaml"
+SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+RULES_BASE_PATH = PROJECT_ROOT / "benchmark" / "configs" / "rules" / "base.yaml"
 SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
 TRANSCRIPT = str(TRANSCRIPT_PATH)
 SCENARIO = str(SCENARIO_PATH)

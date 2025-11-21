@@ -271,7 +271,7 @@ class ScoringOrchestrator:
         # Trauma
         if dimension_scores["trauma"].get("status") != "completed":
             dimension_scores["trauma"] = self._run_scorer_safely(
-                lambda: trauma.score(transcript, scenario),
+                lambda: trauma.score(transcript, scenario, api_client=self._api_client),
                 "trauma"
             )
             scorers_completed += 1

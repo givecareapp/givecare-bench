@@ -35,7 +35,7 @@ def upload_supportbench(token: str, repo_name: str = "givecareapp/supportbench")
     files_to_upload = [
         (hf_path / "README_HF.md", "README.md"),  # Rename to README.md for HF
         (base_path / "scenarios/", "scenarios/"),
-        (base_path / "supportbench/rules/", "rules/"),
+        (base_path / "configs/rules/", "rules/"),
         (base_path / "configs/scoring.yaml", "configs/scoring.yaml"),
         (base_path / "requirements.txt", "requirements.txt"),
         (base_path / "LICENSE", "LICENSE"),
