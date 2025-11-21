@@ -21,7 +21,8 @@
     <meta property="twitter:description" content="Open-source benchmark evaluating AI safety in persistent caregiver support across multi-turn conversations. Test crisis detection, regulatory compliance, and self-care support quality.">
     <meta property="twitter:image" content="https://givecareapp.github.io/givecare-bench/gc.svg">
 
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="logo">
@@ -43,223 +44,413 @@
     </header>
 
     <main class="container page-frame">
+        <!-- Hero with Crisis Alert -->
         <section class="hero">
             <div class="hero-card">
                 <span class="pill" id="version-pill">Live Results · loading…</span>
-                <h2>Stress-test AI models for crisis safety, belonging, and regulatory fitness over multi-turn care conversations.</h2>
-                <p>Tiered scenarios (3–20+ turns) surface masked suicidal ideation, boundary creep, and memory failures common to long-running caregiver support.</p>
+                <h2>Even the best AI models miss crisis signals in 55% of caregiver support conversations.</h2>
+
+                <div class="alert-critical" style="margin: 20px 0;">
+                    <strong>No current AI model is safe for unsupervised caregiver support.</strong>
+                    <p>We tested 4 frontier models across 17 multi-turn scenarios (3-20+ turns). All failed crisis detection at alarming rates.</p>
+                </div>
+
                 <div class="cta-row">
                     <a class="btn primary" href="leaderboard.html">View Leaderboard</a>
                     <a class="btn ghost" href="about.html">Methodology</a>
                     <a class="btn ghost" href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
                 </div>
+
                 <div class="stat-grid">
                     <div class="stat">
                         <label>Models tested</label>
-                        <strong id="models-tested">—</strong><span style="color: var(--muted);"> · live count</span>
+                        <strong id="models-tested">4</strong>
                     </div>
                     <div class="stat">
                         <label>Scenarios</label>
-                        <strong id="scenarios-tested">—</strong><span style="color: var(--muted);"> (current run)</span>
+                        <strong id="scenarios-tested">17</strong>
                     </div>
                     <div class="stat">
-                        <label>Scoring path</label>
-                        <strong>Orchestrator (5 dims)</strong><span style="color: var(--muted);"> tri-judge in progress</span>
+                        <label>Best safety score</label>
+                        <strong style="color: #dc2626;">45%</strong>
                     </div>
                 </div>
-                <p class="note">Results refresh automatically from <code>data/leaderboard.json</code>. Tri-judge ensemble reporting will be added when those runs complete.</p>
             </div>
+
             <div class="card">
-                <h3>Test Stack</h3>
-                <ul>
-                    <li>Tier 1: Crisis detection & masked SI (suicidal ideation)</li>
-                    <li>Tier 2: Belonging + boundary durability</li>
-                    <li>Tier 3: Longitudinal trust & memory</li>
+                <h3>Why Multi-Turn Matters</h3>
+                <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
+                <ul style="margin: 0; padding-left: 1.2rem;">
+                    <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
+                    <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>
+                    <li><strong>Tier 3 (20+ turns):</strong> Longitudinal memory</li>
                 </ul>
-                <div class="methodology" style="margin-top:14px;">
-                    <p><strong>Why:</strong> Safety failures often emerge after rapport builds and fatigue sets in. We test sustained safety—not just first impressions.</p>
-                </div>
             </div>
         </section>
 
-        <section class="card minimal-card">
-            <h3>Why this matters</h3>
-            <p>Caregivers reach for AI after trust forms and exhaustion sets in. Safety failures often appear late—after rapport, boundary creep, or memory drift—not in single-turn demos.</p>
-            <h3>What typical benchmarks miss</h3>
-            <ul>
-                <li>Multi-session fatigue: masked SI that looks like “normal burnout”</li>
-                <li>Belonging gaps: pronouns, culture, and identity repair under stress</li>
-                <li>Boundary durability: regulatory drift after warmth builds</li>
-                <li>Memory hygiene: leakage and inconsistency across spaced turns</li>
-            </ul>
+        <!-- Crisis Safety Visualization -->
+        <section class="card" style="margin-bottom: 30px;">
+            <h3>Crisis Safety Failures (All Models)</h3>
+            <p style="color: var(--muted); margin-bottom: 16px;">Percentage of scenarios where models failed to detect or properly respond to crisis signals</p>
+            <div id="crisis-chart" style="width: 100%; height: 300px;"></div>
+            <p style="margin-top: 12px; font-size: 0.9rem; color: var(--muted);">Best model (Claude Sonnet 4.5) still misses crisis in 55% of scenarios. GPT-4o Mini misses 88%.</p>
         </section>
 
-        <section class="leaderboard card table-card">
-            <h3>Latest Results (orchestrator, 5 dimensions)</h3>
-            <table id="latest-results-table">
-                <caption class="sr-only">Model performance pulled from data/leaderboard.json.</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">Model</th>
-                        <th scope="col">Scenario</th>
-                        <th scope="col">Tier</th>
-                        <th scope="col">Overall</th>
-                        <th scope="col">Memory</th>
-                        <th scope="col">Trauma</th>
-                        <th scope="col">Belonging</th>
-                        <th scope="col">Compliance</th>
-                        <th scope="col">Safety</th>
-                    </tr>
-                </thead>
-                <tbody id="latest-results-body">
-                    <tr><td colspan="9">Loading leaderboard…</td></tr>
-                </tbody>
-            </table>
-            <div aria-live="polite" class="sr-only" id="latest-results-summary"></div>
+        <!-- Model Performance Cards -->
+        <section style="margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0;">Model Performance</h3>
+                <a href="leaderboard.html" style="font-size: 0.95rem;">View full results →</a>
+            </div>
+            <div id="model-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                <!-- Generated by JS -->
+            </div>
         </section>
 
-        <section class="card minimal-card" id="autofail-section" style="display:none;">
-            <h3>Critical Failures</h3>
-            <div class="failure-box" id="autofail-box"></div>
+        <!-- Dimension Comparison (Radar) -->
+        <section class="card" style="margin-bottom: 30px;">
+            <h3>Dimension Comparison (Top 2 Models)</h3>
+            <p style="color: var(--muted); margin-bottom: 16px;">5 evaluation dimensions: Memory, Trauma-Informed Flow, Belonging, Compliance, Safety</p>
+            <div id="radar-chart" style="width: 100%; height: 400px;"></div>
         </section>
 
-        <section class="card minimal-card">
-            <h3>Evaluation Dimensions (current leaderboard)</h3>
+        <!-- What We Test -->
+        <section class="card minimal-card" style="margin-bottom: 30px;">
+            <h3>What Typical Benchmarks Miss</h3>
             <div class="dimension-grid">
-                <div class="dimension">
-                    <strong>Memory</strong>
-                    <p>Entity consistency, recall, conflict resolution.</p>
+                <div class="dimension critical">
+                    <strong>Crisis Detection Degradation</strong>
+                    <p>Masked suicidal ideation that looks like "normal burnout"</p>
+                </div>
+                <div class="dimension high">
+                    <strong>Regulatory Boundary Creep</strong>
+                    <p>Medical advice drift after warmth builds</p>
                 </div>
                 <div class="dimension">
-                    <strong>Trauma-Informed Flow</strong>
-                    <p>Pacing, validation, and grounding before advice.</p>
+                    <strong>Belonging Gaps</strong>
+                    <p>Pronouns, culture, identity repair under stress</p>
                 </div>
                 <div class="dimension">
-                    <strong>Belonging & Cultural Fitness</strong>
-                    <p>Recognition, agency, no othering.</p>
-                </div>
-                <div class="dimension">
-                    <strong>Regulatory Compliance</strong>
-                    <p>No diagnosis/treatment; WOPR-aligned guardrails.</p>
-                </div>
-                <div class="dimension">
-                    <strong>Crisis Safety</strong>
-                    <p>Crisis detection, urgency, and warm handoff quality.</p>
+                    <strong>Memory Hygiene</strong>
+                    <p>Leakage and inconsistency across sessions</p>
                 </div>
             </div>
         </section>
 
-        <section class="scenario-info card minimal-card">
-            <h3>Test Scenarios (current run)</h3>
-            <p><strong>Tier 1:</strong> Crisis Detection (5 turns) — masked SI escalation</p>
-            <p><strong>Tier 2:</strong> Sandwich Generation Burnout (10–12 turns) — dual caregiving & belonging</p>
-            <p><strong>Tier 3:</strong> Longitudinal Trust (20+ turns) — memory continuity and boundary durability</p>
-        </section>
-
-        <section class="methodology card minimal-card">
-            <h3>Why This Matters</h3>
-            <p>Most AI benchmarks don't test <strong>persistent caregiver support</strong> where safety issues emerge over time:</p>
-            <ul>
-                <li>Crisis detection degradation</li>
-                <li>Attachment engineering</li>
-                <li>Regulatory boundary creep</li>
-                <li>Memory hygiene failures</li>
-            </ul>
-            <p>SupportBench tests AI safety in the contexts where caregivers are most vulnerable: ongoing support relationships.</p>
-
-            <h3 style="margin-top:12px;">How scoring works</h3>
-            <p><strong>Live leaderboard:</strong> Uses the 5-dimension YAML orchestrator (memory, trauma-informed flow, belonging & cultural fitness, regulatory compliance, crisis safety). Hard-fail gates enforce crisis detection and medical-advice prohibitions.</p>
-            <p><strong>In progress:</strong> Tri-judge ensemble with 8 dimensions (adds relational quality, actionable support, longitudinal consistency, and memory hygiene) will publish results once runs complete.</p>
+        <!-- Evaluation Dimensions -->
+        <section class="card minimal-card">
+            <h3>Evaluation Framework</h3>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+                <div>
+                    <p style="margin-bottom: 12px;"><strong>Current (v1.1.0):</strong></p>
+                    <p style="color: var(--muted); font-size: 0.95rem;">YAML orchestrator scoring 5 dimensions with hard-fail gates for crisis detection and medical advice.</p>
+                    <p style="margin-top: 12px; color: var(--muted); font-size: 0.95rem;"><strong>In progress:</strong> Tri-judge ensemble (8 dimensions) will publish when runs complete.</p>
+                </div>
+                <div class="dimension-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Memory</strong>
+                        <span style="font-size: 0.85rem; color: var(--muted);">Entity consistency, recall</span>
+                    </div>
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Trauma-Informed Flow</strong>
+                        <span style="font-size: 0.85rem; color: var(--muted);">Pacing, validation, grounding</span>
+                    </div>
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Belonging</strong>
+                        <span style="font-size: 0.85rem; color: var(--muted);">Recognition, agency, no othering</span>
+                    </div>
+                    <div>
+                        <strong style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Compliance</strong>
+                        <span style="font-size: 0.85rem; color: var(--muted);">No diagnosis/treatment (WOPR-aligned)</span>
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <strong style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Crisis Safety</strong>
+                        <span style="font-size: 0.85rem; color: var(--muted);">Detection, urgency, warm handoffs</span>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p id="footer-version">SupportBench · loading version… · <a href="https://github.com/givecareapp/givecare-bench">GitHub</a></p>
+            <p id="footer-version">SupportBench v1.1.0 (Tier 0 Crisis Override) · <a href="https://github.com/givecareapp/givecare-bench">GitHub</a></p>
             <p>Built for evaluating AI safety in persistent caregiver support</p>
         </div>
     </footer>
 
     <script>
+        let globalData = null;
+
         async function loadLeaderboardData() {
             const res = await fetch('data/leaderboard.json');
             if (!res.ok) return null;
             return res.json();
         }
 
-        function formatDate(isoString) {
-            const date = new Date(isoString);
-            return isNaN(date.getTime()) ? isoString : date.toUTCString();
+        function getScoreColor(score) {
+            if (score >= 0.8) return '#15803d';
+            if (score >= 0.5) return '#f59e0b';
+            return '#dc2626';
         }
 
-        function renderSummaryMetadata(metadata) {
-            document.getElementById('models-tested').textContent = metadata.total_models;
-            document.getElementById('scenarios-tested').textContent = metadata.total_scenarios;
-            document.getElementById('version-pill').textContent = `Live Results · ${metadata.benchmark_version}`;
-            document.getElementById('footer-version').innerHTML = `SupportBench ${metadata.benchmark_version} · <a href="https://github.com/givecareapp/givecare-bench">GitHub</a>`;
+        function renderModelCards(leaderboard) {
+            const container = document.getElementById('model-cards');
+            container.innerHTML = '';
+
+            leaderboard.forEach((entry, idx) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '20px';
+
+                const safety = entry.dimension_scores.safety;
+                const compliance = entry.dimension_scores.compliance;
+                const memory = entry.dimension_scores.memory;
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="margin: 0;">${entry.model}</h4>
+                        <span style="color: var(--muted); font-size: 0.9rem;">#${entry.rank}</span>
+                    </div>
+                    <div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 16px;">${entry.overall_score.toFixed(3)}</div>
+                    <div style="display: grid; gap: 8px; font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--muted);">Safety</span>
+                            <strong style="color: ${getScoreColor(safety)};">${(safety * 100).toFixed(0)}%</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--muted);">Compliance</span>
+                            <strong style="color: ${getScoreColor(compliance)};">${(compliance * 100).toFixed(0)}%</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+                            <span style="color: var(--muted);">Memory</span>
+                            <strong style="color: ${getScoreColor(memory)};">${(memory * 100).toFixed(0)}%</strong>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
-        function renderLatestResults(leaderboard) {
-            const tbody = document.getElementById('latest-results-body');
-            tbody.innerHTML = '';
-            const rows = [];
-            leaderboard.forEach(entry => {
-                entry.scenarios.forEach(scenario => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${entry.model}</td>
-                        <td>${scenario.scenario}</td>
-                        <td>${scenario.tier}</td>
-                        <td>${scenario.overall_score.toFixed(3)}</td>
-                        <td>${scenario.dimension_scores.memory.toFixed(2)}</td>
-                        <td>${scenario.dimension_scores.trauma.toFixed(2)}</td>
-                        <td>${scenario.dimension_scores.belonging.toFixed(2)}</td>
-                        <td>${scenario.dimension_scores.compliance.toFixed(2)}</td>
-                        <td>${scenario.dimension_scores.safety.toFixed(2)}</td>`;
-                    rows.push(tr);
+        function renderCrisisChart(leaderboard) {
+            const data = leaderboard.map(entry => ({
+                model: entry.model.replace(/ /g, '\n'), // Line break for readability
+                failureRate: (1 - entry.dimension_scores.safety) * 100
+            })).sort((a, b) => a.failureRate - b.failureRate);
+
+            const margin = {top: 20, right: 30, bottom: 60, left: 120};
+            const width = document.getElementById('crisis-chart').clientWidth - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            d3.select('#crisis-chart').selectAll('*').remove();
+
+            const svg = d3.select('#crisis-chart')
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleLinear()
+                .domain([0, 100])
+                .range([0, width]);
+
+            const y = d3.scaleBand()
+                .domain(data.map(d => d.model))
+                .range([0, height])
+                .padding(0.3);
+
+            // Bars
+            svg.selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('x', 0)
+                .attr('y', d => y(d.model))
+                .attr('width', d => x(d.failureRate))
+                .attr('height', y.bandwidth())
+                .attr('fill', d => d.failureRate > 70 ? '#dc2626' : d.failureRate > 40 ? '#f59e0b' : '#15803d')
+                .attr('rx', 6);
+
+            // Value labels
+            svg.selectAll('text.value')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'value')
+                .attr('x', d => x(d.failureRate) + 10)
+                .attr('y', d => y(d.model) + y.bandwidth() / 2)
+                .attr('dy', '0.35em')
+                .text(d => `${d.failureRate.toFixed(0)}%`)
+                .style('fill', '#422006')
+                .style('font-weight', '600')
+                .style('font-size', '0.9rem');
+
+            // Y axis (model names)
+            svg.append('g')
+                .call(d3.axisLeft(y))
+                .style('font-size', '0.85rem')
+                .style('color', '#92400e');
+
+            // X axis
+            svg.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + '%'))
+                .style('font-size', '0.85rem')
+                .style('color', '#92400e');
+        }
+
+        function renderRadarChart(leaderboard) {
+            // Top 2 models only
+            const models = leaderboard.slice(0, 2);
+            const dimensions = ['Memory', 'Trauma', 'Belonging', 'Compliance', 'Safety'];
+
+            const data = models.map(model => ({
+                model: model.model,
+                values: [
+                    model.dimension_scores.memory,
+                    model.dimension_scores.trauma,
+                    model.dimension_scores.belonging,
+                    model.dimension_scores.compliance,
+                    model.dimension_scores.safety
+                ]
+            }));
+
+            const width = document.getElementById('radar-chart').clientWidth;
+            const height = 400;
+            const radius = Math.min(width, height) / 2 - 80;
+            const levels = 5;
+
+            d3.select('#radar-chart').selectAll('*').remove();
+
+            const svg = d3.select('#radar-chart')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            const angleSlice = Math.PI * 2 / dimensions.length;
+
+            // Circular grid
+            for (let i = 1; i <= levels; i++) {
+                const levelFactor = radius * i / levels;
+                svg.append('circle')
+                    .attr('r', levelFactor)
+                    .style('fill', 'none')
+                    .style('stroke', 'rgba(120, 53, 15, 0.1)')
+                    .style('stroke-width', '1px');
+
+                // Level labels
+                svg.append('text')
+                    .attr('x', 5)
+                    .attr('y', -levelFactor)
+                    .text((i * 0.2).toFixed(1))
+                    .style('font-size', '0.75rem')
+                    .style('fill', '#92400e');
+            }
+
+            // Axis lines and labels
+            dimensions.forEach((dim, i) => {
+                const angle = angleSlice * i - Math.PI / 2;
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+
+                // Axis line
+                svg.append('line')
+                    .attr('x1', 0)
+                    .attr('y1', 0)
+                    .attr('x2', x)
+                    .attr('y2', y)
+                    .style('stroke', 'rgba(120, 53, 15, 0.15)')
+                    .style('stroke-width', '2px');
+
+                // Dimension label
+                const labelRadius = radius + 30;
+                const labelX = labelRadius * Math.cos(angle);
+                const labelY = labelRadius * Math.sin(angle);
+
+                svg.append('text')
+                    .attr('x', labelX)
+                    .attr('y', labelY)
+                    .attr('text-anchor', 'middle')
+                    .text(dim)
+                    .style('font-size', '0.9rem')
+                    .style('font-weight', '600')
+                    .style('fill', '#422006');
+            });
+
+            // Model polygons
+            const colors = ['#f59e0b', '#78350f'];
+            data.forEach((modelData, idx) => {
+                const points = modelData.values.map((value, i) => {
+                    const angle = angleSlice * i - Math.PI / 2;
+                    const r = radius * value;
+                    return [r * Math.cos(angle), r * Math.sin(angle)];
+                });
+
+                // Polygon
+                svg.append('polygon')
+                    .attr('points', points.map(p => p.join(',')).join(' '))
+                    .style('fill', colors[idx])
+                    .style('fill-opacity', 0.2)
+                    .style('stroke', colors[idx])
+                    .style('stroke-width', '2px');
+
+                // Points
+                points.forEach(point => {
+                    svg.append('circle')
+                        .attr('cx', point[0])
+                        .attr('cy', point[1])
+                        .attr('r', 4)
+                        .style('fill', colors[idx]);
                 });
             });
 
-            if (rows.length === 0) {
-                const empty = document.createElement('tr');
-                empty.innerHTML = '<td colspan="9">No leaderboard data available yet.</td>';
-                tbody.appendChild(empty);
-            } else {
-                rows.forEach(row => tbody.appendChild(row));
-            }
+            // Legend
+            const legend = svg.append('g')
+                .attr('transform', `translate(${-radius}, ${radius + 40})`);
 
-            const summary = document.getElementById('latest-results-summary');
-            summary.textContent = `${rows.length} evaluations displayed across ${new Set(leaderboard.map(e => e.model)).size} model(s).`;
-        }
+            data.forEach((modelData, idx) => {
+                const legendRow = legend.append('g')
+                    .attr('transform', `translate(0, ${idx * 25})`);
 
-        function renderAutofails(autofailData) {
-            const section = document.getElementById('autofail-section');
-            const box = document.getElementById('autofail-box');
+                legendRow.append('rect')
+                    .attr('width', 16)
+                    .attr('height', 16)
+                    .attr('rx', 4)
+                    .style('fill', colors[idx]);
 
-            if (!autofailData || autofailData.length === 0) {
-                box.textContent = 'No autofail conditions triggered in the current published run.';
-                section.style.display = 'block';
-                return;
-            }
-
-            const list = document.createElement('ul');
-            autofailData.forEach(item => {
-                const li = document.createElement('li');
-                li.textContent = `${item.model}: ${item.reason}`;
-                list.appendChild(li);
+                legendRow.append('text')
+                    .attr('x', 24)
+                    .attr('y', 12)
+                    .text(modelData.model)
+                    .style('font-size', '0.9rem')
+                    .style('fill', '#422006');
             });
-            box.innerHTML = '';
-            box.appendChild(list);
-            section.style.display = 'block';
         }
 
         (async function init() {
             const data = await loadLeaderboardData();
             if (!data) return;
-            renderSummaryMetadata(data.metadata);
-            renderLatestResults(data.overall_leaderboard);
-            renderAutofails(data.autofail_tracking);
+            globalData = data;
+
+            document.getElementById('models-tested').textContent = data.metadata.total_models;
+            document.getElementById('scenarios-tested').textContent = data.metadata.total_scenarios;
+            document.getElementById('version-pill').textContent = `Live Results · ${data.metadata.benchmark_version}`;
+
+            renderModelCards(data.overall_leaderboard);
+            renderCrisisChart(data.overall_leaderboard);
+            renderRadarChart(data.overall_leaderboard);
         })();
+
+        // Responsive resize
+        window.addEventListener('resize', () => {
+            if (globalData) {
+                renderCrisisChart(globalData.overall_leaderboard);
+                renderRadarChart(globalData.overall_leaderboard);
+            }
+        });
     </script>
 </body>
 </html>
