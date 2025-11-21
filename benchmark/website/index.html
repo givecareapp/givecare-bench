@@ -45,28 +45,26 @@
 
     <main class="container page-frame">
         <!-- Hero -->
-        <section class="hero" style="margin-bottom: 30px;">
-            <div style="display: grid; grid-template-columns: 60% 40%; gap: 40px; margin-bottom: 30px;">
-                <!-- Left 60% -->
-                <div>
-                    <span class="pill" id="version-pill" style="display: inline-block; margin-bottom: 16px;">Live Results · loading…</span>
-                    <h2 style="font-size: 2.8rem; line-height: 1.2; margin-bottom: 20px;">1 in 4 American adults are family caregivers. The AI they turn to misses crisis signals half the time.</h2>
+        <section class="hero" style="display: grid; grid-template-columns: 60% 40%; gap: 40px; margin-bottom: 30px;">
+            <!-- Left 60% -->
+            <div>
+                <span class="pill" id="version-pill" style="display: inline-block; margin-bottom: 16px;">Live Results · loading…</span>
+                <h2 style="font-size: 2.8rem; line-height: 1.2; margin-bottom: 20px;">1 in 4 American adults are family caregivers. The AI they turn to misses crisis signals half the time.</h2>
 
-                    <div class="alert-critical" style="margin: 24px 0;">
-                        <strong>How safe are AI chatbots for America's 63 million family caregivers?</strong>
-                        <p>We tested 4 frontier models across 17 multi-turn scenarios (3-20+ turns). The best safety score: 45%. Even leading models fail to detect crisis signals in 1 out of 2 conversations.</p>
-                    </div>
-
-                    <div class="cta-row">
-                        <a class="btn primary" href="leaderboard.html">View Leaderboard</a>
-                        <a class="btn ghost" href="about.html">Methodology</a>
-                        <a class="btn ghost" href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
-                    </div>
+                <div class="alert-critical" style="margin: 24px 0;">
+                    <strong>How safe are AI chatbots for America's 63 million family caregivers?</strong>
+                    <p>We tested 4 frontier models across 17 multi-turn scenarios (3-20+ turns). The best safety score: 45%. Even leading models fail to detect crisis signals in 1 out of 2 conversations. Recent reports have linked AI chatbots to <a href="https://www.theguardian.com/technology/2025/oct/27/chatgpt-suicide-self-harm-openai" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">suicide and self-harm concerns</a>, with the <a href="https://www.thetimes.com/uk/healthcare/article/stop-using-chatbots-for-therapy-nhs-warns-gr8rgm7jk" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">NHS warning against using chatbots for therapy</a>.</p>
                 </div>
 
-                <!-- Right 40% - Empty -->
-                <div></div>
+                <div class="cta-row">
+                    <a class="btn primary" href="leaderboard.html">View Leaderboard</a>
+                    <a class="btn ghost" href="about.html">Methodology</a>
+                    <a class="btn ghost" href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
+                </div>
             </div>
+
+            <!-- Right 40% - Empty -->
+            <div></div>
         </section>
 
         <!-- Model Performance Cards -->
@@ -93,11 +91,11 @@
             <div class="dimension-grid">
                 <div class="dimension critical">
                     <strong>Crisis Detection Degradation</strong>
-                    <p>Masked suicidal ideation that looks like "normal burnout"</p>
+                    <p>Masked suicidal ideation that looks like "normal burnout" — <a href="https://time.com/7307589/ai-psychosis-chatgpt-mental-health/" target="_blank" rel="noopener">TIME reports on AI-linked mental health crises</a></p>
                 </div>
                 <div class="dimension high">
                     <strong>Regulatory Boundary Creep</strong>
-                    <p>Medical advice drift after warmth builds</p>
+                    <p>Medical advice drift after warmth builds — experts question if <a href="https://www.newyorker.com/magazine/2023/03/06/can-ai-treat-mental-illness" target="_blank" rel="noopener">AI can ethically treat mental illness</a></p>
                 </div>
                 <div class="dimension">
                     <strong>Belonging Gaps</strong>
@@ -113,7 +111,7 @@
         <!-- Why Multi-Turn Matters -->
         <section class="card" style="margin-bottom: 30px;">
             <h3>Why Multi-Turn Matters</h3>
-            <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
+            <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos. As experts like <a href="https://nymag.com/intelligencer/article/ai-artificial-intelligence-chatbots-emily-m-bender.html" target="_blank" rel="noopener">Emily M. Bender warn</a>, these systems lack the contextual understanding needed for vulnerable users.</p>
             <ul style="margin: 0; padding-left: 1.2rem; line-height: 1.7;">
                 <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
                 <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>

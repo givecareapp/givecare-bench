@@ -212,7 +212,7 @@ Recent work has developed comprehensive frameworks for evaluating LLMs in health
 
 While SHARP provides a robust foundation for consumer health applications, it was developed and validated primarily for single-session fitness and wellness interactions. SupportBench complements SHARP by extending similar principles to \textbf{multi-turn caregiving relationships}, where temporal consistency, attachment dynamics, and stress robustness introduce additional safety-critical dimensions. Our framework aligns with SHARP's core principles—particularly Safety (crisis detection, regulatory compliance), Accuracy (clinical consensus, temporal consistency), and Personalization (cultural fitness, memory hygiene)—while introducing novel components specific to persistent care relationships: multi-session testing (20 turns, 3 sessions), stress robustness under caregiver-specific conditions (exhaustion, confusion, crisis), and attachment engineering detection (emerges by 15-20 turns).
 
-SupportBench also addresses the cost-effectiveness gap in health AI evaluation. SHARP's methodology requires extensive human rater infrastructure (18 generalist + 15 clinical specialist raters with interactive training), making it resource-intensive for many research teams and practitioners. Our LLM-as-judge approach with multi-sample judgment distribution achieves comprehensive safety assessment at \$12-15 per full benchmark (10 models × 13 scenarios), demonstrating that principle-based evaluation can be both rigorous and accessible.
+SupportBench also addresses the cost-effectiveness gap in health AI evaluation. SHARP's methodology requires extensive human rater infrastructure (18 generalist + 15 clinical specialist raters with interactive training), making it resource-intensive for many research teams and practitioners. Our LLM-as-judge approach with multi-sample judgment distribution achieves comprehensive safety assessment at \$12-15 per full benchmark (10 models × 16 scenarios), demonstrating that principle-based evaluation can be both rigorous and accessible.
 
 %
 \section{Methodology}%
@@ -785,7 +785,7 @@ Model C & PASS & \cellcolor{yellow!20}FAIL$^*$ & N/A & Variable & Moderate \\
 %
 \subsection{Benchmark Validation}%
 \label{subsec:BenchmarkValidation}%
-To ensure methodological rigor, we have designed four validation studies addressing fundamental questions about benchmark reliability and validity. Full results will be reported as benchmark completion progresses from preliminary N=15 to comprehensive N=130 evaluations (10 models × 13 scenarios).\\[1em]
+To ensure methodological rigor, we have designed four validation studies addressing fundamental questions about benchmark reliability and validity. Full results will be reported as benchmark completion progresses from preliminary N=15 to comprehensive N=160 evaluations (10 models × 16 scenarios).\\[1em]
 
 \textbf{Planned Validation Studies:}
 \begin{enumerate}
@@ -964,9 +964,9 @@ Multi-turn testing reveals failure modes invisible to single-turn benchmarks: re
 
 \textbf{Internal Validity:}
 \begin{itemize}
-    \item \textbf{Scenario selection bias}: Current scenarios (N=3 tested, 13 total) were researcher-designed based on caregiver literature and clinical input, not sampled from real caregiving conversations. Failure modes may be over-represented relative to actual deployment distributions.
+    \item \textbf{Scenario selection bias}: Current scenarios (N=3 tested, 16 total) were researcher-designed based on caregiver literature and clinical input, not sampled from real caregiving conversations. Failure modes may be over-represented relative to actual deployment distributions.
     \item \textbf{Attachment heuristic limitations}: Pattern-based detection of dependency-fostering language is provisional. False negatives may miss subtle attachment patterns; false positives may flag appropriate supportive statements. Requires human-annotated validation (planned N=100 examples).
-    \item \textbf{Small preliminary sample}: N=15 evaluations (5 models $\times$ 3 scenarios) demonstrates proof-of-concept but has wide confidence intervals. Rankings may shift with full benchmark (N=130).
+    \item \textbf{Small preliminary sample}: N=15 evaluations (5 models $\times$ 3 scenarios) demonstrates proof-of-concept but has wide confidence intervals. Rankings may shift with full benchmark (N=160).
 \end{itemize}
 
 \textbf{External Validity:}
@@ -1146,7 +1146,7 @@ Scoring rules, dimension weights, and autofail conditions specified in version-c
 \textbf{Judge Models} & Tri-judge ensemble (2 frontier models + 1 reasoning model); framework is API-agnostic \\
 \textbf{Parameters} & Standardized sampling parameters (temperature, top\_p, max\_tokens); deterministic evaluation with variance testing \\
 \textbf{Turn Limits} & Tier 1: 3-5 turns; Tier 2: 8-12 turns; Tier 3: 20+ turns across 3 sessions \\
-\textbf{Scenario Count} & Preliminary N=3 (1 per tier); Full benchmark: 13 scenarios (distributed across three tiers) \\
+\textbf{Scenario Count} & Preliminary N=3 (1 per tier); Full benchmark: 16 scenarios (distributed across three tiers) \\
 \textbf{Cost} & \$0.03-0.10 per evaluation; Single model: \$0.50-1.30; Multi-model (10 models): \$12-15; Full validation: \$90-125 \\
 \textbf{Scripts} & Validation and full benchmark scripts in \texttt{benchmark/scripts/validation/} (see README) \\
 \textbf{Repository} & \url{https://github.com/givecareapp/supportbench} with tagged releases; Zenodo archive (DOI at camera-ready) \\
@@ -1169,7 +1169,7 @@ All research artifacts are publicly released to enable community validation and 
 \textbf{Artifact} & \textbf{Format} & \textbf{License} & \textbf{URL} \\
 \midrule
 Benchmark Code & Python/TypeScript & MIT & github.com/givecareapp/supportbench \\
-Scenarios (13) & JSON & CC BY 4.0 & /scenarios/*.json \\
+Scenarios (16) & JSON & CC BY 4.0 & /scenarios/*.json \\
 Judge Prompts & YAML & CC BY 4.0 & /configs/judges.yaml \\
 Scoring Rules & YAML & CC BY 4.0 & /configs/scoring.yaml \\
 Results Data & JSONL & CC BY 4.0 & /results/validation\_n15.jsonl \\
@@ -1333,11 +1333,11 @@ other capabilities matter for deployment.
 \section{Complete Scenario Catalog}%
 \label{app:scenario-catalog}%
 
-SupportBench comprises 13 scenarios distributed across three tiers. All scenarios available in JSON format at \texttt{github.com/givecareapp/supportbench/scenarios/}.
+SupportBench comprises 16 scenarios distributed across three tiers. All scenarios available in JSON format at \texttt{github.com/givecareapp/supportbench/scenarios/}.
 
 \begin{table}[h]
 \centering
-\caption{SupportBench Complete Scenario Inventory (13 scenarios)}
+\caption{SupportBench Complete Scenario Inventory (16 scenarios)}
 \label{tab:scenario-catalog}
 \small
 \begin{tabular}{lccl}
@@ -1367,7 +1367,7 @@ SupportBench comprises 13 scenarios distributed across three tiers. All scenario
 \texttt{tier3\_multi\_session} & 3 & 20+ & Temporal gaps, trajectory detection \\
 \texttt{tier3\_relationship\_dynamics} & 3 & 20+ & Parasocial risk, boundary maintenance \\
 \bottomrule
-\multicolumn{4}{l}{\footnotesize Preliminary validation used 3 scenarios (1 per tier). Full benchmark: all 13.}
+\multicolumn{4}{l}{\footnotesize Preliminary validation used 3 scenarios (1 per tier). Full benchmark: all 16.}
 \end{tabular}
 \end{table}
 
