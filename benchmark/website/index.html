@@ -45,63 +45,50 @@
 
     <main class="container page-frame">
         <!-- Hero -->
-        <section class="hero" style="margin-bottom: 40px;">
-            <div style="display: grid; grid-template-columns: 2.5fr 1fr; gap: 40px; align-items: start;">
-                <!-- Left Column (75%) -->
-                <div>
-                    <span class="pill" id="version-pill" style="display: inline-block; margin-bottom: 16px;">Live Results · loading…</span>
-                    <h2 style="font-size: 2.8rem; line-height: 1.2; margin-bottom: 20px;">Even the best AI models miss crisis signals in 55% of caregiver support conversations.</h2>
+        <section class="hero" style="margin-bottom: 30px;">
+            <span class="pill" id="version-pill" style="display: inline-block; margin-bottom: 16px;">Live Results · loading…</span>
+            <h2 style="font-size: 2.8rem; line-height: 1.2; margin-bottom: 20px;">Even the best AI models miss crisis signals in 55% of caregiver support conversations.</h2>
 
-                    <div class="alert-critical" style="margin: 24px 0;">
-                        <strong>No current AI model is safe for unsupervised caregiver support.</strong>
-                        <p>We tested 4 frontier models across 17 multi-turn scenarios (3-20+ turns). All failed crisis detection at alarming rates.</p>
-                    </div>
+            <div class="alert-critical" style="margin: 24px 0;">
+                <strong>No current AI model is safe for unsupervised caregiver support.</strong>
+                <p>We tested 4 frontier models across 17 multi-turn scenarios (3-20+ turns). All failed crisis detection at alarming rates.</p>
+            </div>
 
-                    <div class="cta-row" style="margin-bottom: 24px;">
-                        <a class="btn primary" href="leaderboard.html">View Leaderboard</a>
-                        <a class="btn ghost" href="about.html">Methodology</a>
-                        <a class="btn ghost" href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
-                    </div>
+            <div class="cta-row" style="margin-bottom: 24px;">
+                <a class="btn primary" href="leaderboard.html">View Leaderboard</a>
+                <a class="btn ghost" href="about.html">Methodology</a>
+                <a class="btn ghost" href="https://github.com/givecareapp/givecare-bench" target="_blank" rel="noopener">GitHub</a>
+            </div>
 
-                    <div class="stat-grid">
-                        <div class="stat">
-                            <label>Models tested</label>
-                            <strong id="models-tested">4</strong>
-                        </div>
-                        <div class="stat">
-                            <label>Scenarios</label>
-                            <strong id="scenarios-tested">17</strong>
-                        </div>
-                        <div class="stat">
-                            <label>Best overall</label>
-                            <strong>DeepSeek (73.4%)</strong>
-                        </div>
-                        <div class="stat">
-                            <label>Best safety</label>
-                            <strong style="color: #dc2626;">Claude (45%)</strong>
-                        </div>
-                    </div>
+            <div class="stat-grid">
+                <div class="stat">
+                    <label>Models tested</label>
+                    <strong id="models-tested">4</strong>
                 </div>
-
-                <!-- Right Column (25%) -->
-                <div class="card">
-                    <h3>Why Multi-Turn Matters</h3>
-                    <p style="margin-bottom: 12px; font-size: 0.95rem;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
-                    <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.9rem; line-height: 1.7;">
-                        <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
-                        <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>
-                        <li><strong>Tier 3 (20+ turns):</strong> Longitudinal memory</li>
-                    </ul>
+                <div class="stat">
+                    <label>Scenarios</label>
+                    <strong id="scenarios-tested">17</strong>
+                </div>
+                <div class="stat">
+                    <label>Best overall</label>
+                    <strong>DeepSeek (73.4%)</strong>
+                </div>
+                <div class="stat">
+                    <label>Best safety</label>
+                    <strong style="color: #dc2626;">Claude (45%)</strong>
                 </div>
             </div>
         </section>
 
-        <!-- Crisis Safety Visualization -->
+        <!-- Why Multi-Turn Matters -->
         <section class="card" style="margin-bottom: 30px;">
-            <h3>Crisis Detection Performance (All Models)</h3>
-            <p style="color: var(--muted); margin-bottom: 16px;">Percentage of scenarios where models correctly detected and responded to crisis signals (higher is better)</p>
-            <div id="crisis-chart" style="width: 100%; height: 300px;"></div>
-            <p style="margin-top: 12px; font-size: 0.9rem; color: var(--muted);">Best model (Claude Sonnet 4.5) detects only 45% of crisis signals. GPT-4o Mini detects only 12%.</p>
+            <h3>Why Multi-Turn Matters</h3>
+            <p style="margin-bottom: 12px;">Safety failures emerge after rapport builds and fatigue sets in—not in single-turn demos.</p>
+            <ul style="margin: 0; padding-left: 1.2rem; line-height: 1.7;">
+                <li><strong>Tier 1 (3-5 turns):</strong> Crisis detection</li>
+                <li><strong>Tier 2 (8-12 turns):</strong> Boundary durability</li>
+                <li><strong>Tier 3 (20+ turns):</strong> Longitudinal memory</li>
+            </ul>
         </section>
 
         <!-- Model Performance Cards -->
@@ -240,73 +227,6 @@
             });
         }
 
-        function renderCrisisChart(leaderboard) {
-            const data = leaderboard.map(entry => ({
-                model: entry.model.replace(/ /g, '\n'), // Line break for readability
-                detectionRate: entry.dimension_scores.safety * 100
-            })).sort((a, b) => b.detectionRate - a.detectionRate);
-
-            const margin = {top: 20, right: 30, bottom: 60, left: 120};
-            const width = document.getElementById('crisis-chart').clientWidth - margin.left - margin.right;
-            const height = 300 - margin.top - margin.bottom;
-
-            d3.select('#crisis-chart').selectAll('*').remove();
-
-            const svg = d3.select('#crisis-chart')
-                .append('svg')
-                .attr('width', width + margin.left + margin.right)
-                .attr('height', height + margin.top + margin.bottom)
-                .append('g')
-                .attr('transform', `translate(${margin.left},${margin.top})`);
-
-            const x = d3.scaleLinear()
-                .domain([0, 100])
-                .range([0, width]);
-
-            const y = d3.scaleBand()
-                .domain(data.map(d => d.model))
-                .range([0, height])
-                .padding(0.3);
-
-            // Bars
-            svg.selectAll('rect')
-                .data(data)
-                .enter()
-                .append('rect')
-                .attr('x', 0)
-                .attr('y', d => y(d.model))
-                .attr('width', d => x(d.detectionRate))
-                .attr('height', y.bandwidth())
-                .attr('fill', d => d.detectionRate >= 80 ? '#15803d' : d.detectionRate >= 50 ? '#f59e0b' : '#dc2626')
-                .attr('rx', 6);
-
-            // Value labels
-            svg.selectAll('text.value')
-                .data(data)
-                .enter()
-                .append('text')
-                .attr('class', 'value')
-                .attr('x', d => x(d.detectionRate) + 10)
-                .attr('y', d => y(d.model) + y.bandwidth() / 2)
-                .attr('dy', '0.35em')
-                .text(d => `${d.detectionRate.toFixed(0)}%`)
-                .style('fill', '#422006')
-                .style('font-weight', '600')
-                .style('font-size', '0.9rem');
-
-            // Y axis (model names)
-            svg.append('g')
-                .call(d3.axisLeft(y))
-                .style('font-size', '0.85rem')
-                .style('color', '#92400e');
-
-            // X axis
-            svg.append('g')
-                .attr('transform', `translate(0,${height})`)
-                .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + '%'))
-                .style('font-size', '0.85rem')
-                .style('color', '#92400e');
-        }
 
         function renderRadarChart(leaderboard) {
             // Top 2 models only
@@ -448,14 +368,12 @@
             document.getElementById('version-pill').textContent = `Live Results · ${data.metadata.benchmark_version}`;
 
             renderModelCards(data.overall_leaderboard);
-            renderCrisisChart(data.overall_leaderboard);
             renderRadarChart(data.overall_leaderboard);
         })();
 
         // Responsive resize
         window.addEventListener('resize', () => {
             if (globalData) {
-                renderCrisisChart(globalData.overall_leaderboard);
                 renderRadarChart(globalData.overall_leaderboard);
             }
         });
