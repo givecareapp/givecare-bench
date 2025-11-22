@@ -4,6 +4,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
+\usepackage[all]{hypcap}  % Fix hyperref duplicate float anchors
 \usepackage{url}
 \usepackage{booktabs}
 \usepackage{amsfonts}
@@ -30,6 +31,7 @@
 \usepackage{amssymb}
 \usepackage{cleveref}
 \usepackage{enumitem}
+\usepackage{float}
 
 % Hyperref settings
 \hypersetup{
@@ -230,7 +232,7 @@ InvisibleBench also addresses the cost-effectiveness gap in health AI evaluation
 \end{enumerate}
 \end{tcolorbox}
 
-\begin{figure}[!htbp]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.98\textwidth]{figures/fig1_hero_flow_diagram.pdf}
 \caption{\textbf{Autofail gates catch regulatory violations that dimension scores miss.} InvisibleBench end-to-end evaluation flow shows how user input (e.g., Maria's masked crisis signal at turn 10) flows through the tested agent model, guardrail checks for autofail conditions (missed crisis, medical advice), LLM-as-judge evaluation across five dimensions (Memory, Trauma-Informed Design, Belonging, Compliance, Safety), dimension-specific scoring, and routing logic that determines outcomes: PASS (deploy-ready, score $\geq$70\%, no autofails), FAIL (compliance violation), REVIEW (score 50-70\%, manual check required), or TIER RISK (tier-dependent behavior where models pass long conversations but fail short interactions). Maria's example results in FAIL due to medication dosing advice (regulatory violation). Cost per evaluation: \$0.03-0.10 including model inference and judge evaluation.}
@@ -260,6 +262,13 @@ InvisibleBench organizes scenarios across three difficulty tiers:
 \textbf{Tier 2: Memory and Attachment (8-12 turns).} Extended single-session testing memory consistency, attachment de-escalation, and longitudinal support quality. Example: User expresses increasing dependency on AI (``You're the only one who gets it''). Models must: (1) recall earlier conversation details, (2) gently redirect to human connection, (3) maintain boundaries while remaining supportive.
 
 \textbf{Tier 3: Multi-Session Longitudinal (20+ turns).} Conversations spanning multiple sessions with temporal gaps (e.g., ``3 months later''). Tests memory hygiene (PII minimization), consistency across time, and relationship trajectory. Example: User returns after 2 months with update on care situation. Models must: (1) recall context without excessive PII storage, (2) maintain consistent guidance, (3) detect changes in risk level.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_three_tier_architecture.pdf}
+\caption{Three-tier architecture of InvisibleBench scenarios organized by conversation length and evaluation complexity. Tier 1 (3-5 turns) tests foundational safety and regulatory compliance; Tier 2 (8-12 turns) evaluates memory consistency and attachment boundaries; Tier 3 (20+ turns) assesses multi-session longitudinal consistency and memory hygiene across temporal gaps.}
+\label{fig:three-tier-architecture}
+\end{figure}
 
 \clearpage
 
@@ -300,7 +309,7 @@ InvisibleBench's evaluation dimensions align with and extend Google's SHARP fram
 
 \begin{enumerate}
     \item \textbf{Multi-Session Focus}: SHARP was validated on single-session fitness interactions; our dimensions explicitly test temporal consistency, attachment dynamics, and memory hygiene across 3 sessions
-    \item \textbf{Stress Robustness}: We extend SHARP's Safety principle with planned trait-based stress testing (exhaustion, confusion, skepticism, crisis). Prior work shows -18\% to -46\% degradation under similar stress conditions~\cite{he2025trait}
+    \item \textbf{Stress Robustness}: We extend SHARP's Safety principle with planned trait-based stress testing (exhaustion, confusion, skepticism, crisis). Prior work shows -18\% to -46\% degradation under similar stress conditions~\cite{he2025impatient}
     \item \textbf{Regulatory Specificity}: While SHARP tests general consensus, we include explicit regulatory compliance testing (WOPR Act boundaries)
     \item \textbf{Cost-Effectiveness}: SHARP's human rater infrastructure (18 generalist + 15 specialist raters) vs our LLM-as-judge approach with multi-sample judgment distribution (\$12-15 full benchmark)
 \end{enumerate}
@@ -323,7 +332,14 @@ We define five dimensions with explicit 0-3 point rubrics:
     \item \textbf{Memory Hygiene (0--1)}: PII minimization, appropriate data retention (Tier 3 only).
 \end{enumerate}
 
-\textbf{Dimension Reporting}: While evaluation uses all eight dimensions, results are reported as five aggregate scores for clarity: \textbf{Safety} (Crisis Safety), \textbf{Compliance} (Regulatory Fitness), \textbf{Trauma} (Trauma-Informed Flow), \textbf{Belonging} (Belonging \& Cultural Fitness + Relational Quality + Actionable Support averaged), and \textbf{Memory} (Longitudinal Consistency + Memory Hygiene averaged, Tier 3 only). This mapping aligns with the abstract and Table~\ref{tab:full-results}. Dimension weights in Table~\ref{tab:dimension-weights} apply to the eight analytic dimensions before aggregation.
+\textbf{Dimension Reporting}: While evaluation uses all eight dimensions, results are reported as five aggregate scores for clarity: \textbf{Safety} (Crisis Safety), \textbf{Compliance} (Regulatory Fitness), \textbf{Trauma} (Trauma-Informed Flow), \textbf{Belonging} (Belonging \& Cultural Fitness + Relational Quality + Actionable Support averaged), and \textbf{Memory} (Longitudinal Consistency + Memory Hygiene averaged, Tier 3 only). This mapping aligns with the abstract and Table~\ref{tab:leaderboard}. Dimension weights in Table~\ref{tab:dimension-weights} apply to the eight analytic dimensions before aggregation.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_dimension_taxonomy.pdf}
+\caption{Taxonomy of InvisibleBench's eight evaluation dimensions organized by weighted contribution to final scores. The five reported dimensions aggregate these eight analytic dimensions: Safety (Crisis Safety 20\%), Compliance (Regulatory Fitness 15\%), Trauma (Trauma-Informed Flow 15\%), Belonging (Cultural Fitness 15\% + Relational Quality 10\% + Actionable Support 10\%), and Memory (Longitudinal Consistency 10\% + Memory Hygiene 5\%).}
+\label{fig:dimension-taxonomy}
+\end{figure}
 
 %
 \subsection{LLM{-}as{-}Judge Evaluation with Judgment Distribution}%
@@ -350,8 +366,8 @@ Longitudinal Consistency, Memory Hygiene & Deterministic + single-sample LLM \\
 Autofails override numerical scores—any autofail condition triggers automatic failure regardless of other dimensions.
 
 %
-\subsubsection{Judgment Distribution for Uncertainty Quantification}
-\label{subsubsec:JudgmentDistribution}
+\subsubsection{Judgment Distribution for Uncertainty Quantification}%
+\label{subsubsec:JudgmentDistribution}%
 To quantify scorer uncertainty and improve reliability beyond MT-Bench's single-sample judging~\cite{zheng2023judging}, we implement \textbf{judgment distribution}—sampling each judgment multiple times with non-zero temperature and aggregating via majority vote and confidence metrics.
 
 \textbf{Multi-Sample Scoring Protocol}:
@@ -379,9 +395,16 @@ To quantify scorer uncertainty and improve reliability beyond MT-Bench's single-
 
 \textbf{Confidence-Based Review Threshold}: Low confidence scores ($<0.6$) flag ambiguous cases for human review. Preliminary analysis (N=15) shows 12\% of evaluations fall below this threshold, primarily in Belonging \& Cultural Fitness dimension.
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_judgment_distribution.pdf}
+\caption{Judgment distribution workflow for uncertainty quantification in LLM-as-judge evaluation. Each dimension judgment is sampled N times (N=3-5) with temperature $\tau \in [0.5, 0.7]$. Binary decisions use majority vote; continuous scores use mean aggregation. Confidence scores below 0.6 flag cases for human review.}
+\label{fig:judgment-distribution}
+\end{figure}
+
 %
-\subsubsection{Hybrid Deterministic{-}LLM Cascade}
-\label{subsubsec:HybridEvaluation}
+\subsubsection{Hybrid Deterministic{-}LLM Cascade}%
+\label{subsubsec:HybridEvaluation}%
 To balance cost and accuracy, we implement two-stage evaluation for dimensions with clear rule-based violations:
 
 \textbf{Stage 1: Deterministic Pattern Matching} (zero cost, 60-70\% recall)
@@ -405,9 +428,16 @@ To balance cost and accuracy, we implement two-stage evaluation for dimensions w
 
 \textbf{Cost Savings}: Hybrid approach reduces LLM calls by $\sim$40\% compared to pure LLM evaluation while maintaining equivalent accuracy. Deterministic checks catch clear violations immediately; LLM judge handles edge cases requiring contextual understanding.
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_hybrid_cascade.pdf}
+\caption{Hybrid deterministic-LLM cascade evaluation workflow. Stage 1 uses zero-cost regex pattern matching to detect clear violations (60-70\% recall) in Compliance, Safety, and Trauma dimensions. Stage 2 routes ambiguous cases to LLM judges for nuanced semantic understanding, reducing overall LLM calls by approximately 40\% while maintaining evaluation accuracy.}
+\label{fig:hybrid-cascade}
+\end{figure}
+
 %
-\subsubsection{Reference{-}Guided Prompting}
-\label{subsubsec:ReferenceGuidedPrompting}
+\subsubsection{Reference{-}Guided Prompting}%
+\label{subsubsec:ReferenceGuidedPrompting}%
 Following MT-Bench~\cite{zheng2023judging}, we implement reference-guided prompting for crisis safety evaluation to reduce judge calibration errors:
 
 \textbf{Two-Step Process}:
@@ -648,18 +678,18 @@ Cost per evaluation: Tier 1 (\$0.03-0.05), Tier 2 (\$0.05-0.08), Tier 3 (\$0.06-
 \section{Results: Full Benchmark Evaluation (N=68)}%
 \label{sec:Results}%
 
-\textbf{Scope:} This section presents comprehensive evaluation results from \textbf{4 frontier models $\times$ 17 scenarios = 68 evaluations} across three complexity tiers. Models evaluated: DeepSeek Chat v3, Claude Sonnet 4.5, Gemini 2.5 Flash, and GPT-4o Mini. Evaluation demonstrates InvisibleBench's ability to capture critical safety gaps invisible to single-turn benchmarks and reveals complementary model strengths across dimensions.\\[1em]
+\noindent\textbf{Scope:} This section presents comprehensive evaluation results from \textbf{4 frontier models $\times$ 17 scenarios = 68 evaluations} across three complexity tiers. Models evaluated: DeepSeek Chat v3, Claude Sonnet 4.5, Gemini 2.5 Flash, and GPT-4o Mini. Evaluation demonstrates InvisibleBench's ability to capture critical safety gaps invisible to single-turn benchmarks and reveals complementary model strengths across dimensions.
 
-\textbf{Key Finding:} All models exhibit critical safety dimension failures (11.8-44.8\% crisis detection rates), with GPT-4o Mini detecting only 11.8\% of crisis signals. This universal safety gap demonstrates in this benchmark that deterministic crisis routing is needed in production caregiving AI systems—LLM-based crisis detection alone is insufficient for deployment safety regardless of model choice.\\[1em]
+\noindent\textbf{Key Finding:} All models exhibit critical safety dimension failures (11.8-44.8\% crisis detection rates), with GPT-4o Mini detecting only 11.8\% of crisis signals. This universal safety gap demonstrates in this benchmark that deterministic crisis routing is needed in production caregiving AI systems—LLM-based crisis detection alone is insufficient for deployment safety regardless of model choice.
 
 %
 \subsection{Overall Performance}%
 \label{subsec:OverallPerformance}%
-Table~\ref{tab:leaderboard} presents final model rankings across comprehensive evaluation (4 models $\times$ 17 scenarios = 68 evaluations). \textbf{DeepSeek Chat v3} achieves highest overall performance (75.9\%), demonstrating balanced capability across dimensions with particular strength in belonging \& cultural fitness (91.7\%) and memory hygiene (92.3\%). \textbf{Gemini 2.5 Flash} ranks second (73.6\%), excelling in trauma-informed flow (85.0\%) with strong memory (90.9\%). \textbf{GPT-4o Mini} (73.0\%) shows specialized strength in compliance (88.2\%) with excellent memory retention (91.8\%). \textbf{Claude Sonnet 4.5} (65.4\%) demonstrates strong trauma-informed capability (84.1\%) and exhibits best safety performance among all models (44.8\%), but suffers from severe compliance failures (17.6\%).\\[1em]
+Table~\ref{tab:leaderboard} presents final model rankings across comprehensive evaluation (4 models $\times$ 17 scenarios = 68 evaluations). \textbf{DeepSeek Chat v3} achieves highest overall performance (75.9\%), demonstrating balanced capability across dimensions with particular strength in belonging \& cultural fitness (91.7\%) and memory hygiene (92.3\%). \textbf{Gemini 2.5 Flash} ranks second (73.6\%), excelling in trauma-informed flow (85.0\%) with strong memory (90.9\%). \textbf{GPT-4o Mini} (73.0\%) shows specialized strength in compliance (88.2\%) with excellent memory retention (91.8\%). \textbf{Claude Sonnet 4.5} (65.4\%) demonstrates strong trauma-informed capability (84.1\%) and exhibits best safety performance among all models (44.8\%), but suffers from severe compliance failures (17.6\%).
 
-\textbf{Critical Safety Finding:} All models exhibit severe safety dimension gaps: DeepSeek 27.3\%, Claude 44.8\%, Gemini 17.6\%, GPT-4o Mini 11.8\%. This universal failure demonstrates that in this benchmark current LLMs cannot reliably detect crisis signals in conversational contexts, showing the need for deterministic crisis routing (keyword-based, behavioral pattern detection) in production deployments. The 11.8-44.8\% detection range represents unacceptable risk for vulnerable populations—88-56\% of crisis signals would be missed by LLM-only systems.\\[1em]
+\noindent\textbf{Critical Safety Finding:} All models exhibit severe safety dimension gaps: DeepSeek 27.3\%, Claude 44.8\%, Gemini 17.6\%, GPT-4o Mini 11.8\%. This universal failure demonstrates that in this benchmark current LLMs cannot reliably detect crisis signals in conversational contexts, showing the need for deterministic crisis routing (keyword-based, behavioral pattern detection) in production deployments. The 11.8-44.8\% detection range represents unacceptable risk for vulnerable populations—88-56\% of crisis signals would be missed by LLM-only systems.
 
-\textbf{Model Complementarity and Deployment Strategy.} Full benchmark results reveal no single model achieves deployment-ready performance across all dimensions without supplementary safeguards. DeepSeek's overall lead (75.9\%) combines strong belonging (91.7\%) and memory (92.3\%) with moderate safety (27.3\%) and compliance failures (56.3\%). Claude's strongest crisis detection (44.8\%) still misses 55\% of signals and exhibits severe compliance failures (17.6\%). GPT-4o Mini's compliance leadership (88.2\%) pairs with lowest safety (11.8\%). Gemini's trauma-informed excellence (85.0\%) demonstrates balanced performance (73.6\% overall) but still exhibits safety gaps (17.6\%). This complementarity suggests three deployment strategies: (1) \textbf{Hybrid architectures} routing scenarios to model strengths, (2) \textbf{Ensemble approaches} combining multiple models for critical decisions, (3) \textbf{Deterministic augmentation} adding rule-based crisis detection and compliance guardrails to any base model.\\[1em]
+\noindent\textbf{Model Complementarity and Deployment Strategy.} Full benchmark results reveal no single model achieves deployment-ready performance across all dimensions without supplementary safeguards. DeepSeek's overall lead (75.9\%) combines strong belonging (91.7\%) and memory (92.3\%) with moderate safety (27.3\%) and compliance failures (56.3\%). Claude's strongest crisis detection (44.8\%) still misses 55\% of signals and exhibits severe compliance failures (17.6\%). GPT-4o Mini's compliance leadership (88.2\%) pairs with lowest safety (11.8\%). Gemini's trauma-informed excellence (85.0\%) demonstrates balanced performance (73.6\% overall) but still exhibits safety gaps (17.6\%). This complementarity suggests three deployment strategies: (1) \textbf{Hybrid architectures} routing scenarios to model strengths, (2) \textbf{Ensemble approaches} combining multiple models for critical decisions, (3) \textbf{Deterministic augmentation} adding rule-based crisis detection and compliance guardrails to any base model.
 
 \begin{table}[htbp]
 \centering
@@ -895,6 +925,14 @@ Future work includes: (1) expanded model evaluation (10+ models) to establish ro
 
 %
 \appendix
+% Fix hyperref duplicate identifiers in appendix
+\renewcommand{\thefigure}{A\arabic{figure}}
+\renewcommand{\thetable}{A\arabic{table}}
+\renewcommand{\theHfigure}{appendix.\arabic{figure}}
+\renewcommand{\theHtable}{appendix.\arabic{table}}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+
 \section{Ethics and Data Governance}%
 \label{sec:EthicsDataGovernance}%
 
