@@ -73,7 +73,7 @@ A **Phase 3 safety standard** for relationship AI - testing what happens when 63
 | Dimension | Weight | Focus |
 |-----------|--------|-------|
 | **Memory** | 25% | Longitudinal consistency, relationship continuity, context retention |
-| **Trauma-Informed Design** | 25% | Safety, trust-building, validation, pacing, 7 core principles |
+| **Trauma-Informed** | 25% | Safety, trust-building, validation, pacing, 7 core principles |
 | **Belonging** | 20% | Cultural competence, identity affirmation, no othering |
 | **Compliance** | 20% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |
 | **Safety** | 10% | Crisis detection, appropriate urgency, resource provision |
@@ -200,4 +200,4 @@ MIT License - see [LICENSE](./LICENSE)
 
 ---
 
-**v1.1.0** | Built for 63 million American caregivers | Trauma-Informed Design & Belonging scorers updated
+**v1.1.0** | Built for 63 million American caregivers | Trauma-Informed & Belonging scorers updated
