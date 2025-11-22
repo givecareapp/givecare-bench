@@ -12,7 +12,7 @@ python huggingface/upload_script.py --token $HF_TOKEN
 ```
 
 ### 3. Verify
-Visit: https://huggingface.co/datasets/givecareapp/supportbench
+Visit: https://huggingface.co/datasets/givecareapp/invisiblebench
 
 ---
 
@@ -46,21 +46,21 @@ Visit: https://huggingface.co/datasets/givecareapp/supportbench
 ### Option 1: Using Upload Script (Recommended)
 
 ```bash
-python huggingface/upload_script.py --token $HF_TOKEN --repo givecareapp/supportbench
+python huggingface/upload_script.py --token $HF_TOKEN --repo givecareapp/invisiblebench
 ```
 
 ### Option 2: Using huggingface-cli
 
 ```bash
 huggingface-cli login
-huggingface-cli upload givecareapp/supportbench . --repo-type=dataset \
+huggingface-cli upload givecareapp/invisiblebench . --repo-type=dataset \
   --include="scenarios/*,configs/rules/*,configs/scoring.yaml,README_HF.md,requirements.txt,LICENSE,CHANGELOG.md,CONTRIBUTING.md"
 ```
 
 ### Option 3: Manual Upload via Web UI
 
 1. Go to https://huggingface.co/new-dataset
-2. Create dataset: `givecareapp/supportbench`
+2. Create dataset: `givecareapp/invisiblebench`
 3. Upload files via "Files and versions" tab
 4. Rename `README_HF.md` to `README.md` when uploading
 
@@ -84,7 +84,7 @@ Expected output: `✅ All validation checks passed!`
 ```python
 from datasets import load_dataset
 
-dataset = load_dataset("givecareapp/supportbench")
+dataset = load_dataset("givecareapp/invisiblebench")
 print(dataset)
 ```
 
@@ -93,7 +93,7 @@ print(dataset)
 ```python
 from huggingface_hub import list_repo_files
 
-files = list_repo_files("givecareapp/supportbench", repo_type="dataset")
+files = list_repo_files("givecareapp/invisiblebench", repo_type="dataset")
 print("\n".join(files))
 ```
 
@@ -114,11 +114,11 @@ Changes are reflected immediately (no versioning delay).
 
 ```bash
 # Create version tag
-huggingface-cli tag givecareapp/supportbench v0.8.5 --repo-type=dataset
+huggingface-cli tag givecareapp/invisiblebench v0.8.5 --repo-type=dataset
 
 # Users load specific version
 from datasets import load_dataset
-dataset = load_dataset("givecareapp/supportbench", revision="v0.8.5")
+dataset = load_dataset("givecareapp/invisiblebench", revision="v0.8.5")
 ```
 
 ---
@@ -172,7 +172,7 @@ Use `.gitignore` and `.huggingface_ignore` to prevent accidental uploads.
 
 - **HuggingFace Datasets**: https://huggingface.co/docs/datasets
 - **Dataset Cards Guide**: https://huggingface.co/docs/hub/datasets-cards
-- **SupportBench GitHub**: https://github.com/givecareapp/givecare-bench
+- **InvisibleBench GitHub**: https://github.com/givecareapp/givecare-bench
 
 ---
 
@@ -180,4 +180,4 @@ Use `.gitignore` and `.huggingface_ignore` to prevent accidental uploads.
 
 - **Email**: ali@givecareapp.com
 - **GitHub Issues**: https://github.com/givecareapp/givecare-bench/issues
-- **HuggingFace**: https://huggingface.co/datasets/givecareapp/supportbench/discussions
+- **HuggingFace**: https://huggingface.co/datasets/givecareapp/invisiblebench/discussions

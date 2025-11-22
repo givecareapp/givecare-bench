@@ -13,7 +13,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_single_iteration(self):
         """Single iteration (N=1) should return no variance metrics."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.75]
         result = calculate_variance(scores)
@@ -27,7 +27,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_multiple_iterations(self):
         """Multiple iterations should calculate variance correctly."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.75, 0.78, 0.76]
         result = calculate_variance(scores)
@@ -43,7 +43,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_identical_scores(self):
         """All identical scores should have zero std_dev."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.80, 0.80, 0.80, 0.80]
         result = calculate_variance(scores)
@@ -56,7 +56,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_high_variance(self):
         """High variance scores should reflect in metrics."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.10, 0.50, 0.90]
         result = calculate_variance(scores)
@@ -69,7 +69,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_zero_mean(self):
         """CV should handle zero mean gracefully."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.0, 0.0, 0.0]
         result = calculate_variance(scores)
@@ -80,7 +80,7 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_near_zero_mean(self):
         """CV should handle near-zero mean gracefully."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         scores = [0.001, 0.002, 0.001]
         result = calculate_variance(scores)
@@ -92,14 +92,14 @@ class TestVarianceCalculation:
 
     def test_calculate_variance_with_empty_list(self):
         """Empty list should raise ValueError."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         with pytest.raises(ValueError, match="at least one score"):
             calculate_variance([])
 
     def test_calculate_variance_with_invalid_input(self):
         """Non-numeric values should raise TypeError."""
-        from supportbench.evaluation.variance import calculate_variance
+        from invisiblebench.evaluation.variance import calculate_variance
 
         with pytest.raises(TypeError):
             calculate_variance([0.5, "invalid", 0.7])
@@ -110,7 +110,7 @@ class TestDimensionVarianceCalculation:
 
     def test_calculate_dimension_variance_single_iteration(self):
         """Single iteration should return no dimension variance."""
-        from supportbench.evaluation.variance import calculate_dimension_variance
+        from invisiblebench.evaluation.variance import calculate_dimension_variance
 
         dimension_scores_list = [
             {
@@ -133,7 +133,7 @@ class TestDimensionVarianceCalculation:
 
     def test_calculate_dimension_variance_multiple_iterations(self):
         """Multiple iterations should calculate per-dimension variance."""
-        from supportbench.evaluation.variance import calculate_dimension_variance
+        from invisiblebench.evaluation.variance import calculate_dimension_variance
 
         dimension_scores_list = [
             {
@@ -166,7 +166,7 @@ class TestDimensionVarianceCalculation:
 
     def test_calculate_dimension_variance_missing_dimension(self):
         """Should handle dimensions present in some iterations but not others."""
-        from supportbench.evaluation.variance import calculate_dimension_variance
+        from invisiblebench.evaluation.variance import calculate_dimension_variance
 
         dimension_scores_list = [
             {
@@ -192,7 +192,7 @@ class TestDimensionVarianceCalculation:
 
     def test_calculate_dimension_variance_empty_list(self):
         """Empty list should raise ValueError."""
-        from supportbench.evaluation.variance import calculate_dimension_variance
+        from invisiblebench.evaluation.variance import calculate_dimension_variance
 
         with pytest.raises(ValueError):
             calculate_dimension_variance([])
@@ -203,7 +203,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_single_iteration(self):
         """Single iteration should return original result without variance."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         iteration_results = [
             {
@@ -229,7 +229,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_multiple_iterations(self):
         """Multiple iterations should include variance metrics."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         iteration_results = [
             {
@@ -277,7 +277,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_uses_mean_for_final_score(self):
         """Final scores should be mean across iterations."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         iteration_results = [
             {
@@ -302,7 +302,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_preserves_metadata(self):
         """Should preserve metadata from first iteration."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         iteration_results = [
             {
@@ -334,7 +334,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_handles_hard_fail_in_any_iteration(self):
         """If any iteration has hard_fail=True, final should be hard_fail=True."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         iteration_results = [
             {"overall_score": 0.75, "dimension_scores": {}, "hard_fail": False},
@@ -349,7 +349,7 @@ class TestIterationResultsAggregation:
 
     def test_aggregate_iteration_results_empty_list(self):
         """Empty list should raise ValueError."""
-        from supportbench.evaluation.variance import aggregate_iteration_results
+        from invisiblebench.evaluation.variance import aggregate_iteration_results
 
         with pytest.raises(ValueError):
             aggregate_iteration_results([])
@@ -360,28 +360,28 @@ class TestCoefficientOfVariation:
 
     def test_cv_calculation_normal_case(self):
         """Normal CV calculation."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         cv = calculate_cv(mean=0.75, std_dev=0.05)
         assert cv == pytest.approx(0.0667, abs=0.001)
 
     def test_cv_calculation_zero_std_dev(self):
         """Zero std_dev should give CV=0."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         cv = calculate_cv(mean=0.75, std_dev=0.0)
         assert cv == 0.0
 
     def test_cv_calculation_zero_mean(self):
         """Zero mean should return None (undefined)."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         cv = calculate_cv(mean=0.0, std_dev=0.05)
         assert cv is None
 
     def test_cv_calculation_near_zero_mean(self):
         """Near-zero mean should return None to avoid huge CV values."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         cv = calculate_cv(mean=0.001, std_dev=0.05)
         # Implementation choice: return None for very small means
@@ -389,14 +389,14 @@ class TestCoefficientOfVariation:
 
     def test_cv_calculation_negative_mean(self):
         """Negative mean should raise ValueError (scores can't be negative)."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         with pytest.raises(ValueError):
             calculate_cv(mean=-0.5, std_dev=0.1)
 
     def test_cv_calculation_negative_std_dev(self):
         """Negative std_dev should raise ValueError."""
-        from supportbench.evaluation.variance import calculate_cv
+        from invisiblebench.evaluation.variance import calculate_cv
 
         with pytest.raises(ValueError):
             calculate_cv(mean=0.75, std_dev=-0.1)

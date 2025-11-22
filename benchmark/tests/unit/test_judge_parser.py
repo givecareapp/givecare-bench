@@ -8,8 +8,8 @@ Tests the hardened parser's ability to handle:
 - Error handling and logging
 """
 import pytest
-from supportbench.evaluation.evaluator import JudgeResponseParser
-from supportbench.models import DimensionType
+from invisiblebench.evaluation.evaluator import JudgeResponseParser
+from invisiblebench.models import DimensionType
 
 
 class TestJudgeResponseParser:

@@ -1,4 +1,4 @@
-# SupportBench Scripts
+# InvisibleBench Scripts
 
 Utility scripts for running benchmarks, generating leaderboards, and validating results.
 
@@ -216,7 +216,7 @@ SCENARIOS = [
 
 ### Customizing Evaluation Dimensions
 
-Edit scoring weights in `src/longbench/scoring_config.yaml`:
+Edit scoring weights in `src/invisiblebench/scoring_config.yaml`:
 
 ```yaml
 weights:
@@ -234,11 +234,11 @@ weights:
 If you use these scripts in your research, please cite:
 
 ```bibtex
-@software{supportbench2025,
-  title = {SupportBench: Evaluating AI Safety in Long-Term Care Relationships},
+@software{invisiblebench2025,
+  title = {InvisibleBench: Evaluating AI Safety in Long-Term Care Relationships},
   author = {Your Name},
   year = {2025},
-  url = {https://github.com/givecare/supportbench}
+  url = {https://github.com/givecare/invisiblebench}
 }
 ```
 

@@ -16,11 +16,11 @@ size_categories:
 license: mit
 ---
 
-# SupportBench: AI Safety Benchmark for Persistent Caregiving Relationships
+# InvisibleBench: AI Safety Benchmark for Persistent Caregiving Relationships
 
 ## Dataset Description
 
-SupportBench is the first benchmark designed to evaluate AI safety across multi-turn (3-20+) conversations in caregiving contexts. Unlike single-turn benchmarks, SupportBench captures failure modes that emerge over extended relationships: attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep.
+InvisibleBench is the first benchmark designed to evaluate AI safety across multi-turn (3-20+) conversations in caregiving contexts. Unlike single-turn benchmarks, InvisibleBench captures failure modes that emerge over extended relationships: attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep.
 
 ### Key Features
 
@@ -46,7 +46,7 @@ SupportBench is the first benchmark designed to evaluate AI safety across multi-
 ### Dataset Structure
 
 ```
-supportbench/
+invisiblebench/
 ├── scenarios/
 │   ├── tier1/          # 3-5 turn scenarios
 │   ├── tier2/          # 8-12 turn scenarios
@@ -66,10 +66,10 @@ supportbench/
 from datasets import load_dataset
 
 # Load scenarios
-dataset = load_dataset("givecareapp/supportbench")
+dataset = load_dataset("givecareapp/invisiblebench")
 
 # Run evaluation with your model
-from supportbench import evaluate_model
+from invisiblebench import evaluate_model
 
 results = evaluate_model(
     model="your-model-name",
@@ -89,10 +89,10 @@ cd givecare-bench
 pip install -r requirements.txt
 
 # Run evaluation
-python -m supportbench.yaml_cli \
+python -m invisiblebench.yaml_cli \
   --scenario scenarios/tier1/crisis/crisis_detection.json \
   --transcript your_model_responses.jsonl \
-  --rules supportbench/rules/base.yaml \
+  --rules invisiblebench/rules/base.yaml \
   --out results.html
 ```
 
@@ -106,12 +106,12 @@ python -m supportbench.yaml_cli \
 
 ### Citation
 
-If you use SupportBench in your research, please cite:
+If you use InvisibleBench in your research, please cite:
 
 ```bibtex
-@misc{madad_supportbench_2025,
+@misc{madad_invisiblebench_2025,
   author       = {Ali Madad},
-  title        = {{SupportBench}: AI Safety Benchmark for Persistent Caregiver Support},
+  title        = {{InvisibleBench}: AI Safety Benchmark for Persistent Caregiver Support},
   howpublished = {\url{https://github.com/givecareapp/givecare-bench}},
   year         = {2025}
 }
@@ -119,7 +119,7 @@ If you use SupportBench in your research, please cite:
 
 ### Paper
 
-[SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships](https://github.com/givecareapp/givecare-bench/tree/main/papers/supportbench)
+[InvisibleBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships](https://github.com/givecareapp/givecare-bench/tree/main/papers/invisiblebench)
 
 ### Leaderboard
 
@@ -150,7 +150,7 @@ This benchmark was developed with support from the caregiving community and buil
 
 ### Evaluation Framework
 
-SupportBench uses a tri-judge ensemble system:
+InvisibleBench uses a tri-judge ensemble system:
 
 1. **Judge 1** (Instruction-Following + Regulatory): Crisis Safety, Regulatory Fitness
 2. **Judge 2** (Cultural Reasoning + Emotional Intelligence): Trauma-Informed Flow, Belonging & Cultural Fitness

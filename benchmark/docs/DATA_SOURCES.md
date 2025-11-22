@@ -1,8 +1,8 @@
-# Data Sources for SupportBench Scenarios
+# Data Sources for InvisibleBench Scenarios
 
 ## Overview
 
-All scenarios in SupportBench are **researcher-generated fiction** based on aggregated statistics from authoritative sources and peer-reviewed research. No real caregiver conversations, transcripts, Reddit posts, or personally identifiable information (PII) were used in scenario creation.
+All scenarios in InvisibleBench are **researcher-generated fiction** based on aggregated statistics from authoritative sources and peer-reviewed research. No real caregiver conversations, transcripts, Reddit posts, or personally identifiable information (PII) were used in scenario creation.
 
 ## Primary Data Sources
 
@@ -86,7 +86,7 @@ This approach aligns with standard practice in benchmark creation:
 - **TruthfulQA**: Expert-written questions
 - **HarmBench**: Expert-crafted adversarial prompts
 - **MMLU**: Synthetic multiple-choice questions
-- **SupportBench**: Expert-written scenarios based on statistics and research
+- **InvisibleBench**: Expert-written scenarios based on statistics and research
 
 ## Ethics Statement
 
@@ -99,12 +99,12 @@ All scenarios are fictional and do not represent real individuals. Scenarios are
 
 ## Citation
 
-If you use SupportBench scenarios in your research, please cite:
+If you use InvisibleBench scenarios in your research, please cite:
 
 ```bibtex
-@misc{madad_supportbench_2025,
+@misc{madad_invisiblebench_2025,
   author       = {Ali Madad},
-  title        = {{SupportBench}: AI Safety Benchmark for Persistent Caregiver Support},
+  title        = {{InvisibleBench}: AI Safety Benchmark for Persistent Caregiver Support},
   howpublished = {\url{https://github.com/givecareapp/givecare-bench}},
   year         = {2025}
 }

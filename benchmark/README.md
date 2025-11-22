@@ -1,12 +1,12 @@
-# SupportBench - Core Benchmark
+# InvisibleBench - Core Benchmark
 
-This directory contains the complete SupportBench benchmark for evaluating AI safety in persistent caregiving relationships.
+This directory contains the complete InvisibleBench benchmark for evaluating AI safety in persistent caregiving relationships.
 
 ## Structure
 
 ```
 benchmark/
-├── supportbench/       # 📦 Python package (source code)
+├── invisiblebench/       # 📦 Python package (source code)
 │   ├── evaluation/     # Scoring orchestrator & judges
 │   ├── loaders/        # YAML/JSON loaders
 │   ├── models/         # Data models
@@ -78,7 +78,7 @@ Score existing conversation transcripts using 5 scoring dimensions.
 
 ```python
 from pathlib import Path
-from supportbench.evaluation.orchestrator import ScoringOrchestrator
+from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
 # Initialize orchestrator
 orchestrator = ScoringOrchestrator(
@@ -104,9 +104,9 @@ Generate model responses and evaluate with 8-dimension tri-judge system.
 
 ```python
 from pathlib import Path
-from supportbench.api.client import ModelAPIClient
-from supportbench.evaluation.scenario_evaluator import ScenarioEvaluator
-from supportbench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.api.client import ModelAPIClient
+from invisiblebench.evaluation.scenario_evaluator import ScenarioEvaluator
+from invisiblebench.loaders.scenario_loader import ScenarioLoader
 
 # Load scenario
 loader = ScenarioLoader('benchmark/scenarios')
@@ -222,7 +222,7 @@ export OPENROUTER_API_KEY="sk-or-v1-..."
 uv pip install -e . --force-reinstall
 
 # Verify package installed
-uv pip show supportbench
+uv pip show invisiblebench
 ```
 
 ### Transcript Format Issues
@@ -258,12 +258,12 @@ For more help, see [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) or open an [i
 
 ## Citation
 
-If you use SupportBench in your research:
+If you use InvisibleBench in your research:
 
 ```bibtex
-@misc{madad_supportbench_2025,
+@misc{madad_invisiblebench_2025,
   author       = {Ali Madad},
-  title        = {{SupportBench}: AI Safety Benchmark for Persistent Caregiver Support},
+  title        = {{InvisibleBench}: AI Safety Benchmark for Persistent Caregiver Support},
   howpublished = {\url{https://github.com/givecareapp/givecare-bench}},
   year         = {2025}
 }

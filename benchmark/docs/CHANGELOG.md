@@ -51,34 +51,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Project Renaming (2025-10-29)
 
-**Comprehensive Rebrand: LongitudinalBench → SupportBench**
+**Comprehensive Rebrand: LongitudinalBench → InvisibleBench**
 
-After analyzing 50+ existing benchmarks on arXiv and considering naming patterns, we renamed the entire project from "LongitudinalBench" to "SupportBench" for better market positioning and clarity.
+After analyzing 50+ existing benchmarks on arXiv and considering naming patterns, we renamed the entire project from "LongitudinalBench" to "InvisibleBench" for better market positioning and clarity.
 
 **Rationale:**
 - "Longitudinal" is methodology-focused but doesn't convey the caregiving domain
-- "SupportBench" is domain-specific (support relationships) while remaining generalizable
+- "InvisibleBench" is domain-specific (support relationships) while remaining generalizable
 - Follows academic naming conventions (e.g., LawBench, PsychBench, MedArabiQ)
 - Avoids conflicts with existing benchmarks (CARE already taken by Rosebud)
 - More memorable and easier to say ("rolls off the tongue")
 
 **Files Renamed:**
 - Project folders:
-  - `papers/paper1-longitudinalbench/` → `papers/supportbench/`
+  - `papers/paper1-invisiblebench/` → `papers/invisiblebench/`
   - `papers/paper3-givecare-system/` → `papers/givecare/`
-  - `longbench/` → `supportbench/`
+  - `invisiblebench/` → `invisiblebench/`
 - Paper exports:
-  - `paper.tex` → `SupportBench.tex`
-  - `paper.pdf` → `SupportBench.pdf` (12 pages, 155KB)
+  - `paper.tex` → `InvisibleBench.tex`
+  - `paper.pdf` → `InvisibleBench.pdf` (12 pages, 155KB)
   - `paper3-givecare-system/paper.tex` → `GiveCare.tex`
   - `paper3-givecare-system/paper.pdf` → `GiveCare.pdf` (31 pages, 480KB)
 
 **Content Updates:**
-- Papers: All "LongitudinalBench" → "SupportBench" (22+ occurrences in manuscript)
-- Code: All Python imports updated from `from longbench.` → `from supportbench.`
+- Papers: All "LongitudinalBench" → "InvisibleBench" (22+ occurrences in manuscript)
+- Code: All Python imports updated from `from longbench.` → `from invisiblebench.`
 - Documentation: README.md, CLAUDE.md CLI examples updated
 - Website: index.html, about.html, leaderboard.html updated with new branding
-- Citation: `madad_longitudinalbench_2025` → `madad_supportbench_2025`
+- Citation: `madad_longitudinalbench_2025` → `madad_invisiblebench_2025`
 
 **Methodology Changes:**
 - Updated descriptions from "longitudinal caregiver support" → "persistent caregiver support"
@@ -100,7 +100,7 @@ After analyzing 50+ existing benchmarks on arXiv and considering naming patterns
 - Updated paper with honest positioning: domain-specific application (novel) vs multi-session architecture (established)
 - Added complete Related Work section 2.4 with proper citations
 - Verified research citations: korpan2025bias (arXiv 2503.05765), kaur2025corus (arXiv 2510.16829)
-- **Key Finding**: Multi-session temporal gap simulation is validated and effective; SupportBench's novelty is in caregiver-specific safety dimensions
+- **Key Finding**: Multi-session temporal gap simulation is validated and effective; InvisibleBench's novelty is in caregiver-specific safety dimensions
 - **Archived**: Research analysis documents moved to `archive/research-2025-10/` (RESEARCH_VALIDATION.md, LOCOMO_COMPARISON.md, COLLINEAR_COMPARISON.md, PAPER_UPDATES_SUMMARY.md, CHAI_MEETING_PREP.md, MEETING_BRIEF.md)
 
 ### Phase 2 - High Priority Enhancements (Planned)
@@ -128,7 +128,7 @@ After analyzing 50+ existing benchmarks on arXiv and considering naming patterns
 
 ---
 
-### Added - Paper 1 (SupportBench)
+### Added - Paper 1 (InvisibleBench)
 
 **Capability-Based Judge Framework (Lines 176-187)**
 - Added judge assignment table organized by capabilities rather than model brands
@@ -170,7 +170,7 @@ After analyzing 50+ existing benchmarks on arXiv and considering naming patterns
 
 ---
 
-### Changed - Paper 1 (SupportBench)
+### Changed - Paper 1 (InvisibleBench)
 
 **🔴 BREAKING: Belonging & Cultural Fitness Dimension Scale Upgrade**
 - **Scale**: 0-2 → 0-3 points (Line 166)
@@ -305,7 +305,7 @@ Moved to `archive/working-docs-2025-10-25/`:
 ### Technical
 
 **PDF Compilation**
-- Paper 1: `papers/paper1-longitudinalbench/paper.pdf` (148K, 31 pages)
+- Paper 1: `papers/paper1-invisiblebench/paper.pdf` (148K, 31 pages)
 - Paper 3: `papers/paper3-givecare-system/paper.pdf` (524K, 31 pages)
 - Both compiled successfully with pdflatex + bibtex workflow
 - All LaTeX formatting preserved
@@ -426,7 +426,7 @@ Moved to `archive/working-docs-2025-10-25/`:
 
 **YAML-Based Scoring System**
 - Fully operational alternative to main Python framework
-- Location: `src/supportbench/`
+- Location: `src/invisiblebench/`
 - Built with strict Test-Driven Development (TDD) methodology
 - Test coverage: 49/58 tests passing (84%)
 
@@ -450,10 +450,10 @@ Moved to `archive/working-docs-2025-10-25/`:
 - Comprehensive evidence logging for all scores
 
 **CLI Interface**
-- Fully functional command-line interface (`src/supportbench/cli.py`)
+- Fully functional command-line interface (`src/invisiblebench/cli.py`)
 - Accepts scenario YAML, transcript JSONL, rules YAML
 - Outputs to HTML, JSON, or both
-- Example: `python -m src.supportbench.cli --scenario X.yaml --transcript Y.jsonl --rules Z.yaml --out report.html`
+- Example: `python -m src.invisiblebench.cli --scenario X.yaml --transcript Y.jsonl --rules Z.yaml --out report.html`
 
 ---
 
@@ -659,8 +659,8 @@ Moved to `archive/working-docs-2025-10-25/`:
 
 ### Added - Papers
 
-**Paper 1: SupportBench Methodology**
-- Location: `papers/paper1-longitudinalbench/`
+**Paper 1: InvisibleBench Methodology**
+- Location: `papers/paper1-invisiblebench/`
 - LaTeX source: `paper.tex`
 - Comprehensive manuscript: `manuscript_comprehensive.md`
 - Bibliography: `references.bib`

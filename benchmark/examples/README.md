@@ -1,4 +1,4 @@
-# SupportBench Examples
+# InvisibleBench Examples
 
 ## Quick Start
 

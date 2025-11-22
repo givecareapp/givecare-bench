@@ -16,8 +16,8 @@ import yaml
 # Add benchmark to path
 sys.path.insert(0, str(Path(__file__).parent / "benchmark"))
 
-from supportbench.evaluation.scorers import compliance_revised
-from supportbench.api import ModelAPIClient
+from invisiblebench.evaluation.scorers import compliance_revised
+from invisiblebench.api import ModelAPIClient
 
 
 def load_transcript(result_file: Path) -> List[Dict[str, Any]]:

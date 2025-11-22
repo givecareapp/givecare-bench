@@ -1,6 +1,6 @@
-# Contributing to SupportBench
+# Contributing to InvisibleBench
 
-Thank you for your interest in contributing to SupportBench! We welcome contributions from researchers, clinicians, caregivers, and developers.
+Thank you for your interest in contributing to InvisibleBench! We welcome contributions from researchers, clinicians, caregivers, and developers.
 
 ## Ways to Contribute
 
@@ -66,7 +66,7 @@ Submit PR with:
 
 ### 4. Build Developer Tools
 
-Help make SupportBench more useful:
+Help make InvisibleBench more useful:
 
 - **Preference pair export**: Generate training data for RLHF (see `ROADMAP.md`)
 - **Bias detection**: Demographic robustness testing
@@ -76,7 +76,7 @@ Help make SupportBench more useful:
 ### 5. Contribute Documentation
 
 - **Tutorials**: How to run evaluations, interpret results, use preference pairs
-- **Case studies**: Real-world applications of SupportBench
+- **Case studies**: Real-world applications of InvisibleBench
 - **Research summaries**: Synthesize findings from academic papers
 - **Translation**: Translate documentation to other languages
 

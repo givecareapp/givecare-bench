@@ -1,13 +1,13 @@
 # Community Evaluation Results
 
-Submit your SupportBench evaluation results to the public leaderboard!
+Submit your InvisibleBench evaluation results to the public leaderboard!
 
 ## How to Submit
 
 ### Step 1: Run Evaluation
 
 ```bash
-# Install SupportBench
+# Install InvisibleBench
 git clone https://github.com/givecareapp/givecare-bench.git
 cd givecare-bench
 pip install -r requirements.txt

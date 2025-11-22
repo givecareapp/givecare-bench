@@ -1,6 +1,6 @@
 # Regulatory & Standards Research Analysis
 **Date:** 2025-11-21
-**Purpose:** Inform GiveCare compliance rubric design with authoritative sources
+**Purpose:** Inform InvisibleBench compliance rubric design with authoritative sources
 
 ## Executive Summary
 
@@ -136,7 +136,7 @@ Products that:
 
 ---
 
-## 4. Application to GiveCare Compliance Rubric
+## 4. Application to InvisibleBench Compliance Rubric
 
 ### 4.1 What Current Rubric Prohibits
 

@@ -14,7 +14,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RULES_DIR = PROJECT_ROOT / "benchmark" / "configs" / "rules"
 SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
-SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 
 
@@ -23,7 +23,7 @@ class TestRuleLoader:
 
     def test_load_base_rules(self):
         """Should load base.yaml and return complete rule dictionary."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "base.yaml"))
@@ -51,7 +51,7 @@ class TestRuleLoader:
 
     def test_load_rules_with_inheritance(self):
         """Should resolve 'extends: base.yaml' and merge NY-specific overrides."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "ny.yaml"))
@@ -70,7 +70,7 @@ class TestRuleLoader:
 
     def test_inheritance_merges_nested_dicts(self):
         """Should deep merge nested dictionaries, not replace them."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "ny.yaml"))
@@ -82,7 +82,7 @@ class TestRuleLoader:
 
     def test_load_nonexistent_file_raises_error(self):
         """Should raise FileNotFoundError for missing rule files."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         loader = RuleLoader()
         with pytest.raises(FileNotFoundError):
@@ -90,7 +90,7 @@ class TestRuleLoader:
 
     def test_circular_inheritance_raises_error(self):
         """Should detect and raise error for circular inheritance."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         # Create temporary circular reference fixtures
         import tempfile
@@ -109,7 +109,7 @@ class TestRuleLoader:
 
     def test_invalid_yaml_raises_error(self):
         """Should raise appropriate error for malformed YAML."""
-        from supportbench.evaluation.loaders import RuleLoader
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         import tempfile
 
@@ -130,7 +130,7 @@ class TestScenarioLoader:
 
     def test_load_scenario_basic_structure(self):
         """Should load scenario and return structured dictionary."""
-        from supportbench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -144,7 +144,7 @@ class TestScenarioLoader:
 
     def test_scenario_turns_structure(self):
         """Should parse turns with correct structure."""
-        from supportbench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -161,7 +161,7 @@ class TestScenarioLoader:
 
     def test_scenario_probes_structure(self):
         """Should parse probes with expected fields."""
-        from supportbench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -177,7 +177,7 @@ class TestScenarioLoader:
 
     def test_scenario_compliance_gates(self):
         """Should parse scoring dimensions and autofail triggers."""
-        from supportbench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.evaluation.loaders import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -197,7 +197,7 @@ class TestTranscriptLoader:
 
     def test_load_transcript_basic(self):
         """Should load JSONL transcript into structured format."""
-        from supportbench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -213,7 +213,7 @@ class TestTranscriptLoader:
 
     def test_transcript_alternating_roles(self):
         """Should have alternating user/assistant messages."""
-        from supportbench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -225,7 +225,7 @@ class TestTranscriptLoader:
 
     def test_transcript_preserves_turn_numbers(self):
         """Should preserve turn numbers from JSONL."""
-        from supportbench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -244,7 +244,7 @@ class TestTranscriptLoader:
 
     def test_empty_transcript_returns_empty_list(self):
         """Should return empty list for empty JSONL file."""
-        from supportbench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         import tempfile
 
@@ -260,7 +260,7 @@ class TestTranscriptLoader:
 
     def test_malformed_json_raises_error(self):
         """Should raise error for malformed JSONL."""
-        from supportbench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         import tempfile
 
@@ -281,7 +281,7 @@ class TestScoringConfigLoader:
 
     def test_load_scoring_config(self):
         """Should load scoring.yaml with weights and dimension configs."""
-        from supportbench.evaluation.loaders import ScoringConfigLoader
+        from invisiblebench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
         config = loader.load(str(SCORING_PATH))
@@ -301,7 +301,7 @@ class TestScoringConfigLoader:
 
     def test_scoring_config_dimension_details(self):
         """Should load dimension-specific configuration."""
-        from supportbench.evaluation.loaders import ScoringConfigLoader
+        from invisiblebench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
         config = loader.load(str(SCORING_PATH))
@@ -321,7 +321,7 @@ class TestScoringConfigLoader:
 
     def test_belonging_pillars_list(self):
         """Should parse belonging pillars as a list."""
-        from supportbench.evaluation.loaders import ScoringConfigLoader
+        from invisiblebench.evaluation.loaders import ScoringConfigLoader
 
         loader = ScoringConfigLoader()
         config = loader.load(str(SCORING_PATH))

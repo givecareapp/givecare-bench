@@ -1,6 +1,6 @@
-# SupportBench: A Benchmark for Evaluating AI Safety in Long-Term Caregiving Relationships
+# InvisibleBench: A Benchmark for Evaluating AI Safety in Long-Term Caregiving Relationships
 
-**Authors**: SupportBench Research Team
+**Authors**: InvisibleBench Research Team
 **Affiliation**: GiveCare
 **Contact**: research@givecare.app
 
@@ -12,9 +12,9 @@
 
 The deployment of AI systems in long-term caregiving relationships presents unique safety challenges that current benchmarks fail to capture. While existing evaluations focus on single-turn interactions, critical failure modes—attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep—emerge only over extended multi-turn conversations.
 
-We introduce **SupportBench**, the first benchmark designed to evaluate AI safety across 3-20+ turn conversations in caregiving contexts. Our three-tier architecture tests models under realistic pressure (financial strain, emotional exhaustion, social isolation) across eight evaluation dimensions including crisis safety, regulatory fitness, and trauma-informed flow. Using a tri-judge ensemble evaluation system, we benchmark 10 state-of-the-art models and reveal significant performance gaps: top models achieve 73% overall scores but show 15-20% degradation in longitudinal consistency.
+We introduce **InvisibleBench**, the first benchmark designed to evaluate AI safety across 3-20+ turn conversations in caregiving contexts. Our three-tier architecture tests models under realistic pressure (financial strain, emotional exhaustion, social isolation) across eight evaluation dimensions including crisis safety, regulatory fitness, and trauma-informed flow. Using a tri-judge ensemble evaluation system, we benchmark 10 state-of-the-art models and reveal significant performance gaps: top models achieve 73% overall scores but show 15-20% degradation in longitudinal consistency.
 
-We identify that **86% of models miss masked crisis signals** and **42% exhibit regulatory boundary violations by turn 10**. SupportBench provides the first deployment gate for relationship AI serving 63 million American caregivers and establishes reproducible safety standards for long-term human-AI interactions.
+We identify that **86% of models miss masked crisis signals** and **42% exhibit regulatory boundary violations by turn 10**. InvisibleBench provides the first deployment gate for relationship AI serving 63 million American caregivers and establishes reproducible safety standards for long-term human-AI interactions.
 
 ---
 
@@ -50,7 +50,7 @@ Our analysis of caregiving AI deployments reveals failure modes invisible to sin
 
 ### Our Contribution
 
-We present **SupportBench**, a three-tier benchmark testing AI safety across 1-20+ turn caregiving conversations. Our contributions include:
+We present **InvisibleBench**, a three-tier benchmark testing AI safety across 1-20+ turn caregiving conversations. Our contributions include:
 
 1. **Three-Tier Architecture**: Tier 1 (3-5 turns, foundational safety), Tier 2 (8-12 turns, memory and attachment), Tier 3 (20+ turns across multi-session, longitudinal consistency).
 
@@ -88,7 +88,7 @@ Our benchmark complements these with focus on non-clinical caregiving AI while i
 
 Recent work on long-context language models [Liu et al. 2023] reveals significant performance degradation as conversation length increases—the "lost in the middle" phenomenon. **HELMET** [HELMET 2024] evaluates model behavior across multiple turns but focuses on general capabilities rather than safety-critical caregiving contexts.
 
-SupportBench explicitly tests safety degradation over extended interactions.
+InvisibleBench explicitly tests safety degradation over extended interactions.
 
 ---
 
@@ -141,7 +141,7 @@ This boundary creep is invisible to single-turn testing.
 
 ### 4.1 Three-Tier Architecture
 
-SupportBench organizes scenarios across three difficulty tiers:
+InvisibleBench organizes scenarios across three difficulty tiers:
 
 #### **Tier 1: Foundational Safety (3-5 turns)**
 

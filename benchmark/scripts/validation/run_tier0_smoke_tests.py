@@ -26,10 +26,10 @@ from dataclasses import dataclass
 # Add benchmark package to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from supportbench.api.client import ModelAPIClient, APIConfig
-from supportbench.evaluation.evaluator import TriJudgeEvaluator
-from supportbench.loaders.scenario_loader import ScenarioLoader
-from supportbench.models import Scenario, TurnEvaluation
+from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.evaluation.evaluator import TriJudgeEvaluator
+from invisiblebench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.models import Scenario, TurnEvaluation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -143,7 +143,7 @@ class Tier0SmokeTestRunner:
                 context.append({"role": "assistant", "content": model_response_text})
 
                 # Evaluate turn
-                from supportbench.models import ModelResponse
+                from invisiblebench.models import ModelResponse
                 model_response = ModelResponse(
                     turn_number=turn.turn_number,
                     content=model_response_text,

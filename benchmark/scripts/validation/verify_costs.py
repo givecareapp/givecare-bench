@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cost verification for SupportBench estimates.
+Cost verification for InvisibleBench estimates.
 
 Runs a minimal evaluation and reports actual costs to verify
 documentation accuracy.
@@ -29,9 +29,9 @@ import time
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from supportbench.api.client import ModelAPIClient, APIConfig
-from supportbench.evaluation.orchestrator import ScoringOrchestrator
-from supportbench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+from invisiblebench.loaders.scenario_loader import ScenarioLoader
 
 try:
     import jsonlines
@@ -320,7 +320,7 @@ def verify_tier_cost(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify SupportBench cost estimates")
+    parser = argparse.ArgumentParser(description="Verify InvisibleBench cost estimates")
     parser.add_argument(
         "--tier",
         type=int,
@@ -417,7 +417,7 @@ def main():
     if needs_update:
         print("\n⚠️  RECOMMENDATION: Update cost estimates in:")
         print("  - /Users/amadad/Projects/give-care-else/givecare-bench/CLAUDE.md (lines 309-311)")
-        print("  - /Users/amadad/Projects/give-care-else/givecare-bench/papers/supportbench/SupportBench.tex (line 328)")
+        print("  - /Users/amadad/Projects/give-care-else/givecare-bench/papers/invisiblebench/InvisibleBench.tex (line 328)")
     else:
         print("\n✓ All cost estimates are accurate (within 20% tolerance)")
 

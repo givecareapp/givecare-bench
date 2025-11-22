@@ -5,7 +5,7 @@
 
 ## Problem Statement
 
-Claude Sonnet 4.5 scored 0.0% (17/17 hard fails) on GiveCare-Bench due to compliance rubric misalignment with peer support standards and scenario expectations.
+Claude Sonnet 4.5 scored 0.0% (17/17 hard fails) on InvisibleBench due to compliance rubric misalignment with peer support standards and scenario expectations.
 
 ## Root Cause Analysis
 
@@ -160,7 +160,7 @@ Note: Real-world deployment may need more conservative approach.
 
 ## Files Modified
 
-- `benchmark/supportbench/evaluation/scorers/compliance_revised.py` - Four-tier framework
+- `benchmark/invisiblebench/evaluation/scorers/compliance_revised.py` - Four-tier framework
 - `rescore_claude.py` - Re-scoring script
 - `CRISIS_OVERRIDE_ANALYSIS.md` - False positive documentation
 - `REGULATORY_RESEARCH_ANALYSIS.md` - Authoritative source analysis

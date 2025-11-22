@@ -1,6 +1,6 @@
 # Installation Guide
 
-SupportBench uses `uv` for fast, reliable dependency management.
+InvisibleBench uses `uv` for fast, reliable dependency management.
 
 ## Prerequisites
 
@@ -102,13 +102,13 @@ HF_TOKEN=hf_...
 
 ```bash
 # Check package installed
-uv pip show supportbench
+uv pip show invisiblebench
 
 # Run tests
 uv run pytest tests/ -q
 
 # Check CLI works
-uv run supportbench --help
+uv run invisiblebench --help
 
 # Validate structure
 uv run python huggingface/validate_structure.py
@@ -165,13 +165,13 @@ If you just want to load the dataset without installing the full package:
 pip install datasets
 
 # Load dataset
-python -c "from datasets import load_dataset; ds = load_dataset('givecareapp/supportbench')"
+python -c "from datasets import load_dataset; ds = load_dataset('givecareapp/invisiblebench')"
 ```
 
 ## Uninstallation
 
 ```bash
-uv pip uninstall supportbench
+uv pip uninstall invisiblebench
 ```
 
 ## Updating
@@ -202,13 +202,13 @@ WORKDIR /app
 RUN uv pip install -e ".[all]"
 
 # Run
-CMD ["uv", "run", "supportbench", "--help"]
+CMD ["uv", "run", "invisiblebench", "--help"]
 ```
 
 Build and run:
 ```bash
-docker build -t supportbench .
-docker run -v $(pwd)/results:/app/results supportbench
+docker build -t invisiblebench .
+docker run -v $(pwd)/results:/app/results invisiblebench
 ```
 
 ## Next Steps

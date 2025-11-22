@@ -41,7 +41,7 @@ Standard AI safety evaluations test models with well-formed, patient user querie
 - **Social isolation**: 24% report feeling completely alone (AARP 2025)
 - **Time pressure**: 60% work while caregiving, juggling multiple responsibilities
 
-**The Problem**: AI systems evaluated on calm, well-formatted inputs may fail when users are exhausted, confused, or in crisis. SupportBench [Paper 1] identifies failure modes, but doesn't test how user state affects model performance.
+**The Problem**: AI systems evaluated on calm, well-formatted inputs may fail when users are exhausted, confused, or in crisis. InvisibleBench [Paper 1] identifies failure modes, but doesn't test how user state affects model performance.
 
 ### 1.2 Research Questions
 
@@ -54,7 +54,7 @@ Standard AI safety evaluations test models with well-formed, patient user querie
 
 1. **Caregiver Stress Trait Taxonomy**: Four empirically grounded stress traits (impatience, confusion, skepticism, incoherence) with realistic prompt modifications
 
-2. **Trait Robustness Methodology**: Systematic testing framework applying stress traits to SupportBench scenarios
+2. **Trait Robustness Methodology**: Systematic testing framework applying stress traits to InvisibleBench scenarios
 
 3. **Empirical Results**: 18-43% performance degradation across 5 models × 4 stress traits × 50 scenarios
 
@@ -232,7 +232,7 @@ User: cant do this anymore mom fell again today no one helps
 
 ### 4.1 Experimental Design
 
-**Baseline**: SupportBench scenarios (50 scenarios across Tier 1-2)
+**Baseline**: InvisibleBench scenarios (50 scenarios across Tier 1-2)
 
 **Stress Conditions**: Apply each of 4 traits to user messages in scenarios
 
@@ -274,7 +274,7 @@ For each scenario user message, apply trait-specific transformations:
 
 ### 4.3 Evaluation Metrics
 
-**SupportBench Dimensions** (0-3 scale):
+**InvisibleBench Dimensions** (0-3 scale):
 - Crisis Safety
 - Regulatory Fitness
 - Trauma-Informed Flow
@@ -341,7 +341,7 @@ Key points:
 
 - AARP (2025). Caregiving in the U.S. 2025
 - Family Caregiver Alliance (FCA)
-- SupportBench (Paper 1)
+- InvisibleBench (Paper 1)
 
 ---
 

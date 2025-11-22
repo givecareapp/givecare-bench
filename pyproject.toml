@@ -1,5 +1,5 @@
 [project]
-name = "supportbench"
+name = "invisiblebench"
 version = "0.1.0"
 description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
@@ -52,25 +52,25 @@ dev = [
     "ruff>=0.1.0",
 ]
 all = [
-    "supportbench[analytics,visualization,dev]",
+    "invisiblebench[analytics,visualization,dev]",
 ]
 
 [project.scripts]
-supportbench = "benchmark.supportbench.yaml_cli:main"
+invisiblebench = "benchmark.invisiblebench.yaml_cli:main"
 
 [project.urls]
 Homepage = "https://givecareapp.github.io/givecare-bench"
 Repository = "https://github.com/givecareapp/givecare-bench"
 Issues = "https://github.com/givecareapp/givecare-bench/issues"
 Documentation = "https://github.com/givecareapp/givecare-bench/tree/main/docs"
-Paper = "https://github.com/givecareapp/givecare-bench/tree/main/papers/supportbench"
+Paper = "https://github.com/givecareapp/givecare-bench/tree/main/papers/invisiblebench"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["benchmark/supportbench"]
+packages = ["benchmark/invisiblebench"]
 
 [tool.pytest.ini_options]
 testpaths = ["benchmark/tests"]
