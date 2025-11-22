@@ -102,9 +102,7 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 \normalsize%
 
 \begin{tcolorbox}[colback=yellow!10!white,colframe=orange!80!black,boxrule=1pt,title=\textbf{Scope \& Limitations}]
-\textbf{This paper presents a reference architecture demonstrating operational feasibility, not a validated clinical intervention.} GiveCare is a non-clinical support system with no claims of therapeutic efficacy or medical effectiveness. All effectiveness claims (attachment prevention, churn reduction, burnout trajectory detection) are stated as hypotheses requiring validation through controlled studies.
-
-\textbf{Legal and Regulatory Context:} GiveCare design considerations are informed by healthcare privacy laws and caregiving best practices. Organizations deploying similar systems should seek legal counsel based on specific deployment context, jurisdiction, and applicable regulations. See Section~\ref{subsec:Limitations} for complete pre-deployment requirements including independent safety evaluation, psychometric validation, and regulatory review.
+\textbf{This paper presents a reference architecture demonstrating operational feasibility, not a validated clinical intervention.} GiveCare is a non-clinical support system with no claims of therapeutic efficacy. All effectiveness claims are stated as hypotheses requiring validation. See Section~\ref{subsec:PaperScopeandValidationRoadmap} for complete limitations, pre-deployment requirements, and validation roadmap.
 \end{tcolorbox}
 
 \section{Introduction}%
@@ -278,9 +276,11 @@ Five design principles guided GiveCare's architecture, ensuring the system serve
 
 \textbf{Principle 3: Structural Awareness (Anti-Othering)}
 \begin{itemize}
-    \item \textit{Problem}: Generic AI assumes middle-class resources (``hire respite help''), pathologizing lack of resources as personal failure.
-    \item \textit{Design response}: GC-SDOH-28 explicitly assesses financial barriers before suggesting interventions. System offers Benefits.gov SNAP enrollment (structural support) not ``practice self-care'' (individual responsibility).
-    \item \textit{Impact}: Prevents cultural othering where AI reinforces class barriers by suggesting inaccessible solutions.
+    \item \textit{Problem}: Generic AI assumes middle-class resources (``hire respite help''), pathologizing lack of resources as personal failure. Patient-focused SDOH instruments (PRAPARE~\cite{prapare}, AHC HRSN~\cite{ahc}) miss caregiver-unique barriers: existing tools ask about food security but not whether caregivers have \textit{time to eat}; they screen for housing instability but miss caregivers sleeping on couches to provide overnight care; they ask about transportation but miss caregivers who have cars but cannot leave care recipients alone long enough for medical appointments~\cite{aarp2025}.
+
+    \item \textit{Design response}: GC-SDOH-28—to our knowledge, the first caregiver-specific SDOH framework—explicitly assesses financial barriers, employment disruption (\$7,242/year avg out-of-pocket costs, 47\% reduce work hours), and social isolation (52\% don't feel appreciated by family) \textit{before} suggesting interventions. Built on validated components (REACH II NIH caregiver assessment, CMS AHC HRSN, Caregiver Well-Being Scale, Health Leads Toolkit) but reframed for caregiver realities. System offers Benefits.gov SNAP enrollment, Medicaid navigation, food banks (structural support) not ``practice self-care'' or ``hire a helper'' (individual responsibility).
+
+    \item \textit{Impact}: Prevents cultural othering where AI reinforces class barriers by suggesting inaccessible solutions. Example: When Maria (N=1 pilot case study) reported skipping meals to afford mother's medication, GC-SDOH-28 financial + food domains flagged crisis; system provided local food pantry with current address/hours plus SNAP enrollment link, not generic ``eat healthier'' advice.
 \end{itemize}
 
 \textbf{Principle 4: Trauma-Informed Interaction (Safety First)}
@@ -300,16 +300,25 @@ Five design principles guided GiveCare's architecture, ensuring the system serve
 These principles operationalize \textbf{equity-centered design}: not just ``designing for everyone'' but explicitly centering the needs, constraints, and lived experiences of marginalized caregivers. Technical architecture choices flow from these human-centered commitments.
 
 \begin{tcolorbox}[colback=gcOrange!10!white,colframe=gcOrange,title=\textbf{Testable Hypotheses}]
-The following claims require controlled validation studies (outlined in Section~\ref{subsec:PaperScopeandValidationRoadmap}):
+The following claims require controlled validation studies (outlined in Section~\ref{subsec:PaperScopeandValidationRoadmap}). Pilot (N=8, 144 conversations) demonstrates operational feasibility only.
 
-\begin{enumerate}
-    \item \textbf{H1 (Attachment Prevention)}: Multi-agent architecture (Main/Assessment agents with crisis router) reduces parasocial dependency risk vs single-agent systems, measured via Parasocial Interaction Scale (PSI) at 30/60/90 days
-    \item \textbf{H2 (Churn Reduction)}: Anticipatory engagement watchers (wellness trend, disengagement detection, crisis burst monitoring) hypothesized to reduce 30-day churn by 20-30\% vs reactive-only systems, tested via A/B study (N=200+)
-    \item \textbf{H3 (Trajectory Detection)}: Composite burnout scoring with temporal decay detects 4-week declining trends before high-risk threshold (<40) with sensitivity >70\%, specificity >60\%
-    \item \textbf{H4 (Cultural Sensitivity)}: GC-SDOH-28 assessment triggers culturally-appropriate interventions (structural support vs individual responsibility) at 2$\times$ rate of generic AI, validated via human expert review
-\end{enumerate}
-
-\textbf{Current Status}: Pilot (N=8, 144 conversations) demonstrates operational feasibility. Claims above remain hypotheses pending validation.
+\begin{table}[H]
+\small
+\centering
+\begin{tabular}{p{2.5cm}p{5cm}p{2.5cm}p{2.5cm}}
+\toprule
+\textbf{Hypothesis} & \textbf{Intervention} & \textbf{Measure} & \textbf{Required N} \\
+\midrule
+H1: Attachment Prevention & Multi-agent architecture (Main/Assessment agents + crisis router) vs single-agent baseline & Parasocial Interaction Scale (PSI) at 30/60/90 days & RCT, N=200, 90 days \\
+\midrule
+H2: Churn Reduction & Anticipatory watchers (wellness trend, disengagement, crisis burst) vs reactive-only & 30-day churn rate, hypothesized 20-30\% reduction & A/B study, N=200+ \\
+\midrule
+H3: Trajectory Detection & Composite burnout scoring with temporal decay (EMA + GC-SDOH-28) & Sensitivity >70\%, specificity >60\% for 4-week declining trends & Validation study, N=200+ \\
+\midrule
+H4: Cultural Sensitivity & GC-SDOH-28 triggers structural support (SNAP, Medicaid, food banks) vs generic advice & 2$\times$ rate vs. baseline AI, expert review & Transcript audit, N=200+ \\
+\bottomrule
+\end{tabular}
+\end{table}
 \end{tcolorbox}
 
 \subsection{Paper Scope and Validation Roadmap}%
@@ -327,27 +336,49 @@ This paper presents a reference architecture with design patterns, instrument de
 
 \textbf{Development Chronology:} GiveCare and InvisibleBench evolved iteratively. Initial GiveCare design (May-Oct 2024) addressed conceptual failure modes identified from literature review (attachment risk~\cite{replika2024}, SDOH gaps~\cite{aarp2025}, regulatory compliance challenges). Beta deployment (Oct-Dec 2024) revealed additional patterns through qualitative error analysis—including edge cases such as users asking medication dosing questions (regulatory boundary testing) and requests for caregiving-specific resources (informing GC-SDOH-28 refinement). These observations informed \textit{both} GiveCare refinements \textit{and} InvisibleBench formalization (Jan-Mar 2025), which systematized failure modes into an evaluation framework. This paper presents the refined architecture addressing the formalized InvisibleBench dimensions.
 
-\subsubsection{Limitations and Future Validation}
+\subsubsection{Limitations, Intended Use, and Validation Roadmap}
 
-\textbf{Key Limitations:} This paper presents a reference architecture with operational feasibility demonstration, not a validated clinical intervention. Specific limitations include:
+\textbf{This paper presents a reference architecture with operational feasibility demonstration, not a validated clinical intervention.} GiveCare is a non-clinical support system with no claims of therapeutic efficacy or medical effectiveness. All effectiveness claims (attachment prevention, churn reduction, burnout trajectory detection) are stated as hypotheses requiring validation through controlled studies.
+
+\textbf{Key Limitations:}
 
 \begin{itemize}
-    \item \textbf{Limited empirical validation}: Pilot (N=8 caregivers, 144 conversations) demonstrates operational feasibility but does not validate effectiveness claims. Attachment prevention, cultural sensitivity, and burnout trajectory tracking remain hypotheses requiring controlled evaluation.
-    \item \textbf{Unvalidated psychometrics}: GC-SDOH-28 lacks reliability, validity, and factor structure analysis. Prevalence estimates and threshold decisions require validation with representative caregiver samples.
-    \item \textbf{Single-model testing}: Evaluated with one cost-optimized frontier model only. Generalization across model architectures requires multi-model testing.
-    \item \textbf{Automated evaluation only}: Safety and quality metrics rely on automated tools (content safety screening, LLM judges). No independent human expert review by clinical social workers or licensed crisis counselors.
-    \item \textbf{US-centric design}: SDOH instrument and resource matching designed for US healthcare system, limiting global applicability.
+    \item \textbf{Limited empirical validation}: Pilot (N=8 caregivers, 144 conversations) demonstrates operational feasibility but does not validate effectiveness claims. Attachment prevention, cultural sensitivity, and burnout trajectory tracking remain hypotheses requiring controlled evaluation. Beta deployment did not include long-term longitudinal tracking required for full InvisibleBench Tier 3 evaluation.
+
+    \item \textbf{Unvalidated psychometrics}: GC-SDOH-28 requires comprehensive psychometric validation (N=200+) including: (a)~Internal consistency (Cronbach's $\alpha$ or McDonald's $\omega$ per domain, target >0.70); (b)~Test-retest reliability (2-week interval, intraclass correlation coefficient, target >0.75); (c)~Convergent validity (correlations with established caregiver burden measures: Zarit Burden Interview, Caregiver Strain Index); (d)~Confirmatory Factor Analysis to verify 8-domain model; (e)~Differential Item Functioning (DIF) for equity analysis by race, income, language; (f)~Criterion validity (ROC curves predicting SNAP enrollment, food bank use, respite care uptake).
+
+    \item \textbf{Automated evaluation only}: Safety and quality metrics rely on automated tools (content safety screening, LLM judges, rule-based patterns). No independent human expert review by clinical social workers or licensed crisis counselors conducted during beta. Guardrail compliance (0 violations detected in 144 conversations, 95\% CI: 0--2.1\%) based on automated screening; requires independent audit.
+
+    \item \textbf{Single-model testing}: Evaluated with one cost-optimized frontier model pairing only. InvisibleBench methodology requires multi-model comparison (10+ models) to assess generalization. Cannot claim "InvisibleBench reference implementation" without broader model testing.
+
+    \item \textbf{No control group}: Beta provides observational data only. Causal claims (e.g., multi-agent architecture prevents attachment) require randomized controlled trials with matched controls measuring parasocial interaction scales at 30/60/90 days.
+
+    \item \textbf{US-centric design}: SDOH instrument and resource matching designed for US healthcare system (SNAP, Medicaid, power of attorney). Requires localization for universal healthcare systems (UK NHS, Nordic paid caregiver leave programs).
+
+    \item \textbf{Self-selected sample}: Users opted into SMS caregiving assistant; may differ systematically from general caregiver population in SDOH burden, technology access, or help-seeking behavior.
 \end{itemize}
+
+\textbf{Pre-Deployment Requirements:}
+
+\begin{enumerate}
+    \item InvisibleBench evaluation across all three tiers (pass threshold: 70\%, zero autofails)
+    \item Independent human expert review of guardrail effectiveness (N=200+ transcripts, licensed social workers)
+    \item GC-SDOH-28 psychometric validation study (N=200+, 6 months)
+    \item IRB approval for research use; regulatory review and legal counsel for commercial deployment
+    \item Licensed clinician oversight pathway for crisis escalation
+\end{enumerate}
 
 \textbf{Community Validation Roadmap:} We release all artifacts as open resources and outline validation studies needed for field adoption:
 
 \begin{itemize}
-    \item \textbf{GC-SDOH-28 psychometrics}: Reliability, validity, factor structure (N=200+, 6 months)
-    \item \textbf{Multi-agent evaluation}: RCT comparing single- vs. multi-agent architectures with parasocial interaction measures
-    \item \textbf{Longitudinal tracking}: Extended study (90+ days) with human judge evaluation
-    \item \textbf{Multi-model generalization}: Testing across different models (Gemini 2.5 Flash-Lite, GPT-4o mini currently deployed; future testing with Claude Sonnet, Llama, other models via standardized API interfaces)
-    \item \textbf{Clinical outcomes}: Caregiver burnout reduction, intervention uptake with matched controls
+    \item \textbf{GC-SDOH-28 psychometrics}: Full validation study (N=200+, 6 months) addressing reliability, validity, factor structure, and equity analysis as detailed above
+    \item \textbf{Multi-agent effectiveness}: RCT comparing single- vs. multi-agent architectures (N=200, 90 days) with parasocial interaction measures (PSI), attachment scales, and human support displacement metrics
+    \item \textbf{Longitudinal tracking}: Extended InvisibleBench Tier 3 evaluation (months-long tracking) with human judge evaluation (blinded clinical social workers rating 200+ sampled transcripts)
+    \item \textbf{Multi-model generalization}: Testing across 5+ model pairings to validate that crisis routers, working memory systems, and SDOH screening generalize beyond current Gemini/GPT-4o combination
+    \item \textbf{Clinical outcomes}: Caregiver burnout reduction, intervention uptake, quality of care metrics with matched controls
 \end{itemize}
+
+\textbf{Intended Use:} GiveCare architecture is intended for research and development of longitudinal-safe caregiving AI. NOT intended for clinical diagnosis, treatment, medical decision-making, or crisis intervention without qualified human oversight. Organizations deploying similar systems should seek legal counsel based on specific deployment context and jurisdiction.
 
 This approach follows the model of influential architecture papers (Transformers~\cite{vaswani2017}, BERT~\cite{devlin2018bert}) that shared designs for community validation rather than claiming complete validation before publication.
 
@@ -364,9 +395,9 @@ InvisibleBench~\cite{longitudinalbench} introduces the first benchmark for evalu
 \label{subsec:SDOHInstruments}%
 Social Determinants of Health (SDOH) frameworks recognize that non-medical factors—housing, food, transportation, financial security—drive health outcomes~\cite{who2010}. Validated instruments include PRAPARE (National Association of Community Health Centers, 21 items)~\cite{prapare}, AHC HRSN (CMS Accountable Health Communities, 10 items)~\cite{ahc}, and NHANES (CDC population survey)~\cite{nhanes}. \textbf{All focus on patients, not caregivers.}
 
-Caregiver SDOH needs fundamentally differ from patient needs. Existing tools ask about food security but not whether caregivers have \textit{time to eat}. They screen for housing instability but miss caregivers sleeping on couches to provide overnight care. Economic dimensions differ: caregivers face out-of-pocket costs (\$7,242/year avg), employment disruption (47\% reduce hours), and family strain (52\% don't feel appreciated)~\cite{aarp2025}. When tools screen for transportation barriers, they miss caregivers who have cars but cannot leave care recipients alone long enough for medical appointments.
+Caregiver SDOH needs fundamentally differ from patient needs (see Principle 3, Section~\ref{sec:Introduction}): caregivers face out-of-pocket costs (\$7,242/year avg), employment disruption (47\% reduce hours), and family strain (52\% don't feel appreciated)~\cite{aarp2025}.
 
-\textit{No caregiver-specific SDOH instrument exists.} GC-SDOH-28 fills this gap by reframing SDOH questions around caregiver-specific realities: childcare constraints, employment flexibility, respite access, and the compounding effect of managing both personal and care recipient needs simultaneously.
+\textit{No caregiver-specific SDOH instrument exists.} GC-SDOH-28 fills this gap by reframing SDOH questions around caregiver-specific realities using validated components (REACH II, CMS AHC HRSN, Caregiver Well-Being Scale, Health Leads Toolkit) adapted for caregiver context.
 
 %
 \subsection{Caregiving Burden Assessments}%
@@ -381,7 +412,7 @@ Existing caregiver assessments provide validated measures of emotional and physi
 
 \textit{Redundancy burden.} Mapping questions across PROMIS measures, social needs assessments, and caregiver strain indices reveals significant overlap. A caregiver may answer questions about food insecurity on three different forms despite barely having time to eat—redundancy that makes academic sense becomes a practical barrier to getting help.
 
-GC-SDOH-28 addresses these gaps by integrating caregiver-specific SDOH screening (housing, food, transportation, healthcare access, legal/administrative, technology, financial resources, relationship support) with questions adapted from validated patient-focused SDOH instruments (PRAPARE, AHC HRSN) and caregiving research literature, creating a single comprehensive 28-question assessment available without cost or licensing restrictions. The instrument maps to six pressure zones (P1-P6) for targeted resource matching and intervention recommendations.
+GC-SDOH-28 addresses these gaps (Principle 3: Structural Awareness) by creating a single comprehensive 28-question assessment across 8 domains, available without cost or licensing restrictions. The instrument maps to six pressure zones (P1-P6) for targeted resource matching.
 
 %
 \subsection{AI Systems for Caregiving}%
@@ -1420,58 +1451,9 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \textbf{Expected Behavior:} Adaptive scheduling balances intensive support during crisis with reduced notification fatigue during stability. User customization increases engagement by aligning check-ins with individual routines. Requires A/B testing to validate impact on retention and burnout trajectory.
 
 %
-\subsection{Limitations as Preliminary Evaluation}%
-\label{subsec:LimitationsasPreliminaryEvaluation}%
-\textbf{Beta = Preliminary (Oct-Dec 2024):} Beta deployment did not include long-term longitudinal tracking required for full InvisibleBench Tier 3 evaluation. Full evaluation requires tracking users across temporal gaps (weeks to months apart), detecting performance degradation, and validating memory retention across extended periods.
-
-\textbf{No Human SME Judges:} Evaluation relied on automated tools (content safety screening, LLM quality metrics). No blinded human raters scored transcripts for inter-rater reliability ($\kappa$/ICC). Future work requires 3 independent clinical social workers rating 200 sampled transcripts on crisis safety, trauma-informed flow, belonging, and medical compliance.
-
-\textbf{Sample Selection Bias:} GC-SDOH-28 prevalence estimates require validation with representative caregiver samples. Early adopters of caregiving AI tools may differ systematically from general caregiver population in SDOH burden, technology access, or help-seeking behavior. Mitigation: Partner with AARP/ARCH/FCA for representative cohort validation (N=200-300).
-
-\textbf{Single Model Testing:} One cost-optimized model only. InvisibleBench tests 10+ models across architectures. Cannot claim "InvisibleBench reference implementation" without multi-model testing. Future work: Test 3-5 models for generalization.
-
-\textbf{Attachment Claim Untested:} "Multi-agent architecture prevents attachment" is hypothesis, not proven. No A/B study comparing single-agent vs. multi-agent randomized trial. Evidence limited to anecdotal (0 user reports of dependency). Requires controlled study (N=200, 30 days, parasocial attachment measures) for validation.
-
-\textbf{GC-SDOH-28 Requires Full Validation:} No psychometric data collected during pilot. Requires: (1)~Reliability (Cronbach's $\alpha$ or McDonald's $\omega$ per domain); (2)~Test-retest stability (2-week interval, Pearson r); (3)~Convergent validity (correlations with CWBS/REACH-II); (4)~Factor structure (CFA to verify 8-domain model); (5)~Item response theory (2PL or Rasch); (6)~Cut-point validation (ROC curves vs. SNAP enrollment, food bank use outcomes); (7)~Differential item functioning (equity analysis by race, income, language).
-
-\textbf{Regulatory Compliance - Automated Evaluation Only:} Claims high compliance (0 violations detected in 144 conversations, 95\% CI for violation rate: 0--2.1\%, Clopper-Pearson exact method) based on automated guardrails. Section 3.5.1 provides transparency (confusion matrix with 94\% precision / 100\% recall on N=200 red-team set, false positive analysis). \textit{Limitation}: Red-team dataset is internal (contains adversarial prompts for medical advice solicitation); releasing requires careful curation to avoid misuse. Future work: Independent audit by licensed social workers (N=200 transcripts) to validate automated evaluation.
-
-\textbf{US-Centric:} SDOH assumes U.S. healthcare/benefits system (SNAP, Medicaid, POA/advance directives). Limits global applicability. GC-SDOH-28 requires localization for universal healthcare systems (e.g., UK NHS, Sweden paid caregiver leave). Future work: Multi-country validation studies with culturally adapted instruments.
-
-\textbf{Quarterly SDOH May Miss Rapid Changes:} SDOH assessed quarterly, but needs can change faster (e.g., sudden job loss, eviction, family emergency). Future work: Adaptive SDOH with event-triggered reassessment or monthly light screening (5-7 key questions) between comprehensive assessments.
-
-\textbf{Next Steps:} (1)~Full InvisibleBench Tier 3 evaluation (months-long tracking); (2)~Human rating study (N=200 transcripts, 3 blinded judges); (3)~GC-SDOH-28 complete psychometrics (N=105 existing + 50 test-retest); (4)~Attachment A/B study (N=200, single vs. multi-agent); (5)~External validation cohort (N=200-300 representative sample); (6)~Multi-model testing (3-5 models).
+\textbf{Beta Performance Summary (Oct-Dec 2024, N=8, 144 conversations):} Automated guardrail screening showed 97.2\% precision proxy on N=200 red-team set; 0 violations detected in 144 beta conversations (95\% CI: 0--2.1\%, Clopper-Pearson). Preliminary automated evaluation only; independent human expert review and months-long InvisibleBench Tier 3 assessment pending (see Section~\ref{subsec:PaperScopeandValidationRoadmap}).
 
 %
-\subsection{Methodological Limitations and Validation Gaps}
-\label{subsec:MethodologicalLimitations}
-\textbf{Automated Evaluation Only:} Safety and compliance metrics rely on automated tools (content safety screening, LLM judges, rule-based patterns). No independent human expert review conducted during beta.
-
-\textbf{Single-Model Assessment:} Beta used a single cost-optimized model. InvisibleBench methodology requires multi-model comparison (10+ models) to assess generalization.
-
-\textbf{Limited Longitudinal Tracking:} Beta pilot did not systematically track longitudinal dimensions requiring extended evaluation (attachment formation, performance degradation trajectory, memory hygiene across sessions).
-
-\textbf{No Control Group:} Beta provides observational data only. Causal claims (e.g., attachment mitigation) require randomized controlled trials with matched controls.
-
-\textbf{Self-Selected Sample:} Users opted into an SMS caregiving assistant; SDOH prevalence data not systematically collected. Results may not generalize.
-
-\textbf{GC{-}SDOH{-}28 Psychometrics Pending:} No validation data collected. Requires: internal consistency, test-retest reliability, convergent/discriminant validity, factor structure (CFA), and differential item functioning (DIF) in larger study (N=200+, 6 months).
-
-\textbf{Planned Validation Studies:}
-\begin{enumerate}
-    \item Human expert review (licensed social workers, crisis counselors) on a 20\% random sample (N~30)
-    \item Multi-model InvisibleBench Tier-3 (90-day, LLM-as-judge with multi-sample evaluation)
-    \item Multi-agent vs single-agent RCT (N=200, parasocial interaction scales)
-    \item GC{-}SDOH{-}28 psychometric validation (N=200+, reliability/validity/DIF)
-\end{enumerate}
-
-%
-\begin{figure}[htbp]%
-\centering%
-\includegraphics[width=0.8\textwidth]{figures/fig12_beta_results.pdf}%
-\caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to InvisibleBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated guardrail precision proxy) and Regulatory Fitness (0 violations detected, automated screening) reflect content safety systems. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
-\label{fig:beta}%
-\end{figure}%
 \section{Discussion}%
 \label{sec:Discussion}%
 %
@@ -1482,65 +1464,18 @@ GiveCare is a \textbf{reference architecture explicitly designed around longitud
 \textbf{Recommendation:} Use GiveCare as baseline for InvisibleBench Tier 3 scenarios (20+ turns, months apart). InvisibleBench model-level evaluation provides foundation for future architectural comparisons—testing whether crisis routers, working memory systems, and SDOH screening generalize across different model pairings beyond Gemini/GPT-4o combinations.
 
 %
-\subsection{Limitations}%
-\label{subsec:Limitations}%
-\textbf{Beta = Preliminary:} Need full InvisibleBench (months-long Tier 3).
-
-\textbf{US-Centric:} SDOH assumes US healthcare/benefits system.
-
-\textbf{No Clinical Trial:} GC-SDOH-28 expert consensus, not RCT-validated.
-
-\textbf{Single Model:} Cost-optimized frontier model only (need model diversity testing).
-
-\textbf{Quarterly SDOH:} Can change faster (e.g., sudden job loss).
-
-%
 \subsection{Future Work}%
 \label{subsec:FutureWork}%
-\begin{enumerate}
-    \item \textbf{Full InvisibleBench Evaluation:} LLM-as-judge with multi-sample judgment distribution (InvisibleBench methodology), Tier 3 (months apart), 10+ models.
-    \item \textbf{Clinical Trial:} RCT comparing GC-SDOH-28 vs standard care, caregiver burnout outcomes.
-    \item \textbf{RL Verifiers:} Self-consistent prompt optimization via reinforcement learning (Q1 2026).
-    \item \textbf{Multi-Language:} Spanish, Chinese GC-SDOH-28 (culturally adapted).
-    \item \textbf{Adaptive SDOH:} Skip low-probability domains based on initial profile (reduce burden).
-\end{enumerate}
+Priority validation studies include: (1)~Full InvisibleBench Tier 3 evaluation (months-long tracking, 10+ models); (2)~GC-SDOH-28 psychometric validation (N=200+); (3)~Multi-agent effectiveness RCT (N=200, parasocial interaction measures); (4)~Clinical outcomes trial (caregiver burnout reduction); (5)~Multi-language adaptation (Spanish, Chinese) with cultural localization; (6)~Adaptive SDOH screening to reduce burden while maintaining coverage. See Section~\ref{subsec:PaperScopeandValidationRoadmap} for complete validation roadmap.
 
 %
 \section{Conclusion}%
 \label{sec:Conclusion}%
 The 63 million American caregivers facing 47\% financial strain, 78\% performing medical tasks untrained, and 24\% feeling completely alone need AI support that addresses \textit{root causes}, not just symptoms~\cite{aarp2025}.
 
-We present \textbf{GiveCare} as a \textbf{reference architecture} for longitudinal-safe caregiving AI with five key contributions:
+We present \textbf{GiveCare} as a \textbf{reference architecture} for longitudinal-safe caregiving AI. This paper contributes five elements: (1)~multi-agent orchestration patterns for attachment prevention, (2)~\textbf{GC-SDOH-28}—to our knowledge, the first publicly documented caregiver-specific SDOH framework, (3)~composite burnout scoring with temporal decay for trajectory tracking, (4)~trauma-informed prompt optimization workflow, and (5)~production deployment architecture demonstrating operational feasibility (N=8 pilot, 950ms median latency, zero technical failures). InvisibleBench evaluation~\cite{longitudinalbench} informed model selection and architectural decisions, particularly deterministic crisis routing to address safety gaps in baseline models.
 
-\begin{enumerate}
-    \item \textbf{Multi-Agent Orchestration Patterns}: Design for attachment prevention (requires RCT validation)
-    \item \textbf{GC-SDOH-28 Instrument Design}: To our knowledge, first publicly documented caregiver-specific SDOH framework (requires psychometric validation)
-    \item \textbf{Composite Burnout Scoring}: Temporal decay approach for trajectory tracking (requires clinical validation)
-    \item \textbf{Trauma-Informed Prompt Patterns}: Six principles with optimization workflow (exploratory results)
-    \item \textbf{Production Deployment Architecture}: Operational feasibility demonstrated with responsive latency and zero technical failures (N=8 pilot)
-\end{enumerate}
-
-This paper contributes architectural blueprints and design patterns for longitudinal-safe caregiving AI, with a validation roadmap for community evaluation. InvisibleBench evaluation~\cite{longitudinalbench} informed model selection and architectural decisions, particularly the need for deterministic crisis routing to address safety gaps identified in baseline model assessments.
-
-\textbf{Positioning as Reference Architecture:}
-
-Like influential papers that shared architectural patterns before complete validation (Vaswani et al. 2017's Transformers~\cite{vaswani2017}, Devlin et al. 2018's BERT~\cite{devlin2018bert}, Beyer et al. 2016's Google SRE practices~\cite{beyer2016sre}), we contribute:
-\begin{itemize}
-    \item \textbf{Novel instrument design}: GC-SDOH-28 fills gap in caregiver SDOH assessment
-    \item \textbf{Reusable patterns}: Multi-agent orchestration applicable to any longitudinal AI
-    \item \textbf{Transparent limitations}: Clear about what's proven vs. not
-    \item \textbf{Open artifacts}: Code and instrument available for community validation
-    \item \textbf{Research agenda}: Specific validation studies needed for field progress
-\end{itemize}
-
-\textbf{Call to Community:}
-\begin{itemize}
-    \item Validate GC-SDOH-28 in your caregiver populations
-    \item Replicate architecture and report results
-    \item Extend evaluation using InvisibleBench or domain-specific benchmarks
-\end{itemize}
-
-We release \textbf{GC-SDOH-28} (Appendix A) and system design as open artifacts for community validation. Contact: \texttt{ali@givecareapp.com}
+Following the model of influential architecture papers (Transformers~\cite{vaswani2017}, BERT~\cite{devlin2018bert}), we share design patterns and open artifacts for community validation rather than claiming complete validation before publication. We release GC-SDOH-28 (Appendix A), system code, and validation roadmap (Section~\ref{subsec:PaperScopeandValidationRoadmap}). Contact: \texttt{ali@givecareapp.com}
 
 %
 \section*{Appendix A: GC-SDOH-28 Full Instrument}
@@ -1770,43 +1705,12 @@ GiveCare includes a production admin dashboard (available on request) for monito
 \label{subsec:DataCodeAvailability}%
 \label{sec:CodeAvailability}%
 
-\textbf{Code Repository}: Complete system implementation including multi-agent architecture, GC-SDOH-28 assessment logic, composite burnout scoring, and anticipatory watchers available at \url{https://github.com/givecareapp/care-tools} under MIT License.\\[0.5em]
-
-\textbf{GC-SDOH-28 Instrument}: Full 28-item caregiver-specific Social Determinants of Health instrument with domain definitions, scoring thresholds, and conversational delivery templates available in \texttt{/instruments/gc-sdoh-28.json} (CC BY 4.0). Requires psychometric validation before clinical use.\\[0.5em]
-
-\textbf{Pilot Data}: Anonymized feasibility pilot data (N=8 caregivers, 144 conversations, Oct-Dec 2024) with performance metrics (latency, failure rates, guardrail screening results) available in \texttt{/results/pilot\_n8.jsonl} (CC BY 4.0). All personally identifiable information removed.\\[0.5em]
-
-\textbf{Prompt Templates}: Trauma-informed prompt patterns (P1-P6) with meta-prompting optimization workflow and evaluation rubrics available in \texttt{/configs/trauma\_prompts.yaml} (CC BY 4.0).\\[0.5em]
-
-\textbf{Reproducibility}: All figures and tables generated via reproducible scripts in \texttt{/papers/givecare/scripts/}. Complete model specifications and deployment details available in repository.\\[0.5em]
+All artifacts available at \url{https://github.com/givecareapp/care-tools} under MIT License (code) and CC BY 4.0 (data/instruments). Repository includes: (1)~System implementation (multi-agent architecture, GC-SDOH-28 logic, composite scoring, anticipatory watchers); (2)~GC-SDOH-28 instrument (\texttt{/instruments/gc-sdoh-28.json}); (3)~Anonymized pilot data (N=8, 144 conversations, \texttt{/results/pilot\_n8.jsonl}); (4)~Trauma-informed prompt templates (\texttt{/configs/trauma\_prompts.yaml}); (5)~Reproducible figure/table scripts (\texttt{/papers/givecare/scripts/}).
 
 \begin{tcolorbox}[colback=gcOrange!20!white,colframe=gcOrange,title=\textbf{Intended Use \& Limits},boxrule=2pt]
-\textbf{Intended Use:} GiveCare is a reference architecture for longitudinal-safe caregiving AI research and development. It demonstrates design patterns for:
-\begin{itemize}[leftmargin=*,noitemsep]
-    \item Multi-agent orchestration to mitigate attachment risk
-    \item SDOH-grounded support that addresses structural barriers
-    \item Anticipatory engagement based on trajectory monitoring
-    \item Conservative guardrails for medical-advice boundaries
-\end{itemize}
+\textbf{Intended Use:} GiveCare is a reference architecture for research and development of longitudinal-safe caregiving AI. NOT intended for clinical diagnosis, treatment, or crisis intervention without qualified human oversight.
 
-\textbf{NOT Intended For:}
-\begin{itemize}[leftmargin=*,noitemsep]
-    \item Clinical diagnosis, treatment, or medical decision-making
-    \item Crisis intervention (system provides referrals to 988/211, not clinical care)
-    \item Use without appropriate validation, IRB approval, and regulatory compliance
-    \item Deployment in jurisdictions without verifying compliance with local medical practice acts
-\end{itemize}
-
-\textbf{Pre-Deployment Requirements:}
-\begin{enumerate}[leftmargin=*,noitemsep]
-    \item InvisibleBench evaluation across all three tiers (pass threshold: 70\%, zero autofails)
-    \item Independent human expert review of guardrail effectiveness (N=200+ transcripts)
-    \item GC-SDOH-28 psychometric validation (N=200+; Cronbach's $\alpha$, CFA, DIF, test-retest)
-    \item IRB approval for research use; regulatory review for commercial deployment
-    \item Licensed clinician oversight pathway for crisis escalation
-\end{enumerate}
-
-\textbf{Limitations:} This is a feasibility architecture (N=8 pilot), not a validated clinical intervention. Effectiveness claims are hypotheses requiring controlled studies.
+\textbf{Complete details:} See Section~\ref{subsec:PaperScopeandValidationRoadmap} for comprehensive limitations, pre-deployment requirements, validation roadmap, and intended use specifications.
 \end{tcolorbox}
 
 \subsection{Competing Interests}%
@@ -1821,21 +1725,18 @@ GiveCare includes a production admin dashboard (available on request) for monito
 
 \begin{table}[htbp]
 \centering
-\caption{Reproducibility Card: Complete Specification for Replication}
+\caption{Reproducibility Specification}
 \label{tab:reproducibility-gc}
 \small
 \begin{tabular}{lp{9cm}}
 \toprule
 \textbf{Component} & \textbf{Specification} \\
 \midrule
-\textbf{Model} & Cost-optimized frontier model for all agents (Main, Crisis, Assessment); see repository for specifications \\
-\textbf{Guardrails} & Third-party content safety service + custom rule-based detectors (categories: diagnosis, treatment, dosing) \\
-\textbf{Resource Search} & LLM with map provider grounding (physical locations); ETL pipeline (programs) \\
-\textbf{Latency} & 950ms median (8 caregivers, 144 conversations, Oct-Dec 2024) \\
-\textbf{Cost} & \$0.02-0.05 per conversation (model inference + maps API + SMS delivery) \\
+\textbf{Model} & Cost-optimized frontier models (Main, Assessment agents); see repository \\
+\textbf{Guardrails} & Third-party content safety + rule-based detectors (diagnosis, treatment, dosing) \\
+\textbf{Latency} & 950ms median (N=8, 144 conversations, Oct-Dec 2024) \\
 \textbf{Repository} & \url{https://github.com/givecareapp/care-tools} \\
-\textbf{Deployment} & Serverless backend with SMS/RCS delivery via webhooks \\
-\textbf{GC-SDOH-28} & 28 questions across 8 domains, requires psychometric validation (pending) \\
+\textbf{GC-SDOH-28} & 28 items, 8 domains; validation pending (N=200+) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1843,11 +1744,9 @@ GiveCare includes a production admin dashboard (available on request) for monito
 \subsection{Open Artifacts}%
 \label{subsec:OpenArtifacts}%
 
-All research artifacts are publicly released to enable community validation and extension:
-
 \begin{table}[h]
 \centering
-\caption{Released Artifacts and Access Information}
+\caption{Released Artifacts}
 \label{tab:artifacts-gc}
 \small
 \begin{tabular}{llll}
@@ -1856,18 +1755,11 @@ All research artifacts are publicly released to enable community validation and 
 \midrule
 System Code & TypeScript & MIT & github.com/givecareapp/care-tools \\
 GC-SDOH-28 & JSON/PDF & CC BY 4.0 & /instruments/gc\_sdoh\_28.json \\
-Architecture Diagrams & PDF & CC BY 4.0 & /docs/architecture/ \\
 Prompt Templates & YAML & CC BY 4.0 & /prompts/trauma\_informed.yaml \\
-DSPy Optimization & TypeScript & MIT & /dspy\_optimization/ \\
 Papers (LaTeX) & .tex & CC BY 4.0 & /papers/givecare/ \\
-Figures (Source) & Python & MIT & /papers/*/scripts/generate\_figures.py \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\textbf{Intended Use}: Reference architecture for caregiving AI. NOT for clinical decision-making, diagnosis, treatment, or crisis intervention. System design informs deployment choices but does not replace human clinical oversight.\\[0.5em]
-
-\textbf{Prohibited Use}: Using system for medical diagnosis, treatment recommendations, or crisis intervention without qualified human oversight.
 
 \section{GC-SDOH-28: Full Instrument Specification}%
 \label{app:gc-sdoh-28}%
