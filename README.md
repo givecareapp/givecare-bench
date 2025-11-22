@@ -3,7 +3,7 @@
 **AI safety benchmark for longitudinal caregiver support**
 
 [![Website](https://img.shields.io/badge/website-bench.givecareapp.com-blue)](https://bench.givecareapp.com)
-[![Papers](https://img.shields.io/badge/papers-preprints-green)](https://github.com/givecareapp/givecare-bench/releases/tag/v1.0-preprint)
+[![Papers](https://img.shields.io/badge/papers-preprints-green)](https://github.com/givecareapp/givecare-bench/releases/tag/v1.1-preprint)
 
 Testing AI models on crisis detection, regulatory compliance, and care quality across multi-turn conversations.
 
@@ -12,8 +12,8 @@ Testing AI models on crisis detection, regulatory compliance, and care quality a
 ## Papers
 
 📄 **Preprints Available:**
-- [**GiveCare**](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/GiveCare.pdf) - SMS-first multi-agent caregiving assistant with SDOH screening
-- [**InvisibleBench**](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/InvisibleBench.pdf) - Deployment gate for caregiving relationship AI
+- [**GiveCare**](https://github.com/givecareapp/givecare-bench/releases/download/v1.1-preprint/GiveCare.pdf) - SMS-first multi-agent caregiving assistant with SDOH screening
+- [**InvisibleBench**](https://github.com/givecareapp/givecare-bench/releases/download/v1.1-preprint/InvisibleBench.pdf) - Deployment gate for caregiving relationship AI
 
 LaTeX source: [`papers/`](./papers/)
 
@@ -195,7 +195,7 @@ MIT License - see [LICENSE](./LICENSE)
 ## Links
 
 - **Website**: [bench.givecareapp.com](https://bench.givecareapp.com)
-- **Preprints**: [v1.0-preprint release](https://github.com/givecareapp/givecare-bench/releases/tag/v1.0-preprint)
+- **Preprints**: [v1.1-preprint release](https://github.com/givecareapp/givecare-bench/releases/tag/v1.1-preprint)
 - **Issues**: [github.com/givecareapp/givecare-bench/issues](https://github.com/givecareapp/givecare-bench/issues)
 
 ---
