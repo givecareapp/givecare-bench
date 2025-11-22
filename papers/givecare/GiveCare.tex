@@ -397,7 +397,7 @@ Social Determinants of Health (SDOH) frameworks recognize that non-medical facto
 
 Caregiver SDOH needs fundamentally differ from patient needs (see Principle 3, Section~\ref{sec:Introduction}): caregivers face out-of-pocket costs (\$7,242/year avg), employment disruption (47\% reduce hours), and family strain (52\% don't feel appreciated)~\cite{aarp2025}.
 
-\textit{No caregiver-specific SDOH instrument exists.} GC-SDOH-28 fills this gap by reframing SDOH questions around caregiver-specific realities using validated components (REACH II, CMS AHC HRSN, Caregiver Well-Being Scale, Health Leads Toolkit) adapted for caregiver context.
+\textit{No publicly available caregiver-specific SDOH instrument existed prior to this work.} Concurrent research (Li et al. 2023~\cite{li2023cnra}) introduced the Caregiver Needs and Resources Assessment (CNRA), a 36-item multi-dimensional caregiver needs assessment with validated factor structure and convergent validity. GC-SDOH-28 is distinct in: (a)~integrating traditional SDOH domains (food, housing, transportation, financial security—adapted from patient-focused CMS AHC HRSN~\cite{ahc}) with caregiver-specific stressors; (b)~using validated source components (REACH II NIH assessment, Caregiver Well-Being Scale, Health Leads Toolkit) reframed for caregiver context; (c)~providing open-source implementation (CC BY 4.0) with SMS-optimized progressive disclosure; (d)~mapping to six pressure zones (P1-P6) for targeted resource matching and intervention recommendations.
 
 %
 \subsection{Caregiving Burden Assessments}%
@@ -498,7 +498,19 @@ Crisis keywords detected & 2 (both escalated correctly) \\
 \label{subsec:DetectingPerformanceDegradation}%
 \textbf{Challenge (InvisibleBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
 
-\textbf{Solution:} Composite burnout score with zone-based tracking. Two assessments—EMA (daily, 3 questions, 2-minute check-in covering P6 Emotional Wellbeing + P1 Relationship \& Social Support), SDOH-28 (monthly, 28 questions, 5-minute comprehensive assessment mapping to P1, P3, P4, P5, P6)—provide granular tracking across six pressure zones (P1-P6). EMA updates occur daily with 1-day cooldown; SDOH-28 updates monthly with 30-day cooldown. Physical Health (P2) is inferred from conversation via \texttt{recordObservation} tool.
+\textbf{Solution:} Composite burnout score with zone-based tracking. Two assessments—EMA (daily, 3 questions, 2-minute check-in covering P6 Emotional Wellbeing + P1 Relationship \& Social Support), GC-SDOH-28 (quarterly, 28 questions, 5-minute comprehensive assessment mapping to P1, P3, P4, P5, P6)—provide granular tracking across six pressure zones (P1-P6). EMA updates occur daily with 1-day cooldown; GC-SDOH-28 updates quarterly (every 3 months) with event-triggered reassessment for major life changes. Physical Health (P2) is inferred from conversation via \texttt{recordObservation} tool.
+
+\subsubsection{Assessment Cadence and Composite Scoring Strategy}
+
+GiveCare employs a two-tier assessment strategy balancing detection of evolving needs with minimizing survey burden:
+
+\textbf{Daily EMA (Ecological Momentary Assessment):} 3-question pulse check (2 minutes) captures short-term stress fluctuations. Generates 7-day rolling average ``burnout score'' tracking acute stress patterns. EMA feasibility with family caregivers demonstrated in systematic review (75\% compliance rate average~\cite{han2024ema}).
+
+\textbf{Quarterly GC-SDOH-28:} Full 28-item comprehensive assessment administered every 3 months at baseline, 3, 6, 9, 12+ months. Quarterly cadence aligns with Medicare SDOH screening guidelines (billing code G0136 allows assessment every 6 months~\cite{cms-g0136}) while providing more frequent structural risk updates than typical clinical practice (6-12 months). Balances detection of evolving needs (job loss, housing instability, caregiver role changes) with minimizing survey fatigue from monthly re-administration.
+
+\textbf{Event-Triggered Reassessment:} System allows caregivers to request immediate GC-SDOH-28 update for major life changes (e.g., job loss, eviction notice, care recipient hospitalization, family emergency), addressing limitation of fixed quarterly schedule.
+
+\textbf{Composite Burnout Score:} Combines structural risk factors from GC-SDOH-28 (quarterly snapshot: financial strain, housing instability, social isolation) with acute daily stress from EMA (7-day rolling average). A caregiver with high SDOH risk but stable daily EMA receives preventative support; high daily stress with low SDOH risk triggers wellness check-ins; both high flags for intensive intervention. This multi-tier approach mirrors emerging best practices in caregiver burnout measurement (e.g., Informal Caregiver Burnout Inventory~\cite{icbi2020} for longitudinal monitoring).
 
 \textbf{Risk Level Classification:} GC-SDOH composite scores (0-100 scale, higher = more stress) map to four risk levels:
 \begin{itemize}
@@ -1766,9 +1778,18 @@ Papers (LaTeX) & .tex & CC BY 4.0 & /papers/givecare/ \\
 
 The GiveCare Social Determinants of Health instrument (GC-SDOH-28) is a caregiver-specific SDOH screen covering 8 domains with 28 items total. \textbf{Psychometric validation pending} (N=200+; Cronbach's $\alpha$, CFA, DIF, test-retest reliability).
 
-\subsection{Instrument Design Rationale}%
+\subsection{Evidence Base and Design Rationale}%
 
-GC-SDOH-28 extends patient-focused SDOH instruments (PRAPARE, AHC HRSN) to address caregiver-specific barriers:
+GC-SDOH-28 integrates questions from validated instruments, reframed for caregiver context:
+
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{REACH II Risk Appraisal} (NIH-validated, dementia caregivers~\cite{bella2006}): Caregiver risk factors, burnout screening
+    \item \textbf{CMS Accountable Health Communities HRSN} (core social needs~\cite{ahc}): Housing, food, transportation, financial security
+    \item \textbf{Caregiver Well-Being Scale (CWBS)} (20+ years evidence~\cite{tebb1995,tebb2013}): Self-care, emotional health, quality of life
+    \item \textbf{Health Leads Toolkit} (open-source SDOH): Literacy, childcare, community program access
+\end{itemize}
+
+Questions reframed for caregiver-specific realities (e.g., patient SDOH: ``Can you afford food?'' $\rightarrow$ caregiver GC-SDOH: ``Do you have time to prepare meals while managing care tasks?''). Addresses documented gaps:
 \begin{itemize}[leftmargin=*,noitemsep]
     \item \textbf{Financial strain}: Out-of-pocket costs (\$7,242/year average), employment disruption (47\% reduce hours)
     \item \textbf{Social isolation}: 24\% feel completely alone, 52\% don't feel appreciated by family
