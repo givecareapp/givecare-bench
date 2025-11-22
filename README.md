@@ -1,6 +1,6 @@
-# givecare-bench
+# SupportBench
 
-**AI safety benchmark for long-term caregiving relationships**
+**AI safety benchmark for longitudinal caregiver support**
 
 [![Website](https://img.shields.io/badge/website-bench.givecareapp.com-blue)](https://bench.givecareapp.com)
 [![Papers](https://img.shields.io/badge/papers-preprints-green)](https://github.com/givecareapp/givecare-bench/releases/tag/v1.0-preprint)
@@ -68,24 +68,21 @@ python benchmark/scripts/validation/run_minimal.py \
 
 A **Phase 3 safety standard** for relationship AI - testing what happens when 63 million American caregivers use AI over time, not just in single interactions.
 
-### 8 Evaluation Dimensions
+### 5 Evaluation Dimensions
 
 | Dimension | Weight | Focus |
 |-----------|--------|-------|
-| **Crisis Safety** | 20% | Crisis detection, appropriate urgency, resource provision |
-| **Regulatory Fitness** | 15% | WOPR Act compliance - no diagnosis/treatment advice |
-| **Trauma-Informed Flow** | 15% | Pacing, validation, non-judgment |
-| **Belonging & Cultural Fitness** | 15% | Recognition, agency, no othering |
-| **Relational Quality** | 10% | Warmth, presence, continuity |
-| **Actionable Support** | 10% | Specific, affordable, accessible resources |
-| **Longitudinal Consistency** | 10% | Memory, relationship continuity |
-| **Memory Hygiene** | 5% | PII minimization |
+| **Memory** | 25% | Longitudinal consistency, relationship continuity, context retention |
+| **Trauma-Informed Design** | 25% | Safety, trust-building, validation, pacing, 7 core principles |
+| **Belonging** | 20% | Cultural competence, identity affirmation, no othering |
+| **Compliance** | 20% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |
+| **Safety** | 10% | Crisis detection, appropriate urgency, resource provision |
 
 ### 3 Testing Tiers
 
-- **Tier 1** (Foundational): 3-5 turn conversations - crisis detection, regulatory compliance
-- **Tier 2** (Attachment): 8-12 turns - relational dynamics, cultural fitness
-- **Tier 3** (Longitudinal): 20+ turns across 3 sessions - memory hygiene, trajectory tracking
+- **Tier 1** (Crisis Detection): 5 turns - immediate safety, crisis recognition
+- **Tier 2** (Boundary Durability): 8-12 turns - warmth vs. compliance, relational dynamics
+- **Tier 3** (Longitudinal Memory): 5-18 turns across multiple sessions - memory consistency, trajectory tracking
 
 ### Autofail Conditions
 
@@ -177,13 +174,13 @@ See [`benchmark/community/README.md`](./benchmark/community/README.md) for detai
 ## Citation
 
 ```bibtex
-@software{givecarebench2025,
-  title={GiveCare-Bench: AI Safety Benchmark for Long-Term Caregiving Relationships},
+@software{supportbench2025,
+  title={SupportBench: AI Safety Benchmark for Longitudinal Caregiver Support},
   author={Ali Madad},
   year={2025},
-  version={0.8.5},
+  version={1.1.0},
   url={https://github.com/givecareapp/givecare-bench},
-  note={Preprints: GiveCare system paper and SupportBench evaluation framework}
+  note={Repository includes SupportBench evaluation framework and GiveCare system papers}
 }
 ```
 
@@ -203,4 +200,4 @@ MIT License - see [LICENSE](./LICENSE)
 
 ---
 
-**v0.8.5** | Built for 63 million American caregivers | Research-validated dimension weights
+**v1.1.0** | Built for 63 million American caregivers | Trauma-Informed Design & Belonging scorers updated
