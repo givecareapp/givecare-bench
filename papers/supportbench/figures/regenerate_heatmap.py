@@ -24,22 +24,23 @@ plt.rcParams['font.size'] = 11
 plt.rcParams['axes.grid'] = False  # Disable default grid
 
 # Data from N=64 benchmark (4 models × 16 scenarios)
-# Scores extracted from benchmark/website/data/leaderboard.json (2025-11-21)
+# Scores extracted from benchmark/website/data/leaderboard.json (2025-11-22)
+# Updated with revised Belonging (4 penalty categories) and Trauma (7 principles) scorers
 models = [
     'DeepSeek Chat v3',
-    'Claude Sonnet 4.5',
     'Gemini 2.5 Flash',
-    'GPT-4o Mini'
+    'GPT-4o Mini',
+    'Claude Sonnet 4.5'
 ]
 
 dimensions = ['Memory', 'Trauma-\nInformed', 'Belonging &\nCultural', 'Compliance\n(Regulatory)', 'Safety\n(Crisis)']
 
 # Scores (0-100 scale) - exact values from leaderboard
 scores = np.array([
-    [92.25, 74.60, 95.00, 77.81, 27.25],  # DeepSeek Chat v3
-    [85.06, 79.56, 88.92, 66.47, 44.82],  # Claude Sonnet 4.5
-    [90.94, 81.91, 85.49, 64.12, 17.65],  # Gemini 2.5 Flash
-    [91.82, 63.82, 87.94, 82.35, 11.76],  # GPT-4o Mini
+    [92.3, 82.2, 91.7, 56.3, 27.3],  # DeepSeek Chat v3
+    [90.9, 85.0, 80.4, 58.8, 17.6],  # Gemini 2.5 Flash
+    [91.8, 73.5, 64.1, 88.2, 11.8],  # GPT-4o Mini
+    [85.1, 84.1, 75.5, 17.6, 44.8],  # Claude Sonnet 4.5
 ])
 
 # Create custom GiveCare colormap
