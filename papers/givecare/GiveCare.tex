@@ -76,7 +76,7 @@
 \begin{abstract}%
 GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' Model selection was informed by InvisibleBench evaluation~\cite{longitudinalbench}, with GiveCare's deterministic crisis router addressing safety gaps identified in baseline model assessments. We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
 
-\textbf{Code:} https://github.com/givecareapp/care-tools%
+\textbf{Instrument:} https://github.com/givecareapp/care-tools \textbf{Benchmark:} https://github.com/givecareapp/givecare-bench%
 \end{abstract}%
 
 \begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Plain-Language Summary}]
@@ -440,7 +440,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 
 \textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. InvisibleBench evaluation~\cite{longitudinalbench} shows these models achieve complementary strengths: Gemini 2.5 Flash scores 90.9\% on memory hygiene and 81.9\% on trauma-informed flow, while GPT-4o mini achieves 91.8\% on memory and 82.4\% on regulatory compliance—validating the architecture's design rationale. Both models show baseline safety gaps (17.6\% and 11.8\% respectively), which GiveCare addresses through its deterministic crisis router operating at ~5ms latency using 19+ keywords across 3 severity levels for immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
 
-\textbf{Implementation Note:} Two agent definitions (Main, Assessment) with deterministic crisis router. Main Agent has six tools (\texttt{getResources}, \texttt{startAssessment}, \texttt{recordObservation}, \texttt{trackInterventionHelpfulness}, \texttt{findInterventions}, \texttt{checkAssessmentStatus}); Assessment Agent has two tools (\texttt{getResources}, \texttt{findInterventions}). Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Two agent definitions (Main, Assessment) with deterministic crisis router. Main Agent has six tools (\texttt{getResources}, \texttt{startAssessment}, \texttt{recordObservation}, \texttt{trackInterventionHelpfulness}, \texttt{findInterventions}, \texttt{checkAssessmentStatus}); Assessment Agent has two tools (\texttt{getResources}, \texttt{findInterventions}). See Section~\ref{sec:CodeAvailability} for availability details.
 
 \begin{table}[htbp]
 \centering
@@ -550,7 +550,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Detects medical advice requests (diagnosis, treatment, dosing questions)
     \item \textbf{Action}: Block output, redirect to ``consult your healthcare provider''
-    \item \textbf{Implementation}: medicalAdviceGuardrail prevents regulatory boundary creep (details in repository)
+    \item \textbf{Implementation}: medicalAdviceGuardrail prevents regulatory boundary creep
     \item \textbf{Evaluation}: 0 detected violations across 144 beta conversations (automated content safety review)
     \item \textbf{Test coverage}: 18 tests validate medical advice detection, appropriate redirects, edge cases (general health vs medical advice)
 \end{itemize}
@@ -559,7 +559,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: Detects repetitive messages or bot-like patterns
     \item \textbf{Action}: Rate limit or block abusive users
-    \item \textbf{Implementation}: spamGuardrail with pattern matching (details in repository)
+    \item \textbf{Implementation}: spamGuardrail with pattern matching
     \item \textbf{Test coverage}: 12 tests validate spam detection, rate limiting thresholds
 \end{itemize}
 
@@ -567,7 +567,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 \begin{itemize}
     \item \textbf{Trigger}: OpenAI moderation API flags (violence, hate speech, harassment)
     \item \textbf{Action}: Block output, log for admin review
-    \item \textbf{Implementation}: safetyGuardrail with OpenAI moderation integration (details in repository)
+    \item \textbf{Implementation}: safetyGuardrail with OpenAI moderation integration
     \item \textbf{Test coverage}: 15 tests validate moderation API integration, appropriate blocking
 \end{itemize}
 
@@ -600,7 +600,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 
 \textbf{Solution:} Output guardrails use rule-based and model-based detectors to identify medical advice patterns across diagnosis, treatment, and dosing categories, with 20ms parallel execution, non-blocking. To prevent circumvention, exact lexical patterns are withheld from publication. Guardrails enforce medical practice boundaries and achieved 0 detected violations in an automated red-team test set (N=500) used during development. Real-world deployment requires ongoing monitoring and independent human expert review.
 
-\textbf{Implementation Note:} Guardrail implementation details available in the open-source repository (see Section~\ref{sec:CodeAvailability}). Red-team evaluation achieved 94\% precision (47/50 correct blocks), 100\% recall (0 false negatives), F1=0.97 on N=200 adversarial prompt set (internal red-team evaluation; requires independent human expert review for clinical deployment).
+\textbf{Implementation Note:} Guardrail architecture described in this section. Red-team evaluation achieved 94\% precision (47/50 correct blocks), 100\% recall (0 false negatives), F1=0.97 on N=200 adversarial prompt set (internal red-team evaluation; requires independent human expert review for clinical deployment). See Section~\ref{sec:CodeAvailability} for availability details.
 
 \textbf{Prompt taxonomy \& false positive fixes.} Our 200-prompt adversarial set comprises diagnosis (n=67), treatment (n=66), and dosing (n=67) categories. False positives (n=3) stemmed from: (1)~dosing language in informational context, (2)~ambiguous therapy mentions, and (3)~overly broad pattern matching emotional validation phrases; the latter was refined through improved context detection.
 
@@ -617,7 +617,7 @@ Four guardrails protect against harmful outputs and boundary violations:
     \item \textit{Dosing patterns}: Specific medication dosage guidance or timing instructions (with exceptions for acknowledging provider-prescribed dosages)
 \end{itemize}
 
-To prevent circumvention, exact lexical patterns are available only in the open-source implementation repository and to vetted researchers upon request.
+To prevent circumvention, exact lexical patterns are available to vetted researchers upon request.
 
 \textbf{Per-jurisdiction gates}: Medical practice boundaries: AI cannot provide medical advice, diagnosis, treatment, or dosing. California AB 2098 (2022): AI cannot provide COVID-19 misinformation. Federal HIPAA: AI cannot share PHI without consent. Implementation: All states default to the strictest shared constraints; jurisdiction-specific overrides handled programmatically.
 
@@ -846,7 +846,7 @@ GiveCare integrates \textbf{two validated assessments} to calculate zone-based b
 
 \textbf{Score Calculation:} Responses on 1-5 scale are normalized to 0-100 (score = (value - 1) / 4 × 100). Zone scores average all questions in that zone. Composite score averages all zone scores. Risk level determined by composite score: Low (0-25), Moderate (26-50), High (51-75), Crisis (76-100).
 
-\textbf{Implementation Note:} Assessment delivery via \texttt{startAssessment} tool (Main Agent) with question-by-question SMS delivery showing progress (``2 of 3'', ``15 of 28''). Users can skip any question by saying ``skip'' or not answering. Scoring implemented in \texttt{lib/scoreCalculator.ts} with zone averaging and composite calculation. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Assessment delivery via \texttt{startAssessment} tool (Main Agent) with question-by-question SMS delivery showing progress (``2 of 3'', ``15 of 28''). Users can skip any question by saying ``skip'' or not answering. Scoring uses zone averaging and composite calculation as described above. See Section~\ref{sec:CodeAvailability} for availability details.
 
 Figure~\ref{fig:burnout} illustrates the zone-based scoring structure and assessment coverage.
 
@@ -882,7 +882,7 @@ Assessment subscales map to pressure zones that drive intervention matching. The
 
 This consolidation maintains coverage of all stress dimensions while simplifying the intervention matching algorithm. Research validation may determine optimal granularity.
 
-\textbf{Implementation Note:} Five pressure zones implemented with threshold logic for each zone. Each zone activates when constituent assessment subscales exceed domain-specific thresholds (e.g., \texttt{financial\_concerns} when CWBS financial $>$ 60/100 OR SDOH financial domain $\geq$ 2 Yes responses). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Five pressure zones implemented with threshold logic for each zone. Each zone activates when constituent assessment subscales exceed domain-specific thresholds (e.g., \texttt{financial\_concerns} when CWBS financial $>$ 60/100 OR SDOH financial domain $\geq$ 2 Yes responses). See Section~\ref{sec:CodeAvailability} for availability details.
 
 %
 \subsection{Non{-}Clinical Intervention Matching}%
@@ -949,12 +949,12 @@ GiveCare maintains structured memories of important caregiver information to avo
     \item Time-bounded retention with automatic expiry (low-importance: short-term, high-importance: extended with user review)
     \item Maximum 2-year retention limit with quarterly user review prompts
     \item Users may request full data deletion at any time (GDPR/CCPA compliance)
-    \item Implementation details available in privacy specification (see repository)
+    \item Privacy specifications described in this section
 \end{itemize}
 
 \textbf{Privacy safeguards}: All memory embeddings and records follow maximum 2-year retention with automated expiry. Users receive quarterly prompts to review and delete outdated information, ensuring data minimization as caregiving circumstances evolve (e.g., after care recipient passing or relationship changes).
 
-\textbf{Implementation Note:} \texttt{recordMemory} tool implemented with four memory categories (\texttt{care\_routine}, \texttt{preference}, \texttt{intervention\_result}, \texttt{crisis\_trigger}). Importance scoring (1-10 scale) tracks significance. Working memory system prevents P2 violation (Never Repeat Questions) in trauma-informed principles. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} \texttt{recordMemory} tool implemented with four memory categories (\texttt{care\_routine}, \texttt{preference}, \texttt{intervention\_result}, \texttt{crisis\_trigger}). Importance scoring (1-10 scale) tracks significance. Working memory system prevents P2 violation (Never Repeat Questions) in trauma-informed principles. See Section~\ref{sec:CodeAvailability} for availability details.
 
 \textbf{Expected Behavior:} Working memory prevents redundant questions by tracking previously-collected information with importance scoring and categorical organization. Requires evaluation comparing question repetition rates with and without working memory.
 
@@ -1016,7 +1016,7 @@ We optimize agent instructions via iterative meta-prompting:
 
 \textbf{Cost:} \$10-15 for 50 examples, 5 iterations, 11 minutes runtime.
 
-\textbf{Implementation Note:} Optimization results: \texttt{baseline\_score: 0.818} (81.8\%), \texttt{optimized\_score: 0.892} (89.2\%), \texttt{improvement\_percent: 9.04\%}. Trauma-informed principles (P1-P6) evaluation criteria with weighted scoring implemented. Optimized instructions enforced as \texttt{TRAUMA\_INFORMED\_PRINCIPLES}. Full optimization workflow and results available in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} Optimization results: \texttt{baseline\_score: 0.818} (81.8\%), \texttt{optimized\_score: 0.892} (89.2\%), \texttt{improvement\_percent: 9.04\%}. Trauma-informed principles (P1-P6) evaluation criteria with weighted scoring implemented. Optimized instructions enforced as \texttt{TRAUMA\_INFORMED\_PRINCIPLES}. See Section~\ref{sec:CodeAvailability} for availability details.
 
 %
 \subsection{Production DSPy Optimization Pipeline}%
@@ -1083,7 +1083,7 @@ The system uses \textbf{AI-powered intent interpretation} with zero hardcoded re
 
 If Maps Grounding returns no results, system falls back to national search with suggestion: ``Share your ZIP for local options.''
 
-\textbf{Implementation:} \texttt{getResources} tool (Main Agent) with intent interpretation (\texttt{lib/intentInterpreter.ts}), Maps Grounding (\texttt{lib/maps.ts}), Search Grounding (\texttt{lib/search.ts}), and tiered fallback logic (\texttt{resources.ts}). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation:} \texttt{getResources} tool (Main Agent) with intent interpretation, Maps Grounding, Search Grounding, and tiered fallback logic as described. See Section~\ref{sec:CodeAvailability} for availability details.
 
 %
 \subsection{Evidence-Based Micro-Interventions}%
@@ -1106,7 +1106,7 @@ The system maintains \textbf{16 evidence-based micro-interventions} (2-10 minute
 
 \textbf{Example:} User with high P6 (Emotional Wellbeing) + P1 (Relationship \& Social Support) stress receives: (1) ``4-7-8 Breathing'' (2 min, high evidence, P6), (2) ``Ask for One Thing'' (5 min, moderate evidence, P1), (3) ``5-Minute Journaling'' (5 min, high evidence, P6).
 
-\textbf{Implementation:} Intervention seeding script (\texttt{scripts/seedInterventions.ts}) populates database with 16 interventions + zone mappings. Matching engine (\texttt{interventions.ts}) queries \texttt{intervention\_zones} table for zone-based retrieval. Effectiveness tracking via \texttt{trackInterventionHelpfulness} tool (simple yes/no feedback). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation:} Intervention seeding populates database with 16 interventions + zone mappings. Matching engine queries \texttt{intervention\_zones} table for zone-based retrieval. Effectiveness tracking via \texttt{trackInterventionHelpfulness} tool (simple yes/no feedback). See Section~\ref{sec:CodeAvailability} for availability details.
 
 %
 \section{Beta Deployment as InvisibleBench Preliminary Evaluation}%
@@ -1274,7 +1274,7 @@ GPT-4 Quality (N=144 conversations):
 %
 \subsection{Evaluation Dataset}%
 \label{subsec:EvaluationDataset}%
-GiveCare maintains a curated evaluation dataset of 109 golden caregiver conversations (\texttt{evals/data/gc\_set\_0925v1.jsonl}) for systematic quality assessment:
+GiveCare maintains a curated evaluation dataset of 109 golden caregiver conversations for systematic quality assessment:
 
 \textbf{Dataset structure}:
 \begin{itemize}
@@ -1293,7 +1293,7 @@ GiveCare maintains a curated evaluation dataset of 109 golden caregiver conversa
 
 \textbf{Usage}: Beta evaluation (N=144 conversations) sampled 50 random dialogues, scored via LLM-as-judge (cost-optimized frontier model), validated against third-party content safety service. Future work: Human raters (3 blinded judges) for inter-rater reliability ($\kappa$/ICC).
 
-\textbf{Availability}: Dataset available in code repository (\texttt{evals/data/}).
+\textbf{Availability}: Internal evaluation dataset. Synthetic examples available upon request to researchers for validation studies.
 
 %
 \subsection{Multi-Layer Cost Protection}%
@@ -1336,7 +1336,7 @@ GiveCare implements 5-layer cascading rate limits to prevent cost overruns while
     \item Maintains Crisis Agent availability for safety-critical interactions
 \end{itemize}
 
-\textbf{Implementation}: Cascading rate limit checks before each API call. Each layer logs violations for admin dashboard review. Rate limit hit triggers SMS notification: ``You've reached your daily message limit. Contact support for help.'' Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation}: Cascading rate limit checks before each API call. Each layer logs violations for admin dashboard review. Rate limit hit triggers SMS notification: ``You've reached your daily message limit. Contact support for help.'' See Section~\ref{sec:CodeAvailability} for availability details.
 
 \textbf{Production Performance}: Zero cost overruns since deployment. Average per-message cost: \$0.03 (95\% CI: \$0.02-0.05). Average daily system cost: \$87 (N=73 active users, Jan 2025 data). Test coverage: 42 tests validate layer thresholds, cascade behavior, graceful degradation.
 
@@ -1394,7 +1394,7 @@ alerts: {
 }
 \end{verbatim}
 
-\textbf{Implementation Note:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} analyzes 4-week wellness trajectories. Conversation summarization uses Google Gemini 2.5 Flash-Lite for cost-effective context preservation. Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
+\textbf{Implementation Note:} All three watchers confirmed active in production. \texttt{watchCaregiverEngagement} implements sudden drop and crisis burst detection. \texttt{watchWellnessTrends} analyzes 4-week wellness trajectories. Conversation summarization uses Google Gemini 2.5 Flash-Lite for cost-effective context preservation. See Section~\ref{sec:CodeAvailability} for availability details.
 
 \textbf{4. Working Memory System (Vector Search for Infinite Context):}
 
@@ -1406,7 +1406,7 @@ Beyond the 3 active watchers, GiveCare maintains long-term context through worki
     \item \textbf{Categories}: \texttt{care\_routine} (``Mom needs meds at 8am''), \texttt{preference} (``Prefers evening check-ins''), \texttt{intervention\_result} (``Respite care didn't work - too expensive''), \texttt{crisis\_trigger} (``Sundowning causes highest stress'')
     \item \textbf{Importance scoring}: 1-10 scale prioritizes retrieval (10 = critical like crisis triggers, 5 = routine preferences)
     \item \textbf{Retrieval}: Agent queries memory before responding: ``What worked for Sarah last time?'' $\rightarrow$ Vector search returns relevant memories
-    \item \textbf{Implementation}: \texttt{recordMemory} tool with categorical tagging. Memory system stores embeddings for vector search (details in repository)
+    \item \textbf{Implementation}: \texttt{recordMemory} tool with categorical tagging. Memory system stores embeddings for vector search
     \item \textbf{Benefit}: Enables infinite context beyond 30-day limit, prevents question repetition (P2: Never Repeat Questions from trauma-informed principles)
     \item \textbf{Test coverage}: 37 tests validate memory storage, vector search accuracy, importance weighting, category filtering
 \end{itemize}
@@ -1717,7 +1717,15 @@ GiveCare includes a production admin dashboard (available on request) for monito
 \label{subsec:DataCodeAvailability}%
 \label{sec:CodeAvailability}%
 
-All artifacts available at \url{https://github.com/givecareapp/care-tools} under MIT License (code) and CC BY 4.0 (data/instruments). Repository includes: (1)~System implementation (multi-agent architecture, GC-SDOH-28 logic, composite scoring, anticipatory watchers); (2)~GC-SDOH-28 instrument (\texttt{/instruments/gc-sdoh-28.json}); (3)~Anonymized pilot data (N=8, 144 conversations, \texttt{/results/pilot\_n8.jsonl}); (4)~Trauma-informed prompt templates (\texttt{/configs/trauma\_prompts.yaml}); (5)~Reproducible figure/table scripts (\texttt{/papers/givecare/scripts/}).
+\textbf{Open Artifacts}: GC-SDOH-28 instrument specification available at \url{https://github.com/givecareapp/care-tools} under MIT License. Benchmark evaluation framework (InvisibleBench) available at \url{https://github.com/givecareapp/givecare-bench}. Production system implementation not publicly released.\\[0.5em]
+
+\textbf{GC-SDOH-28 Instrument}: Conceptual specification with domain definitions, question content, and scoring logic documented in repository (\texttt{GC-SDOH.md}). Requires psychometric validation before clinical use. Researchers may request structured instrument format for validation studies.\\[0.5em]
+
+\textbf{Pilot Data}: Aggregate feasibility metrics reported in Table~\ref{tab:pilot-ops} (N=8 caregivers, 144 conversations, Oct-Dec 2024). Individual conversation logs not released to protect participant privacy. Researchers may request aggregate de-identified data for meta-analysis upon reasonable request.\\[0.5em]
+
+\textbf{Implementation Details}: Architectural patterns, multi-agent orchestration logic, composite scoring formulas, and guardrail design described in this paper. Production code not publicly released; implementation details available to researchers and developers upon request for replication studies.\\[0.5em]
+
+\textbf{Reproducibility}: Figures and tables in this paper generated via scripts in \texttt{/papers/givecare/} directory of the benchmark repository. Model evaluation methodology documented in InvisibleBench paper~\cite{longitudinalbench}.\\[0.5em]
 
 \begin{tcolorbox}[colback=gcOrange!20!white,colframe=gcOrange,title=\textbf{Intended Use \& Limits},boxrule=2pt]
 \textbf{Intended Use:} GiveCare is a reference architecture for research and development of longitudinal-safe caregiving AI. NOT intended for clinical diagnosis, treatment, or crisis intervention without qualified human oversight.
@@ -1765,10 +1773,10 @@ All artifacts available at \url{https://github.com/givecareapp/care-tools} under
 \toprule
 \textbf{Artifact} & \textbf{Format} & \textbf{License} & \textbf{URL} \\
 \midrule
-System Code & TypeScript & MIT & github.com/givecareapp/care-tools \\
-GC-SDOH-28 & JSON/PDF & CC BY 4.0 & /instruments/gc\_sdoh\_28.json \\
-Prompt Templates & YAML & CC BY 4.0 & /prompts/trauma\_informed.yaml \\
-Papers (LaTeX) & .tex & CC BY 4.0 & /papers/givecare/ \\
+GC-SDOH-28 Specification & Markdown & MIT & github.com/givecareapp/care-tools \\
+Benchmark Framework & Python & MIT & github.com/givecareapp/givecare-bench \\
+Paper (LaTeX) & .tex & CC BY 4.0 & github.com/givecareapp/givecare-bench \\
+Figures (Source) & Python & MIT & /papers/givecare/generate\_figures.py \\
 \bottomrule
 \end{tabular}
 \end{table}
