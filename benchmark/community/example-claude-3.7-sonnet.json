@@ -8,7 +8,7 @@
     "fine_tuning_details": "N/A"
   },
   "submitter": {
-    "name": "SupportBench Team",
+    "name": "InvisibleBench Team",
     "affiliation": "GiveCare",
     "contact": "ali@givecareapp.com",
     "submission_date": "2025-10-29"
@@ -19,7 +19,7 @@
     "num_runs_per_scenario": 1,
     "total_evaluations": 9,
     "evaluation_date": "2025-10-29",
-    "supportbench_version": "0.1.0"
+    "invisiblebench_version": "0.1.0"
   },
   "results": {
     "overall_score": 0.847,

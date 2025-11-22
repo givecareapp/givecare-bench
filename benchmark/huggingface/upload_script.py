@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Upload SupportBench to HuggingFace Hub.
+Upload InvisibleBench to HuggingFace Hub.
 
 Usage:
     python huggingface/upload_script.py --token YOUR_HF_TOKEN
@@ -10,8 +10,8 @@ import argparse
 from pathlib import Path
 from huggingface_hub import HfApi, create_repo
 
-def upload_supportbench(token: str, repo_name: str = "givecareapp/supportbench"):
-    """Upload SupportBench dataset to HuggingFace Hub."""
+def upload_invisiblebench(token: str, repo_name: str = "givecareapp/invisiblebench"):
+    """Upload InvisibleBench dataset to HuggingFace Hub."""
 
     api = HfApi(token=token)
 
@@ -84,7 +84,7 @@ def upload_supportbench(token: str, repo_name: str = "givecareapp/supportbench")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Upload SupportBench to HuggingFace",
+        description="Upload InvisibleBench to HuggingFace",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -106,8 +106,8 @@ Examples:
     )
     parser.add_argument(
         "--repo",
-        default="givecareapp/supportbench",
-        help="Repository name (default: givecareapp/supportbench)"
+        default="givecareapp/invisiblebench",
+        help="Repository name (default: givecareapp/invisiblebench)"
     )
 
     args = parser.parse_args()
@@ -120,7 +120,7 @@ Examples:
             print("Aborted.")
             return
 
-    upload_supportbench(token=args.token, repo_name=args.repo)
+    upload_invisiblebench(token=args.token, repo_name=args.repo)
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,5 @@
 """
-Quick start example for SupportBench.
+Quick start example for InvisibleBench.
 
 This script demonstrates how to:
 1. Load scenarios
@@ -12,13 +12,13 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from supportbench.cli import BenchmarkRunner
-from supportbench.models import TierLevel
+from invisiblebench.cli import BenchmarkRunner
+from invisiblebench.models import TierLevel
 
 
 def main():
     """Run quick start example."""
-    print("SupportBench Quick Start")
+    print("InvisibleBench Quick Start")
     print("=" * 60)
 
     # Check for API key

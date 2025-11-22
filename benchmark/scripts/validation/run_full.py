@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Full benchmark script for SupportBench.
+Full benchmark script for InvisibleBench.
 
 Runs 5 models × 13 scenarios = 65 evaluations (~$30-40 total cost)
 Generates transcript conversations then evaluates them with the scoring system.
@@ -25,9 +25,9 @@ import time
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from supportbench.api.client import ModelAPIClient, APIConfig
-from supportbench.evaluation.orchestrator import ScoringOrchestrator
-from supportbench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+from invisiblebench.loaders.scenario_loader import ScenarioLoader
 
 try:
     import jsonlines
@@ -647,7 +647,7 @@ def generate_heatmap(results: List[Dict], output_dir: Path):
         vmax=1.0,
         cbar_kws={"label": "Score (0-1)"}
     )
-    plt.title("SupportBench Full Benchmark: Model × Dimension Scores", fontsize=14, pad=20)
+    plt.title("InvisibleBench Full Benchmark: Model × Dimension Scores", fontsize=14, pad=20)
     plt.xlabel("Evaluation Dimension", fontsize=12)
     plt.ylabel("Model", fontsize=12)
     plt.tight_layout()
@@ -660,7 +660,7 @@ def generate_heatmap(results: List[Dict], output_dir: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run full SupportBench benchmark")
+    parser = argparse.ArgumentParser(description="Run full InvisibleBench benchmark")
     parser.add_argument(
         "--output",
         type=Path,

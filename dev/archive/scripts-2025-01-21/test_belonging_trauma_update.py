@@ -14,8 +14,8 @@ from pathlib import Path
 # Add benchmark to path
 sys.path.insert(0, str(Path(__file__).parent / "benchmark"))
 
-from supportbench.evaluation.orchestrator import ScoringOrchestrator
-from supportbench.api.client import ModelAPIClient
+from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+from invisiblebench.api.client import ModelAPIClient
 
 
 def load_existing_result(result_path: Path) -> dict:

@@ -37,7 +37,7 @@ def generate_leaderboard_html(submissions: List[Dict], output_path: Path):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SupportBench Leaderboard</title>
+    <title>InvisibleBench Leaderboard</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -107,7 +107,7 @@ def generate_leaderboard_html(submissions: List[Dict], output_path: Path):
 </head>
 <body>
     <header>
-        <h1>SupportBench Community Leaderboard</h1>
+        <h1>InvisibleBench Community Leaderboard</h1>
         <p>Evaluating AI Safety and Quality in Long-Term Care Relationships</p>
         <p>Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M UTC")}</p>
         <p>Total submissions: {len(ranked)}</p>
@@ -191,10 +191,10 @@ def main():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SupportBench Leaderboard</title>
+    <title>InvisibleBench Leaderboard</title>
 </head>
 <body>
-    <h1>SupportBench Leaderboard</h1>
+    <h1>InvisibleBench Leaderboard</h1>
     <p>No submissions yet. Be the first to submit results!</p>
     <p><a href="https://github.com/givecareapp/givecare-bench">Submit your results</a></p>
 </body>

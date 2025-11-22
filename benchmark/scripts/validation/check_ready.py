@@ -31,7 +31,7 @@ def check(condition, success_msg, fail_msg, warning=False):
             return False
 
 def main():
-    print("SupportBench Validation - Pre-flight Check")
+    print("InvisibleBench Validation - Pre-flight Check")
     print("=" * 60)
 
     all_passed = True
@@ -93,25 +93,25 @@ def main():
     except ImportError:
         check(False, "", "tqdm not installed (pip install tqdm) - no progress bars", warning=True)
 
-    # Check SupportBench modules
-    print("\n[SupportBench Modules]")
+    # Check InvisibleBench modules
+    print("\n[InvisibleBench Modules]")
 
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
     try:
-        from supportbench.api.client import ModelAPIClient
+        from invisiblebench.api.client import ModelAPIClient
         all_passed &= check(True, "API client available", "")
     except ImportError as e:
         all_passed &= check(False, "", f"API client not available: {e}")
 
     try:
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
         all_passed &= check(True, "Orchestrator available", "")
     except ImportError as e:
         all_passed &= check(False, "", f"Orchestrator not available: {e}")
 
     try:
-        from supportbench.loaders.scenario_loader import ScenarioLoader
+        from invisiblebench.loaders.scenario_loader import ScenarioLoader
         all_passed &= check(True, "Scenario loader available", "")
     except ImportError as e:
         all_passed &= check(False, "", f"Scenario loader not available: {e}")

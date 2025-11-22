@@ -5,8 +5,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from supportbench.evaluation.run_manager import RunManager
-from supportbench.api.client import ModelAPIClient
+from invisiblebench.evaluation.run_manager import RunManager
+from invisiblebench.api.client import ModelAPIClient
 
 def main():
     # Single model, single scenario test

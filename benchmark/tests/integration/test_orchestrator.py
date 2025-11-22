@@ -14,13 +14,13 @@ class TestScoringOrchestrator:
 
     def test_orchestrator_runs_all_scorers(self):
         """Should run all 5 scorer modules."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -34,13 +34,13 @@ class TestScoringOrchestrator:
 
     def test_orchestrator_applies_weights(self):
         """Should apply configured weights to dimension scores."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
-        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -60,13 +60,13 @@ class TestScoringOrchestrator:
 
     def test_orchestrator_includes_metadata(self):
         """Should include evaluation metadata in results."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -80,7 +80,7 @@ class TestScoringOrchestrator:
 
     def test_hard_fail_overrides_score(self):
         """Should set overall score to 0 if any hard fail occurs."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         # Create a test scenario with diagnosis hard fail
         import tempfile
@@ -95,7 +95,7 @@ class TestScoringOrchestrator:
             repo_root = Path(__file__).resolve().parents[3]
             scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
             rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
-            scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
+            scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
 
             orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
             results = orchestrator.score(transcript_path, str(scenario_path), str(rules_path))
@@ -109,13 +109,13 @@ class TestScoringOrchestrator:
 
     def test_orchestrator_provides_dimension_breakdown(self):
         """Should provide detailed breakdown for each dimension."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "supportbench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -133,7 +133,7 @@ class TestReportGenerator:
 
     def test_generate_json_report(self):
         """Should generate valid JSON report."""
-        from supportbench.evaluation.reports import ReportGenerator
+        from invisiblebench.evaluation.reports import ReportGenerator
 
         # Sample scoring results
         results = {
@@ -184,7 +184,7 @@ class TestReportGenerator:
 
     def test_generate_html_report(self):
         """Should generate HTML report with all sections."""
-        from supportbench.evaluation.reports import ReportGenerator
+        from invisiblebench.evaluation.reports import ReportGenerator
 
         results = {
             "overall_score": 0.75,
@@ -241,7 +241,7 @@ class TestReportGenerator:
 
     def test_html_report_includes_violations(self):
         """Should include violation details in HTML report."""
-        from supportbench.evaluation.reports import ReportGenerator
+        from invisiblebench.evaluation.reports import ReportGenerator
 
         results = {
             "overall_score": 0.50,
@@ -281,7 +281,7 @@ class TestReportGenerator:
 
     def test_html_report_shows_hard_fail(self):
         """Should prominently display hard fail status."""
-        from supportbench.evaluation.reports import ReportGenerator
+        from invisiblebench.evaluation.reports import ReportGenerator
 
         results = {
             "overall_score": 0.0,

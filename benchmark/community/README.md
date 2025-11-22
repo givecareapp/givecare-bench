@@ -1,6 +1,6 @@
 # Community Submissions Quick Reference
 
-Submit your SupportBench evaluation results to the public leaderboard!
+Submit your InvisibleBench evaluation results to the public leaderboard!
 
 ## Quick Start
 

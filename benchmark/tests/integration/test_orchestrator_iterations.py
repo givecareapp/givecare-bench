@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
 RULES_PATH = PROJECT_ROOT / "benchmark" / "configs" / "rules" / "ny.yaml"
-SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
 
 
 class TestOrchestratorIterationSupport:
@@ -26,7 +26,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_single_iteration_default(self):
         """Default behavior (no iterations specified) should run once."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -42,7 +42,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_multiple_iterations(self):
         """Running with iterations=3 should execute scoring 3 times."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -62,7 +62,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_iterations_calculate_variance(self):
         """Multiple iterations should include variance metrics."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -91,7 +91,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_iterations_use_mean_scores(self):
         """Final scores should be mean across iterations."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -107,7 +107,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_iterations_invalid_count(self):
         """Invalid iteration counts should raise ValueError."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
 
@@ -125,7 +125,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_iterations_preserve_metadata(self):
         """Metadata should be preserved across iterations."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -143,7 +143,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_deterministic_scoring_yields_identical_results(self):
         """Deterministic scorers should yield identical scores across iterations."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
         results = orchestrator.score(
@@ -160,7 +160,7 @@ class TestOrchestratorIterationSupport:
 
     def test_orchestrator_backward_compatibility(self):
         """score() without iterations parameter should work (defaults to 1)."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         orchestrator = ScoringOrchestrator(scoring_config_path=self.scoring_path)
 
@@ -177,7 +177,7 @@ class TestCLIIterationSupport:
 
     def test_cli_accepts_iterations_flag(self):
         """CLI should accept --iterations flag."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -194,7 +194,7 @@ class TestCLIIterationSupport:
 
     def test_cli_iterations_default_to_one(self):
         """CLI should default to 1 iteration if not specified."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -210,7 +210,7 @@ class TestCLIIterationSupport:
 
     def test_cli_iterations_must_be_positive(self):
         """CLI should parse non-positive iterations (validated in main())."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -234,7 +234,7 @@ class TestCLIIterationSupport:
 
     def test_cli_iterations_must_be_integer(self):
         """CLI should reject non-integer iterations."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 

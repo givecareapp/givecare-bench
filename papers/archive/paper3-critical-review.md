@@ -9,7 +9,7 @@
 ## Key Strengths
 
 1. **SDOH Integration**: GC-SDOH-28 with strong qualitative evidence (82% financial strain detection, SNAP enrollment case study)
-2. **Multi-Agent Architecture**: Designed around SupportBench failure modes with concrete triggers, guardrails, watchlists, summarization
+2. **Multi-Agent Architecture**: Designed around InvisibleBench failure modes with concrete triggers, guardrails, watchlists, summarization
 3. **Operational Rigor**: Clear economics ($1.52/user/month), latency metrics, background watchers, Maps vs ETL tradeoffs, reproducible prompt-optimization
 4. **Transparency**: Guardrail confusion matrix, trauma-informed scoring pipeline, releases instrument/code for validation
 
@@ -107,7 +107,7 @@
 - SMS resource list control
 
 **Metrics**:
-- Human raters (licensed social workers) for SupportBench dimensions
+- Human raters (licensed social workers) for InvisibleBench dimensions
 - User-reported attachment scales
 - Publish: Schedule, sample size calculations, attrition mitigation
 

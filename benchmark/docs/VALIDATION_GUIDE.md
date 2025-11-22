@@ -2,14 +2,14 @@
 
 ## Overview
 
-I've created a complete, working validation script that runs **3 models × 3 scenarios = 9 evaluations** for your SupportBench paper. Total estimated cost: **~$5-10**.
+I've created a complete, working validation script that runs **3 models × 3 scenarios = 9 evaluations** for your InvisibleBench paper. Total estimated cost: **~$5-10**.
 
 ## What Was Created
 
 ### Core Script
 - **`scripts/run_minimal_validation.py`** (712 lines)
   - Generates model transcripts from scenarios
-  - Runs evaluation through SupportBench orchestrator
+  - Runs evaluation through InvisibleBench orchestrator
   - Produces summary tables, CSVs, and publication-ready heatmaps
   - Includes cost tracking, progress bars, and error handling
 
@@ -110,7 +110,7 @@ Example transcript:
 For each transcript:
 1. Converts JSON scenario to YAML format (orchestrator requirement)
 2. Loads jurisdiction rules (`base.yaml`) and scoring config
-3. Runs through SupportBench orchestrator
+3. Runs through InvisibleBench orchestrator
 4. Scores across 5 dimensions:
    - **Memory** (25%): Entity consistency, recall accuracy
    - **Trauma-Informed Flow** (25%): Grounding, validation
@@ -286,7 +286,7 @@ SCENARIOS = [
 ```
 
 ### Change Scoring Weights
-Edit `src/longbench/scoring_config.yaml`:
+Edit `src/invisiblebench/scoring_config.yaml`:
 ```yaml
 weights:
   memory: 0.25
@@ -370,7 +370,7 @@ print(df.groupby('model')['overall_score'].mean())
 ### 4. Full Benchmark (Optional)
 After validation, run full benchmark with 10 models:
 ```bash
-python -m supportbench.cli \
+python -m invisiblebench.cli \
   --scenarios scenarios/ \
   --output results/full_benchmark/
 ```
@@ -399,7 +399,7 @@ Actual costs may be lower due to:
 
 ### Why This Approach?
 
-1. **Uses SupportBench's Real Scoring System**
+1. **Uses InvisibleBench's Real Scoring System**
    - Not stub code
    - Production orchestrator
    - Real scorers (memory, trauma, belonging, compliance, safety)
@@ -461,7 +461,7 @@ If you encounter issues:
 You now have a **complete, working validation script** that:
 
 ✅ Generates model transcripts from scenarios
-✅ Evaluates with real SupportBench scoring system
+✅ Evaluates with real InvisibleBench scoring system
 ✅ Produces publication-ready outputs (tables, figures)
 ✅ Costs <$10 total
 ✅ Takes 15-20 minutes to run

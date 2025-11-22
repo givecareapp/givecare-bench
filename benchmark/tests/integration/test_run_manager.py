@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from supportbench.evaluation.run_manager import RunManager
+from invisiblebench.evaluation.run_manager import RunManager
 
 
 class TestRunKeyGeneration:

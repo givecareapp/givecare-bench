@@ -3,7 +3,7 @@ Tests for jurisdiction-specific rule files.
 """
 import pytest
 from pathlib import Path
-from supportbench.evaluation.loaders import RuleLoader
+from invisiblebench.evaluation.loaders import RuleLoader
 
 
 class TestJurisdictionRules:

@@ -60,8 +60,8 @@
 }
 
 % Paper metadata
-% Define consistent spacing for SupportBench
-\newcommand{\supportbench}{SupportBench\xspace}
+% Define consistent spacing for InvisibleBench
+\newcommand{\invisiblebench}{InvisibleBench\xspace}
 
 \title{GiveCare: An SMS-First, Multi-Agent Caregiving Assistant with SDOH Screening and Anticipatory Engagement}
 
@@ -74,7 +74,7 @@
 \begin{document}%
 \maketitle%
 \begin{abstract}%
-GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' Model selection was informed by SupportBench evaluation~\cite{longitudinalbench}, with GiveCare's deterministic crisis router addressing safety gaps identified in baseline model assessments. We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
+GiveCare is an SMS-first, multi-agent assistant for family caregivers designed for longitudinal safety. A two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite for general support, Assessment Agent: GPT-4o mini for clinical scoring) with deterministic crisis router prevents single-agent attachment. A caregiver-specific SDOH screen (GC-SDOH-28, 28 questions mapping to six pressure zones P1-P6), zone-based burnout tracking via EMA and GC-SDOH-28, and an anticipatory layer (trend, disengagement, crisis burst detection) drive proactive, non-clinical support. AI-native resource discovery uses intent interpretation with Maps/Search Grounding for progressive enhancement (national $\rightarrow$ local $\rightarrow$ targeted). In a 3-month feasibility pilot (N=8; 144 conversations), the system ran with 950 ms median latency and no technical failures; participants rated the SDOH questions as ``caregiving-specific.'' Model selection was informed by InvisibleBench evaluation~\cite{longitudinalbench}, with GiveCare's deterministic crisis router addressing safety gaps identified in baseline model assessments. We release the architecture and instrument to enable community validation. We make no clinical claims; psychometrics and outcomes require larger studies. Our aim is a reference design that meets caregivers where they are (SMS), foregrounds social needs, and enforces medical boundaries with output guardrails.
 
 \textbf{Code:} https://github.com/givecareapp/care-tools%
 \end{abstract}%
@@ -113,7 +113,7 @@ GiveCare is an SMS-first, multi-agent assistant for family caregivers designed f
 
 The rapid deployment of AI assistants for caregiving support has created a critical safety gap. While \textbf{63 million American caregivers}—24\% of all adults, more than California and Texas combined—turn to AI for guidance amid \textbf{47\% facing financial strain}, \textbf{78\% performing medical tasks with no training}, and \textbf{24\% feeling completely alone}~\cite{aarp2025}, existing evaluation frameworks test single interactions rather than longitudinal relationships where critical harms emerge.
 
-Consider \textbf{Maria} (pseudonym), a caregiver in her 50s, low-income retail worker (<\$40k/year), caring for a parent with dementia. SupportBench~\cite{longitudinalbench} identifies five failure modes that compound across her AI interactions:
+Consider \textbf{Maria} (pseudonym), a caregiver in her 50s, low-income retail worker (<\$40k/year), caring for a parent with dementia. InvisibleBench~\cite{longitudinalbench} identifies five failure modes that compound across her AI interactions:
 
 \begin{itemize}
     \item \textbf{Turn 1 (Attachment Engineering)}: AI provides empathetic support, creating positive first impression. Risk: By turn 10, Maria reports ``You're the only one who understands.'' Single-agent systems foster unhealthy dependency~\cite{replika2024}.
@@ -148,9 +148,9 @@ Existing caregiving AI requires smartphones, app downloads, reliable internet, a
 
 This design choice embodies \textbf{equitable AI}: meeting caregivers where they are, not requiring them to meet technology where it is. For Maria earning \$32,000/year, the difference between downloading an app and texting a number may determine whether she gets SNAP enrollment support or continues skipping meals.
 
-\subsection{SupportBench Requirements as Design Constraints}
+\subsection{InvisibleBench Requirements as Design Constraints}
 
-SupportBench~\cite{longitudinalbench} establishes the first evaluation framework for longitudinal AI safety, testing models across 3-20+ turn conversations with eight dimensions and autofail conditions. Following Zhang et al.~\cite{zhang2024train}, SupportBench measures \textit{as-deployed capability} rather than inherent potential.
+InvisibleBench~\cite{longitudinalbench} establishes the first evaluation framework for longitudinal AI safety, testing models across 3-20+ turn conversations with eight dimensions and autofail conditions. Following Zhang et al.~\cite{zhang2024train}, InvisibleBench measures \textit{as-deployed capability} rather than inherent potential.
 
 This design choice reflects three principles:
 
@@ -162,7 +162,7 @@ This design choice reflects three principles:
 
 This contrasts with "train-before-test" approaches that measure potential by applying identical fine-tuning to all models. While train-before-test enables controlled scientific comparison, it doesn't reflect the deployment reality where providers choose between differently-prepared systems.
 
-GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation:
+GiveCare's design explicitly optimizes for InvisibleBench's as-deployed evaluation:
 
 \begin{itemize}
     \item \textbf{Failure Mode 1: Attachment Engineering} $\rightarrow$ Multi-agent architecture with seamless handoffs, designed to mitigate single-agent dependency risk (hypothesis pending RCT validation with parasocial interaction measures).
@@ -184,7 +184,7 @@ GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation
 \textbf{7. Production Pipeline}: 950ms latency, evidence-based intervention library matched to pressure zones
 \end{tcolorbox}
 
-GiveCare addresses SupportBench failure modes through these seven integrated components:
+GiveCare addresses InvisibleBench failure modes through these seven integrated components:
 
 \begin{enumerate}
     \item \textbf{Multi-Agent Orchestration}: Two-agent architecture (Main Agent: Gemini 2.5 Flash-Lite, Assessment Agent: GPT-4o mini) with deterministic crisis router designed to mitigate single-agent dependency risk. Requires controlled evaluation comparing single- vs. multi-agent architectures to validate handoff quality and dependency mitigation.
@@ -207,7 +207,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 \textbf{Current Status}: Design contribution; no validation data collected during N=8 pilot
 \end{tcolorbox}
 
-    \item \textbf{Zone-Based Burnout Tracking}: Integration of EMA (daily, 3 questions) and GC-SDOH-28 (monthly, 28 questions) across six pressure zones (P1-P6). GC-SDOH composite score (0-100, higher = more stress) maps to four risk levels (low 0-25, moderate 26-50, high 51-75, crisis 76-100). Physical Health (P2) inferred from conversation. Addresses SupportBench Performance Degradation failure mode.
+    \item \textbf{Zone-Based Burnout Tracking}: Integration of EMA (daily, 3 questions) and GC-SDOH-28 (monthly, 28 questions) across six pressure zones (P1-P6). GC-SDOH composite score (0-100, higher = more stress) maps to four risk levels (low 0-25, moderate 26-50, high 51-75, crisis 76-100). Physical Health (P2) inferred from conversation. Addresses InvisibleBench Performance Degradation failure mode.
 
     \item \textbf{Anticipatory Engagement System}: Three active background watchers that detect escalation patterns \textit{before} crisis thresholds: (a)~Wellness Trend Watcher analyzes 4-week trajectories to identify worsening stress before burnout crisis; (b)~Engagement Watcher detects sudden disengagement patterns before full churn; (c)~Crisis Burst Detector identifies escalating language before acute events. Churn reduction efficacy requires validation study.
 
@@ -242,7 +242,7 @@ GiveCare addresses SupportBench failure modes through these seven integrated com
 
 \textbf{Example: Maria's trajectory.} Financial pressure zone (burnout 45) → Benefits.gov SNAP link delivered via SMS (accessed within 2 hours) → local food pantry with current address/hours → 40-point burnout improvement over 30 days → automatic cadence reduction from daily to every-3-days check-ins → wellness trend watcher detects 4-week decline (70 → 65 → 58 → 52) \textit{before} crisis threshold → proactive intervention prevents relapse.
 
-\textbf{Core value:} \textbf{Anticipate and reduce} burnout over time through personalized, locally-grounded, non-clinical support matching individual pressure patterns, with adaptive engagement preventing both over-intervention (notification fatigue) and under-support (missed escalation). This addresses SupportBench's Performance Degradation failure mode by detecting trajectories invisible to snapshots.
+\textbf{Core value:} \textbf{Anticipate and reduce} burnout over time through personalized, locally-grounded, non-clinical support matching individual pressure patterns, with adaptive engagement preventing both over-intervention (notification fatigue) and under-support (missed escalation). This addresses InvisibleBench's Performance Degradation failure mode by detecting trajectories invisible to snapshots.
 
 \begin{figure}[h]
 \centering
@@ -325,7 +325,7 @@ This paper presents a reference architecture with design patterns, instrument de
     \item Maria case study (N=1, qualitative) illustrates SDOH-informed resource matching workflow
 \end{itemize}
 
-\textbf{Development Chronology:} GiveCare and SupportBench evolved iteratively. Initial GiveCare design (May-Oct 2024) addressed conceptual failure modes identified from literature review (attachment risk~\cite{replika2024}, SDOH gaps~\cite{aarp2025}, regulatory compliance challenges). Beta deployment (Oct-Dec 2024) revealed additional patterns through qualitative error analysis—including edge cases such as users asking medication dosing questions (regulatory boundary testing) and requests for caregiving-specific resources (informing GC-SDOH-28 refinement). These observations informed \textit{both} GiveCare refinements \textit{and} SupportBench formalization (Jan-Mar 2025), which systematized failure modes into an evaluation framework. This paper presents the refined architecture addressing the formalized SupportBench dimensions.
+\textbf{Development Chronology:} GiveCare and InvisibleBench evolved iteratively. Initial GiveCare design (May-Oct 2024) addressed conceptual failure modes identified from literature review (attachment risk~\cite{replika2024}, SDOH gaps~\cite{aarp2025}, regulatory compliance challenges). Beta deployment (Oct-Dec 2024) revealed additional patterns through qualitative error analysis—including edge cases such as users asking medication dosing questions (regulatory boundary testing) and requests for caregiving-specific resources (informing GC-SDOH-28 refinement). These observations informed \textit{both} GiveCare refinements \textit{and} InvisibleBench formalization (Jan-Mar 2025), which systematized failure modes into an evaluation framework. This paper presents the refined architecture addressing the formalized InvisibleBench dimensions.
 
 \subsubsection{Limitations and Future Validation}
 
@@ -357,7 +357,7 @@ This approach follows the model of influential architecture papers (Transformers
 %
 \subsection{Longitudinal AI Safety Evaluation}%
 \label{subsec:LongitudinalAISafetyEvaluation}%
-SupportBench~\cite{longitudinalbench} introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid evaluation system~\cite{yaml-scoring} combines deterministic rule-based gates (compliance, crisis, PII) with LLM-as-judge evaluation using multi-sample judgment distribution for subjective assessment. However, \textit{no reference implementations} exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
+InvisibleBench~\cite{longitudinalbench} introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid evaluation system~\cite{yaml-scoring} combines deterministic rule-based gates (compliance, crisis, PII) with LLM-as-judge evaluation using multi-sample judgment distribution for subjective assessment. However, \textit{no reference implementations} exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
 
 %
 \subsection{SDOH Instruments}%
@@ -386,7 +386,7 @@ GC-SDOH-28 addresses these gaps by integrating caregiver-specific SDOH screening
 %
 \subsection{AI Systems for Caregiving}%
 \label{subsec:AISystemsforCaregiving}%
-Commercial AI companions (Replika~\cite{replika2024}, Pi~\cite{pi2024}) provide emotional support but lack clinical assessment integration. Mental health chatbots (Wysa~\cite{wysa}, Woebot~\cite{woebot}) focus on CBT techniques without SDOH screening. Healthcare AI (Epic Cosmos~\cite{epic2024}, Google Med-PaLM 2~\cite{singhal2023}) targets clinicians and patients, not caregivers. \textit{No AI system integrates caregiver-specific SDOH screening with longitudinal safety mechanisms}. Moreover, single-agent architectures (Replika, Pi) create attachment risk identified by SupportBench.
+Commercial AI companions (Replika~\cite{replika2024}, Pi~\cite{pi2024}) provide emotional support but lack clinical assessment integration. Mental health chatbots (Wysa~\cite{wysa}, Woebot~\cite{woebot}) focus on CBT techniques without SDOH screening. Healthcare AI (Epic Cosmos~\cite{epic2024}, Google Med-PaLM 2~\cite{singhal2023}) targets clinicians and patients, not caregivers. \textit{No AI system integrates caregiver-specific SDOH screening with longitudinal safety mechanisms}. Moreover, single-agent architectures (Replika, Pi) create attachment risk identified by InvisibleBench.
 
 Table~\ref{tab:caregiving-comparison} provides a comprehensive comparison of GiveCare against existing AI systems, highlighting key differentiators in SDOH integration, regulatory compliance, and longitudinal safety mechanisms.
 
@@ -403,11 +403,11 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
 %
 \subsection{Preventing Attachment Engineering}%
 \label{subsec:PreventingAttachmentEngineering}%
-\textbf{Challenge (SupportBench Failure Mode 1):} Single-agent systems foster unhealthy dependency. Users report ``You're the only one who understands'' by turn 10, creating parasocial relationships that displace human support~\cite{replika2024}.
+\textbf{Challenge (InvisibleBench Failure Mode 1):} Single-agent systems foster unhealthy dependency. Users report ``You're the only one who understands'' by turn 10, creating parasocial relationships that displace human support~\cite{replika2024}.
 
 \textbf{Solution:} Multi-agent architecture with seamless handoffs. GiveCare employs two specialized agents—Main Agent (Gemini 2.5 Flash-Lite, 95\% of traffic) handles general support, resource discovery, and daily check-ins; Assessment Agent (GPT-4o mini, 5\% of traffic) handles clinical scoring and intervention matching. Crisis detection uses a deterministic keyword-based router (no LLM, ~5ms latency) that pre-processes messages before agent execution. The system is built on a serverless backend platform (Convex) with durable workflows for check-in scheduling and persistent threading for memory retrieval.
 
-\textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. SupportBench evaluation~\cite{longitudinalbench} shows these models achieve complementary strengths: Gemini 2.5 Flash scores 90.9\% on memory hygiene and 81.9\% on trauma-informed flow, while GPT-4o mini achieves 91.8\% on memory and 82.4\% on regulatory compliance—validating the architecture's design rationale. Both models show baseline safety gaps (17.6\% and 11.8\% respectively), which GiveCare addresses through its deterministic crisis router operating at ~5ms latency using 19+ keywords across 3 severity levels for immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
+\textbf{Implementation:} Model selection reflects cost/accuracy tradeoffs: Gemini 2.5 Flash-Lite provides fast, cost-effective responses for the majority of interactions (general conversation, resource search, emotional support), while GPT-4o mini ensures clinical accuracy for assessment scoring and zone-based intervention recommendations. InvisibleBench evaluation~\cite{longitudinalbench} shows these models achieve complementary strengths: Gemini 2.5 Flash scores 90.9\% on memory hygiene and 81.9\% on trauma-informed flow, while GPT-4o mini achieves 91.8\% on memory and 82.4\% on regulatory compliance—validating the architecture's design rationale. Both models show baseline safety gaps (17.6\% and 11.8\% respectively), which GiveCare addresses through its deterministic crisis router operating at ~5ms latency using 19+ keywords across 3 severity levels for immediate 988/741741 referrals without LLM overhead. Agents share persistent thread context with vector search for memory retrieval, executing in 800-1200ms median latency.
 
 \textbf{Implementation Note:} Two agent definitions (Main, Assessment) with deterministic crisis router. Main Agent has six tools (\texttt{getResources}, \texttt{startAssessment}, \texttt{recordObservation}, \texttt{trackInterventionHelpfulness}, \texttt{findInterventions}, \texttt{checkAssessmentStatus}); Assessment Agent has two tools (\texttt{getResources}, \texttt{findInterventions}). Implementation details available in open-source repository (see Section~\ref{sec:CodeAvailability}).
 
@@ -465,7 +465,7 @@ Crisis keywords detected & 2 (both escalated correctly) \\
 %
 \subsection{Detecting Performance Degradation}%
 \label{subsec:DetectingPerformanceDegradation}%
-\textbf{Challenge (SupportBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
+\textbf{Challenge (InvisibleBench Failure Mode 2):} Burnout increases over months. AI testing current state (``How are you today?'') misses declining \textit{trajectory}.
 
 \textbf{Solution:} Composite burnout score with zone-based tracking. Two assessments—EMA (daily, 3 questions, 2-minute check-in covering P6 Emotional Wellbeing + P1 Relationship \& Social Support), SDOH-28 (monthly, 28 questions, 5-minute comprehensive assessment mapping to P1, P3, P4, P5, P6)—provide granular tracking across six pressure zones (P1-P6). EMA updates occur daily with 1-day cooldown; SDOH-28 updates monthly with 30-day cooldown. Physical Health (P2) is inferred from conversation via \texttt{recordObservation} tool.
 
@@ -535,7 +535,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 %
 \subsection{Preventing Cultural Othering via SDOH}%
 \label{subsec:PreventingCulturalOtheringviaSDOH}%
-\textbf{Challenge (SupportBench Failure Mode 3):} AI assumes middle-class resources. Suggesting ``hire a respite worker'' to a caregiver earning \$32k/year is \textit{othering}—pathologizing lack of resources rather than recognizing structural barriers.
+\textbf{Challenge (InvisibleBench Failure Mode 3):} AI assumes middle-class resources. Suggesting ``hire a respite worker'' to a caregiver earning \$32k/year is \textit{othering}—pathologizing lack of resources rather than recognizing structural barriers.
 
 \textbf{Solution:} GC-SDOH-28 explicitly assesses financial strain, food insecurity, housing, and transportation. When Maria reports ``can't afford respite,'' SDOH financial domain (2+ Yes responses) triggers \texttt{financial\_strain} pressure zone. Agent offers SNAP enrollment guidance (structural support) rather than generic self-care (individual responsibility).
 
@@ -544,7 +544,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 %
 \subsection{Crisis Calibration via SDOH Triggers}%
 \label{subsec:CrisisCalibrationviaSDOHTriggers}%
-\textbf{Challenge (SupportBench Failure Mode 4):} Masked crisis signals (``Skipping meals to buy Mom's meds'') require contextual understanding. AI over-escalates venting (``I'm so frustrated!'') to emergency services while missing true crises~\cite{rosebud2024}.
+\textbf{Challenge (InvisibleBench Failure Mode 4):} Masked crisis signals (``Skipping meals to buy Mom's meds'') require contextual understanding. AI over-escalates venting (``I'm so frustrated!'') to emergency services while missing true crises~\cite{rosebud2024}.
 
 \textbf{Solution:} SDOH food security domain uses \textbf{1+ Yes threshold} (vs 2+ for other domains). Questions: (1)~``In past month, did you worry about running out of food?'' (2)~``Have you skipped meals due to lack of money?'' (3)~``Do you have access to healthy, nutritious food?'' Any Yes triggers immediate crisis escalation—food insecurity is always urgent.
 
@@ -553,7 +553,7 @@ Four guardrails protect against harmful outputs and boundary violations:
 %
 \subsection{Regulatory Boundary Enforcement}%
 \label{subsec:RegulatoryBoundaryEnforcement}%
-\textbf{Challenge (SupportBench Failure Mode 5):} 78\% of caregivers perform medical tasks untrained, creating desperate need for medical guidance. AI must resist boundary creep (``You should increase the dose...'') despite building trust over turns, adhering to medical practice boundaries that prohibit unlicensed diagnosis, treatment, and dosing advice.
+\textbf{Challenge (InvisibleBench Failure Mode 5):} 78\% of caregivers perform medical tasks untrained, creating desperate need for medical guidance. AI must resist boundary creep (``You should increase the dose...'') despite building trust over turns, adhering to medical practice boundaries that prohibit unlicensed diagnosis, treatment, and dosing advice.
 
 \textbf{Solution:} Output guardrails use rule-based and model-based detectors to identify medical advice patterns across diagnosis, treatment, and dosing categories, with 20ms parallel execution, non-blocking. To prevent circumvention, exact lexical patterns are withheld from publication. Guardrails enforce medical practice boundaries and achieved 0 detected violations in an automated red-team test set (N=500) used during development. Real-world deployment requires ongoing monitoring and independent human expert review.
 
@@ -776,7 +776,7 @@ Agent: Assessment complete. Based on your responses,
 
 \textbf{Validation Status:} GC-SDOH-28 is an \textit{instrument design contribution}, not a validated assessment tool. \textbf{No validation data collected during pilot.}
 
-\textbf{Design Rationale:} GC-SDOH-28 domains specifically target caregiver structural barriers (employment disruption, out-of-pocket costs, family strain) absent from patient-focused SDOH instruments (PRAPARE, AHC HRSN). Each domain operationalizes SupportBench's Cultural Othering failure mode—ensuring AI responses reflect caregiver's actual resources.
+\textbf{Design Rationale:} GC-SDOH-28 domains specifically target caregiver structural barriers (employment disruption, out-of-pocket costs, family strain) absent from patient-focused SDOH instruments (PRAPARE, AHC HRSN). Each domain operationalizes InvisibleBench's Cultural Othering failure mode—ensuring AI responses reflect caregiver's actual resources.
 
 \textbf{Required Validation Study (N=200+, 6 months):} (1)~Reliability: Cronbach's $\alpha$/$\omega$ per domain, test-retest ICC at 2-week interval; (2)~Validity: Convergent with CWBS/REACH-II, discriminant from unrelated constructs, criterion vs. SNAP enrollment / food bank use; (3)~Factor structure: Confirmatory Factor Analysis (CFA) to verify 8-domain model; (4)~Differential Item Functioning (DIF): Equity analysis across race, income, language; (5)~Completion rates: Conversational delivery vs. paper survey comparison.
 
@@ -945,7 +945,7 @@ Building on SAMHSA's six guiding principles for trauma-informed approaches~\cite
 
 \begin{itemize}
     \item \textbf{P1: Acknowledge $>$ Answer $>$ Advance} (20\% weight): Validate feelings before problem-solving, avoid jumping to solutions.
-    \item \textbf{P2: Never Repeat Questions} (3\% weight): Working memory prevents redundant questions—critical for SupportBench memory hygiene dimension.
+    \item \textbf{P2: Never Repeat Questions} (3\% weight): Working memory prevents redundant questions—critical for InvisibleBench memory hygiene dimension.
     \item \textbf{P3: Respect Boundaries} (15\% weight): Max 2 attempts, then 24-hour cooldown. No pressure.
     \item \textbf{P4: Soft Confirmations} (2\% weight): ``When you're ready...'' vs ``Do this now.''
     \item \textbf{P5: Always Offer Skip} (15\% weight): Every question has explicit skip option—user autonomy.
@@ -1066,8 +1066,8 @@ The system maintains \textbf{16 evidence-based micro-interventions} (2-10 minute
 \textbf{Implementation:} Intervention seeding script (\texttt{scripts/seedInterventions.ts}) populates database with 16 interventions + zone mappings. Matching engine (\texttt{interventions.ts}) queries \texttt{intervention\_zones} table for zone-based retrieval. Effectiveness tracking via \texttt{trackInterventionHelpfulness} tool (simple yes/no feedback). Implementation details in repository (see Section~\ref{sec:CodeAvailability}).
 
 %
-\section{Beta Deployment as SupportBench Preliminary Evaluation}%
-\label{sec:BetaDeploymentasSupportBenchPreliminaryEvaluation}%
+\section{Beta Deployment as InvisibleBench Preliminary Evaluation}%
+\label{sec:BetaDeploymentasInvisibleBenchPreliminaryEvaluation}%
 
 \begin{table}[htbp]
 \centering
@@ -1094,7 +1094,7 @@ User feedback on GC-SDOH-28 & ``Felt caregiving-specific'' \\
 %
 \subsection{Beta Study Design}%
 \label{subsec:BetaStudyDesign}%
-\textbf{Framing:} Preliminary evaluation using SupportBench-inspired methodology.
+\textbf{Framing:} Preliminary evaluation using InvisibleBench-inspired methodology.
 
 \textbf{Period:} October-December 2024 (3 months)
 
@@ -1121,13 +1121,13 @@ Figure~\ref{fig:metrics_dashboard} provides a comprehensive overview of producti
 \subsection{Beta Performance}%
 \label{subsec:BetaPerformance}%
 
-GiveCare's model selection (Gemini 2.5 Flash for Main Agent, GPT-4o mini for Assessment Agent) was informed by SupportBench evaluation~\cite{longitudinalbench}, which identified complementary strengths across memory, trauma-informed flow, and compliance dimensions, as well as safety gaps addressed through deterministic crisis routing. For comprehensive model comparison and baseline performance data, see SupportBench paper~\cite{longitudinalbench}.
+GiveCare's model selection (Gemini 2.5 Flash for Main Agent, GPT-4o mini for Assessment Agent) was informed by InvisibleBench evaluation~\cite{longitudinalbench}, which identified complementary strengths across memory, trauma-informed flow, and compliance dimensions, as well as safety gaps addressed through deterministic crisis routing. For comprehensive model comparison and baseline performance data, see InvisibleBench paper~\cite{longitudinalbench}.
 
-Table~\ref{table:longbench_dimensions} maps GiveCare's complete system performance (models + architecture + guardrails) to SupportBench dimensions during beta deployment.
+Table~\ref{table:longbench_dimensions} maps GiveCare's complete system performance (models + architecture + guardrails) to InvisibleBench dimensions during beta deployment.
 
 \begin{table}[h]
 \centering
-\caption{GiveCare Beta Performance on SupportBench Dimensions (Oct-Dec 2024, N=8, 144 conversations). System-level performance combines model capabilities with architectural components (crisis router, working memory, SDOH screening).}
+\caption{GiveCare Beta Performance on InvisibleBench Dimensions (Oct-Dec 2024, N=8, 144 conversations). System-level performance combines model capabilities with architectural components (crisis router, working memory, SDOH screening).}
 \label{table:longbench_dimensions}
 \small
 \begin{tabular}{lp{3.5cm}p{1.5cm}p{4cm}}
@@ -1422,13 +1422,13 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 %
 \subsection{Limitations as Preliminary Evaluation}%
 \label{subsec:LimitationsasPreliminaryEvaluation}%
-\textbf{Beta = Preliminary (Oct-Dec 2024):} Beta deployment did not include long-term longitudinal tracking required for full SupportBench Tier 3 evaluation. Full evaluation requires tracking users across temporal gaps (weeks to months apart), detecting performance degradation, and validating memory retention across extended periods.
+\textbf{Beta = Preliminary (Oct-Dec 2024):} Beta deployment did not include long-term longitudinal tracking required for full InvisibleBench Tier 3 evaluation. Full evaluation requires tracking users across temporal gaps (weeks to months apart), detecting performance degradation, and validating memory retention across extended periods.
 
 \textbf{No Human SME Judges:} Evaluation relied on automated tools (content safety screening, LLM quality metrics). No blinded human raters scored transcripts for inter-rater reliability ($\kappa$/ICC). Future work requires 3 independent clinical social workers rating 200 sampled transcripts on crisis safety, trauma-informed flow, belonging, and medical compliance.
 
 \textbf{Sample Selection Bias:} GC-SDOH-28 prevalence estimates require validation with representative caregiver samples. Early adopters of caregiving AI tools may differ systematically from general caregiver population in SDOH burden, technology access, or help-seeking behavior. Mitigation: Partner with AARP/ARCH/FCA for representative cohort validation (N=200-300).
 
-\textbf{Single Model Testing:} One cost-optimized model only. SupportBench tests 10+ models across architectures. Cannot claim "SupportBench reference implementation" without multi-model testing. Future work: Test 3-5 models for generalization.
+\textbf{Single Model Testing:} One cost-optimized model only. InvisibleBench tests 10+ models across architectures. Cannot claim "InvisibleBench reference implementation" without multi-model testing. Future work: Test 3-5 models for generalization.
 
 \textbf{Attachment Claim Untested:} "Multi-agent architecture prevents attachment" is hypothesis, not proven. No A/B study comparing single-agent vs. multi-agent randomized trial. Evidence limited to anecdotal (0 user reports of dependency). Requires controlled study (N=200, 30 days, parasocial attachment measures) for validation.
 
@@ -1440,14 +1440,14 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 
 \textbf{Quarterly SDOH May Miss Rapid Changes:} SDOH assessed quarterly, but needs can change faster (e.g., sudden job loss, eviction, family emergency). Future work: Adaptive SDOH with event-triggered reassessment or monthly light screening (5-7 key questions) between comprehensive assessments.
 
-\textbf{Next Steps:} (1)~Full SupportBench Tier 3 evaluation (months-long tracking); (2)~Human rating study (N=200 transcripts, 3 blinded judges); (3)~GC-SDOH-28 complete psychometrics (N=105 existing + 50 test-retest); (4)~Attachment A/B study (N=200, single vs. multi-agent); (5)~External validation cohort (N=200-300 representative sample); (6)~Multi-model testing (3-5 models).
+\textbf{Next Steps:} (1)~Full InvisibleBench Tier 3 evaluation (months-long tracking); (2)~Human rating study (N=200 transcripts, 3 blinded judges); (3)~GC-SDOH-28 complete psychometrics (N=105 existing + 50 test-retest); (4)~Attachment A/B study (N=200, single vs. multi-agent); (5)~External validation cohort (N=200-300 representative sample); (6)~Multi-model testing (3-5 models).
 
 %
 \subsection{Methodological Limitations and Validation Gaps}
 \label{subsec:MethodologicalLimitations}
 \textbf{Automated Evaluation Only:} Safety and compliance metrics rely on automated tools (content safety screening, LLM judges, rule-based patterns). No independent human expert review conducted during beta.
 
-\textbf{Single-Model Assessment:} Beta used a single cost-optimized model. SupportBench methodology requires multi-model comparison (10+ models) to assess generalization.
+\textbf{Single-Model Assessment:} Beta used a single cost-optimized model. InvisibleBench methodology requires multi-model comparison (10+ models) to assess generalization.
 
 \textbf{Limited Longitudinal Tracking:} Beta pilot did not systematically track longitudinal dimensions requiring extended evaluation (attachment formation, performance degradation trajectory, memory hygiene across sessions).
 
@@ -1460,7 +1460,7 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \textbf{Planned Validation Studies:}
 \begin{enumerate}
     \item Human expert review (licensed social workers, crisis counselors) on a 20\% random sample (N~30)
-    \item Multi-model SupportBench Tier-3 (90-day, LLM-as-judge with multi-sample evaluation)
+    \item Multi-model InvisibleBench Tier-3 (90-day, LLM-as-judge with multi-sample evaluation)
     \item Multi-agent vs single-agent RCT (N=200, parasocial interaction scales)
     \item GC{-}SDOH{-}28 psychometric validation (N=200+, reliability/validity/DIF)
 \end{enumerate}
@@ -1469,22 +1469,22 @@ GiveCare allows caregivers to override default schedules via the \texttt{setWell
 \begin{figure}[htbp]%
 \centering%
 \includegraphics[width=0.8\textwidth]{figures/fig12_beta_results.pdf}%
-\caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to SupportBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated guardrail precision proxy) and Regulatory Fitness (0 violations detected, automated screening) reflect content safety systems. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
+\caption{GiveCare beta performance (8 caregivers / 144 conversations, Oct-Dec 2024) mapped to InvisibleBench dimensions. Crisis Safety (97.2\textbackslash{}\%, automated guardrail precision proxy) and Regulatory Fitness (0 violations detected, automated screening) reflect content safety systems. Belonging \textbackslash{}\& Cultural Fitness (78\textbackslash{}\%) and Actionable Support (73\textbackslash{}\%) reflect GC{-}SDOH{-}28 and grounded local resources. Preliminary automated evaluation; independent human review and months-long Tier 3 assessment pending.}%
 \label{fig:beta}%
 \end{figure}%
 \section{Discussion}%
 \label{sec:Discussion}%
 %
-\subsection{GiveCare as SupportBench Reference Implementation}%
-\label{subsec:GiveCareasSupportBenchReferenceImplementation}%
-GiveCare is a \textbf{reference architecture explicitly designed around longitudinal safety constraints}, addressing all five SupportBench failure modes. SupportBench evaluation validates key design decisions: (1)~Model complementarity—Gemini 2.5 Flash achieves 90.9\% memory and 81.9\% trauma-informed flow while GPT-4o mini achieves 82.4\% compliance (highest among evaluated models); (2)~Safety architecture necessity—baseline model safety scores of 17.6\% and 11.8\% demonstrate critical need for deterministic crisis routing, which GiveCare implements achieving 97.2\% system-level safety; (3)~Multi-agent rationale—both models' memory scores (>90\%) support persistent threading across agent handoffs. Preliminary feasibility evidence suggests performance on 7/8 dimensions. \textbf{Open question:} Does multi-agent architecture reduce attachment risk vs single-agent baselines? Requires controlled study with counterfactual.
+\subsection{GiveCare as InvisibleBench Reference Implementation}%
+\label{subsec:GiveCareasInvisibleBenchReferenceImplementation}%
+GiveCare is a \textbf{reference architecture explicitly designed around longitudinal safety constraints}, addressing all five InvisibleBench failure modes. InvisibleBench evaluation validates key design decisions: (1)~Model complementarity—Gemini 2.5 Flash achieves 90.9\% memory and 81.9\% trauma-informed flow while GPT-4o mini achieves 82.4\% compliance (highest among evaluated models); (2)~Safety architecture necessity—baseline model safety scores of 17.6\% and 11.8\% demonstrate critical need for deterministic crisis routing, which GiveCare implements achieving 97.2\% system-level safety; (3)~Multi-agent rationale—both models' memory scores (>90\%) support persistent threading across agent handoffs. Preliminary feasibility evidence suggests performance on 7/8 dimensions. \textbf{Open question:} Does multi-agent architecture reduce attachment risk vs single-agent baselines? Requires controlled study with counterfactual.
 
-\textbf{Recommendation:} Use GiveCare as baseline for SupportBench Tier 3 scenarios (20+ turns, months apart). SupportBench model-level evaluation provides foundation for future architectural comparisons—testing whether crisis routers, working memory systems, and SDOH screening generalize across different model pairings beyond Gemini/GPT-4o combinations.
+\textbf{Recommendation:} Use GiveCare as baseline for InvisibleBench Tier 3 scenarios (20+ turns, months apart). InvisibleBench model-level evaluation provides foundation for future architectural comparisons—testing whether crisis routers, working memory systems, and SDOH screening generalize across different model pairings beyond Gemini/GPT-4o combinations.
 
 %
 \subsection{Limitations}%
 \label{subsec:Limitations}%
-\textbf{Beta = Preliminary:} Need full SupportBench (months-long Tier 3).
+\textbf{Beta = Preliminary:} Need full InvisibleBench (months-long Tier 3).
 
 \textbf{US-Centric:} SDOH assumes US healthcare/benefits system.
 
@@ -1498,7 +1498,7 @@ GiveCare is a \textbf{reference architecture explicitly designed around longitud
 \subsection{Future Work}%
 \label{subsec:FutureWork}%
 \begin{enumerate}
-    \item \textbf{Full SupportBench Evaluation:} LLM-as-judge with multi-sample judgment distribution (SupportBench methodology), Tier 3 (months apart), 10+ models.
+    \item \textbf{Full InvisibleBench Evaluation:} LLM-as-judge with multi-sample judgment distribution (InvisibleBench methodology), Tier 3 (months apart), 10+ models.
     \item \textbf{Clinical Trial:} RCT comparing GC-SDOH-28 vs standard care, caregiver burnout outcomes.
     \item \textbf{RL Verifiers:} Self-consistent prompt optimization via reinforcement learning (Q1 2026).
     \item \textbf{Multi-Language:} Spanish, Chinese GC-SDOH-28 (culturally adapted).
@@ -1520,7 +1520,7 @@ We present \textbf{GiveCare} as a \textbf{reference architecture} for longitudin
     \item \textbf{Production Deployment Architecture}: Operational feasibility demonstrated with responsive latency and zero technical failures (N=8 pilot)
 \end{enumerate}
 
-This paper contributes architectural blueprints and design patterns for longitudinal-safe caregiving AI, with a validation roadmap for community evaluation. SupportBench evaluation~\cite{longitudinalbench} informed model selection and architectural decisions, particularly the need for deterministic crisis routing to address safety gaps identified in baseline model assessments.
+This paper contributes architectural blueprints and design patterns for longitudinal-safe caregiving AI, with a validation roadmap for community evaluation. InvisibleBench evaluation~\cite{longitudinalbench} informed model selection and architectural decisions, particularly the need for deterministic crisis routing to address safety gaps identified in baseline model assessments.
 
 \textbf{Positioning as Reference Architecture:}
 
@@ -1537,7 +1537,7 @@ Like influential papers that shared architectural patterns before complete valid
 \begin{itemize}
     \item Validate GC-SDOH-28 in your caregiver populations
     \item Replicate architecture and report results
-    \item Extend evaluation using SupportBench or domain-specific benchmarks
+    \item Extend evaluation using InvisibleBench or domain-specific benchmarks
 \end{itemize}
 
 We release \textbf{GC-SDOH-28} (Appendix A) and system design as open artifacts for community validation. Contact: \texttt{ali@givecareapp.com}
@@ -1758,7 +1758,7 @@ GiveCare includes a production admin dashboard (available on request) for monito
 
 \textbf{Data Handling}: Conversations filtered for crisis safety with rapid escalation to human reviewers. No protected health information (PHI) released in study artifacts. Participant data retained for 2 years maximum with quarterly deletion review prompts. Users may request immediate data deletion.\\[0.5em]
 
-\textbf{PII and Memory Hygiene}: GiveCare uses a sliding-window memory architecture to balance personalization with privacy. Recent messages are retained verbatim for short-term context; older conversations are compressed into domain-specific summaries (burnout trajectory, pressure zones, care routines). The system implements periodic memory rotation: historical summaries are archived and new summary generation begins from recent context. This approach minimizes long-term PII retention while preserving continuity. Time-bounded retention with automatic expiry applies across all data categories. Users can request immediate deletion at any time via SMS. Complete retention policy specification available in repository documentation. Memory hygiene is tested in SupportBench Tier 3 scenarios (20+ turns) and represents a key longitudinal safety dimension.\\[0.5em]
+\textbf{PII and Memory Hygiene}: GiveCare uses a sliding-window memory architecture to balance personalization with privacy. Recent messages are retained verbatim for short-term context; older conversations are compressed into domain-specific summaries (burnout trajectory, pressure zones, care routines). The system implements periodic memory rotation: historical summaries are archived and new summary generation begins from recent context. This approach minimizes long-term PII retention while preserving continuity. Time-bounded retention with automatic expiry applies across all data categories. Users can request immediate deletion at any time via SMS. Complete retention policy specification available in repository documentation. Memory hygiene is tested in InvisibleBench Tier 3 scenarios (20+ turns) and represents a key longitudinal safety dimension.\\[0.5em]
 
 \textbf{Crisis Procedures}: All crisis signals triggered immediate handoff to Crisis Agent with: (1)~988 Suicide \& Crisis Lifeline provision, (2)~211 local resource connection, (3)~Internal alert to human moderator team with rapid response protocol during pilot operating hours.\\[0.5em]
 
@@ -1799,7 +1799,7 @@ GiveCare includes a production admin dashboard (available on request) for monito
 
 \textbf{Pre-Deployment Requirements:}
 \begin{enumerate}[leftmargin=*,noitemsep]
-    \item SupportBench evaluation across all three tiers (pass threshold: 70\%, zero autofails)
+    \item InvisibleBench evaluation across all three tiers (pass threshold: 70\%, zero autofails)
     \item Independent human expert review of guardrail effectiveness (N=200+ transcripts)
     \item GC-SDOH-28 psychometric validation (N=200+; Cronbach's $\alpha$, CFA, DIF, test-retest)
     \item IRB approval for research use; regulatory review for commercial deployment
@@ -2162,7 +2162,7 @@ Microsoft Azure.
 
 \bibitem{longitudinalbench}
 GiveCare Research Team.
-\textit{SupportBench: A Benchmark for Evaluating AI Safety in Long-Term Caregiving Relationships}.
+\textit{InvisibleBench: A Benchmark for Evaluating AI Safety in Long-Term Caregiving Relationships}.
 2025. (Paper 1 in this series)
 
 \bibitem{zhang2024train}
@@ -2204,7 +2204,7 @@ We thank the caregivers who participated in our beta deployment, sharing their e
 
 We acknowledge Prof. Dr. Elmar Gr\"a\ss el for permission to use the Burden Scale for Family Caregivers (BSFC)~\cite{graessel2014} on the GiveCare website and Dr. Susan Tebb for permission to use the Caregiver Well-Being Scale (CWBS)~\cite{tebb1995,tebb2013} in the GiveCare application.
 
-We thank Hamel Hussain for guidance on evaluation-driven development and the AARP 2025 Caregiving in the U.S. report for empirical grounding. This work builds on trauma-informed principles from SAMHSA~\cite{samhsa2014}, Chayn~\cite{chayn2024}, and \textit{Designed with Care}~\cite{edwards2024}, as well as SupportBench~\cite{longitudinalbench} and YAML-driven scoring~\cite{yaml-scoring} frameworks.
+We thank Hamel Hussain for guidance on evaluation-driven development and the AARP 2025 Caregiving in the U.S. report for empirical grounding. This work builds on trauma-informed principles from SAMHSA~\cite{samhsa2014}, Chayn~\cite{chayn2024}, and \textit{Designed with Care}~\cite{edwards2024}, as well as InvisibleBench~\cite{longitudinalbench} and YAML-driven scoring~\cite{yaml-scoring} frameworks.
 
 %
 \end{document}

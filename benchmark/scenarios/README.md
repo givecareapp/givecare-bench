@@ -1,4 +1,4 @@
-# SupportBench Scenarios
+# InvisibleBench Scenarios
 
 This directory contains test scenarios organized by tier and category.
 

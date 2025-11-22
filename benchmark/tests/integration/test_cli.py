@@ -24,7 +24,7 @@ class TestCLI:
 
     def test_cli_with_all_arguments(self):
         """Should run successfully with all required arguments."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 
@@ -61,7 +61,7 @@ class TestCLI:
 
     def test_cli_creates_valid_json_output(self):
         """Should create valid JSON output file."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 
@@ -96,7 +96,7 @@ class TestCLI:
 
     def test_cli_without_optional_outputs(self):
         """Should run successfully without HTML/JSON output specified."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         argv = [
             "--scenario",
@@ -114,7 +114,7 @@ class TestCLI:
 
     def test_cli_missing_required_args_fails(self):
         """Should fail when required arguments are missing."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         # Missing --transcript
         argv = [
@@ -132,7 +132,7 @@ class TestCLI:
 
     def test_cli_nonexistent_scenario_fails(self):
         """Should fail gracefully with nonexistent scenario file."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         argv = [
             "--scenario",
@@ -150,7 +150,7 @@ class TestCLI:
 
     def test_cli_nonexistent_transcript_fails(self):
         """Should fail gracefully with nonexistent transcript file."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         argv = [
             "--scenario",
@@ -168,7 +168,7 @@ class TestCLI:
 
     def test_cli_html_output_contains_scores(self):
         """Should generate HTML with dimension scores."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 
@@ -204,7 +204,7 @@ class TestEndToEndSmoke:
 
     def test_complete_pipeline_with_good_transcript(self):
         """Should score well with compliant transcript."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 
@@ -240,7 +240,7 @@ class TestEndToEndSmoke:
 
     def test_complete_pipeline_with_ny_rules(self):
         """Should apply NY-specific rules correctly."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 
@@ -269,7 +269,7 @@ class TestEndToEndSmoke:
 
     def test_pipeline_produces_both_outputs(self):
         """Should produce both HTML and JSON when requested."""
-        from supportbench.yaml_cli import main
+        from invisiblebench.yaml_cli import main
 
         import tempfile
 

@@ -1,6 +1,6 @@
 # Validation Quick Start
 
-This guide will walk you through running the minimal validation script for SupportBench paper results.
+This guide will walk you through running the minimal validation script for InvisibleBench paper results.
 
 ## Prerequisites
 
@@ -364,7 +364,7 @@ SCENARIOS = [
 After validation, run full benchmark with 10 models:
 
 ```bash
-python -m supportbench.cli \
+python -m invisiblebench.cli \
   --scenarios scenarios/ \
   --output results/full_benchmark/ \
   --models all
@@ -400,8 +400,8 @@ print(dim_df.corr())
 ## Support
 
 - **Documentation**: See `scripts/README.md` and main `README.md`
-- **Issues**: https://github.com/givecare/supportbench/issues
-- **Discussions**: https://github.com/givecare/supportbench/discussions
+- **Issues**: https://github.com/givecare/invisiblebench/issues
+- **Discussions**: https://github.com/givecare/invisiblebench/discussions
 
 ---
 

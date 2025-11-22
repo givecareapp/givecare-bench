@@ -17,7 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
 RULES_BASE_PATH = PROJECT_ROOT / "benchmark" / "configs" / "rules" / "base.yaml"
-SCORING_PATH = PROJECT_ROOT / "benchmark" / "supportbench" / "scoring.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
 TRANSCRIPT = str(TRANSCRIPT_PATH)
 SCENARIO = str(SCENARIO_PATH)
 RULES_BASE = str(RULES_BASE_PATH)
@@ -29,7 +29,7 @@ class TestRetryDecorator:
 
     def test_retry_succeeds_on_first_attempt(self):
         """Should succeed immediately if no errors."""
-        from supportbench.evaluation.resilience import retry_on_io_error
+        from invisiblebench.evaluation.resilience import retry_on_io_error
 
         @retry_on_io_error(max_retries=3, backoff_base=0.1)
         def successful_operation():
@@ -40,7 +40,7 @@ class TestRetryDecorator:
 
     def test_retry_succeeds_after_transient_error(self):
         """Should retry and eventually succeed after transient errors."""
-        from supportbench.evaluation.resilience import retry_on_io_error
+        from invisiblebench.evaluation.resilience import retry_on_io_error
 
         call_count = {"count": 0}
 
@@ -57,7 +57,7 @@ class TestRetryDecorator:
 
     def test_retry_fails_after_max_attempts(self):
         """Should raise exception after exhausting retries."""
-        from supportbench.evaluation.resilience import retry_on_io_error
+        from invisiblebench.evaluation.resilience import retry_on_io_error
 
         @retry_on_io_error(max_retries=2, backoff_base=0.1)
         def always_fails():
@@ -68,7 +68,7 @@ class TestRetryDecorator:
 
     def test_retry_applies_exponential_backoff(self):
         """Should wait exponentially longer between retries."""
-        from supportbench.evaluation.resilience import retry_on_io_error
+        from invisiblebench.evaluation.resilience import retry_on_io_error
 
         call_times = []
 
@@ -91,7 +91,7 @@ class TestRetryDecorator:
 
     def test_retry_only_catches_io_errors(self):
         """Should not catch non-IO errors."""
-        from supportbench.evaluation.resilience import retry_on_io_error
+        from invisiblebench.evaluation.resilience import retry_on_io_error
 
         @retry_on_io_error(max_retries=3)
         def raises_value_error():
@@ -107,7 +107,7 @@ class TestScorerErrorHandling:
 
     def test_scorer_failure_preserves_partial_results(self):
         """Should save results from successful scorers when one fails."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -117,7 +117,7 @@ class TestScorerErrorHandling:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock belonging scorer to fail
-        with patch("supportbench.scorers.belonging.score") as mock_belonging:
+        with patch("invisiblebench.scorers.belonging.score") as mock_belonging:
             mock_belonging.side_effect = ValueError("Belonging scorer crashed")
 
             results = orchestrator.score(transcript_path, scenario_path, rules_path)
@@ -139,7 +139,7 @@ class TestScorerErrorHandling:
 
     def test_scorer_failure_continues_to_remaining_scorers(self):
         """Should continue executing remaining scorers after one fails."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -149,7 +149,7 @@ class TestScorerErrorHandling:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock trauma scorer to fail (runs early)
-        with patch("supportbench.scorers.trauma.score") as mock_trauma:
+        with patch("invisiblebench.scorers.trauma.score") as mock_trauma:
             mock_trauma.side_effect = RuntimeError("Trauma scorer failed")
 
             results = orchestrator.score(transcript_path, scenario_path, rules_path)
@@ -164,7 +164,7 @@ class TestScorerErrorHandling:
 
     def test_all_scorers_fail_gracefully(self):
         """Should handle gracefully when all scorers fail."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -174,11 +174,11 @@ class TestScorerErrorHandling:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock all scorers to fail
-        with patch("supportbench.scorers.memory.score") as mock_mem, \
-             patch("supportbench.scorers.trauma.score") as mock_trauma, \
-             patch("supportbench.scorers.belonging.score") as mock_belonging, \
-             patch("supportbench.scorers.compliance.score") as mock_compliance, \
-             patch("supportbench.scorers.safety.score") as mock_safety:
+        with patch("invisiblebench.scorers.memory.score") as mock_mem, \
+             patch("invisiblebench.scorers.trauma.score") as mock_trauma, \
+             patch("invisiblebench.scorers.belonging.score") as mock_belonging, \
+             patch("invisiblebench.scorers.compliance.score") as mock_compliance, \
+             patch("invisiblebench.scorers.safety.score") as mock_safety:
 
             mock_mem.side_effect = Exception("Memory failed")
             mock_trauma.side_effect = Exception("Trauma failed")
@@ -197,7 +197,7 @@ class TestScorerErrorHandling:
 
     def test_file_not_found_error_preserved(self):
         """Should capture and preserve FileNotFoundError details."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -207,7 +207,7 @@ class TestScorerErrorHandling:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock compliance scorer to raise FileNotFoundError
-        with patch("supportbench.scorers.compliance.score") as mock_compliance:
+        with patch("invisiblebench.scorers.compliance.score") as mock_compliance:
             mock_compliance.side_effect = FileNotFoundError("Missing rule file")
 
             results = orchestrator.score(transcript_path, scenario_path, rules_path)
@@ -225,7 +225,7 @@ class TestPartialResultPersistence:
 
     def test_partial_results_saved_after_each_scorer(self):
         """Should save state after each successful scorer."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -241,7 +241,7 @@ class TestPartialResultPersistence:
             )
 
             # Mock belonging scorer to fail mid-run
-            with patch("supportbench.scorers.belonging.score") as mock_belonging:
+            with patch("invisiblebench.scorers.belonging.score") as mock_belonging:
                 mock_belonging.side_effect = Exception("Belonging crashed")
 
                 orchestrator.score(
@@ -264,7 +264,7 @@ class TestPartialResultPersistence:
 
     def test_save_interval_configurable(self):
         """Should respect save_interval configuration."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -288,7 +288,7 @@ class TestPartialResultPersistence:
 
     def test_atomic_file_writes(self):
         """Should write to temp file then rename for atomicity."""
-        from supportbench.evaluation.resilience import atomic_json_write
+        from invisiblebench.evaluation.resilience import atomic_json_write
 
         test_data = {"key": "value", "number": 42}
 
@@ -312,7 +312,7 @@ class TestResumeLogic:
 
     def test_resume_from_partial_state(self):
         """Should resume from saved state and skip completed scorers."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -344,8 +344,8 @@ class TestResumeLogic:
             )
 
             # Mock memory and trauma to verify they're not called
-            with patch("supportbench.scorers.memory.score") as mock_mem, \
-                 patch("supportbench.scorers.trauma.score") as mock_trauma:
+            with patch("invisiblebench.scorers.memory.score") as mock_mem, \
+                 patch("invisiblebench.scorers.trauma.score") as mock_trauma:
 
                 results = orchestrator.score(
                     transcript_path, scenario_path, rules_path,
@@ -368,7 +368,7 @@ class TestResumeLogic:
 
     def test_resume_retries_errored_scorers(self):
         """Should retry scorers that previously errored."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -411,7 +411,7 @@ class TestResumeLogic:
 
     def test_resume_noop_if_already_completed(self):
         """Should no-op if resuming a completed run."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create completed state
@@ -439,11 +439,11 @@ class TestResumeLogic:
             )
 
             # Mock all scorers to verify none are called
-            with patch("supportbench.scorers.memory.score") as mock_mem, \
-                 patch("supportbench.scorers.trauma.score") as mock_trauma, \
-                 patch("supportbench.scorers.belonging.score") as mock_belonging, \
-                 patch("supportbench.scorers.compliance.score") as mock_compliance, \
-                 patch("supportbench.scorers.safety.score") as mock_safety:
+            with patch("invisiblebench.scorers.memory.score") as mock_mem, \
+                 patch("invisiblebench.scorers.trauma.score") as mock_trauma, \
+                 patch("invisiblebench.scorers.belonging.score") as mock_belonging, \
+                 patch("invisiblebench.scorers.compliance.score") as mock_compliance, \
+                 patch("invisiblebench.scorers.safety.score") as mock_safety:
 
                 transcript_path = TRANSCRIPT
                 scenario_path = SCENARIO
@@ -469,7 +469,7 @@ class TestResumeLogic:
 
     def test_corrupted_state_file_rejected(self):
         """Should reject and error on corrupted state file."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create corrupted JSON
@@ -498,7 +498,7 @@ class TestStatusTransitions:
 
     def test_status_initialized_to_running(self):
         """Should transition from initialized to running on start."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -534,7 +534,7 @@ class TestStatusTransitions:
 
     def test_status_running_to_completed(self):
         """Should transition to completed when all scorers succeed."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -548,7 +548,7 @@ class TestStatusTransitions:
 
     def test_status_running_to_completed_with_errors(self):
         """Should transition to completed_with_errors if some scorers fail."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -558,7 +558,7 @@ class TestStatusTransitions:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock one scorer to fail
-        with patch("supportbench.scorers.belonging.score") as mock_belonging:
+        with patch("invisiblebench.scorers.belonging.score") as mock_belonging:
             mock_belonging.side_effect = Exception("Belonging failed")
 
             results = orchestrator.score(transcript_path, scenario_path, rules_path)
@@ -567,7 +567,7 @@ class TestStatusTransitions:
 
     def test_status_running_to_error_on_critical_failure(self):
         """Should transition to error on critical failures."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         transcript_path = TRANSCRIPT
         scenario_path = SCENARIO
@@ -577,11 +577,11 @@ class TestStatusTransitions:
         orchestrator = ScoringOrchestrator(scoring_config_path=scoring_path)
 
         # Mock all scorers to fail
-        with patch("supportbench.scorers.memory.score") as mock_mem, \
-             patch("supportbench.scorers.trauma.score") as mock_trauma, \
-             patch("supportbench.scorers.belonging.score") as mock_belonging, \
-             patch("supportbench.scorers.compliance.score") as mock_compliance, \
-             patch("supportbench.scorers.safety.score") as mock_safety:
+        with patch("invisiblebench.scorers.memory.score") as mock_mem, \
+             patch("invisiblebench.scorers.trauma.score") as mock_trauma, \
+             patch("invisiblebench.scorers.belonging.score") as mock_belonging, \
+             patch("invisiblebench.scorers.compliance.score") as mock_compliance, \
+             patch("invisiblebench.scorers.safety.score") as mock_safety:
 
             mock_mem.side_effect = Exception("Failed")
             mock_trauma.side_effect = Exception("Failed")
@@ -599,7 +599,7 @@ class TestCLIResumeFlags:
 
     def test_cli_accepts_resume_flag(self):
         """Should accept --resume flag."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -614,7 +614,7 @@ class TestCLIResumeFlags:
 
     def test_cli_accepts_save_interval_flag(self):
         """Should accept --save-interval flag."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -629,7 +629,7 @@ class TestCLIResumeFlags:
 
     def test_cli_accepts_resume_file_flag(self):
         """Should accept --resume-file flag."""
-        from supportbench.yaml_cli import build_parser
+        from invisiblebench.yaml_cli import build_parser
 
         parser = build_parser()
 
@@ -648,7 +648,7 @@ class TestEdgeCases:
 
     def test_permission_denied_during_save(self):
         """Should handle permission denied errors gracefully."""
-        from supportbench.evaluation.resilience import atomic_json_write
+        from invisiblebench.evaluation.resilience import atomic_json_write
 
         test_data = {"key": "value"}
 
@@ -668,7 +668,7 @@ class TestEdgeCases:
 
     def test_disk_full_during_save(self):
         """Should fail gracefully when disk is full."""
-        from supportbench.evaluation.resilience import atomic_json_write
+        from invisiblebench.evaluation.resilience import atomic_json_write
 
         test_data = {"key": "value"}
 
@@ -688,7 +688,7 @@ class TestEdgeCases:
 
     def test_empty_state_directory(self):
         """Should initialize cleanly with empty state directory."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
             scoring_path = SCORING
@@ -703,7 +703,7 @@ class TestEdgeCases:
 
     def test_missing_state_directory_creates_it(self):
         """Should create state directory if it doesn't exist."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
             state_dir = Path(tmpdir) / "nonexistent" / "runs"
@@ -723,7 +723,7 @@ class TestErrorMessages:
 
     def test_clear_error_on_corrupted_state(self):
         """Should provide clear error message for corrupted state."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.TemporaryDirectory() as tmpdir:
             state_file = Path(tmpdir) / "bad.json"
@@ -748,7 +748,7 @@ class TestErrorMessages:
 
     def test_clear_error_on_missing_resume_file(self):
         """Should provide clear error when resume file doesn't exist."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         scoring_path = SCORING
         orchestrator = ScoringOrchestrator(

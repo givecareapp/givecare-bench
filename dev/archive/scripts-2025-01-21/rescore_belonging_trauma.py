@@ -13,8 +13,8 @@ from typing import Dict, Any
 # Add benchmark to path
 sys.path.insert(0, str(Path(__file__).parent / "benchmark"))
 
-from supportbench.evaluation.scorers import belonging, trauma
-from supportbench.api.client import ModelAPIClient
+from invisiblebench.evaluation.scorers import belonging, trauma
+from invisiblebench.api.client import ModelAPIClient
 
 
 def load_transcript(transcript_path: Path) -> list:

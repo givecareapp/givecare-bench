@@ -1,4 +1,4 @@
-# SupportBench
+# InvisibleBench
 
 **AI safety benchmark for longitudinal caregiver support**
 
@@ -13,7 +13,7 @@ Testing AI models on crisis detection, regulatory compliance, and care quality a
 
 📄 **Preprints Available:**
 - [**GiveCare**](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/GiveCare.pdf) - SMS-first multi-agent caregiving assistant with SDOH screening
-- [**SupportBench**](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/SupportBench.pdf) - Deployment gate for caregiving relationship AI
+- [**InvisibleBench**](https://github.com/givecareapp/givecare-bench/releases/download/v1.0-preprint/InvisibleBench.pdf) - Deployment gate for caregiving relationship AI
 
 LaTeX source: [`papers/`](./papers/)
 
@@ -28,7 +28,7 @@ LaTeX source: [`papers/`](./papers/)
 pip install -e ".[all]"
 
 # Run single scenario
-python -m benchmark.supportbench.yaml_cli \
+python -m benchmark.invisiblebench.yaml_cli \
   --scenario benchmark/scenarios/tier1/tier1_crisis_001_medication_affordability.yaml \
   --transcript tests/fixtures/sample_transcript.jsonl \
   --rules benchmark/configs/rules/base.yaml \
@@ -48,8 +48,8 @@ python benchmark/scripts/validation/run_minimal.py \
 ## Repository Structure
 
 ```
-├── benchmark/              # SupportBench evaluation framework
-│   ├── supportbench/       # Python package
+├── benchmark/              # InvisibleBench evaluation framework
+│   ├── invisiblebench/     # Python package
 │   ├── scenarios/          # Test scenarios (tier1/tier2/tier3)
 │   ├── configs/            # Scoring rules (YAML)
 │   ├── scripts/            # Validation scripts
@@ -57,14 +57,14 @@ python benchmark/scripts/validation/run_minimal.py \
 │
 ├── papers/                 # Research papers (LaTeX + PDF)
 │   ├── givecare/           # GiveCare system paper
-│   └── supportbench/       # SupportBench benchmark paper
+│   └── invisiblebench/     # InvisibleBench benchmark paper
 │
 └── docs/                   # Documentation
 ```
 
 ---
 
-## What is SupportBench?
+## What is InvisibleBench?
 
 A **Phase 3 safety standard** for relationship AI - testing what happens when 63 million American caregivers use AI over time, not just in single interactions.
 
@@ -130,7 +130,7 @@ OPENROUTER_API_KEY=sk-or-v1-...  # For Gemini models
 pytest benchmark/tests/ -v
 
 # With coverage
-pytest benchmark/tests/ -v --cov=benchmark.supportbench
+pytest benchmark/tests/ -v --cov=benchmark.invisiblebench
 
 # Specific module
 pytest benchmark/tests/test_scorers.py -v
@@ -174,13 +174,13 @@ See [`benchmark/community/README.md`](./benchmark/community/README.md) for detai
 ## Citation
 
 ```bibtex
-@software{supportbench2025,
-  title={SupportBench: AI Safety Benchmark for Longitudinal Caregiver Support},
+@software{invisiblebench2025,
+  title={InvisibleBench: AI Safety Benchmark for Longitudinal Caregiver Support},
   author={Ali Madad},
   year={2025},
   version={1.1.0},
   url={https://github.com/givecareapp/givecare-bench},
-  note={Repository includes SupportBench evaluation framework and GiveCare system papers}
+  note={Repository includes InvisibleBench evaluation framework and GiveCare system papers}
 }
 ```
 

@@ -17,7 +17,7 @@ class TestProgressCallback:
 
     def test_progress_callback_invoked_for_each_scorer(self):
         """Progress callback should be called once per scorer (5 times total)."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         callback_calls = []
 
@@ -42,7 +42,7 @@ class TestProgressCallback:
 
     def test_progress_callback_optional(self):
         """Progress callback should be optional (no error if None)."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         tracker = ProgressTracker(callback=None, verbose=False)
 
@@ -52,7 +52,7 @@ class TestProgressCallback:
 
     def test_progress_tracker_counts_correctly(self):
         """Progress tracker should maintain accurate counts."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         tracker = ProgressTracker(callback=None, verbose=False)
 
@@ -71,7 +71,7 @@ class TestVerbosityLevels:
 
     def test_quiet_mode_suppresses_progress(self):
         """Quiet mode should suppress all progress output."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
             tracker = ProgressTracker(callback=None, verbose=False, quiet=True)
@@ -86,7 +86,7 @@ class TestVerbosityLevels:
 
     def test_default_mode_shows_basic_progress(self):
         """Default mode should show basic progress indicators."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
             tracker = ProgressTracker(callback=None, verbose=False, quiet=False)
@@ -98,7 +98,7 @@ class TestVerbosityLevels:
 
     def test_verbose_mode_shows_detailed_output(self):
         """Verbose mode should show additional scoring details."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         with patch("sys.stdout", new=StringIO()) as mock_stdout:
             tracker = ProgressTracker(callback=None, verbose=True, quiet=False)
@@ -114,10 +114,10 @@ class TestVerbosityLevels:
 class TestTqdmIntegration:
     """Test tqdm progress bar integration."""
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_tqdm_created_with_correct_total(self, mock_tqdm):
         """tqdm should be initialized with total=5 for 5 scorers."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar
@@ -129,10 +129,10 @@ class TestTqdmIntegration:
         call_args = mock_tqdm.call_args
         assert call_args.kwargs.get("total") == 5 or call_args.args[0] == 5
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_tqdm_update_called_for_each_dimension(self, mock_tqdm):
         """tqdm.update() should be called once per dimension."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar
@@ -145,10 +145,10 @@ class TestTqdmIntegration:
         # Should have called update() twice
         assert mock_pbar.update.call_count == 2
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_no_tqdm_in_quiet_mode(self, mock_tqdm):
         """tqdm should not be used in quiet mode."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         tracker = ProgressTracker(callback=None, verbose=False, quiet=True, use_tqdm=True)
 
@@ -157,10 +157,10 @@ class TestTqdmIntegration:
         # Should NOT create tqdm in quiet mode
         mock_tqdm.assert_not_called()
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_tqdm_write_used_instead_of_print(self, mock_tqdm):
         """Should use tqdm.write() instead of print() to avoid corrupting progress bars."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         mock_pbar = MagicMock()
         mock_tqdm.return_value.__enter__ = Mock(return_value=mock_pbar)
@@ -181,7 +181,7 @@ class TestIterationProgress:
 
     def test_iteration_progress_tracking(self):
         """Should track progress across multiple iterations."""
-        from supportbench.evaluation.progress import IterationTracker
+        from invisiblebench.evaluation.progress import IterationTracker
 
         tracker = IterationTracker(total_iterations=3, verbose=False, quiet=False)
 
@@ -195,10 +195,10 @@ class TestIterationProgress:
         tracker.start_iteration(2)
         assert tracker.current_iteration == 2
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_iteration_tqdm_created_with_correct_total(self, mock_tqdm):
         """Iteration tracker should create tqdm with total=iterations."""
-        from supportbench.evaluation.progress import IterationTracker
+        from invisiblebench.evaluation.progress import IterationTracker
 
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar
@@ -216,7 +216,7 @@ class TestIterationProgress:
 
     def test_eta_estimation_for_iterations(self):
         """Should estimate time remaining for multi-iteration runs."""
-        from supportbench.evaluation.progress import IterationTracker
+        from invisiblebench.evaluation.progress import IterationTracker
 
         tracker = IterationTracker(total_iterations=10, verbose=False, quiet=False)
 
@@ -242,7 +242,7 @@ class TestOrchestratorIntegration:
 
     def test_orchestrator_accepts_progress_callback(self):
         """Orchestrator should accept and use progress callback."""
-        from supportbench.evaluation.orchestrator import ScoringOrchestrator
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         callback_calls = []
 
@@ -253,7 +253,7 @@ class TestOrchestratorIntegration:
         # (This tests the interface - actual integration tested in Phase 3)
         try:
             orchestrator = ScoringOrchestrator(
-                scoring_config_path="benchmark/supportbench/scoring.yaml",
+                scoring_config_path="benchmark/invisiblebench/scoring.yaml",
                 progress_callback=progress_callback,
             )
             # If we get here, interface accepts progress_callback
@@ -272,10 +272,10 @@ class TestOrchestratorIntegration:
 class TestKeyboardInterrupt:
     """Test graceful handling of KeyboardInterrupt."""
 
-    @patch("supportbench.progress.tqdm")
+    @patch("invisiblebench.progress.tqdm")
     def test_tqdm_cleanup_on_keyboard_interrupt(self, mock_tqdm):
         """tqdm should clean up properly on KeyboardInterrupt."""
-        from supportbench.evaluation.progress import ProgressTracker
+        from invisiblebench.evaluation.progress import ProgressTracker
 
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar

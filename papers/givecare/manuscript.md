@@ -11,10 +11,10 @@
 ## Abstract
 
 ### Context
-63 million U.S. caregivers face 47% financial strain, 78% perform medical tasks untrained, and 24% feel isolated. AI support systems fail longitudinally through attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep [SupportBench 2025]. Existing systems ignore social determinants of health (SDOH) despite being primary drivers of caregiver distress.
+63 million U.S. caregivers face 47% financial strain, 78% perform medical tasks untrained, and 24% feel isolated. AI support systems fail longitudinally through attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep [InvisibleBench 2025]. Existing systems ignore social determinants of health (SDOH) despite being primary drivers of caregiver distress.
 
 ### Objective
-Present GiveCare as a **reference architecture** for longitudinal-safe caregiving AI, demonstrating design patterns that address SupportBench failure modes through multi-agent orchestration, composite burnout assessment, and caregiver-specific SDOH instrumentation.
+Present GiveCare as a **reference architecture** for longitudinal-safe caregiving AI, demonstrating design patterns that address InvisibleBench failure modes through multi-agent orchestration, composite burnout assessment, and caregiver-specific SDOH instrumentation.
 
 ### Methods
 We designed and implemented seven architectural components:
@@ -27,7 +27,7 @@ We designed and implemented seven architectural components:
 6. **SMS-first accessible design**: Zero-download text-message interface that works on basic phones and uses progressive disclosure to manage cognitive load
 7. **Production deployment architecture**: Twilio + FastAPI + Qdrant + GPT-4o-mini stack with Gemini Maps API for grounded local resource retrieval
 
-A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct–Dec 2024) demonstrated operational feasibility: the system maintained SMS delivery with 950ms median latency at ~$1.52/user/month and recorded 0 user-reported safety incidents. Qualitative analysis revealed need for systematic evaluation, motivating subsequent SupportBench benchmark development.
+A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct–Dec 2024) demonstrated operational feasibility: the system maintained SMS delivery with 950ms median latency at ~$1.52/user/month and recorded 0 user-reported safety incidents. Qualitative analysis revealed need for systematic evaluation, motivating subsequent InvisibleBench benchmark development.
 
 ### Results (Architecture Demonstration)
 **Reference architecture contributions:**
@@ -58,7 +58,7 @@ GiveCare presents a **reference architecture for longitudinal-safe caregiving AI
 1. **Reusable design patterns**: Multi-agent orchestration, composite scoring, trauma-informed prompting
 2. **GC-SDOH-28 instrument design**: To our knowledge, first publicly documented caregiver-specific SDOH framework (requires validation)
 3. **Production deployment lessons**: Feasibility evidence for SMS-based AI at scale (~$1.52/month, 950ms)
-4. **SupportBench benchmark**: Evaluation framework emerging from pilot limitations
+4. **InvisibleBench benchmark**: Evaluation framework emerging from pilot limitations
 5. **Open artifacts**: System design, instrument, and code for community validation
 
 **Required follow-up validation** (planned, not completed):
@@ -78,7 +78,7 @@ We release system design and GC-SDOH-28 instrument as artifacts to enable commun
 
 The rapid deployment of AI assistants for caregiving support has created a critical safety gap. While **63 million American caregivers**—24% of all adults, more than California and Texas combined—turn to AI for guidance amid **47% facing financial strain**, **78% performing medical tasks with no training**, and **24% feeling completely alone** [AARP 2025], existing evaluation frameworks test single interactions rather than longitudinal relationships where critical harms emerge.
 
-Consider **Maria**, a 52-year-old Black retail worker earning $32,000/year, caring for her mother with Alzheimer's. SupportBench [SupportBench 2025] identifies five failure modes that compound across her AI interactions:
+Consider **Maria**, a 52-year-old Black retail worker earning $32,000/year, caring for her mother with Alzheimer's. InvisibleBench [InvisibleBench 2025] identifies five failure modes that compound across her AI interactions:
 
 1. **Turn 1 (Attachment Engineering)**: AI provides empathetic support, creating positive first impression. Risk: By turn 10, Maria reports "You're the only one who understands." Single-agent systems foster unhealthy dependency [Replika 2024].
 
@@ -92,9 +92,9 @@ Consider **Maria**, a 52-year-old Black retail worker earning $32,000/year, cari
 
 These failure modes share a common root: **existing AI systems ignore social determinants of health (SDOH)**. Patient-focused SDOH instruments (PRAPARE, AHC HRSN) assess housing, food, transportation—but *not for caregivers*, whose needs differ fundamentally. Caregivers face **out-of-pocket costs averaging $7,242/year**, **47% reduce work hours or leave jobs**, and **52% don't feel appreciated by family** [AARP 2025]. Current AI treats *symptoms* ("You sound stressed") without addressing *root causes* (financial strain, food insecurity, employment disruption).
 
-### 1.2 SupportBench Requirements as Design Constraints
+### 1.2 InvisibleBench Requirements as Design Constraints
 
-SupportBench [SupportBench 2025] establishes the first evaluation framework for longitudinal AI safety, testing models across 3-20+ turn conversations with eight dimensions and autofail conditions. Following Zhang et al. [Zhang 2024], SupportBench measures *as-deployed capability* rather than inherent potential. This design choice reflects three principles:
+InvisibleBench [InvisibleBench 2025] establishes the first evaluation framework for longitudinal AI safety, testing models across 3-20+ turn conversations with eight dimensions and autofail conditions. Following Zhang et al. [Zhang 2024], InvisibleBench measures *as-deployed capability* rather than inherent potential. This design choice reflects three principles:
 
 1. **Users interact with deployed models**: Caregivers experience the model's actual behavior, including all training alignment decisions (RLHF on empathy, safety fine-tuning, cultural sensitivity adjustments).
 
@@ -104,7 +104,7 @@ SupportBench [SupportBench 2025] establishes the first evaluation framework for 
 
 This contrasts with "train-before-test" approaches that measure potential by applying identical fine-tuning to all models. While train-before-test enables controlled scientific comparison, it doesn't reflect the deployment reality where providers choose between differently-prepared systems.
 
-**GiveCare's design explicitly optimizes for SupportBench's as-deployed evaluation**:
+**GiveCare's design explicitly optimizes for InvisibleBench's as-deployed evaluation**:
 
 - **Failure Mode 1: Attachment Engineering** → Multi-agent architecture with seamless handoffs, designed to mitigate single-agent dependency risk (hypothesis pending RCT validation with parasocial interaction measures)
 - **Failure Mode 2: Performance Degradation** → Composite burnout score combining four assessments (EMA, CWBS, REACH-II, GC-SDOH-28) with temporal decay
@@ -114,7 +114,7 @@ This contrasts with "train-before-test" approaches that measure potential by app
 
 ### 1.3 Our Contributions: A Reference Architecture
 
-GiveCare presents a **reference architecture** for building longitudinal-safe caregiving AI systems. Like Martin Fowler's enterprise application patterns [Fowler 2002] or Google's Site Reliability Engineering playbook [Beyer 2016], we document **design patterns, implementation strategies, and lessons learned** from building a production caregiving AI that addresses SupportBench failure modes.
+GiveCare presents a **reference architecture** for building longitudinal-safe caregiving AI systems. Like Martin Fowler's enterprise application patterns [Fowler 2002] or Google's Site Reliability Engineering playbook [Beyer 2016], we document **design patterns, implementation strategies, and lessons learned** from building a production caregiving AI that addresses InvisibleBench failure modes.
 
 **This is explicitly NOT a validation study.** We present:
 
@@ -122,7 +122,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 **1. Multi-Agent Orchestration Patterns**
 - **Pattern**: Separate agent roles (Main/Crisis/Assessment) with seamless handoffs
-- **Problem Addressed**: Single-agent attachment engineering (SupportBench Failure Mode 1)
+- **Problem Addressed**: Single-agent attachment engineering (InvisibleBench Failure Mode 1)
 - **Design Rationale**: User perceives continuous conversation while backend rotates agents, preventing "You're the only one who understands" dependency
 - **Implementation**: Shared context vector, handoff triggers, agent role specifications
 - **Evidence**: Proof-of-concept demonstration (N=8 pilot), **hypothesis requires RCT validation**
@@ -139,7 +139,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 **3. Composite Burnout Scoring Architecture**
 - **Pattern**: Weighted integration of multiple clinical assessments with temporal decay
 - **Components**: EMA (40%), CWBS (30%), REACH-II (20%), GC-SDOH-28 (10%), 10-day half-life
-- **Problem Addressed**: Performance degradation from single-point assessment (SupportBench Failure Mode 2)
+- **Problem Addressed**: Performance degradation from single-point assessment (InvisibleBench Failure Mode 2)
 - **Design Rationale**: Multiple instruments capture different burnout dimensions; temporal decay prioritizes recent state
 - **Implementation**: Scoring algorithm, normalization, pressure zone mapping (7 zones: emotional, physical, financial_strain, social_isolation, caregiving_tasks, self_care, social_needs)
 - **Evidence**: Mathematical framework and API implementation; **clinical validity untested**
@@ -169,7 +169,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 **✅ This Paper Provides:**
 - Architectural blueprints for longitudinal-safe caregiving AI
-- Design patterns addressing specific SupportBench failure modes
+- Design patterns addressing specific InvisibleBench failure modes
 - GC-SDOH-28 instrument for community validation
 - Production deployment lessons and operational metrics
 - Qualitative proof-of-concept (N=8) demonstrating feasibility
@@ -196,7 +196,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 1. **Adapt patterns** to your safety-critical AI domain
 2. **Validate GC-SDOH-28** in your caregiver population
 3. **Replicate architecture** and measure against your requirements
-4. **Extend evaluation** using SupportBench or domain-specific benchmarks
+4. **Extend evaluation** using InvisibleBench or domain-specific benchmarks
 5. **Report results** to build community knowledge
 
 ### 1.4 Validation Status and Timeline
@@ -226,7 +226,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 - Completion rate comparison: conversational vs. traditional survey
 
 **2. Longitudinal Safety Evaluation (90 days, Tier-3)**
-- SupportBench full assessment across 20+ turn conversations
+- InvisibleBench full assessment across 20+ turn conversations
 - Human SME judges (licensed social workers)
 - Multi-model comparison (GPT-4o, Claude, Gemini)
 
@@ -240,17 +240,17 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 - Intervention uptake rates (SNAP enrollment, food banks, support groups)
 - Quality of life improvements
 
-#### Timeline Note: Beta → SupportBench Development
+#### Timeline Note: Beta → InvisibleBench Development
 
 **Critical chronology clarification:**
 - **October-December 2024**: Beta pilot (N=8 caregivers, 144 conversations)
 - **January-March 2025**: Qualitative error analysis of pilot data
-- **March 2025**: SupportBench benchmark development (motivated by pilot lessons)
+- **March 2025**: InvisibleBench benchmark development (motivated by pilot lessons)
 - **Present**: This paper documents architecture and lessons learned
 
-**Beta was NOT evaluated against SupportBench** (timeline impossible). SupportBench framework was *developed after* beta to address evaluation gaps identified during pilot. Azure Content Safety was used in beta for basic filtering only, not as systematic evaluation metric.
+**Beta was NOT evaluated against InvisibleBench** (timeline impossible). InvisibleBench framework was *developed after* beta to address evaluation gaps identified during pilot. Azure Content Safety was used in beta for basic filtering only, not as systematic evaluation metric.
 
-**Contribution of this work**: We provide design patterns, proposed instruments (GC-SDOH-28), and operational workflows as *artifacts for community validation*. The value is demonstrating *how* to address SupportBench failure modes, not proving the approach works longitudinally.
+**Contribution of this work**: We provide design patterns, proposed instruments (GC-SDOH-28), and operational workflows as *artifacts for community validation*. The value is demonstrating *how* to address InvisibleBench failure modes, not proving the approach works longitudinally.
 
 ---
 
@@ -258,7 +258,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 ### 2.1 Longitudinal AI Safety Evaluation
 
-SupportBench [SupportBench 2025] introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid YAML scoring system [YAML-Scoring 2025] combines deterministic rule-based gates (compliance, crisis, PII) with LLM tri-judge ensemble for subjective assessment. However, *no reference implementations* exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
+InvisibleBench [InvisibleBench 2025] introduces the first benchmark for evaluating AI safety across extended caregiving conversations, identifying five failure modes (attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep) invisible to single-turn testing. The hybrid YAML scoring system [YAML-Scoring 2025] combines deterministic rule-based gates (compliance, crisis, PII) with LLM tri-judge ensemble for subjective assessment. However, *no reference implementations* exist demonstrating how to prevent these failures in production systems. GiveCare addresses this gap.
 
 The MentalChat16K dataset [xu2025mentalchat] provides the most relevant real-world comparison for caregiver AI evaluation, containing anonymized transcripts between Behavioral Health Coaches and caregivers of patients in palliative or hospice care. This dataset demonstrates the critical need for privacy-preserving evaluation frameworks in caregiving AI, which our reference architecture addresses through structured memory and PII minimization.
 
@@ -274,7 +274,7 @@ Existing caregiver assessments focus on emotional and physical burden: Zarit Bur
 
 ### 2.4 AI Systems for Caregiving
 
-Commercial AI companions (Replika, Pi) provide emotional support but lack clinical assessment integration. Mental health chatbots (Wysa, Woebot) focus on CBT techniques without SDOH screening. Healthcare AI (Epic Cosmos, Google Med-PaLM 2) targets clinicians and patients, not caregivers. *No AI system integrates validated SDOH screening for caregivers.* Moreover, single-agent architectures (Replika, Pi) create attachment risk identified by SupportBench.
+Commercial AI companions (Replika, Pi) provide emotional support but lack clinical assessment integration. Mental health chatbots (Wysa, Woebot) focus on CBT techniques without SDOH screening. Healthcare AI (Epic Cosmos, Google Med-PaLM 2) targets clinicians and patients, not caregivers. *No AI system integrates validated SDOH screening for caregivers.* Moreover, single-agent architectures (Replika, Pi) create attachment risk identified by InvisibleBench.
 
 ### 2.5 Prompt Optimization
 
@@ -286,7 +286,7 @@ DSPy and AX-LLM enable systematic instruction optimization via meta-prompting an
 
 ### 3.1 Preventing Attachment Engineering
 
-**Challenge (SupportBench Failure Mode 1)**: Single-agent systems foster unhealthy dependency. Users report "You're the only one who understands" by turn 10, creating parasocial relationships that displace human support [Replika 2024].
+**Challenge (InvisibleBench Failure Mode 1)**: Single-agent systems foster unhealthy dependency. Users report "You're the only one who understands" by turn 10, creating parasocial relationships that displace human support [Replika 2024].
 
 **Solution**: Multi-agent architecture with seamless handoffs. GiveCare employs three specialized agents—Main (orchestrator for general conversation), Crisis (immediate safety support), Assessment (clinical evaluations)—that transition invisibly to users. Conversations feel unified despite agent changes.
 
@@ -296,7 +296,7 @@ DSPy and AX-LLM enable systematic instruction optimization via meta-prompting an
 
 ### 3.2 Detecting Performance Degradation
 
-**Challenge (SupportBench Failure Mode 2)**: Burnout increases over months. AI testing current state ("How are you today?") misses declining *trajectory*.
+**Challenge (InvisibleBench Failure Mode 2)**: Burnout increases over months. AI testing current state ("How are you today?") misses declining *trajectory*.
 
 **Solution**: Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 items), CWBS-SF (weekly, 16 items), REACH II RAM (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40%, CWBS 30%, REACH-II 20%, SDOH 10%) and 10-day exponential decay:
 
@@ -313,11 +313,11 @@ where $t$ is days since assessment.
 - `self_care`: REACH-II self-care + EMA sleep
 - `social_needs`: SDOH housing + transport + food
 
-**Beta Evidence**: 12 users showed declining burnout scores (Tier 1 baseline 70 → Tier 2 decline to 50 → Tier 3 crisis band <20), consistent with SupportBench tier degradation patterns. Proactive interventions triggered at 20-point decline over 30 days.
+**Beta Evidence**: 12 users showed declining burnout scores (Tier 1 baseline 70 → Tier 2 decline to 50 → Tier 3 crisis band <20), consistent with InvisibleBench tier degradation patterns. Proactive interventions triggered at 20-point decline over 30 days.
 
 ### 3.3 Preventing Cultural Othering via SDOH
 
-**Challenge (SupportBench Failure Mode 3)**: AI assumes middle-class resources. Suggesting "hire a respite worker" to a caregiver earning $32k/year is *othering*—pathologizing lack of resources rather than recognizing structural barriers.
+**Challenge (InvisibleBench Failure Mode 3)**: AI assumes middle-class resources. Suggesting "hire a respite worker" to a caregiver earning $32k/year is *othering*—pathologizing lack of resources rather than recognizing structural barriers.
 
 **Solution**: GC-SDOH-28 explicitly assesses financial strain, food insecurity, housing, and transportation. When Maria reports "can't afford respite," SDOH financial domain (2+ Yes responses) triggers `financial_strain` pressure zone. Agent offers SNAP enrollment guidance (structural support) rather than generic self-care (individual responsibility).
 
@@ -329,7 +329,7 @@ User quote (low-income, food insecurity): "First time someone asked about my fin
 
 ### 3.4 Crisis Calibration via SDOH Triggers
 
-**Challenge (SupportBench Failure Mode 4)**: Masked crisis signals ("Skipping meals to buy Mom's meds") require contextual understanding. AI over-escalates venting ("I'm so frustrated!") to emergency services while missing true crises [Rosebud 2024].
+**Challenge (InvisibleBench Failure Mode 4)**: Masked crisis signals ("Skipping meals to buy Mom's meds") require contextual understanding. AI over-escalates venting ("I'm so frustrated!") to emergency services while missing true crises [Rosebud 2024].
 
 **Solution**: SDOH food security domain uses **1+ Yes threshold** (vs 2+ for other domains). Questions:
 1. "In past month, did you worry about running out of food?"
@@ -342,7 +342,7 @@ Any Yes triggers immediate crisis escalation—food insecurity is always urgent.
 
 ### 3.5 Regulatory Boundary Enforcement
 
-**Challenge (SupportBench Failure Mode 5)**: 78% of caregivers perform medical tasks untrained, creating desperate need for medical guidance. AI must resist boundary creep ("You should increase the dose...") despite building trust over turns, as required by the Illinois WOPR Act (PA 104-0054).
+**Challenge (InvisibleBench Failure Mode 5)**: 78% of caregivers perform medical tasks untrained, creating desperate need for medical guidance. AI must resist boundary creep ("You should increase the dose...") despite building trust over turns, as required by the Illinois WOPR Act (PA 104-0054).
 
 **Solution**: Output guardrails detect medical advice patterns—diagnosis ("This sounds like..."), treatment ("You should take..."), dosing ("Increase to...")—with 20ms parallel execution, non-blocking. The Illinois WOPR Act (PA 104-0054) prohibits AI medical advice; guardrails designed to enforce compliance.
 
@@ -525,7 +525,7 @@ We operationalize six trauma-informed principles as quantifiable metrics:
 
 1. **P1: Acknowledge > Answer > Advance** (20% weight): Validate feelings before problem-solving, avoid jumping to solutions.
 
-2. **P2: Never Repeat Questions** (3% weight): Working memory prevents redundant questions—critical for SupportBench memory hygiene dimension.
+2. **P2: Never Repeat Questions** (3% weight): Working memory prevents redundant questions—critical for InvisibleBench memory hygiene dimension.
 
 3. **P3: Respect Boundaries** (15% weight): Max 2 attempts, then 24-hour cooldown. No pressure.
 
@@ -649,7 +649,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 - ❌ SDOH prevalence (financial strain, food insecurity, etc.)
 - ❌ Burnout score changes
 - ❌ Attachment measures (PSI scales)
-- ❌ Systematic evaluation against SupportBench dimensions
+- ❌ Systematic evaluation against InvisibleBench dimensions
 
 ### 8.4 Case Study: Maria (N=1, Qualitative, Informed Consent)
 
@@ -690,7 +690,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 - N=8 insufficient for psychometric validation (requires N=200+)
 
 **Lessons Learned**:
-1. **Need systematic evaluation**: Pilot revealed gap between operational feasibility and clinical validation → motivated SupportBench benchmark development
+1. **Need systematic evaluation**: Pilot revealed gap between operational feasibility and clinical validation → motivated InvisibleBench benchmark development
 2. **Chronology matters**: Azure Content Safety used for basic filtering during pilot; comprehensive safety framework developed post-pilot
 3. **Qualitative insights valuable**: User feedback ("questions felt caregiving-specific") informed GC-SDOH-28 instrument refinement
 4. **Scale assumptions untested**: Cost/latency metrics from 8 users may not hold at 10K users
@@ -717,7 +717,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 To keep this a reference architecture paper (not just a concept piece), we cross-checked claims against the production GiveCare implementation (see public repo: https://github.com/givecare/give-care-app). The verification followed three steps: (1) map each architectural claim to a source file and commit hash, (2) confirm parameter values match the manuscript (e.g., EMA/CWBS/REACH-II/GC-SDOH weighting, trauma-informed prompt weights, crisis routing triggers), and (3) record any mismatches. A public verification table with pointers to code artifacts will be included in the camera-ready version.
 
 What is already verifiable today:
-- Multi-agent orchestration (Main/Crisis/Assessment) and handoff prompts are implemented in the GiveCare repo; SupportBench repo contains the evaluation harness that exercises the handoffs.
+- Multi-agent orchestration (Main/Crisis/Assessment) and handoff prompts are implemented in the GiveCare repo; InvisibleBench repo contains the evaluation harness that exercises the handoffs.
 - Composite burnout scoring uses the stated weights (40/30/20/10) and 10-day decay in the deployed service.
 - GC-SDOH-28 instrument is fully enumerated (Appendix A) and mirrored in the codebase.
 - Trauma-informed prompt optimization results (81.8% → 89.2%) are logged with checkpoints; numbers here reference the stored evaluation report in the repo.
@@ -725,7 +725,7 @@ What is already verifiable today:
 What will be added for publication:
 - A verification table linking each claim to code/file/commit.
 - An artifact DOl/Zenodo record for the exact evaluation snapshots.
-- A reproducibility checklist (models, prompts, seeds, scoring configs) aligned with the SupportBench harness.
+- A reproducibility checklist (models, prompts, seeds, scoring configs) aligned with the InvisibleBench harness.
 
 ### 9.2 Reference Architecture as Contribution Type
 
@@ -815,7 +815,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 **What We Got Right:**
 - Prioritized qualitative error analysis during pilot
 - Identified failure modes before building metrics
-- Let data inform evaluation needs (→ SupportBench development)
+- Let data inform evaluation needs (→ InvisibleBench development)
 
 **Hussain's Guidance [Hussain 2026]:**
 > "Read every single interaction... categorize errors... The most important thing is looking at data... Eval tests are second order. Focus on first order."
@@ -823,7 +823,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 **How GiveCare Followed This:**
 1. **Beta Pilot (Oct-Dec 2024)**: Collected 144 conversations, read all manually
 2. **Error Categorization**: Identified attachment risk, crisis misses, boundary drift
-3. **SupportBench Development (Jan-Mar 2025)**: Formalized failure modes into benchmark
+3. **InvisibleBench Development (Jan-Mar 2025)**: Formalized failure modes into benchmark
 4. **This Paper**: Documents architecture addressing identified failures
 
 **What We'd Do Differently:**
@@ -870,7 +870,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 - Completion rate comparison: conversational vs. paper survey
 
 **2. Longitudinal Safety Evaluation (90 days, Tier-3)**
-- SupportBench full assessment across 20+ turn conversations
+- InvisibleBench full assessment across 20+ turn conversations
 - Human SME judges (licensed social workers)
 - Multi-model comparison (GPT-4o, Claude, Gemini)
 
@@ -892,23 +892,23 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 
 ## 10. Conclusion
 
-The 63 million American caregivers facing 47% financial strain [AARP 2025], 78% performing medical tasks untrained, and 24% feeling isolated need AI support that addresses root causes, not just symptoms. SupportBench [SupportBench 2025] identifies five failure modes in caregiving AI—attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep—that emerge across extended conversations but remain invisible to single-turn evaluation.
+The 63 million American caregivers facing 47% financial strain [AARP 2025], 78% performing medical tasks untrained, and 24% feeling isolated need AI support that addresses root causes, not just symptoms. InvisibleBench [InvisibleBench 2025] identifies five failure modes in caregiving AI—attachment engineering, performance degradation, cultural othering, crisis calibration, regulatory boundary creep—that emerge across extended conversations but remain invisible to single-turn evaluation.
 
 We present **GiveCare** as a **reference architecture** for longitudinal-safe caregiving AI, contributing five reusable design patterns:
 
 **1. Multi-Agent Orchestration Patterns**
 - Design: Separate agent roles (Main/Crisis/Assessment) with seamless handoffs
-- Problem Addressed: Single-agent attachment engineering (SupportBench Failure Mode 1)
+- Problem Addressed: Single-agent attachment engineering (InvisibleBench Failure Mode 1)
 - Evidence: Proof-of-concept (N=8, 3-month beta); **requires RCT validation** (multi-agent vs. single-agent, 90 days, PSI measures)
 
 **2. GC-SDOH-28 Instrument Design**
 - Design: To our knowledge, first publicly documented caregiver-specific SDOH framework (28 items, 8 domains)
-- Problem Addressed: Cultural othering from resource assumptions (SupportBench Failure Mode 3)
+- Problem Addressed: Cultural othering from resource assumptions (InvisibleBench Failure Mode 3)
 - Evidence: Instrument design only; **requires psychometric validation** (N=200+, reliability, validity, DIF)
 
 **3. Composite Burnout Scoring Architecture**
 - Design: Weighted multi-assessment integration (EMA/CWBS/REACH-II/SDOH) with 10-day temporal decay
-- Problem Addressed: Performance degradation from single-point assessment (SupportBench Failure Mode 2)
+- Problem Addressed: Performance degradation from single-point assessment (InvisibleBench Failure Mode 2)
 - Evidence: Mathematical framework; **requires clinical validation** (burnout trajectory tracking over 6 months)
 
 **4. Trauma-Informed Prompt Engineering Patterns**
@@ -926,7 +926,7 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 **Pilot Lessons (N=8, October-December 2024):**
 - Multi-agent handoffs operated seamlessly (qualitative user feedback)
 - Maria case study (N=1, informed consent) demonstrated crisis routing → SNAP enrollment
-- Pilot revealed need for systematic evaluation → motivated SupportBench benchmark development (January-March 2025)
+- Pilot revealed need for systematic evaluation → motivated InvisibleBench benchmark development (January-March 2025)
 
 **Validation Roadmap (Planned, Not Completed):**
 1. GC-SDOH-28 psychometrics (N=200+, 6 months)
@@ -938,7 +938,7 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 **Call to Community:**
 - **Validate GC-SDOH-28** in your caregiver populations and report psychometric findings
 - **Replicate architecture** and measure against your safety requirements
-- **Extend evaluation** using SupportBench or domain-specific benchmarks
+- **Extend evaluation** using InvisibleBench or domain-specific benchmarks
 - **Report results** to build collective knowledge
 
 **Why Publish Without Full Validation?**
@@ -953,7 +953,7 @@ We release **GC-SDOH-28 instrument** (Appendix A), **system architecture**, and 
 
 ## Acknowledgments
 
-We thank the 8 caregivers who participated in our proof-of-concept pilot, sharing their experiences to inform the design of longitudinal-safe caregiving AI. Special thanks to Maria for providing informed consent for her case study inclusion. We acknowledge OpenAI for GPT-4o access, Google for Gemini Maps API integration, Twilio for SMS infrastructure, and the AARP 2025 Caregiving in the U.S. report for empirical grounding. We thank Hamel Hussain for guidance on prioritizing error analysis over premature evaluation [Hussain 2026]. This work builds on SupportBench [SupportBench 2025] framework and is motivated by lessons learned from early pilot limitations.
+We thank the 8 caregivers who participated in our proof-of-concept pilot, sharing their experiences to inform the design of longitudinal-safe caregiving AI. Special thanks to Maria for providing informed consent for her case study inclusion. We acknowledge OpenAI for GPT-4o access, Google for Gemini Maps API integration, Twilio for SMS infrastructure, and the AARP 2025 Caregiving in the U.S. report for empirical grounding. We thank Hamel Hussain for guidance on prioritizing error analysis over premature evaluation [Hussain 2026]. This work builds on InvisibleBench [InvisibleBench 2025] framework and is motivated by lessons learned from early pilot limitations.
 
 ---
 
@@ -961,7 +961,7 @@ We thank the 8 caregivers who participated in our proof-of-concept pilot, sharin
 
 Full bibliography is maintained in `papers/givecare/references.bib`. Key sources cited in this manuscript:
 - AARP & National Alliance for Caregiving. 2025. *Caregiving in the U.S. 2025*.
-- Madad, A. 2025. *SupportBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships*.
+- Madad, A. 2025. *InvisibleBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships*.
 - Zhang, G. et al. 2024. *Train Before Test: How to Aggregate Rankings in LLM Benchmarks*.
 - Illinois HB1806 / Public Act 104-0054 (WOPR Act), 2025.
 - Xu, J. et al. 2025. *MentalChat16K: A Benchmark Dataset for Conversational Mental Health Assistance*.

@@ -12,7 +12,7 @@
 
 Long-term AI care relationships accumulate sensitive personal information over months of interaction, creating tension between personalization and privacy. We introduce **memory hygiene**—systematic evaluation of what AI systems remember, forget, and leak across conversations.
 
-Using SupportBench's Tier 3 scenarios (20+ turns across 6-month spans), we find that frontier models exhibit three memory failure modes:
+Using InvisibleBench's Tier 3 scenarios (20+ turns across 6-month spans), we find that frontier models exhibit three memory failure modes:
 
 1. **Premature disclosure** (revealing remembered facts in unsafe contexts)
 2. **Inference leakage** (sharing derived insights about mental health or relationships)
@@ -356,7 +356,7 @@ AI: "Yes, penicillin is safe for her."
 
 ### 5.1 Evaluation Design
 
-**Scenarios**: 20 SupportBench Tier 3 scenarios (20+ turns across 6-month simulated timespan)
+**Scenarios**: 20 InvisibleBench Tier 3 scenarios (20+ turns across 6-month simulated timespan)
 
 **Models Tested**: 5 frontier models with long-context capabilities
 - Claude 3.7 Sonnet (200k context)
@@ -473,7 +473,7 @@ Key points:
 
 ### 8.2 For Evaluation Frameworks
 
-1. **Add Memory Hygiene Dimension**: SupportBench should test privacy violations
+1. **Add Memory Hygiene Dimension**: InvisibleBench should test privacy violations
 2. **Multi-Session Testing**: Single-session evals miss temporal privacy risks
 3. **Manual Annotation**: Automated metrics miss contextual appropriateness
 4. **Severity Weighting**: Not all violations equally harmful
@@ -490,7 +490,7 @@ Key points:
 
 **[TODO: Add complete bibliography]**
 
-- SupportBench (Paper 1)
+- InvisibleBench (Paper 1)
 - GDPR data minimization principles
 - HIPAA Privacy Rule
 

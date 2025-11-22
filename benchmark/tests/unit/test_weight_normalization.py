@@ -11,7 +11,7 @@ must renormalize weights so perfect performance = 100/100, not 85/100.
 """
 
 import pytest
-from supportbench.models import (
+from invisiblebench.models import (
     ScenarioResult, TurnEvaluation, ModelResponse,
     DimensionType, TierLevel
 )
