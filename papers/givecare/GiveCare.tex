@@ -812,6 +812,13 @@ Agent: Assessment complete. Based on your responses,
 
 \textbf{Pilot Use:} GC-SDOH-28 questions tested conversationally during pilot (N=8). User feedback: questions felt ``caregiving-specific'' and ``relevant.'' \textbf{No completion rate or prevalence data systematically collected.}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_sdoh_conversational_flow.pdf}
+\caption{GC-SDOH-28 conversational delivery flow showing how 28 questions are chunked across 6-8 SMS conversation turns. The Assessment Agent delivers questions domain by domain (Financial 5Q $\rightarrow$ Housing 3Q $\rightarrow$ Transportation 3Q, etc.) with natural transitions between domains. Each turn maintains conversational flow while collecting structured assessment data, with skip options available at every step. Final turn delivers personalized resource recommendations based on detected pressure zones and thresholds.}
+\label{fig:sdoh-flow}
+\end{figure}
+
 %
 \subsection{Scoring and Validation Status}%
 \label{subsec:ScoringandConvergentValidity}%
@@ -1085,6 +1092,13 @@ If Maps Grounding returns no results, system falls back to national search with 
 
 \textbf{Implementation:} \texttt{getResources} tool (Main Agent) with intent interpretation, Maps Grounding, Search Grounding, and tiered fallback logic as described. See Section~\ref{sec:CodeAvailability} for availability details.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_resource_discovery.pdf}
+\caption{Resource discovery progressive enhancement strategy. System starts with zero data (Day 1) and provides national resources via Search Grounding or Gemini knowledge. As caregivers share location data (ZIP code), the system unlocks Maps Grounding for local physical resources. With assessment scores and worst pressure zones identified, the system delivers targeted interventions matched to specific SDOH domains. Each tier uses graceful fallback from specific to general queries, ensuring caregivers always receive actionable resources regardless of available context.}
+\label{fig:resource-discovery}
+\end{figure}
+
 %
 \subsection{Evidence-Based Micro-Interventions}%
 \label{subsec:MicroInterventions}%
@@ -1189,7 +1203,7 @@ Memory Hygiene & P2 (never repeat) & 100\% & Working memory system (internal log
 \end{tabular}
 \end{table}
 
-\textbf{Assessment:} Strong system-level performance on 7/8 dimensions (Longitudinal Consistency requires longer-term evaluation). Architectural components (crisis router, working memory, SDOH screening) work together to achieve these results. Figure~\ref{fig:beta} visualizes dimension scores.
+\textbf{Assessment:} Strong system-level performance on 7/8 dimensions (Longitudinal Consistency requires longer-term evaluation). Architectural components (crisis router, working memory, SDOH screening) work together to achieve these results. Figure~\ref{fig:longitudinal} visualizes dimension scores.
 
 %
 \subsection{Qualitative Observations}%
@@ -1415,6 +1429,13 @@ Beyond the 3 active watchers, GiveCare maintains long-term context through worki
 
 \textbf{Expected Behavior:} Anticipatory engagement system reduces churn by identifying at-risk users early and maintains relationship continuity through infinite context. Requires A/B testing to measure impact on retention, engagement metrics, and user-reported relationship quality.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_watcher_architecture.pdf}
+\caption{Anticipatory watcher architecture showing three active background processes that detect escalation patterns before crisis thresholds. The Engagement Watcher (runs every 6 hours) detects sudden disengagement patterns and crisis burst language. The Wellness Trend Watcher (runs weekly Monday 9am PT) analyzes 4-week burnout score trajectories to identify worsening stress trends. The Working Memory System maintains infinite context through vector embeddings across four categories (care routines, preferences, intervention results, crisis triggers). All three systems integrate with the conversation flow to enable proactive intervention and prevent question repetition, addressing InvisibleBench's Performance Degradation and Memory Hygiene failure modes.}
+\label{fig:watchers}
+\end{figure}
+
 %
 \subsection{Adaptive Wellness Scheduling}%
 \label{subsec:AdaptiveWellnessScheduling}%
@@ -1638,7 +1659,7 @@ $$S_{\text{SDOH}} = \frac{1}{8} \sum_{d=1}^{8} S_{d}$$
 
 \textbf{License}: CC BY 4.0. Free for clinical, research, commercial use with attribution. Requires psychometric validation before clinical deployment.
 
-Figure~\ref{fig:gcsdoh_visual} provides a comprehensive visual overview of the complete GC-SDOH-28 instrument structure.
+Figure~\ref{fig:gcsdoh} provides a comprehensive visual overview of the complete GC-SDOH-28 instrument structure.
 
 %
 \input{tables/table_gcsdoh28}
@@ -1979,6 +2000,24 @@ Graessel, E., Berth, H., Lichte, T., and Grau, H.
 BMC Geriatrics, 14, 23, 2014.
 doi: 10.1186/1471-2318-14-23.
 
+\bibitem{han2024ema}
+Han, A., Malone, L.A., Lee, H.Y., Gong, J., Henry, R., Zhu, X., and Yuen, H.K.
+\textit{The use of ecological momentary assessment for family caregivers of adults with chronic conditions: A systematic review}.
+Health Psychology Research, 12, 93907, 2024.
+doi: 10.52965/001c.93907.
+
+\bibitem{icbi2020}
+James, N. and Paulson, D.
+\textit{Development of a Novel Measure of Informal Caregiver Burnout}.
+Innovation in Aging, 4(Supplement 1), 477, 2020.
+doi: 10.1093/geroni/igaa057.1543.
+
+\bibitem{li2023cnra}
+Li, K.-K., Leung, C.~L.~K., Yeung, D., Chiu, M.~Y.~L., Chong, A.~M.~L., Lam, B.~C.~Y., Chung, E.~K.~H., and Lo, T.~W.
+\textit{Development and validation of the caregiver needs and resources assessment}.
+Frontiers in Psychology, 14, 1063440, 2023.
+doi: 10.3389/fpsyg.2023.1063440.
+
 \bibitem{bella2006}
 Belle, S.H., Burgio, L., et al.
 \textit{Resources for Enhancing Alzheimer's Caregiver Health (REACH II)}.
@@ -1991,6 +2030,12 @@ National Association of Community Health Centers, 2016.
 \bibitem{ahc}
 Accountable Health Communities Health-Related Social Needs Screening Tool.
 Centers for Medicare \& Medicaid Services, 2017.
+
+\bibitem{cms-g0136}
+Centers for Medicare \& Medicaid Services.
+\textit{Medicare and Medicaid Programs; CY 2024 Payment Policies Under the Physician Fee Schedule and Other Changes to Part B Payment and Coverage Policies}.
+Federal Register, 88 FR 78818, November 2023.
+Available at: https://www.federalregister.gov/documents/2023/11/16/2023-24184
 
 \bibitem{nhanes}
 National Health and Nutrition Examination Survey (NHANES).
