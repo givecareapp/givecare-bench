@@ -1,67 +1,56 @@
-% GC-SDOH-28 as inline table
-\begin{table}[htbp]
+\begin{table*}[htbp]
 \centering
-\caption{GC-SDOH-28: Caregiver-Specific Social Determinants Instrument}
-\label{fig:gcsdoh_visual}
 \small
-\begin{tabular}{@{}llcp{4cm}@{}}
+\caption{GC-SDOH Adaptive: Complete 30-Item Caregiver-Specific SDOH Assessment}
+\label{tab:gcsdoh28}
+\begin{tabular}{p{0.12\textwidth}p{0.72\textwidth}p{0.08\textwidth}}
 \toprule
-\textbf{Domain} & \textbf{Questions} & \textbf{Threshold} & \textbf{Example Question} \\
+\textbf{Domain} & \textbf{Question (1=never/very poor, 5=always/excellent)} & \textbf{Zone} \\
 \midrule
-\rowcolor{gcOrange!30}
-Financial Strain & 3 Q & 2+ Yes & ``Worry about money for food/housing?'' \\
-\rowcolor{gcLightOrange!30}
-Housing Stability & 4 Q & 2+ Yes & ``Housing stability issues?'' \\
-\rowcolor{gcTan!30}
-Food Security & 3 Q & \cellcolor{gcOrange!50}\textbf{1+ Yes (CRISIS)} & ``Skipped meals due to lack of money?'' \\
-\rowcolor{gcLightPeach!30}
-Transport Access & 3 Q & 2+ Yes & ``Reliable transportation?'' \\
-\rowcolor{gcTan!30}
-Social Support & 4 Q & 2+ Yes & ``Someone to talk to?'' \\
-\rowcolor{gcOrange!30}
-Healthcare Access & 3 Q & 2+ Yes & ``Delayed own healthcare?'' \\
-\rowcolor{gcLightOrange!30}
-Legal/Admin & 3 Q & 2+ Yes & ``POA or advance directives?'' \\
-\rowcolor{gcTan!30}
-Technology & 2 Q & 2+ Yes & ``Reliable internet access?'' \\
+\multicolumn{3}{l}{\textit{\textbf{P1: Relationship \& Social Support (8 items)}}} \\
+Social & I have people I can rely on for emotional support. & P1 \\
+Social & I feel connected to my community. & P1 \\
+Social & I have someone to help in an emergency. & P1 \\
+Social & I can talk to others about my caregiving challenges. & P1 \\
+Social & I feel supported by family and friends. & P1 \\
+Social & I have people who understand what I'm going through. & P1 \\
+Social & I can ask for help when I need it. & P1 \\
+Social & I participate in social activities. & P1 \\
 \midrule
-\multicolumn{4}{@{}l@{}}{\textbf{Total:} 28 questions across 8 domains} \\
+\multicolumn{3}{l}{\textit{\textbf{P3: Housing \& Environment (4 items)}}} \\
+Housing & My housing is stable and secure. & P3 \\
+Housing & My home is safe and in good condition. & P3 \\
+Housing & I worry about losing my housing. & P3 \\
+Housing & My housing meets my caregiving needs. & P3 \\
+\midrule
+\multicolumn{3}{l}{\textit{\textbf{P4: Financial Resources (8 items)}}} \\
+Financial & I worry about having enough money for basic needs. & P4 \\
+Financial & I have difficulty paying for medical care. & P4 \\
+Financial & I have difficulty paying for medications. & P4 \\
+Financial & I worry about housing costs. & P4 \\
+Financial & I have difficulty paying for utilities. & P4 \\
+Financial & I have difficulty paying for food. & P4 \\
+Financial & Transportation costs are a burden. & P4 \\
+Financial & I can afford internet/phone service. & P4 \\
+\midrule
+\multicolumn{3}{l}{\textit{\textbf{P5: Legal \& Navigation (6 items)}}} \\
+Legal & I can easily communicate with healthcare providers. & P5 \\
+Legal & I understand the medical information I receive. & P5 \\
+Legal & I can coordinate care between multiple providers. & P5 \\
+Legal & I have access to medical records when needed. & P5 \\
+Legal & I have legal documents in order (power of attorney, etc.). & P5 \\
+Legal & I understand my rights as a caregiver. & P5 \\
+\midrule
+\multicolumn{3}{l}{\textit{\textbf{P6: Emotional Wellbeing (2 items)}}} \\
+Emotional & I feel prepared for caregiving emergencies. & P6 \\
+Emotional & I feel safe in my neighborhood. & P6 \\
+\midrule
+\multicolumn{3}{l}{\textit{\textbf{P2: Physical Health (2 items)}}} \\
+Physical & How often do you feel physically exhausted from caregiving? & P2 \\
+Physical & How would you rate your sleep quality overall? & P2 \\
 \bottomrule
 \end{tabular}
-
-\vspace{0.3cm}
-
-\begin{minipage}[t]{0.48\textwidth}
-\textbf{Conversational SMS Delivery}
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item Chunked: 6-8 turns across 2-3 days
-    \item Progressive disclosure (not overwhelming)
-    \item 24-hour cooldown between domains
-    \item Natural language questions
-    \item ``Skip'' option always available
-    \item \textbf{Completion: 75\%} (6/8 caregivers) vs. $\sim$40\% traditional surveys
-\end{itemize}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.48\textwidth}
-\textbf{Scoring \& Validation}
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item Binary: Yes=100, No=0
-    \item Reverse scoring for positive items
-    \item Domain score = mean of questions
-    \item Overall SDOH = mean of 8 domains
-\end{itemize}
-\textbf{Validation Required (N=200+):}
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item Convergent validity with CWBS/REACH-II
-    \item Test-retest reliability (2-week)
-    \item Factor structure (CFA)
-\end{itemize}
-\end{minipage}
-
-\vspace{0.3cm}
-
-\noindent\colorbox{gcLightOrange!40}{\parbox{0.97\textwidth}{%
-\textbf{Key Features:} To our knowledge, first publicly documented caregiver-specific SDOH instrument | Food security 1+ threshold (immediate crisis) | Portable (clinics, telehealth, programs) | CC BY 4.0 (free use with attribution) | \textbf{Requires psychometric validation (N=200+)}
-}}
-\end{table}
+\vspace{0.5em}
+\footnotesize
+\textit{Note}: 30 questions across 6 pressure zones (P1-P6). Adaptive delivery: Quick-6 (1 per zone) $\rightarrow$ Deep-Dive (flagged zones) $\rightarrow$ Full-30 (baseline). Food insecurity questions (P4) trigger immediate crisis escalation on any positive response.
+\end{table*}

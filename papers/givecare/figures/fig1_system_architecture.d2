@@ -1,0 +1,157 @@
+# GiveCare System Architecture
+# Shows unified agent with tool-based specialization
+
+direction: right
+
+title: {
+  label: "GiveCare: Unified Agent Architecture"
+  style: {
+    font-size: 18
+    bold: true
+    font-color: "#54340E"
+  }
+}
+
+# Input Layer
+input: "SMS/RCS\nInput" {
+  style: {
+    fill: "#FFF7EF"
+    stroke: "#54340E"
+    border-radius: 8
+  }
+}
+
+# Pre-processing
+preprocess: "Pre-Agent\nProcessing" {
+  style: {
+    fill: "#FFE8D6"
+    stroke: "#CB997E"
+    border-radius: 8
+  }
+
+  crisis_check: "Crisis\nDetection" {
+    style: { fill: "#FDECEC"; stroke: "#C62828"; border-radius: 6 }
+  }
+
+  guardrails: "Guardrails\n(Medical, Spam)" {
+    style: { fill: "#FFF2E0"; stroke: "#F6A14D"; border-radius: 6 }
+  }
+}
+
+# Core Agent
+mira: "Mira Agent\n(Gemini 2.5 Flash)" {
+  style: {
+    fill: "#F6A14D"
+    stroke: "#54340E"
+    stroke-width: 2
+    border-radius: 10
+    font-color: "#54340E"
+    bold: true
+  }
+}
+
+# Tools (6 active categories)
+tools: "9 Tools (6 Active)" {
+  style: {
+    fill: "#FFF7EF"
+    stroke: "#CB997E"
+    stroke-dash: 3
+    border-radius: 8
+  }
+
+  assessment: "Assessment\nstartAssessment\nrecordAnswer" {
+    style: { fill: "#E8F5E9"; stroke: "#2E7D32"; border-radius: 6 }
+  }
+
+  crisis: "Crisis\ngetCrisisResources" {
+    style: { fill: "#FDECEC"; stroke: "#C62828"; border-radius: 6 }
+  }
+
+  resources: "Resources\ngetResources\n(Maps/Search)" {
+    style: { fill: "#E3F2FD"; stroke: "#0072B2"; border-radius: 6 }
+  }
+
+  memory: "Memory\nrecordMemory\n(Vector Search)" {
+    style: { fill: "#F3E5F5"; stroke: "#9467BD"; border-radius: 6 }
+  }
+
+  profile: "Profile\nupdateProfile" {
+    style: { fill: "#FFE8D6"; stroke: "#CB997E"; border-radius: 6 }
+  }
+
+  interventions: "Interventions\nfindInterventions" {
+    style: { fill: "#FFF2E0"; stroke: "#F6A14D"; border-radius: 6 }
+  }
+}
+
+# Data Layer
+data: "Convex Backend" {
+  style: {
+    fill: "#FFE8D6"
+    stroke: "#54340E"
+    border-radius: 8
+  }
+
+  users: "Users &\nProfiles" {
+    style: { fill: "#FFFFFF"; stroke: "#CB997E"; border-radius: 6 }
+  }
+
+  scores: "Scores &\nAssessments" {
+    style: { fill: "#FFFFFF"; stroke: "#CB997E"; border-radius: 6 }
+  }
+
+  threads: "Threads &\nMemories" {
+    style: { fill: "#FFFFFF"; stroke: "#CB997E"; border-radius: 6 }
+  }
+}
+
+# Output
+output: "SMS/RCS\nResponse" {
+  style: {
+    fill: "#FFF7EF"
+    stroke: "#54340E"
+    border-radius: 8
+  }
+}
+
+# Watchers (anticipatory)
+watchers: "Watchers\n(Anticipatory)" {
+  style: {
+    fill: "#E8F5E9"
+    stroke: "#2E7D32"
+    stroke-dash: 3
+    border-radius: 8
+  }
+
+  checkin: "Check-in\nScheduler" {
+    style: { fill: "#FFFFFF"; stroke: "#2E7D32"; border-radius: 6 }
+  }
+
+  decline: "Decline\nDetector" {
+    style: { fill: "#FFFFFF"; stroke: "#2E7D32"; border-radius: 6 }
+  }
+}
+
+# Main flow
+input -> preprocess
+preprocess -> mira
+mira -> tools
+tools -> data
+mira -> output
+
+# Crisis bypass
+preprocess.crisis_check -> output: "Crisis\nBypass" {
+  style.stroke: "#C62828"
+  style.stroke-width: 2
+  style.stroke-dash: 3
+}
+
+# Watchers observe data
+data -> watchers: "Monitor" {
+  style.stroke: "#2E7D32"
+  style.stroke-dash: 3
+}
+watchers -> mira: "Trigger\nProactive" {
+  style.stroke: "#2E7D32"
+  style.stroke-dash: 3
+}

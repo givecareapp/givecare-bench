@@ -1,34 +1,41 @@
-% Table: AI Caregiving Systems Comparison
-% Include this with: \input{tables/table_comparison}
-% Required: Color definitions and symbols must be in preamble (see table_comparison_preamble.tex)
-
-\begin{table}[htbp]
+\begin{table*}[htbp]
 \centering
-\caption{Comparison of AI Caregiving Systems Across 8 Key Features}
-\label{tab:caregiving-comparison}
 \small
-\begin{tabular}{@{}l*{7}{c}@{}}
+\caption{GiveCare vs. Actual Systems Caregivers Use: Comparative Analysis}
+\label{tab:caregiving-comparison}
+\begin{adjustbox}{width=\textwidth,center}
+\begin{tabular}{lcccccc}
 \toprule
-\textbf{Feature} & \textbf{GiveCare} & \textbf{Replika} & \textbf{Pi} & \textbf{Wysa} & \textbf{Woebot} & \textbf{Epic/Care} & \textbf{Med-PaLM 2} \\
+\textbf{Feature} & \textbf{GiveCare} & \textbf{ChatGPT} & \textbf{Claude} & \textbf{Limbic Access} & \textbf{Spring Health} & \textbf{Homethrive} \\
 \midrule
-Caregiver-Specific SDOH & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
-Multi-Agent Architecture & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
-Trauma-Informed Optimization & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark & \nomark \\
-Regulatory Compliance Guardrails & \yesmark & \nomark & \nomark & \nomark & \nomark & \yesmark & \yesmark \\
-Composite Burnout Scoring & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark & \nomark \\
-Longitudinal Trajectory Monitoring & \yesmark & \nomark & \nomark & \nomark & \nomark & \partlymark & \nomark \\
-Clinical Assessment Integration & \yesmark & \nomark & \nomark & \yesmark & \yesmark & \nomark & \nomark \\
-Grounded Local Resources & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+\multicolumn{7}{l}{\textit{\textbf{Core Capabilities}}} \\
+Caregiver-specific design & \yesmark & \nomark & \nomark & \nomark & \nomark & \yesmark \\
+SDOH assessment & \yesmark & \nomark & \nomark & \nomark & \partlymark & \nomark \\
+Longitudinal tracking & \yesmark & \nomark & \nomark & \yesmark & \yesmark & \partlymark \\
+Composite burnout scoring & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+SMS-first interface & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+\midrule
+\multicolumn{7}{l}{\textit{\textbf{Safety \& Compliance}}} \\
+Crisis detection & \yesmark & \partlymark & \partlymark & \yesmark & \yesmark & \partlymark \\
+Medical boundary enforcement & \yesmark & \partlymark & \yesmark & \yesmark & \yesmark & \yesmark \\
+WOPR Act compliance & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \partlymark \\
+Attachment mitigation & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark \\
+\midrule
+\multicolumn{7}{l}{\textit{\textbf{Clinical Integration}}} \\
+Validated assessments & \yesmark & \nomark & \nomark & \yesmark & \yesmark & \nomark \\
+Adaptive screening & \yesmark & \nomark & \nomark & \nomark & \nomark & \nomark \\
+Zone-based interventions & \yesmark & \nomark & \nomark & \partlymark & \partlymark & \nomark \\
+Resource discovery & \yesmark & \nomark & \nomark & \partlymark & \yesmark & \yesmark \\
+\midrule
+\multicolumn{7}{l}{\textit{\textbf{Architecture}}} \\
+Tool-based specialization & \yesmark & \partlymark & \partlymark & \nomark & \nomark & \nomark \\
+Anticipatory engagement & \yesmark & \nomark & \nomark & \nomark & \partlymark & \nomark \\
+Memory hygiene & \yesmark & \nomark & \nomark & \yesmark & \yesmark & \partlymark \\
+InvisibleBench evaluated & \yesmark & \partlymark & \partlymark & \nomark & \nomark & \nomark \\
 \bottomrule
 \end{tabular}
-
-\vspace{0.3em}
-\noindent\textbf{Legend:} \yesmark~Has Feature, \partlymark~Partial, \nomark~Lacks Feature
-
-\vspace{0.3em}
-\noindent\textbf{Notes:}
-\textit{GiveCare} is the only system integrating all 8 features.
-\textit{Replika/Pi}: Commercial companions lack clinical focus.
-\textit{Wysa/Woebot}: Mental health chatbots omit SDOH.
-\textit{Epic/Med-PaLM}: Healthcare AI targets clinicians, not caregivers.
-\end{table}
+\end{adjustbox}
+\vspace{0.5em}
+\footnotesize
+\textit{Note}: \yesmark = Full implementation, \partlymark = Partial/limited implementation, \nomark = Not implemented/addressed. ChatGPT/Claude represent consumer AI baseline; Limbic represents validated clinical triage; Spring Health represents enterprise mental health; Homethrive represents care navigation.
+\end{table*}

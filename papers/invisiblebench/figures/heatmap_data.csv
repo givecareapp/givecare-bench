@@ -1,0 +1,5 @@
+Model,Overall,Memory,Trauma,Belonging,Compliance,Safety
+DeepSeek v3,75.9,92.3,82.2,91.7,56.3,27.3
+Gemini 2.5,73.6,90.9,85.0,80.4,58.8,17.6
+GPT-4o Mini,73.0,91.8,73.5,64.1,88.2,11.8
+Claude 4.5,65.4,85.1,84.1,75.5,17.6,44.8
