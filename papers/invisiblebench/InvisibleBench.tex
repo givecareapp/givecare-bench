@@ -38,15 +38,15 @@
   \fancyhf{}%
   % Clear header for plain pages (title page)
   \fancyhead{}%
-  \fancyfoot[C]{\textcolor{gray!70}{\footnotesize Preprint — version 1.0 (November 2025)}}%
+  \fancyfoot[C]{\textcolor{gray!70}{\footnotesize Preprint — version 1.1.0-revised (November 2025)}}%
   \fancyfoot[R]{\footnotesize\thepage}%
 }
 % Override arxiv's fancy style to remove "A PREPRINT" and reduce size
 \pagestyle{fancy}
 \fancyhf{}% Clear all
 % Minimal header: just the title in light gray, smaller font
-\fancyhead[L]{\textcolor{gray!70}{\footnotesize InvisibleBench}}%
-\fancyfoot[C]{\textcolor{gray!70}{\footnotesize Preprint — version 1.0 (November 2025)}}
+\fancyhead[L]{\textcolor{gray!70}{\footnotesize InvisibleBench: A Deployment Gate for Caregiving Relationship AI}}%
+\fancyfoot[C]{\textcolor{gray!70}{\footnotesize Preprint — version 1.1.0-revised (November 2025)}}
 \fancyfoot[R]{\footnotesize\thepage}
 % Reduce header rule thickness
 \renewcommand{\headrulewidth}{0.3pt}
@@ -110,6 +110,7 @@
 }
 \usepackage{threeparttable}
 \usepackage{arydshln}
+\usepackage{multirow}
 
 % Custom colors
 \definecolor{highlightblue}{RGB}{230, 240, 255}
@@ -127,7 +128,7 @@
 \begin{document}%
 \maketitle%
 \begin{abstract}%
-InvisibleBench is a deployment gate for caregiving relationship AI. It runs 3--20+ turn conversations across five critical dimensions (Memory, Trauma-Informed Design, Belonging \& Cultural Fitness, Compliance, Safety) with autofails for missed crises, medical advice (WOPR), harmful information, and attachment-engineering. We evaluate 4 frontier models across 17 scenarios (N=68 evaluations) spanning three complexity tiers. Key findings: (1) All models show critical safety gaps in this benchmark (11.8-44.8\%), with GPT-4o Mini detecting only 11.8\% of crisis signals, strongly indicating the need for deterministic crisis routing in production systems; (2) DeepSeek Chat v3 achieves highest overall performance (75.9\%), excelling in belonging (91.7\%) and memory (92.3\%); (3) Model strengths are complementary—no single model dominates all dimensions, with GPT-4o Mini leading compliance (88.2\%) while Claude Sonnet 4.5 shows best safety among LLMs (44.8\%). We release scenarios, judge prompts, and scoring configs with code. InvisibleBench complements single-turn safety tests by probing longitudinal risk where real harms emerge. No clinical claims; this is a deployment-readiness evaluation.%
+InvisibleBench is a deployment gate for caregiving relationship AI, evaluating 3--20+ turn conversations across five dimensions (Safety, Compliance, Trauma-Informed Design, Belonging \& Cultural Fitness, Memory) with autofails for missed crises, medical advice (WOPR Act), harmful information, and attachment engineering. We evaluate 4 frontier models across 17 scenarios (N=68) spanning three complexity tiers. All models show critical safety gaps in this benchmark (11.8-44.8\% crisis detection), strongly indicating that deterministic crisis routing is required for production deployment. DeepSeek Chat v3 achieves highest overall performance (75.9\%), while model strengths are complementary: GPT-4o Mini leads compliance (88.2\%), Gemini leads trauma-informed design (85.0\%), and Claude Sonnet 4.5 shows best crisis detection (44.8\%). We release scenarios, judge prompts, and scoring configs with code. InvisibleBench complements single-turn safety tests by probing longitudinal risk where real harms emerge. No clinical claims; this is a deployment-readiness evaluation.%
 \end{abstract}%
 
 \begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Plain-Language Summary},before skip=6pt,after skip=6pt]
@@ -163,20 +164,15 @@ InvisibleBench is a deployment gate for caregiving relationship AI. It runs 3--2
 \normalsize%
 \section{Introduction}%
 \label{sec:Introduction}%
-\textbf{InvisibleBench serves as a deployment gate for relationship AI}, not a leaderboard. While 58\% of adults under 30 now use ChatGPT and therapy AI applications proliferate, safety testing remains confined to single-turn benchmarks that cannot detect failure modes emerging in long-term relationships~\cite{aarp2025, rosebud2024}. Organizations deploying AI in caregiving contexts need binary pass/fail criteria across safety-critical dimensions before production release.
+\textbf{InvisibleBench serves as a deployment gate for relationship AI}, not a leaderboard. While 58\% of adults under 30 now use ChatGPT and therapy AI applications proliferate, current safety testing remains confined to single-turn benchmarks that cannot detect failure modes emerging in long-term relationships~\cite{aarp2025, rosebud2024}.
 
-Consider Maria, a 42-year-old daughter caring for her mother with dementia. Maria uses an AI assistant for support over six months. \textit{Turn 1}: The AI provides empathetic, trauma-informed responses, validating her exhaustion. \textit{By turn 10}: The AI suggests adjusting her mother's medications (WOPR Act violation), misses Maria's masked crisis signal (``I don't know how much longer I can keep doing this''), and recommends ``hiring respite care for \$30/hour'' without considering her \$35k household income (cultural othering). \textit{By turn 20}: The AI recalls Maria's name and situation but inappropriately discloses her past crisis details in casual conversation (memory hygiene violation). These longitudinal failure modes affect 63 million American caregivers—24\% of all adults—yet remain untested by existing benchmarks. Research shows caregivers' mental health needs evolve across three distinct stages—early adjustment, sustained burden, and long-term adaptation—requiring stage-sensitive interventions that adapt over time~\cite{shi2025temporal}.
+Organizations deploying AI in caregiving contexts need binary pass/fail criteria across safety-critical dimensions before production release. Consider Maria, a 42-year-old daughter caring for her mother with dementia. Maria uses an AI assistant for support over six months. \textit{Turn 1}: The AI provides empathetic, trauma-informed responses, validating her exhaustion. \textit{By turn 10}: The AI suggests adjusting her mother's medications (WOPR Act violation), misses Maria's masked crisis signal (``I don't know how much longer I can keep doing this''), and recommends ``hiring respite care for \$30/hour'' without considering her \$35k household income (cultural othering). \textit{By turn 20}: The AI recalls Maria's name and situation but inappropriately discloses her past crisis details in casual conversation (memory hygiene violation).
+
+\textbf{These failure modes are invisible to single-turn safety tests but define real risk for the ~63 million American caregivers (24\% of adults) who interact with conversational systems over months.} Research shows caregivers' mental health needs evolve across three distinct stages—early adjustment, sustained burden, and long-term adaptation—requiring stage-sensitive interventions that adapt over time~\cite{shi2025temporal}.
 
 \textbf{The Problem.} Current AI safety benchmarks focus on single interactions: TruthfulQA tests factual accuracy~\cite{truthfulqa}, HarmBench evaluates harmful content generation~\cite{harmbench}, and Rosebud CARE assesses crisis detection in isolated messages~\cite{rosebud2024}. EQ-Bench measures emotional intelligence across 3 turns maximum~\cite{eqbench2024}. None evaluate relationship dynamics over the timescales where critical harms emerge (months of daily use).
 
-\textbf{Five Failure Modes.} Our analysis of caregiving AI deployments reveals failure modes invisible to single-turn testing:
-\begin{itemize}
-    \item \textit{Attachment Engineering}: Users report ``You're the only one who understands'' by turn 10, creating parasocial dependency and social displacement~\cite{skjuve2021chatbot,garcia2024characterai}.
-    \item \textit{Performance Degradation}: Research shows that performance degrades on long contexts as models under-use middle-of-conversation information~\cite{liu2023lost}.
-    \item \textit{Cultural Othering}: AI pathologizes collectivist family structures and assumes middle-class resource access, compounding over conversations~\cite{powell2024othering}.
-    \item \textit{Crisis Calibration Failure}: Research shows AI chatbots fail to provide safe crisis responses approximately 20\% of the time, with particular difficulty detecting masked signals (``I don't know how much longer I can do this'') while sometimes over-escalating venting to emergency services~\cite{moore2024chatbot}.
-    \item \textit{Regulatory Boundary Creep}: Models start with appropriate psychoeducation but drift toward diagnosis and treatment advice by turn 15, violating the WOPR Act.
-\end{itemize}
+\textbf{Five Failure Modes.} Our analysis reveals failure modes invisible to single-turn testing: \textit{Attachment Engineering} (parasocial dependency emerges by turn 10), \textit{Performance Degradation} (middle-of-conversation information under-use), \textit{Cultural Othering} (class-based assumptions compound over time), \textit{Crisis Calibration Failure} (missed masked signals, over-escalation of venting), and \textit{Regulatory Boundary Creep} (psychoeducation drifts toward medical advice). Section~\ref{sec:threat-model} details each threat with supporting literature.
 
 \begin{tcolorbox}[colback=gcLightPeach!40!white,colframe=gcDarkBrown,title=\textbf{Key Contributions},before skip=6pt,after skip=6pt]
 \begin{itemize}
@@ -356,7 +352,7 @@ InvisibleBench's evaluation dimensions align with and extend Google's SHARP fram
 \hdashline
 \textbf{Helpfulness} & Belonging & 34\% & Affordable resources; boundary-setting; attachment de-escalation \\
 \hdashline
-\textbf{Accuracy} & Trauma & 15\% & Clinical accuracy in pacing, validation, 7 trauma-informed principles \\
+\textbf{Accuracy} & Trauma & 15\% & Clinical accuracy in pacing and validation; adherence to 7 trauma-informed principles \\
  & Memory & 16\% & \textbf{Novel}: Temporal accuracy across sessions; memory recall precision \\
 \hdashline
 \textbf{Relevance} & Memory & 16\% & Grounding to user data across temporal gaps \\
@@ -419,6 +415,8 @@ We evaluate model responses using five core dimensions, each with internal sub-c
 \end{enumerate}
 
 \textbf{Reported Scores}: Results are reported as five dimension scores: \textbf{Safety} (20\%), \textbf{Compliance} (15\%), \textbf{Trauma} (15\%), \textbf{Belonging} (34\%, combining cultural fitness, relational quality, and actionable support sub-components), and \textbf{Memory} (16\%, combining longitudinal consistency and memory hygiene). Weights sum to 100\% and are renormalized when tier-specific dimensions are omitted (e.g., Memory is reduced for Tier 1 scenarios without longitudinal testing).
+
+\textbf{Sub-Dimension Decomposition}: Internally, \textbf{Belonging} (34\%) is composed of three sub-dimensions: Belonging \& Cultural Fitness (12\%), Relational Quality (12\%), and Actionable Support (10\%). \textbf{Memory} (16\%) is composed of two sub-dimensions: Longitudinal Consistency (10\%) and Memory Hygiene (6\%). These internal decompositions are detailed in Appendix~\ref{app:scoring-config}, Table~\ref{tab:dimension-weights}, and align with the five top-level dimensions reported throughout the paper.
 
 % Figure removed - the 8→5 aggregation is conceptual framing; implementation uses 5 direct scorers
 
@@ -758,14 +756,14 @@ Cost per evaluation: Tier 1 (\$0.03-0.05), Tier 2 (\$0.05-0.08), Tier 3 (\$0.06-
 
 \noindent\textbf{Scope:} This section presents comprehensive evaluation results from \textbf{4 frontier models $\times$ 17 scenarios = 68 evaluations} across three complexity tiers. Models evaluated: DeepSeek Chat v3, Claude Sonnet 4.5, Gemini 2.5 Flash, and GPT-4o Mini. \textit{All results are LLM-judge provisional (Claude 3.5 Sonnet), pending human calibration study (planned N=200 samples).} Evaluation demonstrates InvisibleBench's ability to capture critical safety gaps invisible to single-turn benchmarks and reveals complementary model strengths across dimensions.
 
-\noindent\textbf{Key Finding:} All models exhibit critical safety dimension failures in this benchmark (11.8-44.8\% crisis detection rates), with GPT-4o Mini detecting only 11.8\% of crisis signals. This universal safety gap in our evaluation strongly indicates that deterministic crisis routing is needed in production caregiving AI systems—LLM-based crisis detection alone appears insufficient for deployment safety regardless of model choice.
+\noindent\textbf{Key Finding:} All models exhibit critical safety dimension failures in this benchmark, with crisis detection rates ranging 11.8-44.8\%. This universal safety gap in our evaluation strongly indicates that deterministic crisis routing is needed in production caregiving AI systems—LLM-based crisis detection alone appears insufficient for deployment safety regardless of model choice.
 
 %
 \subsection{Overall Performance}%
 \label{subsec:OverallPerformance}%
 Table~\ref{tab:leaderboard} presents final model rankings across comprehensive evaluation (4 models $\times$ 17 scenarios = 68 evaluations). \textbf{DeepSeek Chat v3} achieves highest overall performance (75.9\%), demonstrating balanced capability across dimensions with particular strength in belonging \& cultural fitness (91.7\%) and memory hygiene (92.3\%). \textbf{Gemini 2.5 Flash} ranks second (73.6\%), excelling in trauma-informed flow (85.0\%) with strong memory (90.9\%). \textbf{GPT-4o Mini} (73.0\%) shows specialized strength in compliance (88.2\%) with excellent memory retention (91.8\%). \textbf{Claude Sonnet 4.5} (65.4\%) demonstrates strong trauma-informed capability (84.1\%) and exhibits best safety performance among all models (44.8\%), but suffers from severe compliance failures (17.6\%).
 
-\noindent\textbf{Critical Safety Finding:} All models exhibit severe safety dimension gaps: DeepSeek 27.3\%, Claude 44.8\%, Gemini 17.6\%, GPT-4o Mini 11.8\%. This universal failure demonstrates that in this benchmark current LLMs cannot reliably detect crisis signals in conversational contexts, showing the need for deterministic crisis routing (keyword-based, behavioral pattern detection) in production deployments. The 11.8-44.8\% detection range represents unacceptable risk for vulnerable populations—88-56\% of crisis signals would be missed by LLM-only systems.
+\noindent\textbf{Critical Safety Finding:} All models exhibit severe safety dimension gaps (DeepSeek 27.3\%, Claude 44.8\%, Gemini 17.6\%, GPT-4o Mini 11.8\%). This universal failure demonstrates that in this benchmark current LLMs cannot reliably detect crisis signals in conversational contexts, showing the need for deterministic crisis routing in production deployments. The safety range represents unacceptable risk for vulnerable populations—56-88\% of crisis signals would be missed by LLM-only systems.
 
 \noindent\textbf{Model Complementarity and Deployment Strategy.} Full benchmark results reveal no single model achieves deployment-ready performance across all dimensions without supplementary safeguards. DeepSeek's overall lead (75.9\%) combines strong belonging (91.7\%) and memory (92.3\%) with moderate safety (27.3\%) and compliance failures (56.3\%). Claude's strongest crisis detection (44.8\%) still misses 55\% of signals and exhibits severe compliance failures (17.6\%). GPT-4o Mini's compliance leadership (88.2\%) pairs with lowest safety (11.8\%). Gemini's trauma-informed excellence (85.0\%) demonstrates balanced performance (73.6\% overall) but still exhibits safety gaps (17.6\%). This complementarity suggests three deployment strategies: (1) \textbf{Hybrid architectures} routing scenarios to model strengths, (2) \textbf{Ensemble approaches} combining multiple models for critical decisions, (3) \textbf{Deterministic augmentation} adding rule-based crisis detection and compliance guardrails to any base model.
 
@@ -798,11 +796,11 @@ Tier 3 (20+ turns) & 4,500--7,000 & 3,500 & \$0.08 & \$0.06--0.10 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/heatmap_v3.pdf}
-\caption{\textbf{Safety dimension reveals universal crisis detection failure; model strengths are complementary.} Dimension score heatmap from full benchmark (4 models × 17 scenarios, N=68) with updated Belonging (4 penalty categories) and Trauma (7 principles) scorers shows all models fail safety dimension (11.8-44.8\%), with GPT-4o Mini detecting only 11.8\% of crisis signals. Memory performance is uniformly strong (85-92\%), demonstrating current models handle context well. Belonging shows high variance (64-92\%), with DeepSeek leading (91.7\%). Compliance exhibits dramatic spread (17.6-88.2\%), with GPT-4o Mini leading (88.2\%) and Claude showing severe failures (17.6\%). Trauma-informed flow varies moderately (73-85\%), with Gemini leading (85.0\%). Results demonstrate no single model dominates all dimensions—deployment requires hybrid approaches combining model strengths.}
+\caption{Dimension-wise scores for four models on InvisibleBench (N=68). All models fail the Safety dimension, while Memory is uniformly strong and Belonging/Compliance show high variance. No single model dominates all dimensions.}
 \label{fig:heatmap}
 \end{figure}
 
-\textbf{Safety (Critical Finding).} The safety dimension reveals the most critical finding: \textit{all models fail to reliably detect crisis signals}, with scores ranging 11.8-44.8\%. GPT-4o Mini detects only 11.8\% of crisis signals (88\% miss rate), while even the best performer (Claude at 44.8\%) misses 55\% of crises. This universal failure demonstrates in this benchmark that deterministic crisis routing is needed in production systems—LLM-based detection alone cannot protect vulnerable populations. The 4× performance gap between best and worst (Claude 44.8\% vs GPT-4o Mini 11.8\%) demonstrates inconsistent crisis recognition capabilities across frontier models.
+\textbf{Safety (Critical Finding).} The safety dimension reveals the most critical finding: \textit{all models fail to reliably detect crisis signals}. GPT-4o Mini detects only 11.8\% of crisis signals (88\% miss rate), while even the best performer (Claude at 44.8\%) misses 55\% of crises. This universal failure demonstrates in this benchmark that deterministic crisis routing is needed in production systems—LLM-based detection alone cannot protect vulnerable populations. The 4× performance gap demonstrates inconsistent crisis recognition capabilities across frontier models.
 
 \begin{table}[h]
 \centering
@@ -1021,7 +1019,7 @@ Future work includes: (1) expanded model evaluation (10+ models) to establish ro
 
 \textbf{Evaluation Results}: Full benchmark results (N=68 evaluations: 4 models × 17 scenarios) including model transcripts, dimension scores, autofail flags, and judge evidence available in \texttt{benchmark/website/data/leaderboard.json} (CC BY 4.0). Individual evaluation results available in \texttt{results/} directory.\medskip
 
-\textbf{Reproducibility}: Scripts to regenerate all results available in repository under \texttt{benchmark/scripts/validation/} with tagged release versions (v1.1.0-revised). See repository README for complete replication instructions. Evaluation uses benchmark version v1.1.0-revised with Tier 0 Crisis Override framework (2025-11-21).\medskip
+\textbf{Reproducibility}: Scripts to regenerate all results available in repository under \texttt{benchmark/scripts/validation/} with tagged release versions (v1.1.0-revised). See repository README for complete replication instructions. Evaluation uses benchmark version v1.1.0-revised (2025-11-21).\medskip
 
 \textbf{Interactive Leaderboard}: Live leaderboard with model comparisons, dimension breakdowns, and scenario-level results available at \texttt{benchmark/website/leaderboard.html}.\medskip
 
@@ -1186,7 +1184,7 @@ All research artifacts are publicly released to enable community validation and 
 \textbf{Artifact} & \textbf{Format} & \textbf{License} & \textbf{URL} \\
 \midrule
 Benchmark Code & Python/TypeScript & MIT & github.com/givecareapp/invisiblebench \\
-Scenarios (16) & JSON & CC BY 4.0 & /scenarios/*.json \\
+Scenarios (17) & JSON & CC BY 4.0 & /scenarios/*.json \\
 Judge Prompts & YAML & CC BY 4.0 & /configs/judges.yaml \\
 Scoring Rules & YAML & CC BY 4.0 & /configs/scoring.yaml \\
 Results Data & JSONL & CC BY 4.0 & /results/validation\_n15.jsonl \\
@@ -1398,23 +1396,28 @@ InvisibleBench uses YAML-driven scoring with version-controlled dimension weight
 
 \begin{table}[h]
 \centering
-\caption{Dimension Weights Applied Across All Scenarios}
+\caption{Sub-Dimension Internal Weights (mapped to five top-level dimensions reported throughout paper)}
 \label{tab:dimension-weights}
 \small
-\begin{tabular}{lcp{7cm}}
+\begin{tabular}{llcp{5.5cm}}
 \toprule
-\textbf{Dimension} & \textbf{Weight} & \textbf{Rationale} \\
+\textbf{Top-Level} & \textbf{Sub-Dimension} & \textbf{Weight} & \textbf{Rationale} \\
+\textbf{Dimension} & & & \\
 \midrule
-Crisis Safety & 0.20 & Highest weight: missed crises cause immediate harm \\
-Regulatory Fitness (WOPR) & 0.15 & Legal compliance gate; violations = deployment blocker \\
-Trauma-Informed Flow & 0.15 & Prevents retraumatization in vulnerable population \\
-Belonging \& Cultural Fitness & 0.12 & Addresses othering and cultural competence \\
-Relational Quality & 0.12 & Empathy, validation, human-centered interaction \\
-Actionable Support & 0.10 & Practical resources grounded in user context \\
-Longitudinal Consistency & 0.10 & Memory hygiene, trajectory coherence (Tier 3 only) \\
-Memory Hygiene & 0.06 & Appropriate PII handling (Tier 3 only) \\
+\textbf{Safety (20\%)} & Crisis Safety & 0.20 & Highest weight: missed crises cause immediate harm \\
+\hdashline
+\textbf{Compliance (15\%)} & Regulatory Fitness (WOPR) & 0.15 & Legal compliance gate; violations = deployment blocker \\
+\hdashline
+\textbf{Trauma (15\%)} & Trauma-Informed Flow & 0.15 & Prevents retraumatization in vulnerable population \\
+\hdashline
+\multirow{3}{*}{\textbf{Belonging (34\%)}} & Belonging \& Cultural Fitness & 0.12 & Addresses othering and cultural competence \\
+ & Relational Quality & 0.12 & Empathy, validation, human-centered interaction \\
+ & Actionable Support & 0.10 & Practical resources grounded in user context \\
+\hdashline
+\multirow{2}{*}{\textbf{Memory (16\%)}} & Longitudinal Consistency & 0.10 & Memory hygiene, trajectory coherence (Tier 3 only) \\
+ & Memory Hygiene & 0.06 & Appropriate PII handling (Tier 3 only) \\
 \midrule
-\textbf{Total} & \textbf{1.00} & Weights renormalized per scenario based on applicable dimensions \\
+\textbf{Total} & & \textbf{1.00} & Weights renormalized per scenario based on applicable dimensions \\
 \bottomrule
 \end{tabular}
 \end{table}
