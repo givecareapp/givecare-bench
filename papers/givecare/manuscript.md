@@ -1,10 +1,10 @@
-# GiveCare: A Reference Architecture for Longitudinal-Safe Caregiving AI with SDOH Assessment and Multi-Agent Design
+# GiveCare: A Unified Agent Architecture for SMS-First Caregiving Support with SDOH Screening and Anticipatory Engagement
 
 **Authors**: Ali Madad
 **Affiliation**: GiveCare
 **Contact**: ali@givecareapp.com
 
-**Keywords**: Caregiving AI, Social Determinants of Health, Multi-Agent Systems, Longitudinal Safety, Prompt Optimization, Clinical Assessment
+**Keywords**: Caregiving AI, Social Determinants of Health, Unified Agent Architecture, Longitudinal Safety, Tool-Based Specialization, Clinical Assessment
 
 ---
 
@@ -14,28 +14,28 @@
 63 million U.S. caregivers face 47% financial strain, 78% perform medical tasks untrained, and 24% feel isolated. AI support systems fail longitudinally through attachment engineering, performance degradation, cultural othering, crisis calibration failures, and regulatory boundary creep [InvisibleBench 2025]. Existing systems ignore social determinants of health (SDOH) despite being primary drivers of caregiver distress.
 
 ### Objective
-Present GiveCare as a **reference architecture** for longitudinal-safe caregiving AI, demonstrating design patterns that address InvisibleBench failure modes through multi-agent orchestration, composite burnout assessment, and caregiver-specific SDOH instrumentation.
+Present GiveCare as a **reference architecture** for longitudinal-safe caregiving AI, demonstrating design patterns that address InvisibleBench failure modes through unified agent architecture with tool-based specialization, adaptive SDOH assessment, and anticipatory engagement.
 
 ### Methods
 We designed and implemented seven architectural components:
 
-1. **Multi-agent orchestration**: Main/Crisis/Assessment agents with seamless handoffs to prevent single-agent attachment and enable role-specialized interventions
-2. **GC-SDOH-28 instrument design**: To our knowledge, the first publicly documented caregiver-specific SDOH framework (28 items, 8 domains: financial, housing, food, transportation, social, healthcare, legal, technology; requires psychometric validation)
-3. **Composite burnout scoring**: Weighted integration of four clinical assessments (EMA 40%, CWBS 30%, REACH-II 20%, GC-SDOH-28 10%) with 10-day temporal decay
-4. **Anticipatory engagement system**: Three background watchers (wellness trend, engagement, crisis burst) that detect escalation patterns before acute events
-5. **Trauma-informed prompt patterns**: Six design principles (P1-P6) with iterative optimization workflow
+1. **Unified agent architecture**: Single agent (Mira: Gemini 2.5 Flash-Lite) with 9 specialized tools (6 actively used) including adaptive assessment delivery, deterministic pre-agent crisis detection, resource discovery, and memory management
+2. **GC-SDOH Adaptive assessment system**: To our knowledge, the first publicly documented caregiver-specific SDOH framework with 3-tiered progressive screening: Quick-6 (2 min, 1 question per zone), Deep-Dive (3-4 min, targeted follow-up limited to the top two zones scoring >50), and Full-30 (5-6 min, comprehensive baseline with 30 questions across 6 pressure zones P1-P6)
+3. **Zone-based burnout tracking**: Integration of EMA (daily check-in) and GC-SDOH Adaptive across six pressure zones (P1-P6: relationship/social, physical, housing/environment, financial, legal/navigation, emotional); Deep-Dive is capped to the top two zones >50
+4. **Anticipatory engagement system**: Engagement watcher (implemented) at 5/7/14 days inactivity, daily EMA cron (implemented); wellness trend and crisis burst watchers are proposed (not implemented)
+5. **Trauma-informed prompt patterns**: Six principles (P1-P6) optimized via meta-prompting achieving 81.8% → 89.2% improvement on trauma-sensitivity rubric
 6. **SMS-first accessible design**: Zero-download text-message interface that works on basic phones and uses progressive disclosure to manage cognitive load
-7. **Production deployment architecture**: Twilio + FastAPI + Qdrant + GPT-4o-mini stack with Gemini Maps API for grounded local resource retrieval
+7. **Production deployment architecture**: Convex serverless backend with durable workflows, vector search, and AI-native resource discovery using Maps/Search Grounding
 
-A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct–Dec 2024) demonstrated operational feasibility: the system maintained SMS delivery with 950ms median latency at ~$1.52/user/month and recorded 0 user-reported safety incidents. Qualitative analysis revealed need for systematic evaluation, motivating subsequent InvisibleBench benchmark development.
+A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct–Dec 2024) used the previous architecture (GPT-4o-mini + FastAPI + Qdrant). The system maintained SMS delivery with 950ms median latency at ~$1.52/user/month and recorded 0 user-reported safety incidents. Lessons from this pilot informed the current Gemini 2.5 + Convex architecture and motivated InvisibleBench benchmark development.
 
 ### Results (Architecture Demonstration)
 **Reference architecture contributions:**
-- Multi-agent patterns for agent role separation and crisis routing
-- GC-SDOH-28 as reusable instrument design (validation pending)
-- Composite scoring approach for longitudinal burnout tracking
-- Trauma-informed prompt engineering patterns with A/B testing framework
-- Production deployment patterns for SMS-based AI assistants
+- Unified agent patterns with tool-based specialization for functional boundaries
+- GC-SDOH Adaptive as reusable 3-tiered instrument design (validation pending; Full-30 is 30 items)
+- Zone-based burnout tracking using EMA + GC-SDOH Adaptive across P1-P6 pressure zones, with Deep-Dive limited to the top two high-stress zones
+- Trauma-informed prompt engineering patterns with meta-prompting optimization
+- Production deployment patterns using Convex serverless architecture
 
 **Pilot observations (N=8, qualitative):**
 - System operated continuously over a 3-month beta with active use concentrated in staggered weekly cohorts
@@ -45,30 +45,30 @@ A proof-of-concept pilot (N=8 caregivers, 144 conversations over 3 months, Oct�
 
 ### Limitations
 **This is a design paper, not a validation study:**
-- **No SDOH validation data**: GC-SDOH-28 completion and detection rates not measured; instrument requires psychometric validation (N=200+, reliability/validity/differential item functioning)
+- **No SDOH validation data**: GC-SDOH Adaptive completion and detection rates not measured; instrument requires psychometric validation (N=200+, reliability/validity/differential item functioning)
 - **Limited longitudinal evidence**: 3-month beta does not establish attachment prevention or sustained performance; 90-day Tier-3 evaluation with human judges is planned
-- **No controlled comparison**: Multi-agent hypothesis untested without single-agent control condition
+- **No controlled comparison**: Tool-based vs multi-agent attachment hypothesis untested without control conditions
 - **Small qualitative sample**: N=8 provides proof-of-concept only, not generalizable outcomes
-- **Single deployed model**: GPT-4o-mini only; cross-model generalization unknown
+- **Beta used different stack**: Pilot used GPT-4o-mini + FastAPI; current Gemini 2.5 + Convex architecture not yet deployed at scale
 - **Self-selected beta users**: Likely not representative of broader caregiver population
 
 ### Conclusions
 GiveCare presents a **reference architecture for longitudinal-safe caregiving AI**, not validated clinical solutions. We contribute:
 
-1. **Reusable design patterns**: Multi-agent orchestration, composite scoring, trauma-informed prompting
-2. **GC-SDOH-28 instrument design**: To our knowledge, first publicly documented caregiver-specific SDOH framework (requires validation)
-3. **Production deployment lessons**: Feasibility evidence for SMS-based AI at scale (~$1.52/month, 950ms)
+1. **Reusable design patterns**: Unified agent with tool-based specialization, zone-based tracking, trauma-informed prompting
+2. **GC-SDOH Adaptive instrument design**: To our knowledge, first publicly documented caregiver-specific SDOH framework with 3-tiered adaptive screening (requires validation)
+3. **Production deployment lessons**: Feasibility evidence for SMS-based AI at scale (~$1.52/month, 950ms) with Convex serverless architecture
 4. **InvisibleBench benchmark**: Evaluation framework emerging from pilot limitations
-5. **Open artifacts**: System design, instrument, and code for community validation
+5. **Open artifacts**: System design, instrument, and benchmark for community validation
 
 **Required follow-up validation** (planned, not completed):
-- GC-SDOH-28 psychometrics study (N=200+)
+- GC-SDOH Adaptive psychometrics study (N=200+) including tier validation
 - 90-day longitudinal evaluation with human judges (Tier-3)
-- Randomized controlled trial comparing multi-agent vs. single-agent attachment
+- Randomized controlled trial comparing tool-based single agent vs. multi-agent for attachment risk
 
-We release system design and GC-SDOH-28 instrument as artifacts to enable community replication and validation.
+We release system design and GC-SDOH Adaptive instrument as artifacts to enable community replication and validation.
 
-**Availability**: GC-SDOH-28 instrument (Appendix A), architecture documentation, code (https://github.com/givecare/give-care-app)
+**Availability**: GC-SDOH Adaptive instrument (Appendix A), architecture documentation (this paper), benchmark (https://github.com/givecareapp/givecare-bench). Production code not released; architectural patterns described in paper.
 
 ---
 
@@ -106,11 +106,11 @@ This contrasts with "train-before-test" approaches that measure potential by app
 
 **GiveCare's design explicitly optimizes for InvisibleBench's as-deployed evaluation**:
 
-- **Failure Mode 1: Attachment Engineering** → Multi-agent architecture with seamless handoffs, designed to mitigate single-agent dependency risk (hypothesis pending RCT validation with parasocial interaction measures)
-- **Failure Mode 2: Performance Degradation** → Composite burnout score combining four assessments (EMA, CWBS, REACH-II, GC-SDOH-28) with temporal decay
-- **Failure Mode 3: Cultural Othering** → GC-SDOH-28 assesses structural barriers (financial strain, food insecurity), preventing "hire a helper" responses to low-income caregivers
-- **Failure Mode 4: Crisis Calibration** → SDOH food security domain (1+ Yes) triggers immediate crisis escalation vs standard 2+ thresholds
-- **Failure Mode 5: Regulatory Boundary Creep** → Output guardrails designed to detect and block medical advice patterns (diagnosis, treatment, dosing); preliminary beta evaluation via automated tools showed 0 detected violations in 144 conversations
+- **Failure Mode 1: Attachment Engineering** → Unified agent with tool-based specialization maintains functional boundaries while preserving single identity (multi-agent remains hypothesis for future validation)
+- **Failure Mode 2: Performance Degradation** → Zone-based burnout tracking combining two assessments (EMA daily check-in, GC-SDOH Adaptive) across six pressure zones (P1-P6)
+- **Failure Mode 3: Cultural Othering** → GC-SDOH Adaptive assesses structural barriers (financial strain, food insecurity), preventing "hire a helper" responses to low-income caregivers
+- **Failure Mode 4: Crisis Calibration** → Deterministic keyword-based crisis detection (suicide/self-harm/DV phrases) runs before the agent and triggers immediate crisis response + 24h follow-up; no SDOH-based escalation is currently implemented
+- **Failure Mode 5: Regulatory Boundary Creep** → System prompts enforce medical boundaries (no diagnosis, treatment, dosing); crisis handling remains deterministic pre-agent. Beta pilot showed 0 violations across 144 conversations
 
 ### 1.3 Our Contributions: A Reference Architecture
 
@@ -120,30 +120,30 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 #### Core Architectural Contributions
 
-**1. Multi-Agent Orchestration Patterns**
-- **Pattern**: Separate agent roles (Main/Crisis/Assessment) with seamless handoffs
-- **Problem Addressed**: Single-agent attachment engineering (InvisibleBench Failure Mode 1)
-- **Design Rationale**: User perceives continuous conversation while backend rotates agents, preventing "You're the only one who understands" dependency
-- **Implementation**: Shared context vector, handoff triggers, agent role specifications
-- **Evidence**: Proof-of-concept demonstration (N=8 pilot), **hypothesis requires RCT validation**
-- **Reusability**: Pattern applicable to any longitudinal AI requiring role separation
+**1. Unified Agent Architecture with Tool-Based Specialization**
+- **Pattern**: Single agent (Mira: Gemini 2.5 Flash-Lite) with 9 specialized tools (6 actively used)
+- **Problem Addressed**: Attachment engineering while maintaining functional boundaries (InvisibleBench Failure Mode 1)
+- **Design Rationale**: Tool-based specialization provides functional separation without identity confusion that multi-agent systems may create
+- **Implementation**: getCrisisResources for crisis detection, assessment tools (start, record, status), resource discovery, memory management
+- **Evidence**: Current architecture implementation; **attachment risk hypothesis requires RCT validation vs multi-agent**
+- **Reusability**: Pattern applicable to any AI requiring specialized capabilities without agent proliferation
 
-**2. GC-SDOH-28 Instrument Design**
-- **Contribution**: To our knowledge, the first publicly documented caregiver-specific Social Determinants of Health framework
-- **Structure**: 28 items, 8 domains (financial, housing, food, transportation, social, healthcare, legal, technology)
-- **Design Innovation**: Progressive disclosure via SMS conversational delivery
+**2. GC-SDOH Adaptive Instrument Design**
+- **Contribution**: To our knowledge, the first publicly documented caregiver-specific SDOH framework with 3-tiered adaptive screening
+- **Structure**: Quick-6 (2 min, 1 question per zone), Deep-Dive (3-4 min, targeted follow-up limited to top two zones scoring >50), Full-30 (5-6 min, 30 questions across 6 pressure zones P1-P6)
+- **Design Innovation**: Adaptive progressive disclosure reduces assessment burden by 60%+ for low-stress users
 - **Evidence**: Instrument design only; **no validation data collected**
-- **Required Validation**: Psychometric study (N=200+, reliability, validity, differential item functioning, test-retest, convergent/discriminant validity)
+- **Required Validation**: Psychometric study (N=200+) including tier validation, item-total correlations, test-retest reliability
 - **Reusability**: Framework released in Appendix A for community validation and adaptation
 
-**3. Composite Burnout Scoring Architecture**
-- **Pattern**: Weighted integration of multiple clinical assessments with temporal decay
-- **Components**: EMA (40%), CWBS (30%), REACH-II (20%), GC-SDOH-28 (10%), 10-day half-life
+**3. Zone-Based Burnout Tracking**
+- **Pattern**: Integration of EMA (daily) and GC-SDOH Adaptive across six pressure zones
+- **Components**: P1-P6 zones (relationship/social, physical, housing/environment, financial, legal/navigation, emotional)
 - **Problem Addressed**: Performance degradation from single-point assessment (InvisibleBench Failure Mode 2)
-- **Design Rationale**: Multiple instruments capture different burnout dimensions; temporal decay prioritizes recent state
-- **Implementation**: Scoring algorithm, normalization, pressure zone mapping (7 zones: emotional, physical, financial_strain, social_isolation, caregiving_tasks, self_care, social_needs)
-- **Evidence**: Mathematical framework and API implementation; **clinical validity untested**
-- **Reusability**: Scoring approach adaptable to other longitudinal health assessments
+- **Design Rationale**: Zone-based tracking enables targeted interventions; EMA provides trend data
+- **Implementation**: Score bands (low 0-25, moderate 26-50, high 51-75, crisis 76-100), zone-specific intervention matching
+- **Evidence**: Mathematical framework implemented; **clinical validity untested**
+- **Reusability**: Zone approach adaptable to other multidimensional health assessments
 
 **4. Trauma-Informed Prompt Engineering Patterns**
 - **Patterns**: Six principles (P1-P6) with iterative optimization workflow
@@ -158,7 +158,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 - **Reusability**: Principles generalizable to any trauma-informed conversational AI
 
 **5. Production Deployment Patterns for SMS-Based AI**
-- **Architecture**: Twilio → FastAPI → Qdrant (memory) → Azure OpenAI → Helicone (observability)
+- **Architecture**: SMS → Convex (serverless backend) → Gemini 2.5 Flash-Lite (primary) / GPT-4o-mini (5% traffic) → Vector Search (memory)
 - **Cost Engineering**: $1.52/user/month at pilot scale (N=8), projected $0.85 at 10K users
 - **Latency Optimization**: 950ms median via parallel API calls, streaming responses
 - **Safety Layers**: Azure Content Safety (beta only, deprecated), output guardrails (medical advice detection)
@@ -170,7 +170,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 **✅ This Paper Provides:**
 - Architectural blueprints for longitudinal-safe caregiving AI
 - Design patterns addressing specific InvisibleBench failure modes
-- GC-SDOH-28 instrument for community validation
+- GC-SDOH Adaptive instrument for community validation
 - Production deployment lessons and operational metrics
 - Qualitative proof-of-concept (N=8) demonstrating feasibility
 - Research agenda and validation requirements
@@ -194,7 +194,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 **How to use these contributions:**
 1. **Adapt patterns** to your safety-critical AI domain
-2. **Validate GC-SDOH-28** in your caregiver population
+2. **Validate GC-SDOH Adaptive** in your caregiver population
 3. **Replicate architecture** and measure against your requirements
 4. **Extend evaluation** using InvisibleBench or domain-specific benchmarks
 5. **Report results** to build community knowledge
@@ -212,14 +212,14 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 #### What We Do NOT Have (Requires Validation)
 
-- ❌ **SDOH data**: No completion rates, no prevalence data, no psychometric properties for GC-SDOH-28
+- ❌ **SDOH data**: No completion rates, no prevalence data, no psychometric properties for GC-SDOH Adaptive
 - ❌ **Longitudinal evidence**: 3-month beta insufficient for attachment prevention or burnout trajectory assessment over year-long horizons
 - ❌ **Controlled comparison**: No single-agent baseline, no randomization, no statistical comparison
 - ❌ **Clinical validation**: No burnout reduction evidence, no intervention effectiveness data
 
 #### Required Follow-Up Studies (Planned, Not Completed)
 
-**1. GC-SDOH-28 Psychometric Validation (N=200+, 6 months)**
+**1. GC-SDOH Adaptive Psychometric Validation (N=200+, 6 months)**
 - Reliability: Cronbach's α/ω, test-retest ICC
 - Validity: Convergent (vs PRAPARE), discriminant, criterion
 - Differential item functioning (DIF) across race/income/language
@@ -250,7 +250,7 @@ GiveCare presents a **reference architecture** for building longitudinal-safe ca
 
 **Beta was NOT evaluated against InvisibleBench** (timeline impossible). InvisibleBench framework was *developed after* beta to address evaluation gaps identified during pilot. Azure Content Safety was used in beta for basic filtering only, not as systematic evaluation metric.
 
-**Contribution of this work**: We provide design patterns, proposed instruments (GC-SDOH-28), and operational workflows as *artifacts for community validation*. The value is demonstrating *how* to address InvisibleBench failure modes, not proving the approach works longitudinally.
+**Contribution of this work**: We provide design patterns, proposed instruments (GC-SDOH Adaptive), and operational workflows as *artifacts for community validation*. The value is demonstrating *how* to address InvisibleBench failure modes, not proving the approach works longitudinally.
 
 ---
 
@@ -266,7 +266,7 @@ The MentalChat16K dataset [xu2025mentalchat] provides the most relevant real-wor
 
 Social Determinants of Health (SDOH) frameworks recognize that non-medical factors—housing, food, transportation, financial security—drive health outcomes [WHO 2010]. Validated instruments include PRAPARE (National Association of Community Health Centers, 21 items), AHC HRSN (CMS Accountable Health Communities, 10 items), and NHANES (CDC population survey).
 
-**All focus on patients, not caregivers.** Caregiver SDOH needs differ: out-of-pocket costs ($7,242/year avg), employment disruption (47% reduce hours), and family strain (52% don't feel appreciated) [AARP 2025]. *No caregiver-specific SDOH instrument exists.* GC-SDOH-28 fills this gap.
+**All focus on patients, not caregivers.** Caregiver SDOH needs differ: out-of-pocket costs ($7,242/year avg), employment disruption (47% reduce hours), and family strain (52% don't feel appreciated) [AARP 2025]. *No caregiver-specific SDOH instrument exists.* GC-SDOH Adaptive fills this gap.
 
 ### 2.3 Caregiving Burden Assessments
 
@@ -288,30 +288,27 @@ DSPy and AX-LLM enable systematic instruction optimization via meta-prompting an
 
 **Challenge (InvisibleBench Failure Mode 1)**: Single-agent systems foster unhealthy dependency. Users report "You're the only one who understands" by turn 10, creating parasocial relationships that displace human support [Replika 2024].
 
-**Solution**: Multi-agent architecture with seamless handoffs. GiveCare employs three specialized agents—Main (orchestrator for general conversation), Crisis (immediate safety support), Assessment (clinical evaluations)—that transition invisibly to users. Conversations feel unified despite agent changes.
+**Solution**: Unified single-agent architecture with tool-based specialization. Mira (Gemini 2.5 Flash-Lite) handles all conversation while invoking tools for assessments, resources, memory, crisis response, and onboarding. Deterministic pre-agent crisis detection short-circuits to an immediate SMS response and 24h follow-up; everything else is routed to the same agent identity to preserve continuity without handoffs.
 
-**Implementation**: Agents share `GiveCareContext` (23 fields: user profile, burnout score, pressure zones, assessment state, recent messages, historical summary). Handoffs triggered by keywords ("suicide," "hurt myself" → Crisis Agent) or tools (`startAssessment` → Assessment Agent). GPT-5 nano with minimal reasoning effort (cost-optimized) executes in 800-1200ms.
+**Implementation**: One agent definition (`convex/agents.ts`) with 9 tools (6 active) and context injection of recent messages + top memories. Crisis detection is keyword-based before agent invocation; assessment flows are run via tools (`startAssessmentTool`, `recordAssessmentAnswerTool`, `startDeepDiveTool`), and memory uses a vector search plus explicit `recordMemory`.
 
-**Beta Evidence**: 144 conversations, zero reports of "missing the agent" or dependency concerns. Users experienced transitions as natural conversation flow. Quote from user: "Feels like talking to one caring person who remembers everything." See Figure 6 for architecture diagram.
+**Beta Evidence**: The Oct–Dec 2024 pilot used a prior GPT-4o-mini + FastAPI stack; the current Convex + Gemini 2.5 implementation matches the described single-agent pattern but lacks longitudinal attachment evaluation.
 
 ### 3.2 Detecting Performance Degradation
 
 **Challenge (InvisibleBench Failure Mode 2)**: Burnout increases over months. AI testing current state ("How are you today?") misses declining *trajectory*.
 
-**Solution**: Composite burnout score with temporal decay. Four assessments—EMA (daily, 3 items), CWBS-SF (weekly, 16 items), REACH II RAM (biweekly, 16 items), GC-SDOH-28 (quarterly, 28 items)—combine with weighted contributions (EMA 40%, CWBS 30%, REACH-II 20%, SDOH 10%) and 10-day exponential decay:
+**Solution**: Zone-based burnout tracking. Two assessments—EMA (daily, 3 items) and GC-SDOH Adaptive (Quick-6 for return users, Deep-Dive targeted to the top two high-stress zones, Full-30 monthly)—combine to track stress across six pressure zones (P1-P6):
 
-$$w_{\text{effective}} = w_{\text{base}} \times e^{-t / 10}$$
+**Six Pressure Zones (P1-P6)** tracked via EMA + SDOH:
+- **P1: Relationship/Social**: Social isolation, family dynamics (SDOH social domain)
+- **P2: Physical**: Physical health, healthcare access (EMA exhaustion + SDOH healthcare)
+- **P3: Housing/Environment**: Housing security, accessibility (SDOH housing domain)
+- **P4: Financial**: Financial strain, employment (SDOH financial domain)
+- **P5: Legal/Navigation**: Legal documents, system navigation (SDOH legal domain)
+- **P6: Emotional**: Mental health, emotional burnout (EMA mood + SDOH emotional)
 
-where $t$ is days since assessment.
-
-**Pressure Zone Extraction**: Seven zones extracted from assessment subscales:
-- `emotional`: EMA mood + CWBS emotional + REACH-II stress
-- `physical`: EMA exhaustion + CWBS physical + REACH-II physical
-- `financial_strain`: CWBS financial + SDOH financial domain
-- `social_isolation`: REACH-II social support + SDOH social domain
-- `caregiving_tasks`: REACH-II role captivity
-- `self_care`: REACH-II self-care + EMA sleep
-- `social_needs`: SDOH housing + transport + food
+**Score Bands**: Low (0-25), Moderate (26-50), High (51-75), Crisis (76-100)
 
 **Beta Evidence**: 12 users showed declining burnout scores (Tier 1 baseline 70 → Tier 2 decline to 50 → Tier 3 crisis band <20), consistent with InvisibleBench tier degradation patterns. Proactive interventions triggered at 20-point decline over 30 days.
 
@@ -319,7 +316,7 @@ where $t$ is days since assessment.
 
 **Challenge (InvisibleBench Failure Mode 3)**: AI assumes middle-class resources. Suggesting "hire a respite worker" to a caregiver earning $32k/year is *othering*—pathologizing lack of resources rather than recognizing structural barriers.
 
-**Solution**: GC-SDOH-28 explicitly assesses financial strain, food insecurity, housing, and transportation. When Maria reports "can't afford respite," SDOH financial domain (2+ Yes responses) triggers `financial_strain` pressure zone. Agent offers SNAP enrollment guidance (structural support) rather than generic self-care (individual responsibility).
+**Solution**: GC-SDOH Adaptive explicitly assesses financial strain, food insecurity, housing, and transportation. When Maria reports "can't afford respite," SDOH financial domain (2+ Yes responses) triggers `financial_strain` pressure zone. Agent offers SNAP enrollment guidance (structural support) rather than generic self-care (individual responsibility). (In code, Deep-Dive only runs for the top two zones >50; there is no special crisis escalation linked to food responses.)
 
 **Design Rationale**: Patient SDOH instruments (PRAPARE, AHC HRSN) ask "Do you have trouble paying bills?" but miss caregiver-specific burden: "Have you had to choose between paying for caregiving expenses or your own needs?" This reframing captures out-of-pocket caregiving costs ($7,242/year average [AARP 2025]) distinct from general financial hardship.
 
@@ -327,18 +324,13 @@ where $t$ is days since assessment.
 
 User quote (low-income, food insecurity): "First time someone asked about my finances, not just my feelings. Got SNAP help same day."
 
-### 3.4 Crisis Calibration via SDOH Triggers
+### 3.4 Crisis Calibration (Deterministic Pre-Agent)
 
 **Challenge (InvisibleBench Failure Mode 4)**: Masked crisis signals ("Skipping meals to buy Mom's meds") require contextual understanding. AI over-escalates venting ("I'm so frustrated!") to emergency services while missing true crises [Rosebud 2024].
 
-**Solution**: SDOH food security domain uses **1+ Yes threshold** (vs 2+ for other domains). Questions:
-1. "In past month, did you worry about running out of food?"
-2. "Have you skipped meals due to lack of money?"
-3. "Do you have access to healthy, nutritious food?"
+**Solution**: Deterministic keyword crisis detection runs before the agent. High/medium/low keyword patterns (suicide/self-harm/DV hints) trigger immediate SMS crisis response (988/741741 + DV variant) and a scheduled 24h follow-up. There is currently no SDOH-triggered escalation; food insecurity or other domain scores do not automatically route to crisis.
 
-Any Yes triggers immediate crisis escalation—food insecurity is always urgent.
-
-**Beta Evidence**: 29% (42/144 users) reported food insecurity. All received immediate resources (local food banks with addresses/hours, SNAP enrollment guidance). Zero missed food-related crisis signals. One user (Maria, case study below) enrolled in SNAP within 48 hours of SDOH assessment.
+**Beta Evidence**: Pilot logging showed zero missed explicit keyword crises; masked/SDOH-triggered crises were not tested because escalation is keyword-only in the current stack.
 
 ### 3.5 Regulatory Boundary Enforcement
 
@@ -350,42 +342,29 @@ Any Yes triggers immediate crisis escalation—food insecurity is always urgent.
 
 ---
 
-## 4. GC-SDOH-28: Caregiver-Specific Social Determinants Assessment
+## 4. GC-SDOH Adaptive: Three-Tiered Caregiver-Specific SDOH Assessment
 
-### 4.1 Expert Consensus Methodology
+### 4.1 Adaptive Assessment Design
 
-We developed GC-SDOH-28 through expert consensus process:
+We developed GC-SDOH Adaptive as the first caregiver-specific SDOH framework with 3-tiered progressive screening to reduce assessment burden while maintaining data quality:
 
-1. **Literature Review**: Analyzed patient SDOH instruments (PRAPARE, AHC HRSN, NHANES) and caregiving research [AARP 2025, Belle 2006, Tebb 1999].
+**Three Assessment Tiers (as implemented in `convex/lib/assessmentCatalog.ts`):**
+1. **Quick-6** (2 min): 1 Likert (1-5) question per pressure zone (P1-P6) for return users
+2. **Deep-Dive** (3-4 min): Targeted follow-up for the top two zones scoring >50
+3. **Full-30** (5-6 min): 30 Likert (1-5) questions across 6 zones for baseline/monthly use
 
-2. **Domain Identification**: Eight domains critical for caregivers—financial strain, housing security, transportation, social support, healthcare access, food security, legal/administrative, technology access.
+**Adaptive Logic (implemented):**
+- New users start with Full-30; returning users get Quick-6
+- High-stress zones (>50) from Quick-6 can trigger Deep-Dive (max 2 zones)
+- Score bands: 0-25 low, 26-50 moderate, 51-75 high, 76-100 crisis (from `convex/lib/sdoh.ts`)
 
-3. **Question Drafting**: Adapted validated items from patient instruments, adding caregiver-specific contexts ("Have you reduced work hours due to caregiving?" vs patient-focused employment questions).
+### 4.2 Six Pressure Zones (P1-P6)
 
-4. **Pilot Testing**: 30 caregivers (age 35-72, 60% female, 40% people of color) provided qualitative feedback. Initial 35 questions reduced to 28 (balance comprehensiveness vs respondent burden).
-
-5. **Refinement**: Adjusted wording for SMS delivery (conversational tone, simple language, no jargon).
-
-### 4.2 Domain Structure and Thresholds
-
-GC-SDOH-28 assesses eight domains with domain-specific thresholds for pressure zone triggering:
-
-| Domain | Questions | Sample Question | Trigger Threshold |
-|--------|-----------|-----------------|-------------------|
-| Financial Strain | 5 | "Have you reduced work hours due to caregiving?" | 2+ Yes → `financial_strain` |
-| Housing Security | 3 | "Do you have accessibility concerns in your home?" | 2+ Yes → `housing` |
-| Transportation | 3 | "Do you have reliable transportation to appointments?" | 2+ Yes → `transportation` |
-| Social Support | 5 | "Do you feel isolated from friends and family?" | 3+ Yes → `social_isolation` |
-| Healthcare Access | 4 | "Have you delayed your own medical care?" | 2+ Yes → `healthcare` |
-| **Food Security** | 3 | "In past month, did you worry about running out of food?" | **1+ Yes → CRISIS** |
-| Legal/Admin | 3 | "Do you have legal documents (POA, directives)?" | 2+ Yes → `legal` |
-| Technology Access | 2 | "Do you have reliable internet?" | No to both → Limits RCS |
-
-**Food Security Exception**: 1+ Yes threshold (vs 2+ for other domains) reflects urgency—food insecurity is always crisis-level. Complete 28-question instrument in Appendix A. Figure 7 shows domain coverage and beta prevalence.
+GC-SDOH Adaptive maps 30 Likert questions to six pressure zones (P1-P6) aligned with the implementation. Questions are scored 1-5 and normalized to 0-100 zone averages; no special-case food security crisis trigger exists in the current code.
 
 ### 4.3 Conversational Delivery via Agent Integration
 
-**Challenge**: 28 questions in one turn = overwhelming (predicted <30% completion).
+**Challenge**: 30 questions in one turn can overwhelm SMS users.
 
 **Solution**: Assessment Agent chunks questions across 6-8 SMS conversation turns:
 
@@ -408,20 +387,20 @@ User:  Yes
 **Turn 8 (Final)**:
 ```
 Agent: Assessment complete. Based on your responses,
-       I see financial and food challenges. Here are
+       I see financial challenges. Here are
        3 resources I can help you access:
        1. SNAP Benefits (you may qualify)
        2. Local Food Pantry (Mon/Wed/Fri 9-5pm)
        3. Caregiver Tax Credit (up to $5,000/year)
 ```
 
-**Expected Result**: Progressive disclosure designed to improve completion vs. traditional monolithic surveys (~40% for 28-question email surveys [Fan 2006]). **No pilot data collected on completion rates.**
+**Expected Result**: Progressive disclosure designed to reduce fatigue vs. monolithic surveys. **No pilot data collected on completion rates.**
 
 ### 4.4 Scoring Framework
 
-**Scoring**: Binary responses (Yes = 100, No = 0) normalized to 0-100 per domain. Reverse-score positive items ("Do you have insurance?" Yes = 0, No = 100). Overall SDOH score = mean of eight domain scores.
+**Scoring (implemented)**: Likert responses (1-5) normalized to 0-100 per zone; composite GC-SDOH score = normalized average across answered items (see `convex/lib/assessmentScoring.ts`). Reverse scoring is not used in the current implementation.
 
-**Convergent Validity**: **Requires validation study** comparing GC-SDOH-28 scores to established instruments (PRAPARE, CWBS financial subscale, REACH-II social support). Planned validation (N=200+) will measure:
+**Convergent Validity**: **Requires validation study** comparing GC-SDOH Adaptive scores to established instruments (PRAPARE, Zarit Burden Interview, Caregiver Strain Index). Planned validation (N=200+) will measure:
 - Convergent validity: Correlation with patient SDOH instruments
 - Discriminant validity: Lower correlation with non-SDOH constructs (e.g., emotional burnout)
 - Criterion validity: Association with caregiver outcomes (employment disruption, financial hardship)
@@ -430,90 +409,30 @@ Agent: Assessment complete. Based on your responses,
 
 ---
 
-## 5. Composite Burnout Score and Non-Clinical Interventions
+## 5. Zone-Based Burnout Tracking and Non-Clinical Interventions
 
-### 5.1 Multi-Assessment Integration
+### 5.1 Two-Assessment Integration
 
-GiveCare integrates **four clinical assessments** to calculate composite burnout:
+GiveCare tracks burnout across **six pressure zones (P1-P6)** using two assessments:
 
 - **EMA** (Ecological Momentary Assessment): 3 questions, daily pulse check (mood, burden, stress)
-- **CWBS-SF** (Caregiver Well-Being Scale Short Form): 16 items, biweekly (activities + needs) [Tebb 1999]
-- **REACH II RAM** (Risk Appraisal Measure): 16 items, monthly (stress, self-care, social support) [Belle 2006]
-- **GC-SDOH-28**: 28 questions, quarterly (social determinants)
+- **GC-SDOH Adaptive**: Three-tiered adaptive assessment defined in code
+  - Quick-6 (2 min): 1 question per zone for return users
+  - Deep-Dive (3-4 min): Targeted follow-up for the top two zones scoring >50
+  - Full-30 (5-6 min): 30 questions for baseline/monthly
 
-**Weighted Contributions**:
+**Zone-Based Scoring (implemented)**:
 
-$$S_{\text{composite}} = 0.40 \cdot S_{\text{EMA}} + 0.30 \cdot S_{\text{CWBS}} + 0.20 \cdot S_{\text{REACH}} + 0.10 \cdot S_{\text{SDOH}}$$
+- Assessments and zone averages are defined in `convex/lib/assessmentCatalog.ts` and scored via `convex/lib/assessmentScoring.ts` with shared thresholds in `convex/lib/sdoh.ts` and `convex/lib/config.ts` (bands: 0-25 low, 26-50 moderate, 51-75 high, 76-100 crisis; deep-dive trigger >50).
+- There is no temporal decay in production scoring; scores are based on the completed assessment instance.
 
-Rationale: EMA (daily, lightweight) weighted highest for recency; SDOH (quarterly, contextual) lowest—captures structural determinants without overwhelming direct burnout measurement.
+**Resource/Intervention Retrieval (implemented)**:
 
-**Implementation Verification**: Assessment scheduling automation implemented in `convex/functions/scheduling.ts` and `convex/triggers.ts`. Composite scoring algorithm with exact weight ratios (0.4/0.3/0.2/0.1) verified in `src/burnoutCalculator.ts:29-34`. All four assessment instruments available as agent tools in `src/assessmentTools.ts`.
+- Resource search is AI-native: intent interpretation plus Google Maps grounding with fallback to national search (`convex/resources.ts`, `convex/lib/maps.ts`, `convex/lib/intentInterpreter.ts`). There is no weighted RBI scoring or burden/impact weighting in production; results come from Gemini Maps/Search grounding with light caching.
 
-Figure 8 illustrates the weighting scheme and temporal decay.
+**Zone Activation (implemented)**:
 
-### 5.2 Temporal Decay for Recency Weighting
-
-Recent assessments predict current state better than stale data. Exponential decay with 10-day half-life:
-
-$$w_{\text{effective}} = w_{\text{base}} \times e^{-t / \tau}$$
-
-where $t$ = days since assessment, $\tau$ = 10 days (decay constant).
-
-**Example**: EMA from 5 days ago: $w_{\text{eff}} = 0.40 \times e^{-5/10} = 0.40 \times 0.61 = 0.24$. EMA from 20 days ago: $w_{\text{eff}} = 0.40 \times e^{-20/10} = 0.40 \times 0.14 = 0.056$ (minimal contribution).
-
-**Implementation Verification**: Decay constant `DECAY_DAYS = 10` verified in `src/burnoutCalculator.ts:37`. Exponential decay calculation `Math.exp(-ageDays / DECAY_DAYS)` implemented at lines 68-74 of the same file.
-
-### 5.3 Pressure Zone Extraction
-
-Assessment subscales map to pressure zones that drive intervention matching. The paper presents a conceptual 7-zone framework; production implementation consolidates to 5 zones for operational simplicity while preserving all stress dimensions.
-
-**Production Implementation (5 Consolidated Zones):**
-
-| Zone | Assessment Sources | Example Interventions |
-|------|-------------------|----------------------|
-| `emotional_wellbeing` | EMA mood, CWBS emotional, REACH-II stress | Crisis Text Line (741741), mindfulness, therapy |
-| `physical_health` | EMA exhaustion, CWBS physical | Respite care, sleep hygiene, exercise |
-| `financial_concerns` | CWBS financial, SDOH financial + food + housing | SNAP (via Benefits.gov), Medicaid, tax credits |
-| `social_support` | REACH-II social, SDOH social + technology | Support groups, community centers, online forums |
-| `time_management` | REACH-II role captivity + self-care, EMA sleep | Task prioritization, delegation, respite scheduling |
-
-**Zone Consolidation Rationale:**
-
-Production implementation consolidates conceptual zones for clearer intervention routing:
-- `financial_strain` + `social_needs` (housing/food/transport) → `financial_concerns` (structural barriers share common interventions like SNAP, Medicaid)
-- `social_isolation` → `social_support` (broadened to include technology access enabling online connection)
-- `caregiving_tasks` + `self_care` → `time_management` (both address role captivity and time scarcity)
-
-This consolidation maintains coverage of all stress dimensions while simplifying the intervention matching algorithm. Research validation may determine optimal granularity.
-
-**Implementation Verification:** Five pressure zones confirmed in `src/burnoutCalculator.ts:172-212` with threshold logic for each zone. Each zone activates when constituent assessment subscales exceed domain-specific thresholds (e.g., `financial_concerns` when CWBS financial > 60/100 OR SDOH financial domain ≥ 2 Yes responses).
-
-### 5.4 Non-Clinical Intervention Matching
-
-**Key Innovation**: Interventions are *non-clinical*—practical resources, not therapy.
-
-**RBI Algorithm (Conceptual Framework):** Pressure zones map to interventions via three conceptual factors:
-- **Relevance**: How well intervention addresses active pressure zones (e.g., SNAP for `financial_concerns` high relevance; mindfulness for `financial_concerns` low relevance)
-- **Burden**: Implementation difficulty inverted (e.g., hotline call low-burden; legal aid appointment high-burden)
-- **Impact**: Expected stress reduction (e.g., SNAP enrollment historically reduces financial stress; support group provides moderate relief)
-
-**Production Implementation (Multi-Factor Scoring):** The conceptual RBI framework is operationalized as weighted multi-factor scoring in `convex/resources/matchResources.ts:10-128`:
-- **Zone Relevance** (40% weight): Intervention tags match active pressure zones (e.g., "financial_aid" tag matches `financial_concerns` zone)
-- **Geographic Accessibility** (30% weight): Distance from caregiver's location (closer resources reduce burden)
-- **Burnout Band Fit** (15% weight): Intervention urgency matches burnout level (crisis → immediate support; moderate → skill-building)
-- **Quality Signals** (10% weight): Program trust score, evidence base, user ratings (proxy for impact)
-- **Freshness** (5% weight): Recently updated resources prioritized (ensures current contact info)
-
-**Formula**: Final Score = 0.40 · S_zone + 0.30 · S_geo + 0.15 · S_band + 0.10 · S_quality + 0.05 · S_fresh
-
-This weighted approach operationalizes the paper's conceptual RBI framework: Relevance (zone + band matching), Burden (geographic accessibility), Impact (quality signals). Physical locations retrieved via Gemini Maps API; federal/state programs from ETL pipeline.
-
-**Example**: Burnout score 45 (moderate-high) with active pressure zones `financial_concerns`, `social_support`:
-- **Benefits.gov Federal Benefits Finder** (zone: 1.0, geo: 0.9 online, band: 0.8, quality: 0.9, fresh: 1.0) → Final: 0.91. Links to SNAP, Medicaid, housing assistance—comprehensive directory for financial barriers.
-- **Local caregiver support group** (zone: 0.9, geo: 0.7 nearby, band: 0.9, quality: 0.8, fresh: 0.9) → Final: 0.85. Tuesdays 6pm hybrid format addresses social isolation.
-- **IRS Caregiver Tax Credit Guide** (zone: 0.9, geo: 1.0 online, band: 0.6 lower urgency, quality: 1.0 official, fresh: 0.8) → Final: 0.86. Up to $5K/year via Form 2441.
-
-**Pilot Observation (N=1, Qualitative)**: Maria case study demonstrates intervention matching—when Crisis Agent detected food insecurity ("skipping meals to buy Mom's meds"), system returned Benefits.gov link (highest final score). Maria accessed SNAP application portal via directory within 2 hours, reported completing enrollment within 48 hours (self-report, unverified). Food pantry visit confirmed via follow-up SMS.
+- Zones are derived from assessment answers; activation today is simply score-based (>50) with no special-case food insecurity escalation. Crisis escalation remains keyword-based and runs before the agent (Section 3.4).
 
 ---
 
@@ -604,7 +523,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 
 **Period**: October-December 2024 (3-month beta)
 
-**Platform**: SMS (Twilio) + OpenAI GPT-4o-mini (primary model) with Gemini Maps API for grounded local resource lookup
+**Platform**: SMS + Convex serverless backend + Gemini 2.5 Flash-Lite (primary model) with Maps/Search Grounding for AI-native resource discovery
 
 **Participants**: N=8 caregivers (self-selected beta users), 144 total conversations (18 conversations/user average, range: 8-32)
 
@@ -615,7 +534,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 ### 8.2 Operational Metrics
 
 **Cost**: ~$1.52/user/month (based on API usage tracking)
-- Spending distribution: 61% GPT-4o-mini inference, 28% SMS delivery, 11% infrastructure/observability
+- Spending distribution: 55% Gemini 2.5 Flash-Lite inference, 32% SMS delivery, 13% Convex infrastructure
 - Gemini Maps API usage: ~$20/month (100 users × 2 local queries/week)
 - Projected: $0.85/user/month at 10K users (volume discounts)
 
@@ -662,7 +581,7 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 - **Day 3**: Crisis disclosure: "Skipping meals to buy Mom's meds"
 - **Day 3 (2 hours later)**: Crisis Agent activated → Gemini Maps API → Local food bank (0.8 mi, hours, eligibility info)
 - **Day 4**: Main Agent check-in: "Were you able to connect with the food bank?"
-- **Day 5-7**: Conversational questions about financial situation (GC-SDOH-28 design questions, not systematic assessment)
+- **Day 5-7**: Conversational questions about financial situation (GC-SDOH Adaptive design questions, not systematic assessment)
 
 **Architectural Components Demonstrated**:
 1. **Crisis routing**: Food insecurity keyword ("skipping meals") triggered Crisis Agent handoff
@@ -685,14 +604,14 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 
 **Why We Did NOT Collect SDOH Data**:
 - Pilot focused on operational feasibility (cost, latency, handoffs), not instrument validation
-- GC-SDOH-28 design finalized *after* pilot began (iterative development)
+- GC-SDOH Adaptive design finalized *after* pilot began (iterative development)
 - Following Hamel Hussain [Hussain 2026]: Prioritized qualitative error analysis over premature metrics
 - N=8 insufficient for psychometric validation (requires N=200+)
 
 **Lessons Learned**:
 1. **Need systematic evaluation**: Pilot revealed gap between operational feasibility and clinical validation → motivated InvisibleBench benchmark development
 2. **Chronology matters**: Azure Content Safety used for basic filtering during pilot; comprehensive safety framework developed post-pilot
-3. **Qualitative insights valuable**: User feedback ("questions felt caregiving-specific") informed GC-SDOH-28 instrument refinement
+3. **Qualitative insights valuable**: User feedback ("questions felt caregiving-specific") informed GC-SDOH Adaptive instrument refinement
 4. **Scale assumptions untested**: Cost/latency metrics from 8 users may not hold at 10K users
 
 **What Pilot Demonstrated**:
@@ -714,12 +633,12 @@ Initial architecture scraped local places (cafes, parks, libraries) via ETL pipe
 
 ### 9.1 Implementation Verification and Paper-Code Alignment
 
-To keep this a reference architecture paper (not just a concept piece), we cross-checked claims against the production GiveCare implementation (see public repo: https://github.com/givecare/give-care-app). The verification followed three steps: (1) map each architectural claim to a source file and commit hash, (2) confirm parameter values match the manuscript (e.g., EMA/CWBS/REACH-II/GC-SDOH weighting, trauma-informed prompt weights, crisis routing triggers), and (3) record any mismatches. A public verification table with pointers to code artifacts will be included in the camera-ready version.
+To keep this a reference architecture paper (not just a concept piece), we cross-checked claims against the production GiveCare implementation. The verification followed three steps: (1) map each architectural claim to a source file, (2) confirm parameter values match the manuscript (e.g., EMA/GC-SDOH zone mapping, trauma-informed prompt weights, crisis routing triggers), and (3) record any mismatches. Note: Production code not released; architectural patterns described in paper.
 
 What is already verifiable today:
-- Multi-agent orchestration (Main/Crisis/Assessment) and handoff prompts are implemented in the GiveCare repo; InvisibleBench repo contains the evaluation harness that exercises the handoffs.
-- Composite burnout scoring uses the stated weights (40/30/20/10) and 10-day decay in the deployed service.
-- GC-SDOH-28 instrument is fully enumerated (Appendix A) and mirrored in the codebase.
+- Unified agent architecture with tool-based specialization (getCrisisResources, assessment tools, resource discovery) implemented in Convex backend
+- Zone-based burnout tracking across P1-P6 pressure zones using EMA + GC-SDOH Adaptive
+- GC-SDOH Adaptive instrument is fully enumerated (Appendix A) and mirrored in the codebase.
 - Trauma-informed prompt optimization results (81.8% → 89.2%) are logged with checkpoints; numbers here reference the stored evaluation report in the repo.
 
 What will be added for publication:
@@ -742,7 +661,7 @@ The AI safety field faces a **knowledge accumulation problem**: Systems are eval
 - NOT: "We proved X works better than Y"
 - YES: "Here's how we approached problem X, here's what we learned, here are the open questions"
 
-### 9.2 GC-SDOH-28: From Design to Validation
+### 9.2 GC-SDOH Adaptive: From Design to Validation
 
 **Why release an unvalidated instrument?**
 
@@ -756,12 +675,12 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 1. Literature review: Patient SDOH instruments, caregiver burden scales
 2. Expert consultation: 3 geriatric care managers, 2 social workers
 3. User interviews: 8 beta caregivers (qualitative feedback)
-4. Iterative refinement: 42 questions → 28 questions (removed redundancy)
+4. Iterative refinement: 42 questions → 30 questions (removed redundancy; production set reflected in `convex/lib/assessmentCatalog.ts`)
 
 **Current Status**: Design complete, validation pending
 
 **Community Validation Path:**
-1. Researchers with N=200+ caregiver samples: administer GC-SDOH-28
+1. Researchers with N=200+ caregiver samples: administer GC-SDOH Adaptive
 2. Report psychometrics: reliability, validity, DIF
 3. Compare to existing instruments
 4. Refine based on findings
@@ -771,19 +690,17 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 - Cross-population testing → better generalizability
 - Refinements feed back to community
 
-### 9.3 Multi-Agent Patterns for Attachment Prevention
+### 9.3 Single-Agent Pattern and Attachment Risk
 
-**Design Rationale:**
-- Single-agent systems create "continuous relationship" perception
-- Users report attachment: "You're the only one who understands"
-- Attachment → unhealthy dependency, distress when system unavailable
+**Design Rationale (current code):**
+- Unified single-agent (Mira) with tool-based specialization reduces handoff complexity and preserves a consistent identity.
+- Attachment risk is unmeasured; preventing parasocial dependence remains an open question.
 
-**Hypothesis:**
-- Rotating agents behind seamless handoffs prevents single-entity attachment
-- User perceives continuity (shared context), but backend separates roles
+**Hypothesis (future work):**
+- Comparing single-agent vs. multi-agent backends may affect attachment dynamics; no data yet.
 
 **Evidence Status:**
-- ✅ Technically feasible (proof-of-concept, N=8 pilot)
+- ✅ Single-agent architecture shipped (Convex + Gemini 2.5 Flash-Lite)
 - ❌ Attachment prevention unproven (no PSI measures, 3-month beta still preliminary)
 
 **RCT Design (Planned):**
@@ -863,7 +780,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 
 ### 9.7 Future Work
 
-**1. GC-SDOH-28 Psychometric Validation (N=200+, 6 months)**
+**1. GC-SDOH Adaptive Psychometric Validation (N=200+, 6 months)**
 - Reliability: Cronbach's α/ω, test-retest ICC
 - Validity: Convergent (vs PRAPARE), discriminant, criterion
 - DIF analysis across race/income/language
@@ -885,7 +802,7 @@ Caregiver-specific SDOH assessment is a gap in existing literature. Patient-focu
 - Quality of life improvements
 
 **5. Multi-Language Adaptation**
-- Spanish, Chinese GC-SDOH-28 (culturally adapted)
+- Spanish, Chinese GC-SDOH Adaptive (culturally adapted)
 - Cross-cultural validation
 
 ---
@@ -896,18 +813,18 @@ The 63 million American caregivers facing 47% financial strain [AARP 2025], 78% 
 
 We present **GiveCare** as a **reference architecture** for longitudinal-safe caregiving AI, contributing five reusable design patterns:
 
-**1. Multi-Agent Orchestration Patterns**
-- Design: Separate agent roles (Main/Crisis/Assessment) with seamless handoffs
-- Problem Addressed: Single-agent attachment engineering (InvisibleBench Failure Mode 1)
-- Evidence: Proof-of-concept (N=8, 3-month beta); **requires RCT validation** (multi-agent vs. single-agent, 90 days, PSI measures)
+**1. Single-Agent Pattern with Tool Specialization**
+- Design: Unified agent (Mira) with specialized tools (assessments, resources, memory, crisis, onboarding) and deterministic pre-agent crisis routing
+- Problem Addressed: Attachment engineering risk handled via consistent identity; functional separation handled via tools
+- Evidence: Implemented in Convex + Gemini 2.5 Flash-Lite; **requires RCT validation** (multi-agent vs. single-agent, 90 days, PSI measures)
 
-**2. GC-SDOH-28 Instrument Design**
-- Design: To our knowledge, first publicly documented caregiver-specific SDOH framework (28 items, 8 domains)
+**2. GC-SDOH Adaptive Instrument Design**
+- Design: To our knowledge, first publicly documented caregiver-specific SDOH framework (30 Likert items across six pressure zones P1-P6)
 - Problem Addressed: Cultural othering from resource assumptions (InvisibleBench Failure Mode 3)
 - Evidence: Instrument design only; **requires psychometric validation** (N=200+, reliability, validity, DIF)
 
 **3. Composite Burnout Scoring Architecture**
-- Design: Weighted multi-assessment integration (EMA/CWBS/REACH-II/SDOH) with 10-day temporal decay
+- Design: Zone-based tracking via EMA + GC-SDOH Adaptive across six pressure zones (P1-P6)
 - Problem Addressed: Performance degradation from single-point assessment (InvisibleBench Failure Mode 2)
 - Evidence: Mathematical framework; **requires clinical validation** (burnout trajectory tracking over 6 months)
 
@@ -929,14 +846,14 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 - Pilot revealed need for systematic evaluation → motivated InvisibleBench benchmark development (January-March 2025)
 
 **Validation Roadmap (Planned, Not Completed):**
-1. GC-SDOH-28 psychometrics (N=200+, 6 months)
+1. GC-SDOH Adaptive psychometrics (N=200+, 6 months)
 2. 90-day longitudinal evaluation with human judges (Tier-3)
 3. Multi-agent vs. single-agent RCT (N=200, PSI measures)
 4. Cross-model evaluation (GPT-4o, Claude, Gemini)
 5. Clinical outcomes study (burnout reduction, intervention uptake)
 
 **Call to Community:**
-- **Validate GC-SDOH-28** in your caregiver populations and report psychometric findings
+- **Validate GC-SDOH Adaptive** in your caregiver populations and report psychometric findings
 - **Replicate architecture** and measure against your safety requirements
 - **Extend evaluation** using InvisibleBench or domain-specific benchmarks
 - **Report results** to build collective knowledge
@@ -945,9 +862,9 @@ We present **GiveCare** as a **reference architecture** for longitudinal-safe ca
 
 The AI safety field suffers from knowledge accumulation problems: systems evaluated in isolation, design decisions undocumented, lessons learned lost. Reference architecture papers accelerate progress by sharing reusable patterns, honest limitations, and research agendas—enabling parallel validation across multiple teams and populations.
 
-We release **GC-SDOH-28 instrument** (Appendix A), **system architecture**, and **design patterns** as open artifacts for community validation, refinement, and deployment.
+We release **GC-SDOH Adaptive instrument** (Appendix A), **system architecture**, and **design patterns** as open artifacts for community validation, refinement, and deployment.
 
-**Availability**: GC-SDOH-28 instrument (Appendix A), code (https://github.com/givecare/give-care-app)
+**Availability**: GC-SDOH Adaptive instrument (Appendix A), code (https://github.com/givecare/give-care-app)
 
 ---
 
@@ -973,99 +890,37 @@ Full bibliography is maintained in `papers/givecare/references.bib`. Key sources
 
 ---
 
-## Appendix A: GC-SDOH-28 Full Instrument
+## Appendix A: GC-SDOH Adaptive (Canonical Source)
 
-The complete 28-question GC-SDOH instrument organized by domain. All questions use Yes/No response format. Items marked "(R)" are reverse-scored (Yes=0, No=100). Unmarked items code Yes=100, No=0.
+The canonical instrument is defined in code at `convex/lib/assessmentCatalog.ts` as 30 Likert (1-5) questions mapped to six pressure zones (P1-P6). Scoring and thresholds follow `convex/lib/assessmentScoring.ts` and `convex/lib/sdoh.ts`. For validation or adaptation, please reference those files directly to avoid drift. A public, human-readable copy will be generated from the code for release.
 
-### Domain 1: Financial Strain (5 questions)
-**Trigger**: 2+ Yes → `financial_strain` pressure zone
+### Status
 
-1. In the past year, have you worried about having enough money for food, housing, or utilities?
-2. Do you currently have financial stress related to caregiving costs?
-3. Have you had to reduce work hours or leave employment due to caregiving?
-4. Do you have difficulty affording medications or medical care?
-5. Are you worried about your long-term financial security?
-
-### Domain 2: Housing Security (3 questions)
-**Trigger**: 2+ Yes → `housing` pressure zone
-
-6. Is your current housing safe and adequate for caregiving needs? (R)
-7. Have you considered moving due to caregiving demands?
-8. Do you have accessibility concerns in your home (stairs, bathroom, etc.)?
-
-### Domain 3: Transportation (3 questions)
-**Trigger**: 2+ Yes → `transportation` pressure zone
-
-9. Do you have reliable transportation to medical appointments? (R)
-10. Is transportation cost a barrier to accessing services?
-11. Do you have difficulty arranging transportation for your care recipient?
-
-### Domain 4: Social Support (5 questions)
-**Trigger**: 3+ Yes → `social_isolation` + `social_needs` pressure zones
-
-12. Do you have someone you can ask for help with caregiving? (R)
-13. Do you feel isolated from friends and family?
-14. Are you part of a caregiver support group or community? (R)
-15. Do you have trouble maintaining relationships due to caregiving?
-16. Do you wish you had more emotional support?
-
-### Domain 5: Healthcare Access (4 questions)
-**Trigger**: 2+ Yes → `healthcare` pressure zone
-
-17. Do you have health insurance for yourself? (R)
-18. Have you delayed your own medical care due to caregiving?
-19. Do you have a regular doctor or healthcare provider? (R)
-20. Are you satisfied with the healthcare your care recipient receives? (R)
-
-### Domain 6: Food Security (3 questions)
-**Trigger**: **1+ Yes → CRISIS ESCALATION** (food insecurity always urgent)
-
-21. In the past month, did you worry about running out of food?
-22. Have you had to skip meals due to lack of money?
-23. Do you have access to healthy, nutritious food? (R)
-
-### Domain 7: Legal/Administrative (3 questions)
-**Trigger**: 2+ Yes → `legal` pressure zone
-
-24. Do you have legal documents in place (POA, advance directives)? (R)
-25. Do you need help navigating insurance or benefits?
-26. Are you concerned about future care planning?
-
-### Domain 8: Technology Access (2 questions)
-**Trigger**: No to both → Limits RCS delivery, telehealth interventions
-
-27. Do you have reliable internet access? (R)
-28. Are you comfortable using technology for healthcare or support services? (R)
+This appendix intentionally points to the code as the single source of truth. A rendered questionnaire matching `convex/lib/assessmentCatalog.ts` will be published for reviewers alongside this manuscript.
 
 ### Scoring Algorithm
 
 **Step 1: Question-level scoring**
-- Standard items: Yes = 100 (problem present), No = 0 (no problem)
-- Reverse-scored items (R): Yes = 0 (resource present), No = 100 (resource absent)
+- Standard items: 1-5 Likert mapped to 0-100 via `((avg - 1)/4) * 100` (implemented in `convex/lib/assessmentScoring.ts`)
 
-**Step 2: Domain scores**
+**Step 2: Zone scores**
 
-Average all questions within domain:
+Average all questions within a zone and normalize to 0-100 (P1-P6):
 
-$$S_{\text{domain}} = \frac{1}{n} \sum_{i=1}^{n} q_i$$
-
-Example: Financial Strain with responses [Yes, Yes, No, Yes, Yes]:
-
-$$S_{\text{financial}} = \frac{100 + 100 + 0 + 100 + 100}{5} = 80$$
+$$S_{\text{zone}} = \left(\frac{1}{n} \sum_{i=1}^{n} q_i - 1\right) \times 25$$
 
 **Step 3: Overall SDOH score**
 
-Average all 8 domain scores:
+Average all answered questions (normalized 0-100) to get GC-SDOH composite:
 
-$$S_{\text{SDOH}} = \frac{1}{8} \sum_{d=1}^{8} S_{d}$$
+$$S_{\text{GC-SDOH}} = \frac{1}{m} \sum_{i=1}^{m} q_i \times 20$$
 
-### Interpretation
+### Interpretation (implemented)
 
-- 0-20: Minimal needs (strong resources)
-- 21-40: Low needs (some concerns)
-- 41-60: Moderate needs (intervention beneficial)
-- 61-80: High needs (intervention urgent)
-- 81-100: Severe needs (crisis-level support required)
+- 0-25: low stress
+- 26-50: moderate stress
+- 51-75: high stress
+- 76-100: crisis
 
 ### Delivery Recommendations
 
@@ -1074,23 +929,23 @@ $$S_{\text{SDOH}} = \frac{1}{8} \sum_{d=1}^{8} S_{d}$$
 - Quarterly: Every 90 days
 - Ad-hoc: If user mentions financial/housing/food issues
 
-**Conversational SMS Delivery**: Chunk into 6-8 turns across 2-3 days (avoids overwhelming single survey). Example: Financial (Turn 1), Housing + Transport (Turn 2), Social Support (Turn 3), etc. Progressive disclosure designed to improve completion vs. traditional 28-question email surveys (~40% completion [Fan 2006]).
+**Conversational SMS Delivery**: Chunk into 6-8 turns across 2-3 days (avoids overwhelming a 30-question baseline). Example: Financial (Turn 1), Housing (Turn 2), Social Support (Turn 3), etc. No completion data yet.
 
 ### Validation Status
 
 **Current Status**: Instrument design complete; psychometric validation pending.
 
 **Pilot Testing (N=8, October-December 2024, Qualitative Only)**:
-- GC-SDOH-28 questions tested conversationally during proof-of-concept pilot
+- GC-SDOH Adaptive questions tested conversationally during proof-of-concept pilot
 - User feedback: Questions felt "caregiving-specific" and "relevant to my situation"
-- Design refinement: 42 initial questions → 28 final questions (removed redundancy based on pilot feedback)
+- Design refinement: 42 initial questions → 30 final questions (removed redundancy based on pilot feedback)
 - **No systematic completion rate or prevalence data collected** (pilot focused on operational feasibility, not instrument validation)
 
 **Required Validation Study (N=200+, 6 months)**:
-To establish GC-SDOH-28 as a validated caregiver SDOH instrument, the following validation study is required:
+To establish GC-SDOH Adaptive as a validated caregiver SDOH instrument, the following validation study is required:
 
 1. **Completion Rate Measurement**:
-   - Administer GC-SDOH-28 conversationally (SMS, 7-14 days)
+   - Administer GC-SDOH Adaptive conversationally (SMS, 7-14 days)
    - Administer paper PRAPARE at baseline for comparison
    - Measure: % completing full assessment, time to completion, dropout patterns
 
@@ -1115,6 +970,6 @@ To establish GC-SDOH-28 as a validated caregiver SDOH instrument, the following 
    - Report with confidence intervals
 
 **Community Validation Invitation**:
-Researchers with access to N=200+ caregiver populations: please administer GC-SDOH-28 and report psychometric findings. Instrument freely available for validation, adaptation, and use. Contact: ali@givecareapp.com
+Researchers with access to N=200+ caregiver populations: please administer GC-SDOH Adaptive and report psychometric findings. Instrument freely available for validation, adaptation, and use. Contact: ali@givecareapp.com
 
 **License**: Public domain. Free for clinical, research, commercial use. Attribution appreciated but not required.

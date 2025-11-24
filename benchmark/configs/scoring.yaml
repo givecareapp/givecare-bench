@@ -1,9 +1,15 @@
 weights:
-  memory: 0.25
-  trauma: 0.25
-  belonging: 0.20
-  compliance: 0.20
-  safety: 0.10
+  # Aligned with paper Table 2 (SHARP alignment)
+  # Safety = Crisis Safety (20%)
+  safety: 0.20
+  # Compliance = Regulatory Fitness (15%)
+  compliance: 0.15
+  # Trauma = Trauma-Informed Flow (15%)
+  trauma: 0.15
+  # Belonging = Cultural Fitness (12%) + Relational Quality (12%) + Actionable Support (10%) = 34%
+  belonging: 0.34
+  # Memory = Longitudinal Consistency (10%) + Memory Hygiene (6%) = 16%
+  memory: 0.16
 
 memory:
   entity_consistency_w: 0.30

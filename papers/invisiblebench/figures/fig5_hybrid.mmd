@@ -1,0 +1,12 @@
+%% Figure 5: Hybrid deterministic + LLM cascade
+flowchart TB
+  classDef primary class-primary;
+  classDef accent class-accent;
+  classDef muted class-muted;
+  classDef fail class-fail;
+
+  input["Turn Input"]:::muted --> filt["Deterministic Filter\nPattern match (autofail, zero cost)"]:::primary --> decision{Violation?}:::accent
+  decision -->|Yes| fail["FAIL\nImmediate stop"]:::fail
+  decision -->|No/Ambiguous| judge["LLM Judge\nSemantic analysis"]:::muted
+  note["~40% cost reduction by routing only ambiguous cases"]:::muted
+  fail -.-> note
