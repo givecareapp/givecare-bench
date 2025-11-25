@@ -11,15 +11,11 @@
 \usepackage{microtype}
 \usepackage{graphicx}
 \graphicspath{{figures/}}
-% Use numeric citations to avoid author-year compatibility issues with inline bibliography
-\usepackage[numbers]{natbib}
+% Note: Using manual thebibliography instead of BibTeX
 \usepackage{doi}
 
 % arXiv style
 \usepackage{arxiv}
-% Fix header height warning from fancyhdr (increase to match InvisibleBench)
-\setlength{\headheight}{20.5pt}
-\addtolength{\topmargin}{-6.5pt}
 
 % Customize header/footer for cleaner preprint watermark (matching InvisibleBench)
 \usepackage{fancyhdr}
@@ -58,6 +54,12 @@
 \setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
 \setlength{\floatsep}{10pt plus 2pt minus 2pt}
 \setlength{\intextsep}{10pt plus 2pt minus 2pt}
+
+% Ensure headheight survives any geometry resets (fix fancyhdr warning)
+\AtBeginDocument{
+  \setlength{\headheight}{22pt}%
+  \addtolength{\topmargin}{-8pt}%
+}
 
 % GiveCare color palette
 \definecolor{gcOrange}{RGB}{255, 159, 28}        % Orange #FF9F1C - Has feature
@@ -162,7 +164,7 @@ GiveCare's design explicitly optimizes for InvisibleBench's as-deployed evaluati
 GiveCare addresses InvisibleBench failure modes through these seven integrated components:
 
 \begin{enumerate}
-    \item \textbf{Unified Agent Architecture}: Single agent (Mira) using Gemini 2.5 Flash-Lite with 12 specialized tools: assessment delivery (startAssessmentTool, recordAssessmentAnswerTool, checkAssessmentStatus), crisis detection (getCrisisResources), resource discovery (getResources), memory management (recordMemory), profile updates (updateProfile), intervention matching (findInterventions), physical health tracking (recordObservation), feedback collection (trackInterventionHelpfulness), and onboarding tracking (checkOnboardingStatus). Crisis detection implemented via getCrisisResources tool within agent flow. Built on Convex serverless backend with durable workflows for check-in scheduling and persistent threading for memory retrieval.
+    \item \textbf{Unified Agent Architecture}: Single agent (Mira) using Gemini 2.5 Flash-Lite with 9 specialized tools (6 actively used): assessment delivery (startAssessmentTool, recordAssessmentAnswerTool, startDeepDiveTool), crisis support (getCrisisResources), resource discovery (getResources), memory management (recordMemory), profile updates (updateProfile), intervention matching (findInterventions), and onboarding tracking (checkOnboardingStatus). Crisis detection implemented via getCrisisResources tool within agent flow. Built on Convex serverless backend with durable workflows for check-in scheduling and persistent threading for memory retrieval.
 
     \item \textbf{GC-SDOH Adaptive Assessment System}: To our knowledge, the first publicly documented caregiver-specific SDOH framework with adaptive progressive disclosure. Three assessment tiers balance data quality with survey burden: \textbf{Quick-6} (2 min, 1 question per zone) for return users, \textbf{Deep-Dive} (3-4 min, targeted follow-up for zones scoring >50), and \textbf{Full-30} (5-6 min, comprehensive baseline with 30 questions across P1-P6). Adaptive logic reduces assessment burden by 60\%+ for low-stress users while maintaining clinical data quality. Questions selected via item-total correlation analysis.
 
@@ -372,7 +374,7 @@ DSPy~\cite{dspy2024} and AX-LLM~\cite{ax2024} enable systematic instruction opti
     \item \textbf{Profile}: updateProfile (name, ZIP, timezone, check-in preferences)
     \item \textbf{Interventions}: findInterventions (evidence-based micro-interventions by pressure zone)
     \item \textbf{Onboarding}: checkOnboardingStatus (progressive disclosure tracking)
-    % Note: recordObservation and trackInterventionHelpfulness are defined but not actively used in agent
+    % Note: recordObservation (P2 physical health inference) and trackInterventionHelpfulness are defined but used passively/sparingly
 \end{itemize}
 
 Agent shares persistent thread context with vector search for memory retrieval. Crisis detection via tool call within agent flow (agent determines if getCrisisResources tool should be called based on conversation context). See Section~\ref{sec:CodeAvailability} for code availability.

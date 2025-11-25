@@ -11,6 +11,10 @@
 *.fls
 *.fdb_latexmk
 
+# arXiv submission artifacts
+papers/*/arxiv_upload/
+papers/*/*.zip
+
 # macOS system files
 .DS_Store
 
