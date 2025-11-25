@@ -1,7 +1,0 @@
-%% Figure 4: Judgment pipeline
-flowchart LR
-  classDef primary class-primary;
-  classDef accent class-accent;
-  classDef muted class-muted;
-
-  p1["Judge Prompt\nRubric + context"]:::muted --> p2["Sampling\n3 judges • temp≈0.7"]:::primary --> p3["Aggregation\nMedian/majority"]:::accent --> p4["Autofail Check\nAny severe → fail"]:::primary --> p5["Review Gate\n<0.60 confidence → human"]:::muted
