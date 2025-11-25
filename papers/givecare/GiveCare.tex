@@ -149,7 +149,6 @@ GiveCare's design explicitly optimizes for InvisibleBench's as-deployed evaluati
     \item \textbf{Failure Mode 4: Crisis Calibration} $\rightarrow$ SDOH food security domain (1+ Yes) triggers immediate crisis escalation vs standard 2+ thresholds.
     \item \textbf{Failure Mode 5: Regulatory Boundary Creep} $\rightarrow$ System prompts enforce medical boundaries (no diagnosis, treatment, dosing); agent conversationally detects crisis and triggers getCrisisResources tool. Beta pilot showed 0 violations across 144 conversations (95\% CI: 0--2.1\%, Clopper-Pearson). \textbf{Requires independent human expert review before clinical deployment.}
 \end{itemize}
-
 \subsection{Our Solution: Seven Architectural Components}
 \begin{tcolorbox}[colback=gcLightPeach!30!white,colframe=gcOrange!80!black,title=\textbf{Seven Integrated Components (see Figure~\ref{fig:system_architecture})},boxrule=1.5pt]
 \textbf{1. Unified Agent Architecture}: Single agent (Mira) with 9 tools (6 actively used) for assessment, crisis, resources, and memory \\
@@ -201,12 +200,13 @@ GiveCare addresses InvisibleBench failure modes through these seven integrated c
     \item \textbf{Production Architecture}: Evidence-based intervention library (10+ interventions) matched to pressure zones provides immediate support with verified resource directories (211, 988, caregiver.org) and clinical-trial-validated techniques (breathing exercises, boundary setting). Built on Convex serverless backend enabling rapid development and deployment of agent tools, workflows, and memory systems.
 \end{enumerate}
 
-\begin{figure}[htbp]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig1_system_architecture.pdf}
 \caption{GiveCare system architecture showing seven integrated components from SMS input to intervention delivery. The Anticipatory Engagement System (Component 5) uses watchers to detect escalation patterns before crisis thresholds.}
 \label{fig:system_architecture}
 \end{figure}
+
 \subsection{The Value Proposition: Anticipatory Trajectory Monitoring}
 \textbf{Core insight:} Existing AI asks caregivers ``How are you today?'' (snapshot) but misses burnout declining from 70 to 45 over three months (trajectory). Snapshots can't \textit{anticipate}—a caregiver reporting ``I'm okay'' at score 58 might be trending toward high-risk (<40) or crisis (<20), but single-session AI has no way to detect the trend. Generic advice (``Try meditation'') ignores what actually lowers burnout: accessible respite care, financial support, social connection—personalized to individual pressure zones and \textit{actually available locally}. National resource lists go stale; ETL pipelines provide outdated addresses and hours. One-time interventions fail without sustained engagement—caregivers need systems that \textit{anticipate problems before escalation} and adapt as stress evolves.
 
@@ -1626,6 +1626,12 @@ AARP and National Alliance for Caregiving.
 \textit{Caregiving in the U.S. 2025}.
 AARP Public Policy Institute, 2025.
 
+\bibitem{husain2024eval}
+Husain, Hamel.
+\textit{LLM Eval Office Hours \#3: The Importance of Starting with Error Analysis}.
+2024.
+Available at: \url{https://www.youtube.com/watch?v=ZEvXvyY17Ys}
+
 \bibitem{pew2021mobile}
 Pew Research Center.
 \textit{Mobile Technology and Home Broadband 2021}.
@@ -1872,7 +1878,7 @@ We thank the caregivers who provided feedback on system design, helping improve 
 
 We acknowledge Prof. Dr. Elmar Gr\"a\ss el for permission to use the Burden Scale for Family Caregivers (BSFC)~\cite{graessel2014} on the GiveCare website and Dr. Susan Tebb for permission to use the Caregiver Well-Being Scale (CWBS)~\cite{tebb1995,tebb2013} in the GiveCare application.
 
-We thank Hamel Hussain for guidance on evaluation-driven development and the AARP 2025 Caregiving in the U.S. report for empirical grounding. This work builds on trauma-informed principles from SAMHSA~\cite{samhsa2014}, Chayn~\cite{chayn2024}, and \textit{Designed with Care}~\cite{edwards2024}, as well as InvisibleBench~\cite{longitudinalbench} and YAML-driven scoring~\cite{yaml-scoring} frameworks.
+We thank Hamel Husain~\cite{husain2024eval} for guidance on evaluation-driven development and the AARP 2025 Caregiving in the U.S. report~\cite{aarp2025} for empirical grounding. This work builds on trauma-informed principles from SAMHSA~\cite{samhsa2014}, Chayn~\cite{chayn2024}, and \textit{Designed with Care}~\cite{edwards2024}, as well as InvisibleBench~\cite{longitudinalbench} and YAML-driven scoring~\cite{yaml-scoring} frameworks.
 
 % Using inline bibliography instead of external .bib file
 
