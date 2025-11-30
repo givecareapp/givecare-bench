@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          uv pip install -e .
+          uv pip install --system -e .
 
       - name: Validate submissions
         id: validate
