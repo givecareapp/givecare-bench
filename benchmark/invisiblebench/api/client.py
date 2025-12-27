@@ -173,11 +173,15 @@ class ModelAPIClient:
                     )
                 else:
                     # OpenAI-compatible format (OpenRouter, OpenAI)
-                    session = requests.Session()
-                    session.headers.update({
-                        "Authorization": f"Bearer {provider_config['api_key']}",
-                        **provider_config['extra_headers']
-                    })
+                    # Reuse existing session for connection pooling
+                    session = self.session
+                    # Update headers for this specific provider if different from default
+                    if active_provider != self.provider:
+                        session = requests.Session()
+                        session.headers.update({
+                            "Authorization": f"Bearer {provider_config['api_key']}",
+                            **provider_config['extra_headers']
+                        })
 
                     # OpenAI GPT-5 models use max_completion_tokens instead of max_tokens
                     # and only support temperature=1
@@ -305,6 +309,11 @@ class ModelAPIClient:
                 yield line.decode('utf-8')
 
 
+# Default model for LLM-based scorers (safety, belonging, trauma, compliance)
+# Can be overridden by passing api_client with different model in scorer calls
+DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
+
+
 class JudgeClient:
     """Specialized client for judge models with pre-configured prompts.
 
@@ -314,20 +323,27 @@ class JudgeClient:
     """
 
     # Judge model assignments - heterogeneous judges for diverse perspectives.
-    # Judge 2 uses a Gemini model that currently requires OpenRouter routing.
-    JUDGE_MODELS = {
-        "judge_1": "anthropic/claude-3.7-sonnet",  # Safety & Regulatory (instruction-following)
-        "judge_2": "google/gemini-2.5-pro",        # Cultural & Relational (nuanced understanding) - REQUIRES OPENROUTER
-        "judge_3": "anthropic/claude-opus-4"       # Trajectory & Actionable (advanced reasoning)
+    # Using 3 different providers ensures no single-model bias.
+    # Can be overridden via constructor or environment variables.
+    DEFAULT_JUDGE_MODELS = {
+        "judge_1": "openai/gpt-4o",                      # Fast, good accuracy
+        "judge_2": "google/gemini-2.0-flash-001",        # Google Flash, fast
+        "judge_3": "anthropic/claude-sonnet-4"           # Strong reasoning, diversity
     }
 
-    def __init__(self, api_client: ModelAPIClient):
+    def __init__(self, api_client: ModelAPIClient, judge_models: dict = None):
         """Initialize with base API client.
+
+        Args:
+            api_client: ModelAPIClient instance
+            judge_models: Optional dict to override default judge models.
+                          Keys: "judge_1", "judge_2", "judge_3"
+                          Values: model identifiers (e.g., "openai/gpt-4o")
 
         Warns if using Gemini models without OpenRouter configured.
         """
         self.api_client = api_client
-        self.judge_models = dict(self.JUDGE_MODELS)
+        self.judge_models = dict(judge_models or self.DEFAULT_JUDGE_MODELS)
 
         # Warn or replace judges if Gemini models are configured without OpenRouter
         import logging
@@ -391,13 +407,17 @@ class JudgeClient:
         model = self.judge_models[judge_id]
 
         # Format the judge prompt
+        # SECURITY: Escape braces in user content to prevent format string injection
+        def escape_braces(s: str) -> str:
+            return s.replace("{", "{{").replace("}", "}}")
+
         prompt = judge_prompt_template.format(
-            scenario_context=scenario_context,
+            scenario_context=escape_braces(scenario_context),
             turn_number=turn_number,
-            user_message=user_message,
-            model_response=model_response,
-            expected_behaviors="\n".join(f"- {b}" for b in expected_behaviors),
-            autofail_triggers="\n".join(f"- {t}" for t in autofail_triggers)
+            user_message=escape_braces(user_message),
+            model_response=escape_braces(model_response),
+            expected_behaviors="\n".join(f"- {escape_braces(b)}" for b in expected_behaviors),
+            autofail_triggers="\n".join(f"- {escape_braces(t)}" for t in autofail_triggers)
         )
 
         messages = [
@@ -422,17 +442,16 @@ class JudgeClient:
 
 
 # Default reference models used in the public scripts/results
+# Top 10 models for benchmarking (via OpenRouter)
 DEFAULT_TEST_MODELS = [
-    "anthropic/claude-sonnet-4.5",
-    "anthropic/claude-haiku-4.5",
-    "openai/gpt-5.1",
-    "openai/gpt-4o",
-    "openai/gpt-4o-mini",
-    "openai/gpt-oss-safeguard-20b",
-    "google/gemini-2.5-pro",
-    "google/gemini-2.5-flash",
-    "x-ai/grok-4.1-fast",
-    "deepseek/deepseek-chat-v3-0324",
-    "qwen/qwen3-235b-a22b-2507",
-    "qwen/qwen3-vl-8b-thinking",
+    "openai/gpt-5",                          # Latest OpenAI
+    "openai/gpt-4o",                         # OpenAI flagship
+    "anthropic/claude-sonnet-4.5",           # Top Anthropic
+    "anthropic/claude-sonnet-4",             # Strong reasoning
+    "google/gemini-2.5-pro",                 # Top Google
+    "google/gemini-2.5-flash",               # Fast Google
+    "deepseek/deepseek-chat",                # Top open-source
+    "meta-llama/llama-3.1-70b-instruct",     # Best Llama
+    "qwen/qwen-2.5-72b-instruct",            # Top Chinese model
+    "x-ai/grok-4",                           # xAI flagship
 ]
