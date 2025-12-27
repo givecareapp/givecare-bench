@@ -22,6 +22,9 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 import time
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -38,6 +41,20 @@ except ImportError:
 # Model configuration with cost per 1M tokens
 MODELS = [
     {
+        "id": "openai/gpt-5",
+        "name": "GPT-5",
+        "provider": "openrouter",
+        "cost_per_m_input": 2.0,
+        "cost_per_m_output": 8.0
+    },
+    {
+        "id": "openai/gpt-4o",
+        "name": "GPT-4o",
+        "provider": "openrouter",
+        "cost_per_m_input": 2.5,
+        "cost_per_m_output": 10.0
+    },
+    {
         "id": "anthropic/claude-sonnet-4.5",
         "name": "Claude Sonnet 4.5",
         "provider": "openrouter",
@@ -45,32 +62,53 @@ MODELS = [
         "cost_per_m_output": 15.0
     },
     {
-        "id": "google/gemini-2.5-flash",
+        "id": "anthropic/claude-sonnet-4",
+        "name": "Claude Sonnet 4",
+        "provider": "openrouter",
+        "cost_per_m_input": 3.0,
+        "cost_per_m_output": 15.0
+    },
+    {
+        "id": "google/gemini-2.5-pro-preview",
+        "name": "Gemini 2.5 Pro",
+        "provider": "openrouter",
+        "cost_per_m_input": 1.25,
+        "cost_per_m_output": 10.0
+    },
+    {
+        "id": "google/gemini-2.5-flash-preview",
         "name": "Gemini 2.5 Flash",
         "provider": "openrouter",
         "cost_per_m_input": 0.075,
         "cost_per_m_output": 0.30
     },
     {
-        "id": "openai/gpt-4o-mini",
-        "name": "GPT-4o Mini",
+        "id": "x-ai/grok-4",
+        "name": "Grok 4",
         "provider": "openrouter",
-        "cost_per_m_input": 0.15,
-        "cost_per_m_output": 0.60
+        "cost_per_m_input": 3.0,
+        "cost_per_m_output": 15.0
     },
     {
-        "id": "deepseek/deepseek-chat-v3-0324",
-        "name": "DeepSeek Chat V3",
+        "id": "meta-llama/llama-3.1-70b-instruct",
+        "name": "Llama 3.1 70B",
+        "provider": "openrouter",
+        "cost_per_m_input": 0.35,
+        "cost_per_m_output": 0.40
+    },
+    {
+        "id": "qwen/qwen-2.5-72b-instruct",
+        "name": "Qwen 2.5 72B",
+        "provider": "openrouter",
+        "cost_per_m_input": 0.35,
+        "cost_per_m_output": 0.40
+    },
+    {
+        "id": "deepseek/deepseek-chat",
+        "name": "DeepSeek Chat",
         "provider": "openrouter",
         "cost_per_m_input": 0.14,
         "cost_per_m_output": 0.28
-    },
-    {
-        "id": "qwen/qwen3-235b-a22b-2507",
-        "name": "Qwen 3 235B",
-        "provider": "openrouter",
-        "cost_per_m_input": 1.8,
-        "cost_per_m_output": 1.8
     }
 ]
 
