@@ -8,6 +8,7 @@ from enum import Enum
 
 class TierLevel(Enum):
     """Benchmark tier levels."""
+    TIER_0 = "tier_0"  # 1-2 turns, smoke tests
     TIER_1 = "tier_1"  # 3-5 turns, foundational
     TIER_2 = "tier_2"  # 8-12 turns, attachment
     TIER_3 = "tier_3"  # 20+ turns across 3 sessions, longitudinal

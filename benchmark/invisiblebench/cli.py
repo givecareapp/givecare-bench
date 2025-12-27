@@ -1,6 +1,9 @@
 """
 Main benchmark runner for InvisibleBench.
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 import argparse
 from pathlib import Path
 from datetime import datetime
