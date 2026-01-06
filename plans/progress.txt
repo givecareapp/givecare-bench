@@ -31,3 +31,11 @@ scenario_id metadata fix
 - Deterministic safety/belonging fallback; disable LLM in tests
 - Run ruff/mypy/pytest (ruff+mypy errors; pytest ok)
 - Update PRD item status
+
+turn index normalization
+
+- Canonical t; normalize loaders; lint utility + script
+- Scorers read t/turn_number via helper
+- Tests for normalization + lint
+- Run ruff/mypy/pytest (ruff+mypy errors; pytest ok)
+- Update PRD item status

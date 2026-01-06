@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 from invisiblebench.models import Scenario, TierLevel, DimensionType
+from invisiblebench.utils.turn_index import normalize_turn_indices
 
 
 class ScenarioValidator:
@@ -89,6 +90,8 @@ class ScenarioLoader:
         """Load single scenario from file."""
         with open(file_path, 'r') as f:
             data = json.load(f)
+
+        normalize_turn_indices(data)
 
         # Validate
         errors = self.validator.validate_scenario(data)

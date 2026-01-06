@@ -67,7 +67,7 @@
       "normalize loaders to map t/turn_number",
       "add lint to flag mixed usage"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "infra",

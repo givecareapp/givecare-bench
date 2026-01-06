@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 
 import yaml
 
+from invisiblebench.utils.turn_index import normalize_turn_indices
 
 class RuleLoader:
     """Loads rule YAML files with inheritance resolution."""
@@ -114,7 +115,9 @@ class ScenarioLoader:
         with open(path_obj) as f:
             scenario = yaml.safe_load(f)
 
-        return scenario if scenario else {}
+        scenario = scenario if scenario else {}
+        normalize_turn_indices(scenario)
+        return scenario
 
 
 class TranscriptLoader:
