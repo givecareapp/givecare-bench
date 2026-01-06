@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
-from invisiblebench.api import ModelAPIClient
+from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.utils.turn_index import get_turn_index
 
 
@@ -24,7 +24,8 @@ def score(
     transcript: List[Dict[str, Any]],
     scenario: Dict[str, Any],
     rules: Dict[str, Any],
-    api_client: Optional[ModelAPIClient] = None
+    api_client: Optional[ModelAPIClient] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Score regulatory compliance using three-tier approach."""
     result = {"score": 1.0, "violations": [], "hard_fails": [], "breakdown": {}}
@@ -34,7 +35,7 @@ def score(
     _check_violations_deterministic(transcript, rules, result, evidence)
 
     # 2) Use LLM to check for additional violations with revised prompt
-    _check_violations_with_llm_revised(transcript, scenario, result, evidence, api_client)
+    _check_violations_with_llm_revised(transcript, scenario, result, evidence, api_client, model)
 
     # Build breakdown
     result["breakdown"] = {
@@ -141,7 +142,8 @@ def _check_violations_with_llm_revised(
     scenario: Dict[str, Any],
     result: Dict[str, Any],
     evidence: List[str],
-    api_client: Optional[ModelAPIClient] = None
+    api_client: Optional[ModelAPIClient] = None,
+    model: Optional[str] = None,
 ):
     """Use LLM judge to detect compliance violations with revised three-tier framework."""
     # Initialize API client if not provided
@@ -151,6 +153,7 @@ def _check_violations_with_llm_revised(
         except ValueError as e:
             evidence.append(f"ERROR: Cannot initialize API client - {e}")
             return
+    model_name = model or resolve_scorer_model(api_client, "compliance")
 
     # Get assistant messages only
     assistant_msgs = [msg for msg in transcript if msg["role"] == "assistant"]
@@ -347,7 +350,7 @@ TIER 2 VIOLATIONS: none"""
 
         for _ in range(n_samples):
             result_data = api_client.call_model(
-                model="anthropic/claude-3.7-sonnet",
+                model=model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.5,
                 max_tokens=2000

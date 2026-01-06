@@ -69,3 +69,12 @@ Scenario schema/validator alignment
 - Add ScenarioValidator tests
 - Run ruff/mypy/pytest
 - Update PRD item status
+
+## 2026-01-06
+
+infra model configurability
+
+- Add scorer model resolution + Google direct provider fallback
+- Record judge model map in scenario outputs
+- Tests: ruff/mypy/pytest unavailable ("No module named ruff"; "mypy: command not found"; "No module named pytest")
+- Update PRD item status

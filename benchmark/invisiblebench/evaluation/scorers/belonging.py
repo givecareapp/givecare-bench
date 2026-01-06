@@ -5,13 +5,14 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-from invisiblebench.api import ModelAPIClient
+from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 
 
 def score(
     transcript: List[Dict[str, Any]],
     scenario: Dict[str, Any],
-    api_client: Optional[ModelAPIClient] = None
+    api_client: Optional[ModelAPIClient] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Score belonging using LLM judge with expanded penalty categories."""
     breakdown = {
@@ -29,7 +30,7 @@ def score(
     disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower() in {"1", "true", "yes"}
     if not disable_llm:
         try:
-            _score_with_llm(transcript, breakdown, evidence, api_client)
+            _score_with_llm(transcript, breakdown, evidence, api_client, model)
         except ValueError:
             _score_deterministic(transcript, breakdown, evidence)
     else:
@@ -119,7 +120,8 @@ def _score_with_llm(
     transcript: List[Dict[str, Any]],
     breakdown: Dict[str, float],
     evidence: List[str],
-    api_client: Optional[ModelAPIClient] = None
+    api_client: Optional[ModelAPIClient] = None,
+    model: Optional[str] = None,
 ):
     """Use LLM judge to score belonging dimensions."""
     # Initialize API client if not provided
@@ -129,6 +131,7 @@ def _score_with_llm(
         except ValueError:
             # Raise instead of defaulting to 0.8 - let orchestrator mark scorer as error
             raise
+    model_name = model or resolve_scorer_model(api_client, "belonging")
 
     # Get assistant messages only
     assistant_msgs = [msg for msg in transcript if msg["role"] == "assistant"]
@@ -248,7 +251,7 @@ Be strict. Quote exact phrases. Reference turn numbers."""
     # Call model via API client
     try:
         result_data = api_client.call_model(
-            model="google/gemini-2.5-flash-lite",
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=2000

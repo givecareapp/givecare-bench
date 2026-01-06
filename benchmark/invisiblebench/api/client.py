@@ -50,6 +50,8 @@ class ModelAPIClient:
                      not self.config.openai_api_key.startswith("your_"))
         has_anthropic = (self.config.anthropic_api_key and
                         not self.config.anthropic_api_key.startswith("your_"))
+        has_google = (self.config.google_api_key and
+                      not self.config.google_api_key.startswith("your_"))
 
         # Priority: OpenRouter > specific providers
         # Store all available providers for dynamic routing
@@ -78,9 +80,17 @@ class ModelAPIClient:
                     "anthropic-version": "2023-06-01"
                 }
             }
+        if has_google:
+            self.available_providers["google"] = {
+                "base_url": "https://generativelanguage.googleapis.com/v1beta",
+                "api_key": self.config.google_api_key,
+                "extra_headers": {}
+            }
 
         if not self.available_providers:
-            raise ValueError("At least one API key must be set (OPENROUTER, OPENAI, or ANTHROPIC)")
+            raise ValueError(
+                "At least one API key must be set (OPENROUTER, OPENAI, ANTHROPIC, or GOOGLE)"
+            )
 
         # Default to first available provider (will be overridden per call)
         self.provider = list(self.available_providers.keys())[0]
@@ -91,10 +101,16 @@ class ModelAPIClient:
         extra_headers = provider_config["extra_headers"]
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {api_key}",
-            **extra_headers
-        })
+        if self.provider == "google":
+            self.session.headers.update({
+                "Content-Type": "application/json",
+                **extra_headers
+            })
+        else:
+            self.session.headers.update({
+                "Authorization": f"Bearer {api_key}",
+                **extra_headers
+            })
 
     def call_model(
         self,
@@ -176,6 +192,50 @@ class ModelAPIClient:
                         json=anthropic_payload,
                         timeout=self.config.timeout
                     )
+                elif active_provider == "google":
+                    system_content = None
+                    contents = []
+
+                    for msg in messages:
+                        role = msg.get("role")
+                        if role == "system":
+                            if system_content:
+                                system_content += f"\n{msg.get('content', '')}"
+                            else:
+                                system_content = msg.get("content", "")
+                            continue
+
+                        google_role = "user" if role == "user" else "model"
+                        contents.append({
+                            "role": google_role,
+                            "parts": [{"text": msg.get("content", "")}]
+                        })
+
+                    api_model = model.split("/")[-1] if "/" in model else model
+                    google_payload = {
+                        "contents": contents,
+                        "generationConfig": {
+                            "temperature": temperature,
+                            "maxOutputTokens": max_tokens,
+                        },
+                    }
+                    if system_content:
+                        google_payload["system_instruction"] = {
+                            "parts": [{"text": system_content}]
+                        }
+
+                    session = requests.Session()
+                    session.headers.update({
+                        "Content-Type": "application/json",
+                        **provider_config["extra_headers"],
+                    })
+
+                    response = session.post(
+                        f"{provider_config['base_url']}/models/{api_model}:generateContent",
+                        params={"key": provider_config["api_key"]},
+                        json=google_payload,
+                        timeout=self.config.timeout
+                    )
                 else:
                     # OpenAI-compatible format (OpenRouter, OpenAI)
                     # Reuse existing session for connection pooling
@@ -211,6 +271,16 @@ class ModelAPIClient:
                         raise ValueError(f"No content in response: {data}")
                     response_text = data["content"][0]["text"]
                     tokens_used = data.get("usage", {}).get("input_tokens", 0) + data.get("usage", {}).get("output_tokens", 0)
+                elif active_provider == "google":
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        raise ValueError(f"No candidates in response: {data}")
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    response_text = "".join(part.get("text", "") for part in parts)
+                    usage = data.get("usageMetadata", {})
+                    tokens_used = usage.get("totalTokenCount")
+                    if tokens_used is None:
+                        tokens_used = usage.get("promptTokenCount", 0) + usage.get("candidatesTokenCount", 0)
                 else:
                     # OpenAI-compatible format
                     if "choices" not in data or len(data["choices"]) == 0:
@@ -258,10 +328,14 @@ class ModelAPIClient:
                 return "anthropic"
             elif provider_prefix == "openai" and "openai" in self.available_providers:
                 return "openai"
+            elif provider_prefix == "google" and "google" in self.available_providers:
+                return "google"
 
         # Check model name patterns
         if "claude" in model.lower() and "anthropic" in self.available_providers:
             return "anthropic"
+        elif "gemini" in model.lower() and "google" in self.available_providers:
+            return "google"
         elif ("gpt" in model.lower() or "o1" in model.lower()) and "openai" in self.available_providers:
             return "openai"
 
@@ -319,14 +393,47 @@ class ModelAPIClient:
 # Default model for LLM-based scorers (safety, belonging, trauma, compliance)
 # Can be overridden by passing api_client with different model in scorer calls
 DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
+DEFAULT_SAFETY_REFERENCE_MODEL = "anthropic/claude-3.7-sonnet"
+
+
+def resolve_scorer_model(
+    api_client: ModelAPIClient,
+    scorer_name: str,
+    default: str = DEFAULT_SCORER_MODEL,
+) -> str:
+    """Resolve scorer model with env overrides and provider-aware fallback."""
+    env_specific = os.getenv(f"INVISIBLEBENCH_{scorer_name.upper()}_MODEL")
+    env_global = os.getenv("INVISIBLEBENCH_SCORER_MODEL")
+
+    if env_specific:
+        return env_specific
+    if env_global:
+        return env_global
+
+    # OpenRouter can serve any model string, so keep defaults.
+    if "openrouter" in api_client.available_providers:
+        return default
+
+    prefix = default.split("/")[0] if "/" in default else ""
+    if prefix and prefix in api_client.available_providers:
+        return default
+
+    if "google" in api_client.available_providers:
+        return "google/gemini-2.5-flash-lite"
+    if "openai" in api_client.available_providers:
+        return "openai/gpt-4o-mini"
+    if "anthropic" in api_client.available_providers:
+        return "anthropic/claude-3.7-sonnet"
+
+    return default
 
 
 class JudgeClient:
     """Specialized client for judge models with pre-configured prompts.
 
-    Note: Judge 2 uses google/gemini-2.5-pro which requires OpenRouter.
-    Direct Google provider is not implemented. Ensure OPENROUTER_API_KEY
-    is set or modify JUDGE_MODELS to use only Anthropic/OpenAI models.
+    Env overrides:
+      - INVISIBLEBENCH_JUDGE_MODEL (sets all judges)
+      - INVISIBLEBENCH_JUDGE_MODEL_1/2/3 (per-judge override)
     """
 
     # Judge model assignments - heterogeneous judges for diverse perspectives.
@@ -352,12 +459,22 @@ class JudgeClient:
         self.api_client = api_client
         self.judge_models = dict(judge_models or self.DEFAULT_JUDGE_MODELS)
 
+        global_override = os.getenv("INVISIBLEBENCH_JUDGE_MODEL")
+        if global_override:
+            for judge_id in self.judge_models:
+                self.judge_models[judge_id] = global_override
+        else:
+            for idx in range(1, 4):
+                env_model = os.getenv(f"INVISIBLEBENCH_JUDGE_MODEL_{idx}")
+                if env_model:
+                    self.judge_models[f"judge_{idx}"] = env_model
+
         # Warn or replace judges if Gemini models are configured without OpenRouter
         import logging
         available_providers = set(api_client.available_providers.keys())
-        has_openrouter = "openrouter" in available_providers
+        supports_google = "openrouter" in available_providers or "google" in available_providers
 
-        if not has_openrouter:
+        if not supports_google:
             has_google_judge = any("google/" in model for model in self.judge_models.values())
             if has_google_judge:
                 # Pick a fallback judge model from available providers

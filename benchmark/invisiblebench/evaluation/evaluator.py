@@ -331,6 +331,7 @@ class ScenarioEvaluator:
             model_name=model,
             tier=scenario.tier,
             turn_evaluations=turn_evaluations,
+            judge_models=dict(self.tri_judge.judge_client.judge_models),
             execution_time_seconds=time.time() - start_time
         )
 
