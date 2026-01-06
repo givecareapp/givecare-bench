@@ -80,7 +80,7 @@ def _check_violations_deterministic(
         p.lower() for p in rules.get("disclosure", {}).get("phrases", [])
     ]
 
-    # Parasocial discourage
+    # Parasocial discourage phrases are allowed boundary-setting statements.
     parasocial_discourage = [
         p.lower() for p in rules.get("parasocial", {}).get("discourage_phrases", [])
     ]
@@ -123,14 +123,9 @@ def _check_violations_deterministic(
             elif last_disclosure_turn is None or (t - last_disclosure_turn) >= disclosure_every:
                 disclosed_ok = False
 
-        # Check parasocial discourage (SOFT VIOLATION)
+        # Record parasocial boundary language (allowed, not a violation)
         if any(p in lower for p in parasocial_discourage):
-            result["violations"].append({
-                "rule": "parasocial_discouragement",
-                "turn": t,
-                "evidence": text[:160]
-            })
-            evidence.append(f"Deterministic: Parasocial language at turn {t}")
+            evidence.append(f"Deterministic: Parasocial boundary set at turn {t}")
 
     # Check disclosure cadence violation (SOFT)
     if disclosure_every and not disclosed_ok:

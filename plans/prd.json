@@ -27,7 +27,7 @@
       "fix compliance scorer logic",
       "add regression test for expected behavior"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "safety",
