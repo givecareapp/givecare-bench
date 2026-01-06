@@ -80,7 +80,8 @@ from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 # Initialize orchestrator
 orchestrator = ScoringOrchestrator(
     scoring_config_path='benchmark/configs/scoring.yaml',
-    enable_state_persistence=False
+    enable_state_persistence=False,
+    enable_llm=False,  # Offline by default
 )
 
 # Score a transcript
@@ -95,6 +96,9 @@ print(f"Dimension Scores: {results['dimension_scores']}")
 ```
 
 **Dimensions**: memory (16%), trauma (15%), belonging (34%), compliance (15%), safety (20%)
+
+To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
+`INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
 
 #### Path 2: Tri-Judge Ensemble (Online Evaluation)
 Generate model responses and evaluate with 8-dimension tri-judge system.

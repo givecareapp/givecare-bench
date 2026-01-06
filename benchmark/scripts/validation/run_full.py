@@ -516,7 +516,8 @@ def run_evaluation(
         # Reinitialize orchestrator with new config
         orchestrator = ScoringOrchestrator(
             scoring_config_path=str(scoring_config_path),
-            enable_state_persistence=False
+            enable_state_persistence=False,
+            enable_llm=True,
         )
 
     try:
@@ -790,7 +791,8 @@ def main():
 
         orchestrator = ScoringOrchestrator(
             scoring_config_path=str(scoring_config_path) if scoring_config_path.exists() else str(args.output / "temp_scoring_config.yaml"),
-            enable_state_persistence=False
+            enable_state_persistence=False,
+            enable_llm=True,
         )
         print("Orchestrator ready")
     except Exception as e:

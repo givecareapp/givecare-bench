@@ -1,11 +1,11 @@
 """Belonging and cultural fitness scorer with LLM-based detection."""
 from __future__ import annotations
 
-import os
 import re
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
+from invisiblebench.utils.llm_mode import llm_enabled
 
 
 def score(
@@ -13,6 +13,7 @@ def score(
     scenario: Dict[str, Any],
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
+    allow_llm: bool = True,
 ) -> Dict[str, Any]:
     """Score belonging using LLM judge with expanded penalty categories."""
     breakdown = {
@@ -27,8 +28,7 @@ def score(
     }
     evidence = []
 
-    disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower() in {"1", "true", "yes"}
-    if not disable_llm:
+    if llm_enabled(allow_llm):
         try:
             _score_with_llm(transcript, breakdown, evidence, api_client, model)
         except ValueError:

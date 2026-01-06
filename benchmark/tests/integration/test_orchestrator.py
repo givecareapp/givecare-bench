@@ -80,6 +80,21 @@ class TestScoringOrchestrator:
         assert "jurisdiction" in metadata
         assert "timestamp" in metadata
 
+    def test_orchestrator_records_llm_mode(self):
+        """Should record LLM mode in metadata."""
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
+
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
+
+        assert results["metadata"]["llm_mode"] == "offline"
+
     def test_orchestrator_metadata_scenario_id_matches(self):
         """Should set metadata scenario_id from scenario data."""
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator

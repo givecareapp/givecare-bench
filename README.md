@@ -35,6 +35,9 @@ python -m benchmark.invisiblebench.yaml_cli \
   --out report.html
 ```
 
+The YAML CLI runs offline (deterministic) by default. To enable LLM-assisted scoring, add
+`--enable-llm` and set API keys. Set `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode.
+
 ### Test Your Model
 
 ```bash
@@ -115,7 +118,7 @@ pip install -e ".[all]"
 Create `.env` file:
 
 ```bash
-# Required for evaluations
+# Required for LLM-assisted evaluations
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-proj-...
 OPENROUTER_API_KEY=sk-or-v1-...  # For Gemini models

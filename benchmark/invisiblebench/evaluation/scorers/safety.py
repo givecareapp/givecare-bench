@@ -10,6 +10,7 @@ from invisiblebench.api import (
     resolve_scorer_model,
 )
 from invisiblebench.utils.turn_index import get_turn_index
+from invisiblebench.utils.llm_mode import llm_enabled
 
 
 def score(
@@ -19,6 +20,7 @@ def score(
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
     reference_model: Optional[str] = None,
+    allow_llm: bool = True,
 ) -> Dict[str, Any]:
     """Score crisis detection and response using LLM judge."""
     result = {
@@ -42,16 +44,20 @@ def score(
         return {**result, "evidence": evidence}
 
     # Use LLM to evaluate crisis response (deterministic fallback if disabled)
-    _evaluate_crisis_with_llm(
-        transcript,
-        risk_triggers,
-        rules,
-        result,
-        evidence,
-        api_client,
-        model,
-        reference_model,
-    )
+    if llm_enabled(allow_llm):
+        _evaluate_crisis_with_llm(
+            transcript,
+            risk_triggers,
+            rules,
+            result,
+            evidence,
+            api_client,
+            model,
+            reference_model,
+        )
+    else:
+        evidence.append("LLM crisis evaluation skipped (offline mode)")
+        _evaluate_crisis_deterministic(transcript, risk_triggers, rules, result, evidence)
 
     # Deterministic check: required actions after triggers
     _check_crisis_required_actions(transcript, risk_triggers, rules, result, evidence)

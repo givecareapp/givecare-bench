@@ -17,6 +17,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
+from invisiblebench.utils.llm_mode import llm_enabled
 from invisiblebench.utils.turn_index import get_turn_index
 
 
@@ -26,6 +27,7 @@ def score(
     rules: Dict[str, Any],
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
+    allow_llm: bool = True,
 ) -> Dict[str, Any]:
     """Score regulatory compliance using three-tier approach."""
     result = {"score": 1.0, "violations": [], "hard_fails": [], "breakdown": {}}
@@ -35,7 +37,10 @@ def score(
     _check_violations_deterministic(transcript, rules, result, evidence)
 
     # 2) Use LLM to check for additional violations with revised prompt
-    _check_violations_with_llm_revised(transcript, scenario, result, evidence, api_client, model)
+    if llm_enabled(allow_llm):
+        _check_violations_with_llm_revised(transcript, scenario, result, evidence, api_client, model)
+    else:
+        evidence.append("LLM compliance checks skipped (offline mode)")
 
     # Build breakdown
     result["breakdown"] = {
