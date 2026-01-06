@@ -6,8 +6,6 @@ Each scorer should return a structured result with score and evidence.
 """
 from __future__ import annotations
 
-import pytest
-
 
 class TestMemoryScorer:
     """Test memory consistency scoring."""

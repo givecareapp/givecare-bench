@@ -29,8 +29,8 @@ pip install -e ".[all]"
 
 # Run single scenario
 python -m benchmark.invisiblebench.yaml_cli \
-  --scenario benchmark/scenarios/tier1/tier1_crisis_001_medication_affordability.yaml \
-  --transcript tests/fixtures/sample_transcript.jsonl \
+  --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
+  --transcript benchmark/tests/fixtures/sample_transcript.jsonl \
   --rules benchmark/configs/rules/base.yaml \
   --out report.html
 ```
@@ -163,11 +163,11 @@ See [`benchmark/community/README.md`](./benchmark/community/README.md) for detai
 
 ## Documentation
 
-- [Installation Guide](./docs/INSTALLATION.md)
-- [Usage Guide](./docs/USAGE.md)
-- [Architecture](./docs/ARCHITECTURE.md)
-- [Contributing](./docs/CONTRIBUTING.md)
-- [Changelog](./docs/CHANGELOG.md)
+- [Benchmark Overview](./benchmark/README.md)
+- [Validation Quickstart](./benchmark/scripts/validation/QUICKSTART.md)
+- [Transcript Format](./benchmark/docs/transcript_format.md)
+- [Community Submissions](./benchmark/community/SUBMISSION_GUIDE.md)
+- [Research Validation](./docs/RESEARCH_VALIDATION.md)
 
 ---
 

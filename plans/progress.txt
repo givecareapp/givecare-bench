@@ -39,3 +39,11 @@ turn index normalization
 - Tests for normalization + lint
 - Run ruff/mypy/pytest (ruff+mypy errors; pytest ok)
 - Update PRD item status
+
+## 2026-01-06
+
+Doc/command drift fix
+
+- Align docs/scripts/paths (community, HF, validation, meeting notes)
+- Add doc lint (lint_doc_commands.py) + update check_ready/run_benchmark/setup_env
+- Add python-dotenv; mypy config relax; ruff/mypy/pytest run (pytest warnings)

@@ -8,7 +8,7 @@ https://huggingface.co/settings/tokens → Create new token with "Write" permiss
 ### 2. Run Upload
 ```bash
 export HF_TOKEN="hf_your_token_here"
-python huggingface/upload_script.py --token $HF_TOKEN
+python benchmark/huggingface/upload_script.py --token $HF_TOKEN
 ```
 
 ### 3. Verify
@@ -20,11 +20,11 @@ Visit: https://huggingface.co/datasets/givecareapp/invisiblebench
 
 **Included:**
 - README_HF.md → README.md (dataset card)
-- scenarios/ (all tier1, tier2, tier3, confidential)
-- configs/rules/ → rules/ (base.yaml, ny.yaml, etc.)
-- configs/scoring.yaml
-- requirements.txt, LICENSE
-- CHANGELOG.md, CONTRIBUTING.md
+- benchmark/scenarios/ (all tier1, tier2, tier3, confidential)
+- benchmark/configs/rules/ → rules/ (base.yaml, ny.yaml, etc.)
+- benchmark/configs/scoring.yaml
+- pyproject.toml, LICENSE
+- benchmark/README.md, benchmark/docs/transcript_format.md
 
 **Excluded** (via `.huggingface_ignore`):
 - .git/, .venv/, __pycache__/
@@ -46,7 +46,7 @@ Visit: https://huggingface.co/datasets/givecareapp/invisiblebench
 ### Option 1: Using Upload Script (Recommended)
 
 ```bash
-python huggingface/upload_script.py --token $HF_TOKEN --repo givecareapp/invisiblebench
+python benchmark/huggingface/upload_script.py --token $HF_TOKEN --repo givecareapp/invisiblebench
 ```
 
 ### Option 2: Using huggingface-cli
@@ -54,7 +54,7 @@ python huggingface/upload_script.py --token $HF_TOKEN --repo givecareapp/invisib
 ```bash
 huggingface-cli login
 huggingface-cli upload givecareapp/invisiblebench . --repo-type=dataset \
-  --include="scenarios/*,configs/rules/*,configs/scoring.yaml,README_HF.md,requirements.txt,LICENSE,CHANGELOG.md,CONTRIBUTING.md"
+  --include="benchmark/scenarios/*,benchmark/configs/rules/*,benchmark/configs/scoring.yaml,benchmark/huggingface/README_HF.md,pyproject.toml,LICENSE,benchmark/README.md,benchmark/docs/transcript_format.md"
 ```
 
 ### Option 3: Manual Upload via Web UI
@@ -70,7 +70,7 @@ huggingface-cli upload givecareapp/invisiblebench . --repo-type=dataset \
 
 Before uploading:
 ```bash
-python huggingface/validate_structure.py
+python benchmark/huggingface/validate_structure.py
 ```
 
 Expected output: `✅ All validation checks passed!`
@@ -103,7 +103,7 @@ print("\n".join(files))
 
 ```bash
 git pull
-python huggingface/upload_script.py --token $HF_TOKEN
+python benchmark/huggingface/upload_script.py --token $HF_TOKEN
 ```
 
 Changes are reflected immediately (no versioning delay).
@@ -132,7 +132,7 @@ dataset = load_dataset("givecareapp/invisiblebench", revision="v0.8.5")
 → Script auto-creates it, or manually create at https://huggingface.co/new-dataset
 
 ### "Invalid YAML in README"
-→ Run validation: `python huggingface/validate_structure.py`
+→ Run validation: `python benchmark/huggingface/validate_structure.py`
 
 ### "File too large"
 → HuggingFace has 50GB limit per file. Use git-lfs for large files:

@@ -6,7 +6,7 @@ Runs 3 models × 3 scenarios = 9 evaluations (~$5-10 total cost)
 Generates transcript conversations then evaluates them with the scoring system.
 
 Usage:
-    python scripts/run_minimal_validation.py --output results/minimal_validation/
+    python benchmark/scripts/validation/run_minimal.py --output results/minimal_validation/
 
 Requirements:
     export OPENAI_API_KEY="your-key"
@@ -17,17 +17,16 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Any
 import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.api.client import ModelAPIClient
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-from invisiblebench.loaders.scenario_loader import ScenarioLoader
 
 try:
     import jsonlines
@@ -370,7 +369,7 @@ def run_evaluation(
                             "severity": "medium"
                         })
             yaml_scenario["sessions"].append(sess)
-            
+
             # Do not fabricate probes if originals exist; rely on preserved scenario.get("probes", [])
     else:
         # Tier 1/2: Flat turns format
@@ -595,14 +594,14 @@ def generate_heatmap(results: List[Dict], output_dir: Path):
         import matplotlib
         matplotlib.use('Agg')  # Non-interactive backend
         import matplotlib.pyplot as plt
-        import seaborn as sns
         import numpy as np
+        import seaborn as sns
     except ImportError:
         print("Warning: matplotlib/seaborn not installed, skipping heatmap")
         return
 
     # Prepare data for heatmap
-    models = sorted(set(r["model"] for r in results))
+    models = sorted({r["model"] for r in results})
     dimensions = ["memory", "trauma", "belonging", "compliance", "safety"]
     dim_labels = ["Memory", "Trauma", "Belonging", "Compliance", "Safety"]
 
@@ -777,8 +776,6 @@ def main():
         print("Note: Install tqdm for progress bars (pip install tqdm)")
 
     total = len(MODELS) * len(SCENARIOS)
-    iterator = enumerate(MODELS)
-
     if use_tqdm:
         pbar = tqdm(total=total, desc="Running evaluations")
 
@@ -864,7 +861,7 @@ def main():
     successful = len([r for r in results if r['status'] != 'error'])
 
     print(f"\n{'='*60}")
-    print(f"VALIDATION COMPLETE")
+    print("VALIDATION COMPLETE")
     print(f"{'='*60}")
     print(f"Total evaluations: {len(results)}/{total}")
     print(f"Successful: {successful}")

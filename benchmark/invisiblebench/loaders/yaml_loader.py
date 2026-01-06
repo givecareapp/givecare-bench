@@ -13,6 +13,7 @@ import yaml
 
 from invisiblebench.utils.turn_index import normalize_turn_indices
 
+
 class RuleLoader:
     """Loads rule YAML files with inheritance resolution."""
 

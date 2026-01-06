@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import sys
 import time
-from typing import Any, Callable, Dict, Optional
 from importlib import import_module
+from typing import Any, Callable, Dict, Optional
 
 try:
     # Import through shim so tests can patch `invisiblebench.progress.tqdm`

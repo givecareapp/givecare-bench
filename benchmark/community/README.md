@@ -6,21 +6,23 @@ Submit your InvisibleBench evaluation results to the public leaderboard!
 
 ```bash
 # 1. Run evaluation
-python scripts/run_minimal_validation.py \
+python benchmark/scripts/validation/run_minimal.py \
   --model your-model-name \
   --output results/your-submission
 
 # 2. Copy template
-cp community_results/TEMPLATE.json community_results/your-model-name.json
+cp benchmark/community/TEMPLATE.json \
+  benchmark/community/submissions/your-model-name.json
 
 # 3. Edit with your results (open in your favorite editor)
 
 # 4. Validate
-python scripts/validate_submission.py community_results/your-model-name.json
+python benchmark/scripts/community/validate_submission.py \
+  benchmark/community/submissions/your-model-name.json
 
 # 5. Submit PR
 git checkout -b add-your-model-results
-git add community_results/your-model-name.json
+git add benchmark/community/submissions/your-model-name.json
 git commit -m "Add results for [Your Model]"
 git push origin add-your-model-results
 # Create pull request on GitHub
@@ -28,10 +30,10 @@ git push origin add-your-model-results
 
 ## Files & Documentation
 
-- **Submission Guide**: [`community_results/README.md`](community_results/README.md)
-- **Template**: [`community_results/TEMPLATE.json`](community_results/TEMPLATE.json)
-- **Validation Script**: [`scripts/validate_submission.py`](scripts/validate_submission.py)
-- **Leaderboard Generator**: [`scripts/update_leaderboard.py`](scripts/update_leaderboard.py)
+- **Submission Guide**: [`SUBMISSION_GUIDE.md`](SUBMISSION_GUIDE.md)
+- **Template**: [`TEMPLATE.json`](TEMPLATE.json)
+- **Validation Script**: [`../scripts/community/validate_submission.py`](../scripts/community/validate_submission.py)
+- **Leaderboard Generator**: [`../scripts/community/update_leaderboard.py`](../scripts/community/update_leaderboard.py)
 - **Live Leaderboard**: [bench.givecareapp.com/leaderboard.html](https://bench.givecareapp.com/leaderboard.html)
 
 ## Submission Rules

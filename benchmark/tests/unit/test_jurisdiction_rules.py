@@ -1,8 +1,8 @@
 """
 Tests for jurisdiction-specific rule files.
 """
+
 import pytest
-from pathlib import Path
 from invisiblebench.evaluation.loaders import RuleLoader
 
 

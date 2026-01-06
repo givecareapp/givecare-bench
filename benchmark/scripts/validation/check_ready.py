@@ -4,9 +4,14 @@ Pre-flight check for validation script.
 Verifies all dependencies, scenarios, and API keys are ready.
 """
 
-import sys
+import importlib
+import importlib.util
 import os
+import sys
 from pathlib import Path
+from typing import Optional, Tuple
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # Color codes for terminal output
 GREEN = '\033[92m'
@@ -30,6 +35,18 @@ def check(condition, success_msg, fail_msg, warning=False):
             print(f"{RED}{CROSS}{RESET} {fail_msg}")
             return False
 
+def has_module(module_name: str) -> bool:
+    """Return True if module can be found without importing it."""
+    return importlib.util.find_spec(module_name) is not None
+
+def importable(module_name: str) -> Tuple[bool, Optional[str]]:
+    """Return True if module imports cleanly, otherwise False + error message."""
+    try:
+        importlib.import_module(module_name)
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
 def main():
     print("InvisibleBench Validation - Pre-flight Check")
     print("=" * 60)
@@ -48,73 +65,68 @@ def main():
     # Check dependencies
     print("\n[Core Dependencies]")
 
-    try:
-        import yaml
-        all_passed &= check(True, "pyyaml installed", "")
-    except ImportError:
-        all_passed &= check(False, "", "pyyaml not installed (pip install pyyaml)")
+    all_passed &= check(
+        has_module("yaml"),
+        "pyyaml installed",
+        "pyyaml not installed (pip install pyyaml)"
+    )
 
-    try:
-        import jsonlines
-        all_passed &= check(True, "jsonlines installed", "")
-    except ImportError:
-        all_passed &= check(False, "", "jsonlines not installed (pip install jsonlines)")
+    all_passed &= check(
+        has_module("jsonlines"),
+        "jsonlines installed",
+        "jsonlines not installed (pip install jsonlines)"
+    )
 
-    try:
-        import requests
-        all_passed &= check(True, "requests installed", "")
-    except ImportError:
-        all_passed &= check(False, "", "requests not installed (pip install requests)")
+    all_passed &= check(
+        has_module("requests"),
+        "requests installed",
+        "requests not installed (pip install requests)"
+    )
 
     # Check optional dependencies
     print("\n[Visualization Dependencies]")
 
-    try:
-        import pandas
-        check(True, "pandas installed", "", warning=True)
-    except ImportError:
-        check(False, "", "pandas not installed (pip install pandas) - summary table will be skipped", warning=True)
+    check(
+        has_module("pandas"),
+        "pandas installed",
+        "pandas not installed (pip install pandas) - summary table will be skipped",
+        warning=True
+    )
 
-    try:
-        import matplotlib
-        check(True, "matplotlib installed", "", warning=True)
-    except ImportError:
-        check(False, "", "matplotlib not installed (pip install matplotlib) - heatmap will be skipped", warning=True)
+    check(
+        has_module("matplotlib"),
+        "matplotlib installed",
+        "matplotlib not installed (pip install matplotlib) - heatmap will be skipped",
+        warning=True
+    )
 
-    try:
-        import seaborn
-        check(True, "seaborn installed", "", warning=True)
-    except ImportError:
-        check(False, "", "seaborn not installed (pip install seaborn) - heatmap will be skipped", warning=True)
+    check(
+        has_module("seaborn"),
+        "seaborn installed",
+        "seaborn not installed (pip install seaborn) - heatmap will be skipped",
+        warning=True
+    )
 
-    try:
-        import tqdm
-        check(True, "tqdm installed", "", warning=True)
-    except ImportError:
-        check(False, "", "tqdm not installed (pip install tqdm) - no progress bars", warning=True)
+    check(
+        has_module("tqdm"),
+        "tqdm installed",
+        "tqdm not installed (pip install tqdm) - no progress bars",
+        warning=True
+    )
 
     # Check InvisibleBench modules
     print("\n[InvisibleBench Modules]")
 
-    sys.path.insert(0, str(Path(__file__).parent.parent))
+    sys.path.insert(0, str(REPO_ROOT / "benchmark"))
 
-    try:
-        from invisiblebench.api.client import ModelAPIClient
-        all_passed &= check(True, "API client available", "")
-    except ImportError as e:
-        all_passed &= check(False, "", f"API client not available: {e}")
+    ok, err = importable("invisiblebench.api.client")
+    all_passed &= check(ok, "API client available", f"API client not available: {err}")
 
-    try:
-        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-        all_passed &= check(True, "Orchestrator available", "")
-    except ImportError as e:
-        all_passed &= check(False, "", f"Orchestrator not available: {e}")
+    ok, err = importable("invisiblebench.evaluation.orchestrator")
+    all_passed &= check(ok, "Orchestrator available", f"Orchestrator not available: {err}")
 
-    try:
-        from invisiblebench.loaders.scenario_loader import ScenarioLoader
-        all_passed &= check(True, "Scenario loader available", "")
-    except ImportError as e:
-        all_passed &= check(False, "", f"Scenario loader not available: {e}")
+    ok, err = importable("invisiblebench.loaders.scenario_loader")
+    all_passed &= check(ok, "Scenario loader available", f"Scenario loader not available: {err}")
 
     # Check API keys
     print("\n[API Keys]")
@@ -154,11 +166,11 @@ def main():
     # Check scenarios
     print("\n[Scenarios]")
 
-    repo_root = Path(__file__).parent.parent
+    repo_root = REPO_ROOT
     scenarios = [
-        "scenarios/tier1/crisis/crisis_detection.json",
-        "scenarios/tier2/burnout/sandwich_generation_burnout.json",
-        "scenarios/tier3/longitudinal_trust.json"
+        "benchmark/scenarios/tier1/crisis/crisis_detection.json",
+        "benchmark/scenarios/tier2/burnout/sandwich_generation_burnout.json",
+        "benchmark/scenarios/tier3/longitudinal_trust.json"
     ]
 
     for scenario_path in scenarios:
@@ -174,20 +186,20 @@ def main():
 
     results_dir = repo_root / "results"
     check(
-        True,  # We'll create it if it doesn't exist
+        results_dir.exists(),
         "results/ directory ready",
-        "",
+        "results/ directory will be created on run",
         warning=True
     )
 
     # Check script
     print("\n[Validation Script]")
 
-    script_path = repo_root / "scripts" / "run_minimal_validation.py"
+    script_path = repo_root / "benchmark" / "scripts" / "validation" / "run_minimal.py"
     all_passed &= check(
         script_path.exists(),
-        "run_minimal_validation.py found",
-        "run_minimal_validation.py not found"
+        "run_minimal.py found",
+        "run_minimal.py not found"
     )
 
     if script_path.exists():
@@ -202,13 +214,13 @@ def main():
     if all_passed:
         print(f"{GREEN}✓ All critical checks passed!{RESET}")
         print("\nReady to run validation:")
-        print("  python scripts/run_minimal_validation.py --dry-run")
-        print("  python scripts/run_minimal_validation.py")
+        print("  python benchmark/scripts/validation/run_minimal.py --dry-run")
+        print("  python benchmark/scripts/validation/run_minimal.py")
         return 0
     else:
         print(f"{RED}✗ Some critical checks failed{RESET}")
         print("\nFix the issues above, then run:")
-        print("  python scripts/check_validation_ready.py")
+        print("  python benchmark/scripts/validation/check_ready.py")
         return 1
 
 if __name__ == "__main__":

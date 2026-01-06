@@ -3,12 +3,14 @@
 Upload InvisibleBench to HuggingFace Hub.
 
 Usage:
-    python huggingface/upload_script.py --token YOUR_HF_TOKEN
+    python benchmark/huggingface/upload_script.py --token YOUR_HF_TOKEN
 """
 
 import argparse
 from pathlib import Path
+
 from huggingface_hub import HfApi, create_repo
+
 
 def upload_invisiblebench(token: str, repo_name: str = "givecareapp/invisiblebench"):
     """Upload InvisibleBench dataset to HuggingFace Hub."""
@@ -37,10 +39,10 @@ def upload_invisiblebench(token: str, repo_name: str = "givecareapp/invisibleben
         (base_path / "scenarios/", "scenarios/"),
         (base_path / "configs/rules/", "rules/"),
         (base_path / "configs/scoring.yaml", "configs/scoring.yaml"),
-        (base_path / "requirements.txt", "requirements.txt"),
-        (base_path / "LICENSE", "LICENSE"),
-        (base_path / "docs/CHANGELOG.md", "CHANGELOG.md"),  # Include version history
-        (base_path / "docs/CONTRIBUTING.md", "CONTRIBUTING.md"),  # Include contribution guidelines
+        (base_path.parent / "pyproject.toml", "pyproject.toml"),
+        (base_path.parent / "LICENSE", "LICENSE"),
+        (base_path / "README.md", "benchmark/README.md"),
+        (base_path / "docs/transcript_format.md", "benchmark/transcript_format.md"),
     ]
 
     for local_path, remote_path in files_to_upload:
@@ -69,17 +71,17 @@ def upload_invisiblebench(token: str, repo_name: str = "givecareapp/invisibleben
                     repo_type="dataset",
                     token=token
                 )
-            print(f"   ✅ Uploaded successfully")
+            print("   ✅ Uploaded successfully")
         except Exception as e:
             print(f"   ❌ Error uploading {local_path}: {e}")
 
     print(f"\n{'='*60}")
-    print(f"✅ Dataset upload complete!")
+    print("✅ Dataset upload complete!")
     print(f"{'='*60}")
     print(f"🔗 View at: https://huggingface.co/datasets/{repo_name}")
     print(f"📚 Documentation: https://huggingface.co/datasets/{repo_name}")
-    print(f"\nTest loading with:")
-    print(f'  from datasets import load_dataset')
+    print("\nTest loading with:")
+    print('  from datasets import load_dataset')
     print(f'  dataset = load_dataset("{repo_name}")')
 
 def main():
@@ -89,14 +91,14 @@ def main():
         epilog="""
 Examples:
   # Upload to default repository
-  python huggingface/upload_script.py --token hf_xxxxx
+  python benchmark/huggingface/upload_script.py --token hf_xxxxx
 
   # Upload to custom repository
-  python huggingface/upload_script.py --token hf_xxxxx --repo myorg/mybenchmark
+  python benchmark/huggingface/upload_script.py --token hf_xxxxx --repo myorg/mybenchmark
 
   # Use token from environment variable
   export HF_TOKEN=hf_xxxxx
-  python huggingface/upload_script.py --token $HF_TOKEN
+  python benchmark/huggingface/upload_script.py --token $HF_TOKEN
         """
     )
     parser.add_argument(

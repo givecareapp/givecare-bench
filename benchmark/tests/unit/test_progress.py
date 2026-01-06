@@ -6,8 +6,7 @@ Tests progress callbacks, verbosity levels, and tqdm integration.
 from __future__ import annotations
 
 from io import StringIO
-from typing import Callable
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -122,7 +121,7 @@ class TestTqdmIntegration:
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar
 
-        tracker = ProgressTracker(callback=None, verbose=False, quiet=False, use_tqdm=True)
+        ProgressTracker(callback=None, verbose=False, quiet=False, use_tqdm=True)
 
         # Should create tqdm with total=5
         mock_tqdm.assert_called_once()
@@ -203,9 +202,7 @@ class TestIterationProgress:
         mock_pbar = MagicMock()
         mock_tqdm.return_value = mock_pbar
 
-        tracker = IterationTracker(
-            total_iterations=5, verbose=False, quiet=False, use_tqdm=True
-        )
+        IterationTracker(total_iterations=5, verbose=False, quiet=False, use_tqdm=True)
 
         # Should create tqdm with total=5
         mock_tqdm.assert_called_once()

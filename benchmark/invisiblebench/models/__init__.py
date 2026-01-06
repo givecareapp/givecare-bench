@@ -2,8 +2,8 @@
 Data models for InvisibleBench scenarios, turns, and evaluation results.
 """
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class TierLevel(Enum):
@@ -229,7 +229,7 @@ class ScenarioResult:
         if self.autofail_count > 0:
             self.passed = False
             self.total_score = 0.0
-            self.final_scores = {dim: 0.0 for dim in DimensionType}
+            self.final_scores = dict.fromkeys(DimensionType, 0.0)
             return
 
         # Step 1: Accumulate raw dimension scores and count how many turns

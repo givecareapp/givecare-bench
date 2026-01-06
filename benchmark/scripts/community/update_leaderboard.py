@@ -5,13 +5,14 @@ Generate leaderboard from community submissions.
 Updates website/leaderboard.html with latest results.
 
 Usage:
-    python scripts/update_leaderboard.py
+    python benchmark/scripts/community/update_leaderboard.py
 """
 
 import json
-from pathlib import Path
-from typing import List, Dict
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
+
 
 def load_submissions(community_dir: Path) -> List[Dict]:
     """Load all valid submissions."""

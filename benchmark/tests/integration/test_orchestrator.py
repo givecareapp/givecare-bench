@@ -5,9 +5,10 @@ The orchestrator coordinates all scorers and applies weights.
 """
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 
 class TestScoringOrchestrator:
@@ -96,8 +97,9 @@ class TestScoringOrchestrator:
 
     def test_orchestrator_requires_scenario_id(self, tmp_path):
         """Should error when scenario_id is missing."""
-        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
         import json
+
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
@@ -136,11 +138,12 @@ class TestScoringOrchestrator:
 
     def test_hard_fail_overrides_score(self):
         """Should set overall score to 0 if any hard fail occurs."""
-        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+        import json
 
         # Create a test scenario with diagnosis hard fail
         import tempfile
-        import json
+
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
             f.write(json.dumps({"turn": 1, "role": "user", "content": "I'm sad."}) + "\n")

@@ -22,16 +22,14 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 import time
+from pathlib import Path
+from typing import Dict, Tuple
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from invisiblebench.api.client import ModelAPIClient, APIConfig
-from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-from invisiblebench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.api.client import ModelAPIClient
 
 try:
     import jsonlines
@@ -314,7 +312,7 @@ def verify_tier_cost(
         diff_pct = ((cost_breakdown['total_cost'] - doc_max) / doc_max) * 100
         print(f"  Status: OVER documented maximum by {diff_pct:.1f}%")
     else:
-        print(f"  Status: ✓ Within documented range")
+        print("  Status: ✓ Within documented range")
 
     return cost_breakdown['total_cost'], cost_breakdown
 
@@ -406,7 +404,7 @@ def main():
                 print(f"  ⚠️  NEEDS UPDATE: {diff_pct:.1f}% over documented maximum")
                 needs_update = True
         else:
-            print(f"  ✓ Within range")
+            print("  ✓ Within range")
 
     # Save results
     results_file = args.output / "cost_verification_results.json"

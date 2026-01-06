@@ -3,8 +3,9 @@ Utilities for loading and validating scenarios.
 """
 import json
 from pathlib import Path
-from typing import List, Dict, Any
-from invisiblebench.models import Scenario, TierLevel, DimensionType
+from typing import Any, Dict, List
+
+from invisiblebench.models import DimensionType, Scenario, TierLevel
 from invisiblebench.utils.turn_index import normalize_turn_indices
 
 

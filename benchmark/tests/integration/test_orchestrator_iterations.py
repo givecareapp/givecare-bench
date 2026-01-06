@@ -5,9 +5,9 @@ Tests the orchestrator's ability to run multiple iterations and aggregate result
 """
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"

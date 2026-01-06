@@ -54,7 +54,7 @@ Tests long-term relationship dynamics:
 
 ## Creating New Scenarios
 
-See `docs/scenarios.md` for detailed scenario design guidelines.
+See `benchmark/scenarios/SCENARIO_SCHEMA.yaml` for required fields and validation rules.
 
 Quick template:
 ```json

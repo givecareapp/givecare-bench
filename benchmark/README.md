@@ -23,10 +23,7 @@ benchmark/
 │   └── fixtures/       # Test data
 │
 ├── docs/               # 📚 Documentation
-│   ├── CHANGELOG.md    # Version history
-│   ├── CLAUDE.md       # AI assistant guide
-│   ├── CONTRIBUTING.md # Contribution guide
-│   └── guides/         # Additional guides
+│   └── transcript_format.md # Transcript schema
 │
 ├── examples/           # 📖 Usage examples
 │   └── quick_start.py  # Getting started
@@ -56,7 +53,7 @@ benchmark/
 ### Installation
 ```bash
 cd ../  # Go to project root
-uv pip install -e .
+uv pip install -e ".[all]"
 ```
 
 ### Run Tests
@@ -82,19 +79,19 @@ from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
 # Initialize orchestrator
 orchestrator = ScoringOrchestrator(
-    config_path='benchmark/configs/scoring.yaml',
+    scoring_config_path='benchmark/configs/scoring.yaml',
     enable_state_persistence=False
 )
 
 # Score a transcript
 results = orchestrator.score(
     transcript_path='path/to/transcript.jsonl',
-    scenario_path='benchmark/scenarios/tier1/crisis/crisis_detection.yaml',
+    scenario_path='benchmark/scenarios/tier1/crisis/crisis_detection.json',
     rules_path='benchmark/configs/rules/base.yaml'
 )
 
-print(f"Overall Score: {results.overall_score:.2f}")
-print(f"Dimension Scores: {results.dimension_scores}")
+print(f"Overall Score: {results['overall_score']:.2f}")
+print(f"Dimension Scores: {results['dimension_scores']}")
 ```
 
 **Dimensions**: memory (25%), trauma (25%), belonging (20%), compliance (20%), safety (10%)
@@ -105,7 +102,7 @@ Generate model responses and evaluate with 8-dimension tri-judge system.
 ```python
 from pathlib import Path
 from invisiblebench.api.client import ModelAPIClient
-from invisiblebench.evaluation.scenario_evaluator import ScenarioEvaluator
+from invisiblebench.evaluation.evaluator import ScenarioEvaluator
 from invisiblebench.loaders.scenario_loader import ScenarioLoader
 
 # Load scenario
@@ -125,7 +122,7 @@ print(f"Passed: {result.passed}")
 
 **Dimensions**: Crisis Safety (20%), Regulatory Fitness (15%), Trauma-Informed Flow (15%), Belonging & Cultural Fitness (15%), Relational Quality (10%), Actionable Support (10%), Longitudinal Consistency (10%), Memory Hygiene (5%)
 
-See [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) for detailed examples, cost estimates, and troubleshooting.
+See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples, cost estimates, and troubleshooting.
 
 ## Key Statistics
 
@@ -195,12 +192,12 @@ These are documented failure modes but not yet enforced as hard-fail gates in th
 
 ## Documentation
 
-- **Installation**: `docs/INSTALLATION.md` - Setup and configuration
-- **Validation Guide**: `docs/VALIDATION_GUIDE.md` - Running evaluations
-- **Contributing**: `docs/CONTRIBUTING.md` - Contribution guidelines
+- **Validation Guide**: `benchmark/scripts/validation/QUICKSTART.md` - Running evaluations
+- **Transcript Format**: `benchmark/docs/transcript_format.md` - Transcript schema
+- **Community Submissions**: `benchmark/community/SUBMISSION_GUIDE.md` - Leaderboard submissions
+- **Scripts Reference**: `benchmark/scripts/README.md` - Validation tooling
+- **Scenarios Overview**: `benchmark/scenarios/README.md` - Scenario structure
 - **Development**: `../CLAUDE.md` (root) - Development guidance for AI assistants
-- **Changelog**: `docs/CHANGELOG.md` - Version history and updates
-- **Tasks**: `docs/TASKS.md` - Active work tracker
 
 ## Troubleshooting
 
@@ -238,9 +235,9 @@ uv pip install jsonlines
 ```
 
 ### Missing Scenario Files
-Scenarios use different formats:
-- **YAML Orchestrator**: `.yaml` files in `benchmark/scenarios/`
-- **Tri-Judge**: `.json` files in `benchmark/scenarios/`
+Scenarios are JSON files under `benchmark/scenarios/`:
+- **Offline Scoring**: scenario JSON + rules YAML
+- **Tri-Judge**: scenario JSON for response generation
 
 Check path matches your evaluation method.
 
@@ -248,12 +245,12 @@ Check path matches your evaluation method.
 - **YAML Orchestrator**: No model calls, scores pre-existing transcripts (~free, fast)
 - **Tri-Judge**: Generates responses + 3 judge calls (~$0.03-0.10 per scenario)
 
-For more help, see [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) or open an [issue](https://github.com/givecareapp/givecare-bench/issues).
+For more help, see [QUICKSTART.md](scripts/validation/QUICKSTART.md) or open an [issue](https://github.com/givecareapp/givecare-bench/issues).
 
 ## Community
 
-- **Leaderboard**: https://givecareapp.github.io/givecare-bench/leaderboard.html
-- **Submit Results**: See `community/README.md`
+- **Leaderboard**: https://bench.givecareapp.com/leaderboard.html
+- **Submit Results**: See `community/SUBMISSION_GUIDE.md`
 - **Issues**: https://github.com/givecareapp/givecare-bench/issues
 
 ## Citation

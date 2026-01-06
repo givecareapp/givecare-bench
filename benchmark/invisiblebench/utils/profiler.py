@@ -8,11 +8,10 @@ Inspired by MindBenchAI's dual-stage evaluation approach:
 This module handles Stage 1: Profiling.
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional
-import requests
-from datetime import datetime
 import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional
 
 
 @dataclass

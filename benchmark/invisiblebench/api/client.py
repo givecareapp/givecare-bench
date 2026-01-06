@@ -3,9 +3,10 @@ API client for calling models via OpenRouter and direct provider APIs.
 """
 import os
 import time
-from typing import List, Dict, Optional, Any
-import requests
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import requests
 
 
 @dataclass
@@ -231,13 +232,15 @@ class ModelAPIClient:
                 if hasattr(e, 'response') and e.response is not None:
                     try:
                         error_detail += f" | Response: {e.response.text[:500]}"
-                    except:
+                    except Exception:
                         pass
 
                 if attempt < self.config.max_retries - 1:
                     time.sleep(self.config.retry_delay * (attempt + 1))
                     continue
-                raise RuntimeError(f"Failed to call model {model} after {self.config.max_retries} attempts: {error_detail}")
+                raise RuntimeError(
+                    f"Failed to call model {model} after {self.config.max_retries} attempts: {error_detail}"
+                ) from e
 
         raise RuntimeError(f"Failed to call model {model}")
 

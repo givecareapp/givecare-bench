@@ -1,23 +1,23 @@
 """
 Main benchmark runner for InvisibleBench.
 """
-from dotenv import load_dotenv
-load_dotenv()
-
 import argparse
-from pathlib import Path
+import uuid
 from datetime import datetime
 from typing import List, Optional
-import uuid
 
-from invisiblebench.models import Scenario, BenchmarkRun
-from invisiblebench.api import ModelAPIClient, APIConfig
+from dotenv import load_dotenv
+
+from invisiblebench.api import APIConfig, ModelAPIClient
 from invisiblebench.api.client import DEFAULT_TEST_MODELS
-from invisiblebench.session import SessionManager
 from invisiblebench.evaluation import ScenarioEvaluator as ScenarioEvaluator
 from invisiblebench.export import ResultsExporter
 from invisiblebench.export.results_exporter import LeaderboardHTMLGenerator
 from invisiblebench.loaders.scenario_loader import ScenarioLoader
+from invisiblebench.models import BenchmarkRun, Scenario
+from invisiblebench.session import SessionManager
+
+load_dotenv()
 
 
 class BenchmarkRunner:
@@ -88,7 +88,7 @@ class BenchmarkRunner:
         timestamp = datetime.now().isoformat()
 
         print(f"\n{'='*60}")
-        print(f"InvisibleBench Evaluation")
+        print("InvisibleBench Evaluation")
         print(f"Run ID: {run_id}")
         print(f"Models: {len(models)}")
         print(f"Scenarios: {len(scenarios)}")
@@ -143,12 +143,12 @@ class BenchmarkRunner:
         print(f"\nEvaluating {model} on {scenario.scenario_id}...")
         result = self.evaluator.evaluate_scenario(scenario, model)
 
-        print(f"\nResults:")
+        print("\nResults:")
         print(f"  Total Score: {result.total_score:.1f}/{result.max_possible_score:.1f}")
         print(f"  Autofails: {result.autofail_count}")
         print(f"  Passed: {result.passed}")
 
-        print(f"\n  Dimension Scores:")
+        print("\n  Dimension Scores:")
         for dim, score in result.final_scores.items():
             print(f"    {dim.value}: {score:.1f}")
 
@@ -253,7 +253,7 @@ def main():
         )
 
     print(f"\n{'='*60}")
-    print(f"Benchmark complete!")
+    print("Benchmark complete!")
     print(f"Results: {output_dir}")
     print(f"{'='*60}\n")
 

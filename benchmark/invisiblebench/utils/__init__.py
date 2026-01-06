@@ -1,6 +1,6 @@
 """Utility functions."""
 
-from .progress import ProgressTracker
 from .profiler import ModelProfiler
+from .progress import ProgressTracker
 
 __all__ = ["ProgressTracker", "ModelProfiler"]

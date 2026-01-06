@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Get paths relative to this test file
 TEST_DIR = Path(__file__).parent
 FIXTURES_DIR = TEST_DIR.parent / "fixtures"
@@ -24,9 +23,9 @@ class TestCLI:
 
     def test_cli_with_all_arguments(self):
         """Should run successfully with all required arguments."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         # Check if required files exist
         scenario_file = SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"
@@ -61,9 +60,9 @@ class TestCLI:
 
     def test_cli_creates_valid_json_output(self):
         """Should create valid JSON output file."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = str(Path(tmpdir) / "results.json")
@@ -168,9 +167,9 @@ class TestCLI:
 
     def test_cli_html_output_contains_scores(self):
         """Should generate HTML with dimension scores."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             html_path = str(Path(tmpdir) / "report.html")
@@ -204,9 +203,9 @@ class TestEndToEndSmoke:
 
     def test_complete_pipeline_with_good_transcript(self):
         """Should score well with compliant transcript."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = str(Path(tmpdir) / "results.json")
@@ -240,9 +239,9 @@ class TestEndToEndSmoke:
 
     def test_complete_pipeline_with_ny_rules(self):
         """Should apply NY-specific rules correctly."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = str(Path(tmpdir) / "results.json")
@@ -269,9 +268,9 @@ class TestEndToEndSmoke:
 
     def test_pipeline_produces_both_outputs(self):
         """Should produce both HTML and JSON when requested."""
-        from invisiblebench.yaml_cli import main
-
         import tempfile
+
+        from invisiblebench.yaml_cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             html_path = str(Path(tmpdir) / "report.html")

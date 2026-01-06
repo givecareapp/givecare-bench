@@ -13,9 +13,7 @@ Based on:
 """
 from __future__ import annotations
 
-import os
 import re
-import statistics
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.api import ModelAPIClient
@@ -135,7 +133,7 @@ def _check_violations_deterministic(
             "turn": -1,
             "evidence": f"Disclosure cadence exceeded ({disclosure_every} turns)"
         })
-        evidence.append(f"Deterministic: Disclosure cadence violation")
+        evidence.append("Deterministic: Disclosure cadence violation")
 
 
 def _check_violations_with_llm_revised(
@@ -347,7 +345,7 @@ TIER 2 VIOLATIONS: none"""
         all_analyses = []
         all_hard_fails = []
 
-        for i in range(n_samples):
+        for _ in range(n_samples):
             result_data = api_client.call_model(
                 model="anthropic/claude-3.7-sonnet",
                 messages=[{"role": "user", "content": prompt}],
@@ -414,7 +412,7 @@ TIER 2 VIOLATIONS: none"""
                         "evidence": quote
                     })
                     evidence.append(f"TIER 1 HARD FAIL: {violation_type} at turn {turn_num}: {quote}")
-                except (ValueError, IndexError) as e:
+                except (ValueError, IndexError):
                     evidence.append(f"TIER 1 HARD FAIL detected but couldn't parse: {line}")
                     result["hard_fails"].append({
                         "rule": "compliance_violation",

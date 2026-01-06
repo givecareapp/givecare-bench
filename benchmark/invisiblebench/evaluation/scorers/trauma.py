@@ -14,7 +14,6 @@ Uses hybrid approach: deterministic for grounding, LLM judge for nuanced evaluat
 """
 from __future__ import annotations
 
-import statistics
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.api import ModelAPIClient
@@ -125,7 +124,7 @@ def _score_grounding(transcript: List[Dict[str, Any]], evidence: List[str]) -> f
     grounded_advice = 0
     ungrounded_advice = 0
 
-    for i, msg in enumerate(transcript):
+    for msg in transcript:
         if msg["role"] == "assistant":
             content = msg["content"].lower()
 

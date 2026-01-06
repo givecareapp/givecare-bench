@@ -7,7 +7,7 @@
       "align docs/scripts with actual code entrypoints",
       "add lightweight check to prevent future drift"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "scoring",

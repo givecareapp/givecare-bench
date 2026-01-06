@@ -3,7 +3,7 @@
 Validate community submission format.
 
 Usage:
-    python scripts/community/validate_submission.py community/submissions/your-model.json
+    python benchmark/scripts/community/validate_submission.py benchmark/community/submissions/your-model.json
 """
 
 import argparse

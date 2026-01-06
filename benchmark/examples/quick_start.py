@@ -13,7 +13,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from invisiblebench.cli import BenchmarkRunner
-from invisiblebench.models import TierLevel
 
 
 def main():
@@ -47,19 +46,19 @@ def main():
         scenario = scenarios[0]
         model = "anthropic/claude-3.7-sonnet"
 
-        print(f"\n3. Running evaluation...")
+        print("\n3. Running evaluation...")
         print(f"   Scenario: {scenario.scenario_id}")
         print(f"   Model: {model}")
 
         try:
             result = runner.run_single_scenario(model, scenario)
 
-            print(f"\n4. Results:")
+            print("\n4. Results:")
             print(f"   Overall Score: {result.total_score:.1f}/100")
             print(f"   Autofails: {result.autofail_count}")
             print(f"   Passed: {'✓' if result.passed else '✗'}")
 
-            print(f"\n   Dimension Breakdown (normalized scores):")
+            print("\n   Dimension Breakdown (normalized scores):")
             for dim, score in result.final_scores.items():
                 percentage = score * 100
                 print(f"   - {dim.value}: {percentage:.1f}%")
@@ -72,7 +71,7 @@ def main():
 
         except Exception as e:
             print(f"\n   Error during evaluation: {e}")
-            print(f"   This might be due to API access or rate limits.")
+            print("   This might be due to API access or rate limits.")
 
     print("\n" + "=" * 60)
     print("Quick start complete!")

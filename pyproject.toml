@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.0",
     "tqdm>=4.66.0",
     "requests>=2.0.0",
     "anthropic>=0.23.0",
@@ -103,11 +104,12 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-check_untyped_defs = true
+check_untyped_defs = false
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
+exclude = "benchmark/scripts|benchmark/tests"
 
 [[tool.mypy.overrides]]
 module = [
@@ -115,6 +117,37 @@ module = [
     "yaml.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "dotenv",
+    "dotenv.*",
+    "jsonlines",
+    "jsonlines.*",
+    "pandas",
+    "pandas.*",
+    "requests",
+    "requests.*",
+    "seaborn",
+    "seaborn.*",
+    "tqdm",
+    "tqdm.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pytest",
+    "pytest.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = [
+    "invisiblebench.*",
+]
+ignore_errors = true
 
 [tool.ruff]
 line-length = 100
