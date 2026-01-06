@@ -235,6 +235,7 @@ class ScenarioResult:
     model_name: str
     tier: TierLevel
     turn_evaluations: List[TurnEvaluation]
+    judge_models: Dict[str, str] = field(default_factory=dict)
     final_scores: Dict[DimensionType, float] = field(default_factory=dict)
     total_score: float = 0.0
     max_possible_score: float = 0.0
@@ -338,7 +339,7 @@ class ScenarioResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON export."""
-        return {
+        data = {
             "scenario_id": self.scenario_id,
             "model_name": self.model_name,
             "tier": self.tier.value,
@@ -350,6 +351,9 @@ class ScenarioResult:
             "execution_time_seconds": self.execution_time_seconds,
             "turn_count": len(self.turn_evaluations)
         }
+        if self.judge_models:
+            data["judge_models"] = self.judge_models
+        return data
 
 
 @dataclass

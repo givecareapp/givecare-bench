@@ -183,6 +183,8 @@ class ResultsExporter:
             "execution_time_seconds": result.execution_time_seconds,
             "turns": []
         }
+        if result.judge_models:
+            data["judge_models"] = result.judge_models
 
         # Add turn details
         for turn_eval in result.turn_evaluations:
