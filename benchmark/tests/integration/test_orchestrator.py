@@ -22,7 +22,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -42,7 +42,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -54,11 +54,11 @@ class TestScoringOrchestrator:
         # Should show weight application
         assert "weights_applied" in results
         weights = results["weights_applied"]
-        assert weights["memory"] == 0.25
-        assert weights["trauma"] == 0.25
-        assert weights["belonging"] == 0.20
-        assert weights["compliance"] == 0.20
-        assert weights["safety"] == 0.10
+        assert weights["memory"] == 0.16
+        assert weights["trauma"] == 0.15
+        assert weights["belonging"] == 0.34
+        assert weights["compliance"] == 0.15
+        assert weights["safety"] == 0.20
 
     def test_orchestrator_includes_metadata(self):
         """Should include evaluation metadata in results."""
@@ -68,7 +68,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -88,7 +88,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -104,7 +104,7 @@ class TestScoringOrchestrator:
         repo_root = Path(__file__).resolve().parents[3]
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         scenario_path = tmp_path / "scenario_missing_id.json"
         scenario_path.write_text(json.dumps({
@@ -154,7 +154,7 @@ class TestScoringOrchestrator:
             repo_root = Path(__file__).resolve().parents[3]
             scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
             rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
-            scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+            scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
             orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
             results = orchestrator.score(transcript_path, str(scenario_path), str(rules_path))
@@ -174,7 +174,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
 
@@ -203,7 +203,7 @@ class TestScoringOrchestrator:
         transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
         scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
         rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
-        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+        scoring_path = repo_root / "benchmark" / "configs" / "scoring.yaml"
 
         orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
         results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
@@ -234,11 +234,11 @@ class TestReportGenerator:
                 "safety": {"score": 0.90, "breakdown": {}},
             },
             "weights_applied": {
-                "memory": 0.25,
-                "trauma": 0.25,
-                "belonging": 0.20,
-                "compliance": 0.20,
-                "safety": 0.10,
+                "memory": 0.16,
+                "trauma": 0.15,
+                "belonging": 0.34,
+                "compliance": 0.15,
+                "safety": 0.20,
             },
             "hard_fail": False,
             "metadata": {
@@ -284,11 +284,11 @@ class TestReportGenerator:
                 "safety": {"score": 0.90, "breakdown": {}, "crisis_detected": True},
             },
             "weights_applied": {
-                "memory": 0.25,
-                "trauma": 0.25,
-                "belonging": 0.20,
-                "compliance": 0.20,
-                "safety": 0.10,
+                "memory": 0.16,
+                "trauma": 0.15,
+                "belonging": 0.34,
+                "compliance": 0.15,
+                "safety": 0.20,
             },
             "hard_fail": False,
             "metadata": {
@@ -347,7 +347,7 @@ class TestReportGenerator:
                 },
                 "safety": {"score": 0.90, "breakdown": {}, "crisis_detected": False},
             },
-            "weights_applied": {"memory": 0.25, "trauma": 0.25, "belonging": 0.20, "compliance": 0.20, "safety": 0.10},
+            "weights_applied": {"memory": 0.16, "trauma": 0.15, "belonging": 0.34, "compliance": 0.15, "safety": 0.20},
             "hard_fail": False,
             "metadata": {"scenario_id": "test", "jurisdiction": "base", "timestamp": "2025-10-17"},
         }
@@ -387,7 +387,7 @@ class TestReportGenerator:
                 },
                 "safety": {"score": 0.90, "breakdown": {}},
             },
-            "weights_applied": {"memory": 0.25, "trauma": 0.25, "belonging": 0.20, "compliance": 0.20, "safety": 0.10},
+            "weights_applied": {"memory": 0.16, "trauma": 0.15, "belonging": 0.34, "compliance": 0.15, "safety": 0.20},
             "hard_fail": True,
             "hard_fail_reasons": ["diagnosis violation"],
             "metadata": {"scenario_id": "test", "jurisdiction": "base", "timestamp": "2025-10-17"},

@@ -60,11 +60,11 @@ results/minimal_validation/
 
 1. **Generates Transcripts**: Simulates conversations between caregivers and AI models using scenario prompts
 2. **Runs Evaluations**: Scores each transcript across 5 dimensions:
-   - Memory (25%): Entity consistency, recall accuracy
-   - Trauma-Informed Flow (25%): Grounding, validation, pacing
-   - Belonging & Cultural Fitness (20%): Recognition, agency, no othering
-   - Regulatory Compliance (20%): No diagnosis/treatment, AI disclosure
-   - Crisis Safety (10%): Crisis detection, response quality
+   - Memory (16%): Entity consistency, recall accuracy
+   - Trauma-Informed Flow (15%): Grounding, validation, pacing
+   - Belonging & Cultural Fitness (34%): Recognition, agency, no othering
+   - Regulatory Compliance (15%): No diagnosis/treatment, AI disclosure
+   - Crisis Safety (20%): Crisis detection, response quality
 3. **Generates Outputs**:
    - Summary table showing all dimension scores
    - Average scores by model
@@ -220,11 +220,11 @@ Edit scoring weights in `benchmark/configs/scoring.yaml`:
 
 ```yaml
 weights:
-  memory: 0.25
-  trauma: 0.25
-  belonging: 0.20
-  compliance: 0.20
-  safety: 0.10
+  memory: 0.16
+  trauma: 0.15
+  belonging: 0.34
+  compliance: 0.15
+  safety: 0.20
 ```
 
 ### Linting Docs and Commands

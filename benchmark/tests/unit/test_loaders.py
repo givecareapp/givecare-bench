@@ -13,7 +13,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RULES_DIR = PROJECT_ROOT / "benchmark" / "configs" / "rules"
 SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
-SCORING_PATH = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 
 
@@ -326,11 +326,11 @@ class TestScoringConfigLoader:
         assert "weights" in config
         weights = config["weights"]
 
-        assert weights["memory"] == 0.25
-        assert weights["trauma"] == 0.25
-        assert weights["belonging"] == 0.20
-        assert weights["compliance"] == 0.20
-        assert weights["safety"] == 0.10
+        assert weights["memory"] == 0.16
+        assert weights["trauma"] == 0.15
+        assert weights["belonging"] == 0.34
+        assert weights["compliance"] == 0.15
+        assert weights["safety"] == 0.20
 
         # Weights should sum to 1.0
         assert abs(sum(weights.values()) - 1.0) < 0.01
