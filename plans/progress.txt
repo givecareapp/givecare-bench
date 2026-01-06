@@ -21,3 +21,13 @@ Parasocial discourage handling fix
 - Treat boundary phrases as allowed, not violations
 - Add regression test for boundary language
 - Update PRD item status
+
+## 2026-01-06
+
+scenario_id metadata fix
+
+- Require scenario_id; metadata uses scenario_id
+- Tests: scenario_id match + missing scenario_id error
+- Deterministic safety/belonging fallback; disable LLM in tests
+- Run ruff/mypy/pytest (ruff+mypy errors; pytest ok)
+- Update PRD item status
