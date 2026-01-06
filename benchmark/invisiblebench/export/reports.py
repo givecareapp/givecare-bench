@@ -78,6 +78,7 @@ class ReportGenerator:
                 f"        <p><strong>Scenario:</strong> {html.escape(str(metadata.get('scenario_id', 'N/A')))}</p>",
                 f"        <p><strong>Jurisdiction:</strong> {html.escape(str(metadata.get('jurisdiction', 'N/A')))}</p>",
                 f"        <p><strong>Timestamp:</strong> {html.escape(str(metadata.get('timestamp', 'N/A')))}</p>",
+                f"        <p><strong>LLM Mode:</strong> {html.escape(str(metadata.get('llm_mode', 'N/A')))}</p>",
                 "    </div>",
             ]
         )

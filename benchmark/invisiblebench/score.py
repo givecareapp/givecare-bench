@@ -34,6 +34,7 @@ def score(
     scenario_path: str,
     rules_path: Optional[str] = None,
     scoring_config_path: Optional[str] = None,
+    enable_llm: bool = False,
 ) -> Dict[str, Any]:
     """
     Score a transcript against a scenario.
@@ -50,6 +51,7 @@ def score(
         scenario_path: Path to scenario JSON/YAML file.
         rules_path: Path to jurisdiction rules YAML. Defaults to base.yaml.
         scoring_config_path: Path to scoring weights YAML. Defaults to scoring.yaml.
+        enable_llm: Enable LLM-assisted scoring (default: False).
 
     Returns:
         Dict containing:
@@ -79,6 +81,7 @@ def score(
     orchestrator = ScoringOrchestrator(
         scoring_config_path=scoring_config_path,
         enable_state_persistence=False,
+        enable_llm=enable_llm,
     )
 
     return orchestrator.score(

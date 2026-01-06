@@ -38,6 +38,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of scoring iterations to run (default: 1). Multiple iterations enable variance measurement.",
     )
 
+    llm_group = parser.add_mutually_exclusive_group()
+    llm_group.add_argument(
+        "--enable-llm",
+        action="store_true",
+        help="Enable LLM-assisted scoring (requires API keys).",
+    )
+    llm_group.add_argument(
+        "--offline",
+        action="store_true",
+        help="Force offline scoring (deterministic).",
+    )
+
     # Run tracking options
     parser.add_argument(
         "--model",
@@ -141,11 +153,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         parser.error("--iterations must be at least 1")
 
     try:
+        enable_llm = bool(args.enable_llm)
+        if args.offline:
+            enable_llm = False
+
+        from invisiblebench.utils.llm_mode import llm_enabled
+        actual_llm_enabled = llm_enabled(enable_llm)
+
         print("InvisibleBench scoring")
         print(f" scenario : {Path(args.scenario).resolve()}")
         print(f" transcript : {Path(args.transcript).resolve()}")
         print(f" rules : {Path(args.rules).resolve()}")
         print(f" iterations : {args.iterations}")
+        print(f" llm mode : {'llm' if actual_llm_enabled else 'offline'}")
 
         if args.model:
             print(f" model : {args.model}")
@@ -181,7 +201,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             runs_dir=args.runs_dir,
             enable_state_persistence=bool(args.model) or args.resume,
             progress_callback=progress_tracker.report_dimension,
-            save_interval=args.save_interval
+            save_interval=args.save_interval,
+            enable_llm=enable_llm,
         )
         results = orchestrator.score(
             args.transcript,

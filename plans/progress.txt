@@ -1,4 +1,14 @@
-# Progress Log
+# Ralph Progress Log
+Started: 2026-01-05
+
+## Codebase Patterns
+- YAML orchestrator defaults to offline scoring; enable LLM via `enable_llm`/`--enable-llm`.
+- `INVISIBLEBENCH_DISABLE_LLM=1` forces offline mode across scorers.
+
+## Key Files
+- (add key files here)
+
+---
 
 ## 2026-01-05
 
@@ -78,3 +88,13 @@ infra model configurability
 - Record judge model map in scenario outputs
 - Tests: ruff/mypy/pytest unavailable ("No module named ruff"; "mypy: command not found"; "No module named pytest")
 - Update PRD item status
+
+## 2026-01-06 - EVAL-OFFLINE
+- Default YAML orchestrator to offline LLM mode, add CLI toggle, and record llm_mode in outputs
+- Update scorers to respect offline mode and add LLM mode to HTML report metadata
+- Enable LLM scoring explicitly in validation scripts; update README docs
+- Files changed: benchmark/invisiblebench/evaluation/orchestrator.py, benchmark/invisiblebench/yaml_cli.py, benchmark/invisiblebench/score.py, benchmark/invisiblebench/evaluation/scorers/{belonging,compliance,safety,trauma}.py, benchmark/invisiblebench/utils/llm_mode.py, benchmark/invisiblebench/export/reports.py, benchmark/scripts/validation/{run_minimal.py,run_full.py}, README.md, benchmark/README.md, benchmark/tests/integration/test_orchestrator.py
+- **Learnings:**
+  - Offline scoring is now the default path; LLM usage must be explicitly enabled.
+  - `INVISIBLEBENCH_DISABLE_LLM` overrides `enable_llm` and should be honored in all scorers.
+---

@@ -26,6 +26,7 @@ from invisiblebench.loaders.yaml_loader import (
     ScoringConfigLoader,
     TranscriptLoader,
 )
+from invisiblebench.utils.llm_mode import llm_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class ScoringOrchestrator:
         enable_state_persistence: bool = True,
         progress_callback=None,
         save_interval: int = 1,
+        enable_llm: bool = False,
         api_client: Optional[ModelAPIClient] = None,
     ):
         """
@@ -84,6 +86,7 @@ class ScoringOrchestrator:
             enable_state_persistence: Enable/disable run tracking
             progress_callback: Optional callback(dimension, score) for progress tracking
             save_interval: Save state after every N scorers (default: 1)
+            enable_llm: Enable LLM-assisted scoring (default: False)
             api_client: Optional ModelAPIClient for LLM-based scorers (lazy-initialized if not provided)
         """
         self.scoring_config_path = scoring_config_path
@@ -91,7 +94,8 @@ class ScoringOrchestrator:
         self.scoring_config = self.config_loader.load(scoring_config_path)
         self.progress_callback = progress_callback
         self.save_interval = save_interval
-        self._api_client = api_client  # Store provided client, lazy-init if needed
+        self.llm_enabled = llm_enabled(enable_llm)
+        self._api_client = api_client if self.llm_enabled else None
 
         # Initialize run manager
         self.enable_state_persistence = enable_state_persistence
@@ -306,7 +310,12 @@ class ScoringOrchestrator:
         # Trauma
         if dimension_scores["trauma"].get("status") != "completed":
             dimension_scores["trauma"] = self._run_scorer_safely(
-                lambda: trauma.score(transcript, scenario, api_client=self._api_client),
+                lambda: trauma.score(
+                    transcript,
+                    scenario,
+                    api_client=self._api_client,
+                    allow_llm=self.llm_enabled,
+                ),
                 "trauma"
             )
             scorers_completed += 1
@@ -319,7 +328,12 @@ class ScoringOrchestrator:
         # Belonging
         if dimension_scores["belonging"].get("status") != "completed":
             dimension_scores["belonging"] = self._run_scorer_safely(
-                lambda: belonging.score(transcript, scenario, api_client=self._api_client),
+                lambda: belonging.score(
+                    transcript,
+                    scenario,
+                    api_client=self._api_client,
+                    allow_llm=self.llm_enabled,
+                ),
                 "belonging"
             )
             scorers_completed += 1
@@ -332,7 +346,13 @@ class ScoringOrchestrator:
         # Compliance
         if dimension_scores["compliance"].get("status") != "completed":
             dimension_scores["compliance"] = self._run_scorer_safely(
-                lambda: compliance.score(transcript, scenario, rules, api_client=self._api_client),
+                lambda: compliance.score(
+                    transcript,
+                    scenario,
+                    rules,
+                    api_client=self._api_client,
+                    allow_llm=self.llm_enabled,
+                ),
                 "compliance"
             )
             scorers_completed += 1
@@ -345,7 +365,13 @@ class ScoringOrchestrator:
         # Safety
         if dimension_scores["safety"].get("status") != "completed":
             dimension_scores["safety"] = self._run_scorer_safely(
-                lambda: safety.score(transcript, scenario, rules, api_client=self._api_client),
+                lambda: safety.score(
+                    transcript,
+                    scenario,
+                    rules,
+                    api_client=self._api_client,
+                    allow_llm=self.llm_enabled,
+                ),
                 "safety"
             )
             scorers_completed += 1
@@ -405,6 +431,7 @@ class ScoringOrchestrator:
                 "scenario_id": scenario_id,
                 "jurisdiction": jurisdiction,
                 "timestamp": datetime.now().isoformat(),
+                "llm_mode": "llm" if self.llm_enabled else "offline",
             },
         }
 
