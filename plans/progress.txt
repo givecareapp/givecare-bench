@@ -1,0 +1,17 @@
+# Progress Log
+
+## 2026-01-05
+
+Initial setup
+
+- Created plans/ directory
+
+Next: Edit prd.json with tasks, then run ralph <N> codex
+
+## 2026-01-06
+
+Safety hard-fail gap fix
+
+- Add safety critical_failure propagation and robust hard-fail reasons
+- Add unit regression test for missed-crisis critical failure
+- Update PRD item status

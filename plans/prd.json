@@ -1,0 +1,82 @@
+[
+  {
+    "category": "docs",
+    "description": "Doc/command drift across benchmark docs, scripts, prompts",
+    "steps": [
+      "inventory referenced paths/commands",
+      "align docs/scripts with actual code entrypoints",
+      "add lightweight check to prevent future drift"
+    ],
+    "passes": false
+  },
+  {
+    "category": "scoring",
+    "description": "Weight mismatch between README and scoring config",
+    "steps": [
+      "choose canonical source for weights",
+      "update README and config to match",
+      "add test or lint to enforce parity"
+    ],
+    "passes": false
+  },
+  {
+    "category": "scoring",
+    "description": "Parasocial discourage phrases treated as violations",
+    "steps": [
+      "clarify rule intent (discourage vs violate)",
+      "fix compliance scorer logic",
+      "add regression test for expected behavior"
+    ],
+    "passes": false
+  },
+  {
+    "category": "safety",
+    "description": "Safety hard-fail gap: critical_failure not escalated",
+    "steps": [
+      "propagate critical_failure into hard fail result",
+      "align orchestrator hard-fail conditions",
+      "add test covering missed-crisis critical failure"
+    ],
+    "passes": true
+  },
+  {
+    "category": "data",
+    "description": "scenario_id metadata bug uses id fallback",
+    "steps": [
+      "standardize on scenario_id",
+      "fix metadata field population",
+      "add validation for missing scenario_id"
+    ],
+    "passes": false
+  },
+  {
+    "category": "schema",
+    "description": "Scenario schema/validator drift and unused fields",
+    "steps": [
+      "compare SCENARIO_SCHEMA.yaml to validator/models",
+      "update validator to match schema or revise schema",
+      "remove or wire unused fields"
+    ],
+    "passes": false
+  },
+  {
+    "category": "data",
+    "description": "Turn index mismatch risk: t vs turn_number across JSON",
+    "steps": [
+      "define single canonical field",
+      "normalize loaders to map t/turn_number",
+      "add lint to flag mixed usage"
+    ],
+    "passes": false
+  },
+  {
+    "category": "infra",
+    "description": "Hard-coded judge/scorer models and Google provider gap",
+    "steps": [
+      "make judge/scorer models configurable",
+      "support Google direct provider or remove default dependency",
+      "record judge model versions in outputs"
+    ],
+    "passes": false
+  }
+]
