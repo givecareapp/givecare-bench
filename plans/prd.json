@@ -57,7 +57,7 @@
       "update validator to match schema or revise schema",
       "remove or wire unused fields"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "data",
