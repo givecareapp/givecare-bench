@@ -250,7 +250,7 @@ class TestOrchestratorIntegration:
         # (This tests the interface - actual integration tested in Phase 3)
         try:
             orchestrator = ScoringOrchestrator(
-                scoring_config_path="benchmark/invisiblebench/scoring.yaml",
+                scoring_config_path="benchmark/configs/scoring.yaml",
                 progress_callback=progress_callback,
             )
             # If we get here, interface accepts progress_callback

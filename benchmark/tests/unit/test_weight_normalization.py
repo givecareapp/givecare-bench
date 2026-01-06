@@ -431,7 +431,7 @@ def test_multi_turn_averaging():
 
     # Scores are accumulated: Turn 1 (3,3,3,3,2,2) + Turn 2 (0,0,0,0,0,0) = (3,3,3,3,2,2)
     # Normalized: 3/6=0.5, 3/6=0.5, 3/6=0.5, 3/6=0.5, 2/4=0.5, 2/4=0.5
-    # All dimensions at 50%, with weights (0.25, 0.25, 0.2, 0.2, 0.1) = 0.5 * 0.5 = 0.25 (25% on 0-100 scale)
+    # All dimensions at 25% normalized, renormalized weights sum to 1.0 -> 0.25 (25% on 0-100 scale)
     assert result.total_score == pytest.approx(25.0, abs=1.0), \
         f"50% accumulated performance with 50% weight should yield ~25 score, got {result.total_score}"
 

@@ -503,11 +503,11 @@ def run_evaluation(
         scoring_config_path = output_dir / "temp_scoring_config.yaml"
         basic_config = {
             "weights": {
-                "memory": 0.25,
-                "trauma": 0.25,
-                "belonging": 0.20,
-                "compliance": 0.20,
-                "safety": 0.10
+                "memory": 0.16,
+                "trauma": 0.15,
+                "belonging": 0.34,
+                "compliance": 0.15,
+                "safety": 0.20
             }
         }
         with open(scoring_config_path, 'w') as f:

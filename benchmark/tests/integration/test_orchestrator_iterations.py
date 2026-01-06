@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
 RULES_PATH = PROJECT_ROOT / "benchmark" / "configs" / "rules" / "ny.yaml"
-SCORING_PATH = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
+SCORING_PATH = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 
 
 class TestOrchestratorIterationSupport:

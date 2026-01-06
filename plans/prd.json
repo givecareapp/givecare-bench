@@ -17,7 +17,7 @@
       "update README and config to match",
       "add test or lint to enforce parity"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "scoring",
