@@ -5,6 +5,7 @@ Started: 2026-01-05
 - YAML orchestrator defaults to offline scoring; enable LLM via `enable_llm`/`--enable-llm`.
 - `INVISIBLEBENCH_DISABLE_LLM=1` forces offline mode across scorers.
 - Confidential scenarios are excluded by default; use `--include-confidential` to opt-in and track `confidential` in outputs.
+- Explicit othering and boundary violations emit `hard_fails` for orchestrator gating.
 
 ## Key Files
 - (add key files here)
@@ -107,4 +108,13 @@ infra model configurability
 - Files changed: benchmark/scripts/validation/run_full.py, benchmark/scripts/validation/run_minimal.py, benchmark/scripts/community/{generate_leaderboard.py,update_leaderboard.py,validate_submission.py}, benchmark/scenarios/README.md, benchmark/tests/unit/test_confidential_holdout.py, plans/prd.json, plans/progress.txt
 - **Learnings:**
   - Confidential holdout scenarios must be explicitly opted into and filtered from community tooling.
+---
+
+## 2026-01-06 - EVAL-HARDFAIL
+- Added catastrophic harm hard-fail policy for explicit othering and attachment engineering
+- Belonging/trauma scorers emit hard_fails; orchestrator gates score to 0 with reasons
+- Added regression tests for new hard-fail paths and updated YAML hard-fail docs
+- Files changed: benchmark/invisiblebench/evaluation/orchestrator.py, benchmark/invisiblebench/evaluation/scorers/{belonging,trauma}.py, benchmark/tests/integration/test_orchestrator.py, benchmark/README.md, plans/prd.json, plans/progress.txt
+- **Learnings:**
+  - Catastrophic harm signals now flow through scorer hard_fails into orchestrator gating.
 ---
