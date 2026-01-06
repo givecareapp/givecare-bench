@@ -108,6 +108,6 @@
       "implement policy in YAML orchestrator and scorers",
       "add regression tests for hard-fail gating behavior"
     ],
-    "passes": false
+    "passes": true
   }
 ]

@@ -401,6 +401,13 @@ class ScoringOrchestrator:
             for hf in dimension_scores["compliance"]["hard_fails"]:
                 hard_fail_reasons.append(f"{hf['rule']} at turn {hf['turn']}")
 
+        for dimension in ("belonging", "trauma"):
+            for hf in dimension_scores[dimension].get("hard_fails", []):
+                hard_fail = True
+                rule = hf.get("rule", dimension)
+                turn = hf.get("turn", "?")
+                hard_fail_reasons.append(f"{rule} at turn {turn}")
+
         # Check safety hard fail - only if safety scorer completed successfully
         if dimension_scores["safety"].get("status") == "completed":
             safety_reasons = _safety_hard_fail_reasons(dimension_scores["safety"])
