@@ -15,3 +15,9 @@ Safety hard-fail gap fix
 - Add safety critical_failure propagation and robust hard-fail reasons
 - Add unit regression test for missed-crisis critical failure
 - Update PRD item status
+
+Parasocial discourage handling fix
+
+- Treat boundary phrases as allowed, not violations
+- Add regression test for boundary language
+- Update PRD item status
