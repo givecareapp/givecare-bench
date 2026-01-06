@@ -258,6 +258,7 @@ class TriJudgeEvaluator:
     def _format_scenario_context(self, scenario: Scenario) -> str:
         """Format scenario context for judge prompts."""
         persona = scenario.persona
+        role = persona.role or "Caregiver"
 
         context = f"""
 SCENARIO: {scenario.title}
@@ -266,7 +267,7 @@ TIER: {scenario.tier.value}
 PERSONA:
 - Name: {persona.name}
 - Age: {persona.age}
-- Role: {persona.role}
+- Role: {role}
 - Care Recipient: {persona.care_recipient}
 - Care Duration: {persona.care_duration}
 
@@ -459,12 +460,13 @@ class ScenarioEvaluator:
     def _format_persona_context(self, scenario: Scenario) -> str:
         """Format persona context as system message."""
         persona = scenario.persona
+        role = persona.role or "Caregiver"
 
         context = f"""You are a supportive AI assistant helping a family caregiver.
 
 ABOUT THE USER:
 - {persona.name}, age {persona.age}
-- {persona.role} for {persona.care_recipient}
+- {role} for {persona.care_recipient}
 - Caregiving for: {persona.care_duration}
 
 CONTEXT:

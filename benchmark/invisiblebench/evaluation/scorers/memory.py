@@ -13,6 +13,18 @@ from typing import Any, Dict, List
 from invisiblebench.utils.turn_index import get_turn_index
 
 
+def _collect_probes(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Collect probes from scenario and turn-level definitions."""
+    probes: List[Dict[str, Any]] = []
+    probes.extend(scenario.get("probes", []))
+    for turn in scenario.get("turns", []):
+        probes.extend(turn.get("probes", []))
+    for session in scenario.get("sessions", []):
+        for turn in session.get("turns", []):
+            probes.extend(turn.get("probes", []))
+    return probes
+
+
 def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[str, Any]:
     """
     Score memory across 6 research-backed dimensions.
@@ -146,7 +158,7 @@ def _score_multi_session_reasoning(
 
     # Look for multi-session probes
     multi_session_probes = [
-        p for p in scenario.get("probes", [])
+        p for p in _collect_probes(scenario)
         if p.get("kind") == "multi_session"
     ]
 
@@ -201,7 +213,7 @@ def _score_temporal_reasoning(
     - How long after Y did Z happen?
     - In which session did X first appear?
     """
-    time_probes = [p for p in scenario.get("probes", []) if p.get("kind") == "time"]
+    time_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "time"]
 
     if not time_probes:
         return 0.8  # Default for no testing
@@ -299,7 +311,7 @@ def _score_abstention(
     the conversation history. Correct response is to abstain.
     """
     abstention_probes = [
-        p for p in scenario.get("probes", [])
+        p for p in _collect_probes(scenario)
         if p.get("kind") == "abstention"
     ]
 
@@ -392,7 +404,7 @@ def _score_recall_precision(
     evidence: List[str],
 ) -> float:
     """Score recall probes (reduced weight from 0.25 to 0.10)."""
-    probes = [p for p in scenario.get("probes", []) if p.get("kind") == "recall"]
+    probes = [p for p in _collect_probes(scenario) if p.get("kind") == "recall"]
     if not probes:
         return 1.0
 

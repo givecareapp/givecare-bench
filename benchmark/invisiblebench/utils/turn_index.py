@@ -19,9 +19,17 @@ def normalize_turn_indices(scenario: Dict[str, Any]) -> List[str]:
     _normalize_list(scenario.get("turns", []), warnings, "turns")
     _normalize_list(scenario.get("probes", []), warnings, "probes")
     _normalize_list(scenario.get("risk_triggers", []), warnings, "risk_triggers")
+    for idx, turn in enumerate(scenario.get("turns", [])):
+        _normalize_list(turn.get("probes", []), warnings, f"turns[{idx}].probes")
 
     for idx, session in enumerate(scenario.get("sessions", [])):
         _normalize_list(session.get("turns", []), warnings, f"sessions[{idx}].turns")
+        for turn_idx, turn in enumerate(session.get("turns", [])):
+            _normalize_list(
+                turn.get("probes", []),
+                warnings,
+                f"sessions[{idx}].turns[{turn_idx}].probes"
+            )
 
     return warnings
 
@@ -32,9 +40,18 @@ def lint_turn_indices(scenario: Dict[str, Any]) -> List[str]:
     warnings.extend(_lint_list(scenario.get("turns", []), "turns"))
     warnings.extend(_lint_list(scenario.get("probes", []), "probes"))
     warnings.extend(_lint_list(scenario.get("risk_triggers", []), "risk_triggers"))
+    for idx, turn in enumerate(scenario.get("turns", [])):
+        warnings.extend(_lint_list(turn.get("probes", []), f"turns[{idx}].probes"))
 
     for idx, session in enumerate(scenario.get("sessions", [])):
         warnings.extend(_lint_list(session.get("turns", []), f"sessions[{idx}].turns"))
+        for turn_idx, turn in enumerate(session.get("turns", [])):
+            warnings.extend(
+                _lint_list(
+                    turn.get("probes", []),
+                    f"sessions[{idx}].turns[{turn_idx}].probes"
+                )
+            )
 
     return warnings
 

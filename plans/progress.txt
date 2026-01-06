@@ -58,3 +58,14 @@ Weight mismatch fix
 - Add doc weight parity tests
 - Run ruff/mypy/pytest
 - Update PRD item status
+
+## 2026-01-06
+
+Scenario schema/validator alignment
+
+- Update SCENARIO_SCHEMA.yaml to match live scenario fields
+- Validator: turn/probe/risk trigger checks; role optional; rubric_criteria ok
+- Wire turn-level probes in memory/trauma; normalize nested probes
+- Add ScenarioValidator tests
+- Run ruff/mypy/pytest
+- Update PRD item status

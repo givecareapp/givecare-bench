@@ -31,8 +31,12 @@ class Turn:
     """A single conversational turn in a scenario."""
     turn_number: int
     user_message: str
-    expected_behaviors: List[str]
+    expected_behaviors: List[str] = field(default_factory=list)
     autofail_triggers: List[str] = field(default_factory=list)
+    facts: List[str] = field(default_factory=list)
+    updates: List[str] = field(default_factory=list)
+    rubric_criteria: List[Dict[str, Any]] = field(default_factory=list)
+    probes: List[Dict[str, Any]] = field(default_factory=list)
     context_notes: Optional[str] = None
 
     @classmethod
@@ -44,8 +48,12 @@ class Turn:
         return cls(
             turn_number=turn_number,
             user_message=data["user_message"],
-            expected_behaviors=data["expected_behaviors"],
+            expected_behaviors=data.get("expected_behaviors", []),
             autofail_triggers=data.get("autofail_triggers", []),
+            facts=data.get("facts", []),
+            updates=data.get("updates", []),
+            rubric_criteria=data.get("rubric_criteria", []),
+            probes=data.get("probes", []),
             context_notes=data.get("context_notes")
         )
 
@@ -74,10 +82,18 @@ class Persona:
     """User persona with demographic and context information."""
     name: str
     age: int
-    role: str
     care_recipient: str
     care_duration: str
     context: Dict[str, Any]
+    role: Optional[str] = None
+    gender: Optional[str] = None
+    race_ethnicity: Optional[str] = None
+    income_bracket: Optional[str] = None
+    employment: Optional[str] = None
+    education: Optional[str] = None
+    primary_language: Optional[str] = None
+    care_hours_per_week: Optional[int] = None
+    living_situation: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Persona':
@@ -85,10 +101,18 @@ class Persona:
         return cls(
             name=data["name"],
             age=data["age"],
-            role=data["role"],
             care_recipient=data["care_recipient"],
             care_duration=data["care_duration"],
-            context=data["context"]
+            context=data["context"],
+            role=data.get("role"),
+            gender=data.get("gender"),
+            race_ethnicity=data.get("race_ethnicity"),
+            income_bracket=data.get("income_bracket"),
+            employment=data.get("employment"),
+            education=data.get("education"),
+            primary_language=data.get("primary_language"),
+            care_hours_per_week=data.get("care_hours_per_week"),
+            living_situation=data.get("living_situation"),
         )
 
 
@@ -99,10 +123,14 @@ class Scenario:
     tier: TierLevel
     title: str
     persona: Persona
+    category: Optional[DimensionType] = None
     turns: List[Turn] = field(default_factory=list)
     sessions: List[Session] = field(default_factory=list)
     scoring_dimensions: Dict[DimensionType, int] = field(default_factory=dict)
     dif_variables: List[str] = field(default_factory=list)
+    probes: List[Dict[str, Any]] = field(default_factory=list)
+    risk_triggers: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_multi_session(self) -> bool:
@@ -121,6 +149,9 @@ class Scenario:
         """Create Scenario from dictionary."""
         tier = TierLevel(data["tier"])
         persona = Persona.from_dict(data["persona"])
+        category = None
+        if "category" in data:
+            category = DimensionType(data["category"])
 
         # Parse turns or sessions based on structure
         turns = []
@@ -142,10 +173,14 @@ class Scenario:
             tier=tier,
             title=data["title"],
             persona=persona,
+            category=category,
             turns=turns,
             sessions=sessions,
             scoring_dimensions=scoring_dimensions,
-            dif_variables=data.get("dif_variables", [])
+            dif_variables=data.get("dif_variables", []),
+            probes=data.get("probes", []),
+            risk_triggers=data.get("risk_triggers", []),
+            metadata=data.get("metadata", {}),
         )
 
 

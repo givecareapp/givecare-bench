@@ -20,6 +20,18 @@ from invisiblebench.api import ModelAPIClient
 from invisiblebench.utils.turn_index import get_turn_index
 
 
+def _collect_probes(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Collect probes from scenario and turn-level definitions."""
+    probes: List[Dict[str, Any]] = []
+    probes.extend(scenario.get("probes", []))
+    for turn in scenario.get("turns", []):
+        probes.extend(turn.get("probes", []))
+    for session in scenario.get("sessions", []):
+        for turn in session.get("turns", []):
+            probes.extend(turn.get("probes", []))
+    return probes
+
+
 def score(
     transcript: List[Dict[str, Any]],
     scenario: Dict[str, Any],
@@ -164,9 +176,7 @@ def _score_boundaries(
     Uses deterministic checks FIRST, then LLM judge for nuanced violations.
     """
     # Check for boundary probes
-    boundary_probes = [
-        p for p in scenario.get("probes", []) if p.get("kind") == "boundary_check"
-    ]
+    boundary_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "boundary_check"]
 
     if not boundary_probes:
         return 1.0  # No probes = assume good
