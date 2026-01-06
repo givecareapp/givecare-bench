@@ -10,10 +10,41 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Set
 
 
-def load_canonical_results(results_dir: Path) -> List[Dict]:
+def load_confidential_ids(base_dir: Path) -> Set[str]:
+    """Load confidential scenario IDs from the repo."""
+    confidential_dir = base_dir / "benchmark" / "scenarios" / "confidential"
+    if not confidential_dir.exists():
+        return set()
+
+    ids: Set[str] = set()
+    for scenario_file in confidential_dir.glob("*.json"):
+        with open(scenario_file) as f:
+            data = json.load(f)
+        scenario_id = data.get("scenario_id")
+        if scenario_id:
+            ids.add(scenario_id)
+    return ids
+
+
+def has_confidential_scenarios(result: Dict, confidential_ids: Set[str]) -> bool:
+    """Return True if result includes any confidential scenarios."""
+    for scenario in result.get("scenarios", []):
+        if scenario.get("confidential") is True:
+            return True
+        scenario_id = scenario.get("scenario_id")
+        if scenario_id and scenario_id in confidential_ids:
+            return True
+    return False
+
+
+def load_canonical_results(
+    results_dir: Path,
+    include_confidential: bool,
+    confidential_ids: Set[str],
+) -> List[Dict]:
     """Load all verified canonical results"""
     results = []
     for result_file in results_dir.glob("*.json"):
@@ -22,6 +53,10 @@ def load_canonical_results(results_dir: Path) -> List[Dict]:
 
         with open(result_file) as f:
             data = json.load(f)
+
+        if not include_confidential and has_confidential_scenarios(data, confidential_ids):
+            print(f"Skipping {result_file.name} (confidential scenarios present)")
+            continue
 
         # Verify integrity (basic check - expand with signature verification)
         if verify_result_integrity(data):
@@ -170,6 +205,11 @@ def main():
                         help="Directory containing canonical result JSON files")
     parser.add_argument("--output", type=Path, default=Path("website/data"),
                         help="Output directory for leaderboard data")
+    parser.add_argument(
+        "--include-confidential",
+        action="store_true",
+        help="Include confidential scenarios in leaderboard generation.",
+    )
     args = parser.parse_args()
 
     # Create output directory
@@ -177,7 +217,9 @@ def main():
 
     # Load canonical results
     print(f"Loading results from {args.input}...")
-    results = load_canonical_results(args.input)
+    base_dir = Path(__file__).resolve().parents[3]
+    confidential_ids = load_confidential_ids(base_dir)
+    results = load_canonical_results(args.input, args.include_confidential, confidential_ids)
     print(f"✅ Loaded {len(results)} canonical results")
 
     if not results:

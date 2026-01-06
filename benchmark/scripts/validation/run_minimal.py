@@ -492,6 +492,7 @@ def run_evaluation(
             "model_id": model["id"],
             "scenario": scenario_info["name"],
             "scenario_id": scenario["scenario_id"],
+            "confidential": scenario_info.get("confidential", False),
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
             "dimensions": dimension_scores,
@@ -512,6 +513,7 @@ def run_evaluation(
             "model_id": model["id"],
             "scenario": scenario_info["name"],
             "scenario_id": scenario["scenario_id"],
+            "confidential": scenario_info.get("confidential", False),
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
             "dimensions": {
