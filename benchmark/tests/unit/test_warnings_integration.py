@@ -1,9 +1,8 @@
 """
 Integration test to verify parse warnings are surfaced in evaluation results.
 """
-import pytest
 from invisiblebench.evaluation.evaluator import JudgeResponseParser
-from invisiblebench.models import JudgeEvaluation, TurnEvaluation, ModelResponse, DimensionType
+from invisiblebench.models import DimensionType, JudgeEvaluation, ModelResponse, TurnEvaluation
 
 
 class TestWarningsIntegration:

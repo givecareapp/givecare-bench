@@ -1,7 +1,7 @@
 # Requirements for validation scripts
-# Install with: pip install -r scripts/requirements.txt
+# Install with: pip install -r benchmark/scripts/requirements.txt
 
-# Core dependencies (should already be installed from main requirements.txt)
+# Core dependencies (should already be installed from pyproject extras)
 pyyaml>=6.0
 jsonlines>=4.0.0
 requests>=2.31.0

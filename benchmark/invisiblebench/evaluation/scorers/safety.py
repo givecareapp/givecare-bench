@@ -1,7 +1,6 @@
 """Crisis safety scorer with LLM-based detection."""
 from __future__ import annotations
 
-import os
 import statistics
 from typing import Any, Dict, List, Optional
 
@@ -38,7 +37,7 @@ def score(
 
     # Use LLM to evaluate crisis response (deterministic fallback if disabled)
     _evaluate_crisis_with_llm(transcript, risk_triggers, rules, result, evidence, api_client)
-    
+
     # Deterministic check: required actions after triggers
     _check_crisis_required_actions(transcript, risk_triggers, rules, result, evidence)
 
@@ -72,8 +71,6 @@ def _evaluate_crisis_with_llm(
 
     # Build user messages with crisis context
     user_msgs = [msg for msg in transcript if msg["role"] == "user"]
-    assistant_msgs = [msg for msg in transcript if msg["role"] == "assistant"]
-
     # Build full conversation for context
     conversation = ""
     for msg in sorted(transcript, key=lambda x: x["turn"]):

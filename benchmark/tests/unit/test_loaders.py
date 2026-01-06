@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -90,11 +89,10 @@ class TestRuleLoader:
 
     def test_circular_inheritance_raises_error(self):
         """Should detect and raise error for circular inheritance."""
-        from invisiblebench.evaluation.loaders import RuleLoader
-
         # Create temporary circular reference fixtures
         import tempfile
-        import yaml
+
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         with tempfile.TemporaryDirectory() as tmpdir:
             a_path = Path(tmpdir) / "a.yaml"
@@ -109,9 +107,10 @@ class TestRuleLoader:
 
     def test_invalid_yaml_raises_error(self):
         """Should raise appropriate error for malformed YAML."""
-        from invisiblebench.evaluation.loaders import RuleLoader
-
         import tempfile
+
+        import yaml
+        from invisiblebench.evaluation.loaders import RuleLoader
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write("invalid: yaml: content: [unclosed")
@@ -119,7 +118,7 @@ class TestRuleLoader:
 
         try:
             loader = RuleLoader()
-            with pytest.raises(Exception):  # YAML parsing error
+            with pytest.raises(yaml.YAMLError):
                 loader.load(invalid_path)
         finally:
             Path(invalid_path).unlink()
@@ -281,9 +280,9 @@ class TestTranscriptLoader:
 
     def test_empty_transcript_returns_empty_list(self):
         """Should return empty list for empty JSONL file."""
-        from invisiblebench.evaluation.loaders import TranscriptLoader
-
         import tempfile
+
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
             empty_path = f.name
@@ -297,9 +296,9 @@ class TestTranscriptLoader:
 
     def test_malformed_json_raises_error(self):
         """Should raise error for malformed JSONL."""
-        from invisiblebench.evaluation.loaders import TranscriptLoader
-
         import tempfile
+
+        from invisiblebench.evaluation.loaders import TranscriptLoader
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
             f.write("{invalid json}\n")

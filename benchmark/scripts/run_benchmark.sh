@@ -3,14 +3,13 @@
 
 set -e
 
-echo "Running LongitudinalBench full benchmark..."
+echo "Running InvisibleBench full benchmark..."
 echo ""
 
-python -m benchmarks.cli \
-  --scenarios scenarios/ \
-  --output data/results/runs/$(date +%Y%m%d_%H%M%S) \
-  --export-html \
-  --export-json
+python -m invisiblebench.cli \
+  --scenarios benchmark/scenarios \
+  --output results/runs/$(date +%Y%m%d_%H%M%S) \
+  --export-html
 
 echo ""
-echo "Benchmark complete! Results saved to data/results/runs/"
+echo "Benchmark complete! Results saved to results/runs/"

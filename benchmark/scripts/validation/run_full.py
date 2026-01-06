@@ -17,20 +17,16 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Any
 import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
 
 from dotenv import load_dotenv
-load_dotenv()
-
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.api.client import ModelAPIClient
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-from invisiblebench.loaders.scenario_loader import ScenarioLoader
+
+load_dotenv()
 
 try:
     import jsonlines
@@ -653,14 +649,14 @@ def generate_heatmap(results: List[Dict], output_dir: Path):
         import matplotlib
         matplotlib.use('Agg')  # Non-interactive backend
         import matplotlib.pyplot as plt
-        import seaborn as sns
         import numpy as np
+        import seaborn as sns
     except ImportError:
         print("Warning: matplotlib/seaborn not installed, skipping heatmap")
         return
 
     # Prepare data for heatmap
-    models = sorted(set(r["model"] for r in results))
+    models = sorted({r["model"] for r in results})
     dimensions = ["memory", "trauma", "belonging", "compliance", "safety"]
     dim_labels = ["Memory", "Trauma", "Belonging", "Compliance", "Safety"]
 
@@ -747,7 +743,7 @@ def main():
             total_cost += estimate_cost(scenario["tier"], model)
 
     print(f"\n{'='*60}")
-    print(f"FULL BENCHMARK PLAN")
+    print("FULL BENCHMARK PLAN")
     print(f"{'='*60}")
     print(f"Models: {len(MODELS)}")
     for m in MODELS:
@@ -757,7 +753,7 @@ def main():
         print(f"  - {s['name']} (Tier {s['tier']})")
     print(f"\nTotal evaluations: {len(MODELS) * len(SCENARIOS)}")
     print(f"Estimated cost: ${total_cost:.2f}")
-    print(f"Estimated time: 60-90 minutes")
+    print("Estimated time: 60-90 minutes")
     print(f"Output directory: {args.output}")
     print(f"{'='*60}\n")
 
@@ -904,7 +900,7 @@ def main():
     successful = len([r for r in results if r['status'] != 'error'])
 
     print(f"\n{'='*60}")
-    print(f"FULL BENCHMARK COMPLETE")
+    print("FULL BENCHMARK COMPLETE")
     print(f"{'='*60}")
     print(f"Total evaluations: {len(results)}/{total}")
     print(f"Successful: {successful}")

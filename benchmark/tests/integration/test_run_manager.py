@@ -6,10 +6,6 @@ Following TDD methodology - these tests are written FIRST before implementation.
 from __future__ import annotations
 
 import json
-import pytest
-import tempfile
-from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch
 
 from invisiblebench.evaluation.run_manager import RunManager
@@ -396,7 +392,7 @@ class TestRunManagerInitialization:
         runs_dir = tmp_path / "new_runs"
         assert not runs_dir.exists()
 
-        manager = RunManager(runs_dir=str(runs_dir))
+        RunManager(runs_dir=str(runs_dir))
 
         assert runs_dir.exists()
         assert runs_dir.is_dir()
@@ -410,7 +406,7 @@ class TestRunManagerInitialization:
         test_file = runs_dir / "test.txt"
         test_file.write_text("existing")
 
-        manager = RunManager(runs_dir=str(runs_dir))
+        RunManager(runs_dir=str(runs_dir))
 
         assert test_file.exists()
         assert test_file.read_text() == "existing"

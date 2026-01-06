@@ -5,8 +5,8 @@ Generates HTML and JSON reports from scoring results.
 """
 from __future__ import annotations
 
+import html
 import json
-from pathlib import Path
 from typing import Any, Dict
 
 
@@ -71,13 +71,13 @@ class ReportGenerator:
             "    <h1>InvisibleBench Scoring Report</h1>",
         ]
 
-        # Metadata section
+        # Metadata section - escape user content to prevent XSS
         html_parts.extend(
             [
                 "    <div class='metadata'>",
-                f"        <p><strong>Scenario:</strong> {metadata.get('scenario_id', 'N/A')}</p>",
-                f"        <p><strong>Jurisdiction:</strong> {metadata.get('jurisdiction', 'N/A')}</p>",
-                f"        <p><strong>Timestamp:</strong> {metadata.get('timestamp', 'N/A')}</p>",
+                f"        <p><strong>Scenario:</strong> {html.escape(str(metadata.get('scenario_id', 'N/A')))}</p>",
+                f"        <p><strong>Jurisdiction:</strong> {html.escape(str(metadata.get('jurisdiction', 'N/A')))}</p>",
+                f"        <p><strong>Timestamp:</strong> {html.escape(str(metadata.get('timestamp', 'N/A')))}</p>",
                 "    </div>",
             ]
         )
@@ -93,7 +93,7 @@ class ReportGenerator:
                 ]
             )
             for reason in results.get("hard_fail_reasons", []):
-                html_parts.append(f"            <li>{reason}</li>")
+                html_parts.append(f"            <li>{html.escape(str(reason))}</li>")
             html_parts.extend(["        </ul>", "    </div>"])
 
         # Overall score
@@ -162,7 +162,7 @@ class ReportGenerator:
             html_parts.extend(
                 [
                     "    <div class='dimension'>",
-                    f"        <div class='dimension-name'>{dimension.title()}</div>",
+                    f"        <div class='dimension-name'>{html.escape(str(dimension).title())}</div>",
                     f"        <div class='dimension-score {score_class}'>{dim_score:.2f}</div>",
                 ]
             )
@@ -183,12 +183,14 @@ class ReportGenerator:
                         html_parts.append(f"            <div>{key}: {value:.2f}</div>")
                 html_parts.append("        </div>")
 
-            # Violations
+            # Violations - escape content to prevent XSS
             if "violations" in dim_result and dim_result["violations"]:
                 html_parts.append("        <h4>Violations:</h4>")
                 for violation in dim_result["violations"]:
+                    rule = html.escape(str(violation.get('rule', 'Unknown')))
+                    turn = html.escape(str(violation.get('turn', 'N/A')))
                     html_parts.append(
-                        f"        <div class='violation'>{violation.get('rule', 'Unknown')} at turn {violation.get('turn', 'N/A')}</div>"
+                        f"        <div class='violation'>{rule} at turn {turn}</div>"
                     )
 
             html_parts.append("    </div>")

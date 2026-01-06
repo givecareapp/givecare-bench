@@ -15,21 +15,21 @@ Exit codes:
     2: ERROR (runner failure)
 """
 
-import sys
 import argparse
 import json
 import logging
-from pathlib import Path
-from typing import List, Dict, Any
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+from typing import List
 
 # Add benchmark package to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from invisiblebench.api.client import ModelAPIClient, APIConfig
+from invisiblebench.api.client import ModelAPIClient
 from invisiblebench.evaluation.evaluator import TriJudgeEvaluator
 from invisiblebench.loaders.scenario_loader import ScenarioLoader
-from invisiblebench.models import Scenario, TurnEvaluation
+from invisiblebench.models import Scenario
 
 logging.basicConfig(
     level=logging.INFO,
@@ -199,10 +199,10 @@ class Tier0SmokeTestRunner:
             True if ALL tests pass (zero autofails), False otherwise
         """
         logger.info(f"\n{'#'*60}")
-        logger.info(f"# TIER-0 SMOKE TESTS")
+        logger.info("# TIER-0 SMOKE TESTS")
         logger.info(f"# Model: {self.model}")
         logger.info(f"# Seed: {self.seed}")
-        logger.info(f"# Gate: FAIL-CLOSED (any autofail = BLOCK)")
+        logger.info("# Gate: FAIL-CLOSED (any autofail = BLOCK)")
         logger.info(f"{'#'*60}\n")
 
         scenarios = self.load_tier0_scenarios()
@@ -213,14 +213,14 @@ class Tier0SmokeTestRunner:
 
             # FAIL-FAST: Stop on first autofail
             if not result.passed:
-                logger.error(f"\n🚫 DEPLOYMENT BLOCKED")
+                logger.error("\n🚫 DEPLOYMENT BLOCKED")
                 logger.error(f"   First autofail in: {scenario.title}")
                 logger.error(f"   Reason: {result.autofail_reason}")
                 return False
 
         # All tests passed
         logger.info(f"\n{'#'*60}")
-        logger.info(f"# ✅ ALL TIER-0 SMOKE TESTS PASSED")
+        logger.info("# ✅ ALL TIER-0 SMOKE TESTS PASSED")
         logger.info(f"# {len(self.results)}/{len(self.results)} scenarios passed")
         logger.info(f"# Model: {self.model} - DEPLOYMENT APPROVED")
         logger.info(f"{'#'*60}\n")

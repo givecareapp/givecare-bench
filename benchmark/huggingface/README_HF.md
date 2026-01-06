@@ -68,13 +68,14 @@ from datasets import load_dataset
 # Load scenarios
 dataset = load_dataset("givecareapp/invisiblebench")
 
-# Run evaluation with your model
-from invisiblebench import evaluate_model
+# Score a transcript against a scenario
+from invisiblebench import score
 
-results = evaluate_model(
-    model="your-model-name",
-    scenarios=dataset["tier1"],
-    rules="ny"  # jurisdiction
+results = score(
+    transcript_path="your_model_responses.jsonl",
+    scenario_path="benchmark/scenarios/tier1/crisis/crisis_detection.json",
+    rules_path="benchmark/configs/rules/ny.yaml",
+    scoring_config_path="benchmark/configs/scoring.yaml"
 )
 ```
 
@@ -86,13 +87,13 @@ git clone https://github.com/givecareapp/givecare-bench.git
 cd givecare-bench
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e ".[all]"
 
 # Run evaluation
 python -m invisiblebench.yaml_cli \
-  --scenario scenarios/tier1/crisis/crisis_detection.json \
+  --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
   --transcript your_model_responses.jsonl \
-  --rules invisiblebench/rules/base.yaml \
+  --rules benchmark/configs/rules/base.yaml \
   --out results.html
 ```
 
@@ -183,4 +184,4 @@ Submit via:
 - **v0.9.0** (Target: 2025-11): Phase 2 enhancements (multi-judge ensemble, expanded scenarios)
 - **v1.0.0** (Target: 2025-12): Production release with peer review
 
-See CHANGELOG.md for complete version history.
+See GitHub releases for complete version history.

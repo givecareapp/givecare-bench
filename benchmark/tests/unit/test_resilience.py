@@ -10,7 +10,8 @@ import json
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
+
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -529,7 +530,7 @@ class TestStatusTransitions:
             with patch.object(orchestrator, 'score', side_effect=capture_status):
                 try:
                     orchestrator.score(transcript_path, scenario_path, rules_path)
-                except:
+                except Exception:
                     pass
 
     def test_status_running_to_completed(self):
@@ -709,9 +710,10 @@ class TestEdgeCases:
             state_dir = Path(tmpdir) / "nonexistent" / "runs"
             scoring_path = SCORING
 
-            orchestrator = ScoringOrchestrator(
+            ScoringOrchestrator(
                 scoring_config_path=scoring_path,
-                runs_dir=str(state_dir), enable_state_persistence=True
+                runs_dir=str(state_dir),
+                enable_state_persistence=True,
             )
 
             # Directory should be created
@@ -738,9 +740,9 @@ class TestErrorMessages:
                     SCENARIO,
                     RULES_BASE,
                     resume=True,
-                    resume_file=str(state_file)
+                    resume_file=str(state_file),
                 )
-                assert False, "Should have raised error"
+                pytest.fail("Should have raised error")
             except ValueError as e:
                 # Error message should be actionable
                 error_msg = str(e).lower()

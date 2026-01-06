@@ -10,10 +10,10 @@ Submit your InvisibleBench evaluation results to the public leaderboard!
 # Install InvisibleBench
 git clone https://github.com/givecareapp/givecare-bench.git
 cd givecare-bench
-pip install -r requirements.txt
+pip install -e ".[all]"
 
 # Run your model evaluation
-python scripts/run_minimal_validation.py \
+python benchmark/scripts/validation/run_minimal.py \
   --model your-model-name \
   --output results/your-submission
 ```
@@ -23,21 +23,29 @@ python scripts/run_minimal_validation.py \
 Copy and complete the submission template:
 
 ```bash
-cp community_results/TEMPLATE.json community_results/your-model-name.json
+cp benchmark/community/TEMPLATE.json \
+  benchmark/community/submissions/your-model-name.json
 ```
 
 Fill in all fields with your evaluation results.
 
+Validate the submission before opening a PR:
+
+```bash
+python benchmark/scripts/community/validate_submission.py \
+  benchmark/community/submissions/your-model-name.json
+```
+
 ### Step 3: Submit Pull Request
 
 1. Fork this repository
-2. Add your results file: `community_results/your-model-name.json`
+2. Add your results file: `benchmark/community/submissions/your-model-name.json`
 3. Submit PR with title: "Add results for [Your Model]"
 4. We'll review and merge within 48 hours!
 
 ## Leaderboard
 
-Live rankings: https://givecareapp.github.io/givecare-bench/leaderboard.html
+Live rankings: https://bench.givecareapp.com/leaderboard.html
 
 ## Submission Rules
 

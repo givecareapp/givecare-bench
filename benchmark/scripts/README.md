@@ -4,7 +4,7 @@ Utility scripts for running benchmarks, generating leaderboards, and validating 
 
 ## Scripts
 
-### `run_minimal_validation.py`
+### `run_minimal.py`
 
 **Purpose**: Run minimal validation for paper results (3 models × 3 scenarios = 9 evaluations)
 
@@ -28,16 +28,16 @@ export OPENAI_API_KEY="your_openai_key_here"
 export OPENROUTER_API_KEY="your_openrouter_key_here"
 
 # Install additional dependencies
-pip install -r scripts/requirements.txt
+pip install -r benchmark/scripts/requirements.txt
 
 # Dry run (estimate costs without running)
-python scripts/run_minimal_validation.py --dry-run
+python benchmark/scripts/validation/run_minimal.py --dry-run
 
 # Run full validation
-python scripts/run_minimal_validation.py --output results/minimal_validation/
+python benchmark/scripts/validation/run_minimal.py --output results/minimal_validation/
 
 # Skip transcript generation (use existing transcripts)
-python scripts/run_minimal_validation.py --skip-transcripts
+python benchmark/scripts/validation/run_minimal.py --skip-transcripts
 ```
 
 **Output Files**:
@@ -98,7 +98,7 @@ Note: Costs are estimates. Actual costs may vary based on response length and AP
 **Usage**:
 
 ```bash
-python scripts/generate_leaderboard.py \
+python benchmark/scripts/community/generate_leaderboard.py \
   --results results/ \
   --output docs/leaderboard.html
 ```
@@ -112,7 +112,7 @@ python scripts/generate_leaderboard.py \
 **Usage**:
 
 ```bash
-bash scripts/run_benchmark.sh
+bash benchmark/scripts/run_benchmark.sh
 ```
 
 ---
@@ -154,17 +154,17 @@ export ANTHROPIC_API_KEY="..."   # For direct Anthropic access
 
 **Solution**: Install script dependencies:
 ```bash
-pip install -r scripts/requirements.txt
+pip install -r benchmark/scripts/requirements.txt
 ```
 
 ### Scenario Not Found
 
-**Error**: `Scenario not found: scenarios/...`
+**Error**: `Scenario not found: benchmark/scenarios/...`
 
 **Solution**: Ensure you're running from the repository root:
 ```bash
 cd /path/to/givecare-bench
-python scripts/run_minimal_validation.py
+python benchmark/scripts/validation/run_minimal.py
 ```
 
 ### Plotting Errors
@@ -174,7 +174,7 @@ python scripts/run_minimal_validation.py
 **Solution**: Script uses non-interactive backend (`Agg`). If issues persist:
 ```bash
 export MPLBACKEND=Agg
-python scripts/run_minimal_validation.py
+python benchmark/scripts/validation/run_minimal.py
 ```
 
 ---
@@ -183,7 +183,7 @@ python scripts/run_minimal_validation.py
 
 ### Adding New Models
 
-Edit `MODELS` list in `run_minimal_validation.py`:
+Edit `MODELS` list in `benchmark/scripts/validation/run_minimal.py`:
 
 ```python
 MODELS = [
@@ -200,13 +200,13 @@ MODELS = [
 
 ### Adding New Scenarios
 
-Edit `SCENARIOS` list in `run_minimal_validation.py`:
+Edit `SCENARIOS` list in `benchmark/scripts/validation/run_minimal.py`:
 
 ```python
 SCENARIOS = [
     {
         "tier": 1,  # 1, 2, or 3
-        "path": "scenarios/path/to/scenario.json",
+        "path": "benchmark/scenarios/path/to/scenario.json",
         "name": "Display Name",
         "yaml_path": None  # Optional YAML version
     },
@@ -216,7 +216,7 @@ SCENARIOS = [
 
 ### Customizing Evaluation Dimensions
 
-Edit scoring weights in `src/invisiblebench/scoring_config.yaml`:
+Edit scoring weights in `benchmark/configs/scoring.yaml`:
 
 ```yaml
 weights:
@@ -225,6 +225,14 @@ weights:
   belonging: 0.20
   compliance: 0.20
   safety: 0.10
+```
+
+### Linting Docs and Commands
+
+Run the doc command lint to catch stale paths before updating documentation:
+
+```bash
+python benchmark/scripts/validation/lint_doc_commands.py
 ```
 
 ---

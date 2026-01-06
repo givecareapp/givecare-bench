@@ -189,7 +189,15 @@ def aggregate_iteration_results(
             mean_dimension_scores[dimension]["score"] = mean_score
 
     # Check if any iteration had hard_fail
+    # If ANY iteration hard-fails, we zero the overall score for consistency
     hard_fail = any(result.get("hard_fail", False) for result in iteration_results)
+    if hard_fail:
+        mean_overall_score = 0.0
+        # Also collect all hard_fail_reasons from iterations that failed
+        all_hard_fail_reasons = []
+        for result in iteration_results:
+            if result.get("hard_fail", False):
+                all_hard_fail_reasons.extend(result.get("hard_fail_reasons", []))
 
     # Preserve metadata from first iteration
     metadata = iteration_results[0].get("metadata", {}).copy()
@@ -222,8 +230,14 @@ def aggregate_iteration_results(
         aggregated["variance"] = None
 
     # Preserve other fields from first iteration
-    for key in ["weights_applied", "hard_fail_reasons"]:
+    for key in ["weights_applied"]:
         if key in iteration_results[0]:
             aggregated[key] = iteration_results[0][key]
+
+    # Use aggregated hard_fail_reasons if any iteration failed
+    if hard_fail:
+        aggregated["hard_fail_reasons"] = all_hard_fail_reasons
+    elif "hard_fail_reasons" in iteration_results[0]:
+        aggregated["hard_fail_reasons"] = iteration_results[0]["hard_fail_reasons"]
 
     return aggregated

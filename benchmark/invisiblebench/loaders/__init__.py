@@ -1,7 +1,8 @@
 """Data loaders for scenarios and configurations."""
 
 from .scenario_loader import ScenarioLoader
-from .yaml_loader import RuleLoader, ScenarioLoader as YamlScenarioLoader, TranscriptLoader, ScoringConfigLoader
+from .yaml_loader import RuleLoader, ScoringConfigLoader, TranscriptLoader
+from .yaml_loader import ScenarioLoader as YamlScenarioLoader
 
 # Backwards-compatible exports
 loaders = {

@@ -13,8 +13,7 @@ This guide will walk you through running the minimal validation script for Invis
 
 3. **Dependencies**: Install from repository root:
    ```bash
-   pip install -r requirements.txt
-   pip install -r scripts/requirements.txt
+   pip install -e ".[all]"
    ```
 
 ## Step-by-Step Guide
@@ -43,7 +42,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 Estimate costs without running evaluations:
 
 ```bash
-python scripts/run_minimal_validation.py --dry-run
+python benchmark/scripts/validation/run_minimal.py --dry-run
 ```
 
 Expected output:
@@ -71,7 +70,7 @@ Output directory: results/minimal_validation
 From the repository root:
 
 ```bash
-python scripts/run_minimal_validation.py --output results/minimal_validation/
+python benchmark/scripts/validation/run_minimal.py --output results/minimal_validation/
 ```
 
 When prompted:
@@ -258,7 +257,7 @@ export OPENROUTER_API_KEY="sk-or-v1-..."
 1. Wait 60 seconds
 2. Resume with `--skip-transcripts` flag:
    ```bash
-   python scripts/run_minimal_validation.py --skip-transcripts
+   python benchmark/scripts/validation/run_minimal.py --skip-transcripts
    ```
 
 ### Issue: Import errors
@@ -267,17 +266,17 @@ export OPENROUTER_API_KEY="sk-or-v1-..."
 
 **Solution**:
 ```bash
-pip install -r scripts/requirements.txt
+pip install -r benchmark/scripts/requirements.txt
 ```
 
 ### Issue: Scenario not found
 
-**Error**: `Scenario not found: scenarios/...`
+**Error**: `Scenario not found: benchmark/scenarios/...`
 
 **Solution**: Run from repository root:
 ```bash
 cd /path/to/givecare-bench
-python scripts/run_minimal_validation.py
+python benchmark/scripts/validation/run_minimal.py
 ```
 
 ### Issue: Matplotlib backend error
@@ -285,7 +284,7 @@ python scripts/run_minimal_validation.py
 **Solution**:
 ```bash
 export MPLBACKEND=Agg
-python scripts/run_minimal_validation.py
+python benchmark/scripts/validation/run_minimal.py
 ```
 
 ## Advanced Usage
@@ -295,7 +294,7 @@ python scripts/run_minimal_validation.py
 If the script was interrupted, resume using existing transcripts:
 
 ```bash
-python scripts/run_minimal_validation.py \
+python benchmark/scripts/validation/run_minimal.py \
   --output results/minimal_validation/ \
   --skip-transcripts
 ```
@@ -303,13 +302,13 @@ python scripts/run_minimal_validation.py \
 ### Custom Output Directory
 
 ```bash
-python scripts/run_minimal_validation.py \
+python benchmark/scripts/validation/run_minimal.py \
   --output results/paper_validation_2025-01-15/
 ```
 
 ### Testing Single Model
 
-Edit `MODELS` list in `run_minimal_validation.py`:
+Edit `MODELS` list in `run_minimal.py`:
 
 ```python
 MODELS = [
@@ -332,7 +331,7 @@ Edit `SCENARIOS` list:
 SCENARIOS = [
     {
         "tier": 1,
-        "path": "scenarios/custom/my_scenario.json",
+        "path": "benchmark/scenarios/custom/my_scenario.json",
         "name": "My Custom Scenario",
         "yaml_path": None
     }
@@ -365,9 +364,9 @@ After validation, run full benchmark with 10 models:
 
 ```bash
 python -m invisiblebench.cli \
-  --scenarios scenarios/ \
+  --scenarios benchmark/scenarios/ \
   --output results/full_benchmark/ \
-  --models all
+  --export-html
 ```
 
 See `OPERATIONS.md` for details.

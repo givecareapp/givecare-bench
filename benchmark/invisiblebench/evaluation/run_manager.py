@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -63,7 +62,11 @@ class RunManager:
         sanitized = re.sub(r'[^a-zA-Z0-9_.-]+', '_', model_name)
 
         # Generate or use provided run_id prefix
-        prefix = run_id if run_id else uuid.uuid4().hex[:8]
+        # SECURITY: Sanitize run_id to prevent path traversal attacks
+        if run_id:
+            prefix = re.sub(r'[^a-zA-Z0-9_.-]+', '_', run_id)
+        else:
+            prefix = uuid.uuid4().hex[:8]
 
         return f"{prefix}_{sanitized}"
 
@@ -98,7 +101,7 @@ class RunManager:
             temp_path.rename(file_path)
             return True
 
-        except (OSError, IOError, PermissionError) as e:
+        except (OSError, IOError, PermissionError):
             # Clean up temp file if it exists
             try:
                 if temp_path.exists():

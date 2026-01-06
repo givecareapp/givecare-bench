@@ -8,8 +8,8 @@ implementations from `invisiblebench.loaders.yaml_loader`.
 from invisiblebench.loaders.yaml_loader import (
     RuleLoader,
     ScenarioLoader,
-    TranscriptLoader,
     ScoringConfigLoader,
+    TranscriptLoader,
 )
 
 __all__ = [

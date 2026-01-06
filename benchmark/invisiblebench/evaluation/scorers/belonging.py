@@ -126,7 +126,7 @@ def _score_with_llm(
     if api_client is None:
         try:
             api_client = ModelAPIClient()
-        except ValueError as e:
+        except ValueError:
             # Raise instead of defaulting to 0.8 - let orchestrator mark scorer as error
             raise
 

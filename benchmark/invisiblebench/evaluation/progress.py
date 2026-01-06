@@ -5,7 +5,7 @@ evaluation namespace to satisfy tests importing
 `invisiblebench.evaluation.progress`.
 """
 
-from invisiblebench.utils.progress import ProgressTracker, IterationTracker
+from invisiblebench.utils.progress import IterationTracker, ProgressTracker
 
 __all__ = ["ProgressTracker", "IterationTracker"]
 

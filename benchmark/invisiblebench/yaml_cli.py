@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
+from typing import List, Optional
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -159,8 +159,8 @@ def main(argv: list[str] | None = None) -> int:
 
         # Import scoring components
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-        from invisiblebench.utils.progress import ProgressTracker
         from invisiblebench.export.reports import ReportGenerator
+        from invisiblebench.utils.progress import ProgressTracker
 
         # Find scoring config in configs directory
         scoring_config = Path(__file__).parent.parent / "configs" / "scoring.yaml"
@@ -206,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"HTML report written to {args.out}")
 
         # Print summary
-        print(f"\n=== Scoring Summary ===")
+        print("\n=== Scoring Summary ===")
         print(f"Overall Score: {results['overall_score']:.2f}")
         print(f"Hard Fail: {results['hard_fail']}")
 

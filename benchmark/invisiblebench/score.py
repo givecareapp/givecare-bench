@@ -23,7 +23,6 @@ from typing import Any, Dict, Optional
 
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
-
 # Default paths relative to package
 _PACKAGE_ROOT = Path(__file__).parent.parent.parent
 _DEFAULT_SCORING_CONFIG = _PACKAGE_ROOT / "configs" / "scoring.yaml"

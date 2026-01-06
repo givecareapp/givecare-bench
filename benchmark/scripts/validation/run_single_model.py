@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Run benchmark with ONLY ONE model to test scoring variance."""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from invisiblebench.evaluation.run_manager import RunManager
 from invisiblebench.api.client import ModelAPIClient
+from invisiblebench.evaluation.run_manager import RunManager
+
 
 def main():
     # Single model, single scenario test
@@ -34,7 +36,7 @@ def main():
     print("RESULTS")
     print("=" * 60)
     print(f"Overall Score: {result['overall_score']:.3f}")
-    print(f"\nDimension Scores:")
+    print("\nDimension Scores:")
     for dim, score in result['dimensions'].items():
         print(f"  {dim}: {score:.3f}")
     print(f"\nHard Fail: {result['hard_fail']}")

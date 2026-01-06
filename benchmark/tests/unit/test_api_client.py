@@ -4,6 +4,7 @@ Quick API test to verify OpenRouter/OpenAI connectivity.
 Run this before the full benchmark to ensure API keys work.
 """
 import os
+
 from dotenv import load_dotenv
 
 # Load environment variables

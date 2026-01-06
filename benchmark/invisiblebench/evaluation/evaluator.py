@@ -1,18 +1,22 @@
 """
 Tri-judge evaluation pipeline for scoring model responses.
 """
-import re
 import logging
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+import re
+from typing import Any, Dict, List, Optional
 
-from invisiblebench.models import (
-    Scenario, Turn, Session, DimensionType, JudgeEvaluation,
-    TurnEvaluation, ModelResponse, ScenarioResult
-)
 from invisiblebench.api import ModelAPIClient
 from invisiblebench.api.client import JudgeClient
 from invisiblebench.evaluation.judge_prompts import JUDGE_PROMPTS
+from invisiblebench.models import (
+    DimensionType,
+    JudgeEvaluation,
+    ModelResponse,
+    Scenario,
+    ScenarioResult,
+    Turn,
+    TurnEvaluation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +91,7 @@ class JudgeResponseParser:
                         logger.warning(warning)
 
                     result["scores"][dimension] = score
-                except (ValueError, IndexError) as e:
+                except (ValueError, IndexError, TypeError) as e:
                     warning = f"[{judge_id}] Failed to parse {dimension.value}: {str(e)}"
                     result["parse_warnings"].append(warning)
                     logger.warning(warning)

@@ -11,12 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-from invisiblebench.loaders.yaml_loader import (
-    RuleLoader,
-    ScenarioLoader,
-    ScoringConfigLoader,
-    TranscriptLoader,
-)
+from invisiblebench.api import ModelAPIClient
 from invisiblebench.evaluation.resilience import (
     create_error_result,
     determine_overall_status,
@@ -25,7 +20,12 @@ from invisiblebench.evaluation.resilience import (
 from invisiblebench.evaluation.run_manager import RunManager
 from invisiblebench.evaluation.scorers import belonging, compliance, memory, safety, trauma
 from invisiblebench.evaluation.variance import aggregate_iteration_results
-from invisiblebench.api import ModelAPIClient
+from invisiblebench.loaders.yaml_loader import (
+    RuleLoader,
+    ScenarioLoader,
+    ScoringConfigLoader,
+    TranscriptLoader,
+)
 
 logger = logging.getLogger(__name__)
 

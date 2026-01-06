@@ -11,11 +11,11 @@ Usage:
       --output results/minimal_validation/leaderboard_ready/
 """
 
-import json
 import argparse
-from pathlib import Path
+import json
 from datetime import datetime
-from typing import List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List
 
 
 def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -59,7 +59,7 @@ def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str
         models[model_id]['total_cost'] += result.get('cost', 0.0)
 
     # Compute averages
-    for model_id, model_data in models.items():
+    for model_data in models.values():
         # Average dimension scores
         for dim in model_data['dimension_scores']:
             scores = model_data['dimension_scores'][dim]
@@ -117,10 +117,10 @@ def main():
 
         print(f"✓ {model_data['model_name']}: {output_file}")
 
-    print(f"\nReady for leaderboard generation!")
-    print(f"Run: python benchmark/scripts/community/generate_leaderboard.py \\")
+    print("\nReady for leaderboard generation!")
+    print("Run: python benchmark/scripts/community/generate_leaderboard.py \\")
     print(f"       --input {output_dir} \\")
-    print(f"       --output benchmark/website/data/")
+    print("       --output benchmark/website/data/")
 
 
 if __name__ == '__main__':

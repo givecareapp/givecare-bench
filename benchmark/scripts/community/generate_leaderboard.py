@@ -6,12 +6,11 @@ Usage:
     python tools/generate_leaderboard_data.py --input benchmarks/canonical_results/ --output website/data/
 """
 
-import json
 import argparse
-from pathlib import Path
-from typing import List, Dict
+import json
 from datetime import datetime
-import hashlib
+from pathlib import Path
+from typing import Dict, List
 
 
 def load_canonical_results(results_dir: Path) -> List[Dict]:
@@ -201,12 +200,12 @@ def main():
     print("LEADERBOARD SUMMARY")
     print("="*60)
     print(f"Total Models: {len(results)}")
-    print(f"\nTop 3 Models:")
+    print("\nTop 3 Models:")
     for i, result in enumerate(leaderboard_data["overall_leaderboard"][:3], 1):
         print(f"  {i}. {result['model']}: {result['overall_score']:.1f}/20.0 ({result['overall_score']/20*100:.1f}%)")
 
     if leaderboard_data["autofail_tracking"]:
-        print(f"\n⚠️  Models with Autofails:")
+        print("\n⚠️  Models with Autofails:")
         for item in leaderboard_data["autofail_tracking"][:3]:
             print(f"  - {item['model']}: {item['autofail_count']} incidents")
 

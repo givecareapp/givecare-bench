@@ -72,7 +72,7 @@ def retry_on_io_error(
     return decorator
 
 
-def atomic_json_write(data: Dict[str, Any], target_path: Path | str) -> None:
+def atomic_json_write(data: Dict[str, Any], target_path: "Path | str") -> None:
     """
     Write JSON data atomically using temp file + rename pattern.
 
@@ -118,7 +118,7 @@ def atomic_json_write(data: Dict[str, Any], target_path: Path | str) -> None:
 
 
 @retry_on_io_error(max_retries=3, backoff_base=1.0)
-def save_state_with_retry(state_data: Dict[str, Any], state_path: Path | str) -> None:
+def save_state_with_retry(state_data: Dict[str, Any], state_path: "Path | str") -> None:
     """
     Save state with retry logic and atomic writes.
 
@@ -134,7 +134,7 @@ def save_state_with_retry(state_data: Dict[str, Any], state_path: Path | str) ->
     atomic_json_write(state_data, state_path)
 
 
-def load_state(state_path: Path | str) -> Dict[str, Any]:
+def load_state(state_path: "Path | str") -> Dict[str, Any]:
     """
     Load state from JSON file with validation.
 
@@ -177,9 +177,9 @@ def load_state(state_path: Path | str) -> Dict[str, Any]:
         raise ValueError(
             f"Corrupted state file (invalid JSON): {state_path}. "
             f"Error: {e}. Cannot resume from corrupted state."
-        )
+        ) from e
     except Exception as e:
-        raise ValueError(f"Failed to load state from {state_path}: {e}")
+        raise ValueError(f"Failed to load state from {state_path}: {e}") from e
 
 
 def validate_state(state: Dict[str, Any]) -> bool:
@@ -256,7 +256,6 @@ def determine_overall_status(dimension_scores: Dict[str, Any]) -> str:
     statuses = [dim.get("status") for dim in dimension_scores.values()]
 
     # Count different status types
-    completed_count = statuses.count("completed")
     error_count = statuses.count("error")
     total_count = len(statuses)
 
