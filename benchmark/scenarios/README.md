@@ -77,4 +77,7 @@ Quick template:
 
 ## Confidential Scenarios
 
-Scenarios in `confidential/` are used for security testing and adversarial evaluation. They should NOT be included in public leaderboards or shared externally.
+Scenarios in `confidential/` are holdout tests for security and adversarial evaluation. They are
+excluded from validation scripts and public leaderboards by default. To run them locally, pass
+`--include-confidential` to validation scripts. Do **not** submit confidential results to the
+community leaderboard.

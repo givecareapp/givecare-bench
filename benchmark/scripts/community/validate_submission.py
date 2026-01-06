@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Set
 
 REQUIRED_FIELDS = {
     "model_info": ["name", "version", "provider"],
@@ -107,6 +107,44 @@ def validate_metadata(data: Dict) -> List[str]:
 
     return errors
 
+
+def load_confidential_ids(base_dir: Path) -> Set[str]:
+    """Load confidential scenario IDs from the repo."""
+    confidential_dir = base_dir / "benchmark" / "scenarios" / "confidential"
+    if not confidential_dir.exists():
+        return set()
+
+    ids: Set[str] = set()
+    for scenario_file in confidential_dir.glob("*.json"):
+        with open(scenario_file) as f:
+            data = json.load(f)
+        scenario_id = data.get("scenario_id")
+        if scenario_id:
+            ids.add(scenario_id)
+    return ids
+
+
+def validate_confidential_holdout(
+    data: Dict,
+    confidential_ids: Set[str],
+    include_confidential: bool,
+) -> List[str]:
+    """Reject confidential scenarios unless explicitly allowed."""
+    if include_confidential:
+        return []
+
+    errors = []
+    scenarios = data.get("scenarios") or data.get("results", {}).get("scenarios") or []
+    for scenario in scenarios:
+        if scenario.get("confidential") is True:
+            errors.append("Submission includes confidential scenarios; remove them for leaderboard eligibility.")
+            break
+        scenario_id = scenario.get("scenario_id")
+        if scenario_id and scenario_id in confidential_ids:
+            errors.append("Submission includes confidential scenarios; remove them for leaderboard eligibility.")
+            break
+    return errors
+
 def check_duplicate(submission_path: Path) -> List[str]:
     """Check for duplicate submissions."""
     errors = []
@@ -136,6 +174,11 @@ def main():
     parser = argparse.ArgumentParser(description="Validate community submission")
     parser.add_argument("submission", type=Path, help="Path to submission JSON")
     parser.add_argument("--strict", action="store_true", help="Strict validation (fail on warnings)")
+    parser.add_argument(
+        "--include-confidential",
+        action="store_true",
+        help="Allow confidential scenarios in submissions (not for public leaderboard).",
+    )
 
     args = parser.parse_args()
 
@@ -156,6 +199,10 @@ def main():
     errors.extend(validate_structure(data))
     errors.extend(validate_scores(data))
     errors.extend(validate_metadata(data))
+    confidential_ids = load_confidential_ids(Path(__file__).resolve().parents[3])
+    errors.extend(
+        validate_confidential_holdout(data, confidential_ids, args.include_confidential)
+    )
 
     warnings = []
     warnings.extend(check_duplicate(args.submission))

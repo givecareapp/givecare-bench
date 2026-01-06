@@ -108,8 +108,8 @@ MODELS = [
     }
 ]
 
-# All scenarios in the benchmark
-SCENARIOS = [
+# All public scenarios in the benchmark
+SCENARIOS_PUBLIC = [
     # Tier 1 scenarios (3-5 turns)
     {
         "tier": 1,
@@ -172,8 +172,11 @@ SCENARIOS = [
         "path": "benchmark/scenarios/tier3/longitudinal_trust.json",
         "name": "Longitudinal Trust",
         "yaml_path": None
-    },
-    # Confidential scenarios (adversarial edge cases)
+    }
+]
+
+# Confidential scenarios (adversarial edge cases)
+SCENARIOS_CONFIDENTIAL = [
     {
         "tier": 1,
         "path": "benchmark/scenarios/confidential/ai_disclosure_test.json",
@@ -197,6 +200,23 @@ SCENARIOS = [
 # Default rules and scoring config (relative to project root)
 RULES_PATH = "benchmark/configs/rules/base.yaml"
 SCORING_CONFIG = "benchmark/configs/scoring.yaml"
+
+
+def select_scenarios(include_confidential: bool) -> List[Dict]:
+    """Return scenario list with optional confidential holdout set."""
+    scenarios: List[Dict] = []
+    for scenario in SCENARIOS_PUBLIC:
+        entry = dict(scenario)
+        entry["confidential"] = False
+        scenarios.append(entry)
+
+    if include_confidential:
+        for scenario in SCENARIOS_CONFIDENTIAL:
+            entry = dict(scenario)
+            entry["confidential"] = True
+            scenarios.append(entry)
+
+    return scenarios
 
 
 def estimate_cost(scenario_tier: int, model: Dict) -> float:
@@ -540,6 +560,7 @@ def run_evaluation(
             "model_id": model["id"],
             "scenario": scenario_info["name"],
             "scenario_id": scenario["scenario_id"],
+            "confidential": scenario_info.get("confidential", False),
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
             "dimensions": dimension_scores,
@@ -560,6 +581,7 @@ def run_evaluation(
             "model_id": model["id"],
             "scenario": scenario_info["name"],
             "scenario_id": scenario["scenario_id"],
+            "confidential": scenario_info.get("confidential", False),
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
             "dimensions": {
@@ -717,8 +739,17 @@ def main():
         action="store_true",
         help="Auto-confirm (skip interactive prompt)"
     )
+    parser.add_argument(
+        "--include-confidential",
+        action="store_true",
+        help="Include confidential holdout scenarios (not for public leaderboard).",
+    )
 
     args = parser.parse_args()
+
+    scenarios = select_scenarios(args.include_confidential)
+    if args.include_confidential:
+        print("WARNING: Including confidential scenarios. Do not submit these results to the leaderboard.")
 
     # Create output directory
     args.output.mkdir(parents=True, exist_ok=True)
@@ -740,7 +771,7 @@ def main():
     # Estimate total cost
     total_cost = 0
     for model in MODELS:
-        for scenario in SCENARIOS:
+        for scenario in scenarios:
             total_cost += estimate_cost(scenario["tier"], model)
 
     print(f"\n{'='*60}")
@@ -749,10 +780,10 @@ def main():
     print(f"Models: {len(MODELS)}")
     for m in MODELS:
         print(f"  - {m['name']} ({m['id']})")
-    print(f"\nScenarios: {len(SCENARIOS)}")
-    for s in SCENARIOS:
+    print(f"\nScenarios: {len(scenarios)}")
+    for s in scenarios:
         print(f"  - {s['name']} (Tier {s['tier']})")
-    print(f"\nTotal evaluations: {len(MODELS) * len(SCENARIOS)}")
+    print(f"\nTotal evaluations: {len(MODELS) * len(scenarios)}")
     print(f"Estimated cost: ${total_cost:.2f}")
     print("Estimated time: 60-90 minutes")
     print(f"Output directory: {args.output}")
@@ -811,15 +842,15 @@ def main():
         use_tqdm = False
         print("Note: Install tqdm for progress bars (pip install tqdm)")
 
-    total = len(MODELS) * len(SCENARIOS)
+    total = len(MODELS) * len(scenarios)
     start_time = time.time()
 
     if use_tqdm:
         pbar = tqdm(total=total, desc="Running evaluations")
 
     for model_idx, model in enumerate(MODELS):
-        for scenario_idx, scenario_info in enumerate(SCENARIOS):
-            eval_num = model_idx * len(SCENARIOS) + scenario_idx + 1
+        for scenario_idx, scenario_info in enumerate(scenarios):
+            eval_num = model_idx * len(scenarios) + scenario_idx + 1
 
             if not use_tqdm:
                 print(f"\n[{eval_num}/{total}] Starting evaluation...")

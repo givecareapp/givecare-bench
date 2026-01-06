@@ -98,7 +98,7 @@
       "ensure leaderboard/submission tooling excludes confidential by default",
       "document holdout policy in benchmark/scenarios/README.md"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "eval",

@@ -8,13 +8,46 @@ Usage:
     python benchmark/scripts/community/update_leaderboard.py
 """
 
+import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Set
 
 
-def load_submissions(community_dir: Path) -> List[Dict]:
+def load_confidential_ids(base_dir: Path) -> Set[str]:
+    """Load confidential scenario IDs from the repo."""
+    confidential_dir = base_dir / "benchmark" / "scenarios" / "confidential"
+    if not confidential_dir.exists():
+        return set()
+
+    ids: Set[str] = set()
+    for scenario_file in confidential_dir.glob("*.json"):
+        with open(scenario_file) as f:
+            data = json.load(f)
+        scenario_id = data.get("scenario_id")
+        if scenario_id:
+            ids.add(scenario_id)
+    return ids
+
+
+def submission_has_confidential(submission: Dict, confidential_ids: Set[str]) -> bool:
+    """Return True if submission includes confidential scenarios."""
+    scenarios = submission.get("scenarios") or submission.get("results", {}).get("scenarios") or []
+    for scenario in scenarios:
+        if scenario.get("confidential") is True:
+            return True
+        scenario_id = scenario.get("scenario_id")
+        if scenario_id and scenario_id in confidential_ids:
+            return True
+    return False
+
+
+def load_submissions(
+    community_dir: Path,
+    include_confidential: bool,
+    confidential_ids: Set[str],
+) -> List[Dict]:
     """Load all valid submissions."""
     submissions = []
 
@@ -24,7 +57,11 @@ def load_submissions(community_dir: Path) -> List[Dict]:
 
         with open(submission_file) as f:
             data = json.load(f)
-            submissions.append(data)
+
+        if not include_confidential and submission_has_confidential(data, confidential_ids):
+            print(f"Skipping {submission_file.name} (confidential scenarios present)")
+            continue
+        submissions.append(data)
 
     return submissions
 
@@ -178,11 +215,20 @@ def generate_leaderboard_html(submissions: List[Dict], output_path: Path):
     print(f"Leaderboard updated: {output_path}")
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate community leaderboard")
+    parser.add_argument(
+        "--include-confidential",
+        action="store_true",
+        help="Include confidential scenarios in leaderboard generation.",
+    )
+    args = parser.parse_args()
+
     base_dir = Path(__file__).parent.parent.parent  # Project root
     community_dir = base_dir / "community" / "submissions"
     output_path = base_dir / "website" / "leaderboard.html"
 
-    submissions = load_submissions(community_dir)
+    confidential_ids = load_confidential_ids(base_dir)
+    submissions = load_submissions(community_dir, args.include_confidential, confidential_ids)
 
     print(f"Found {len(submissions)} submissions")
 
