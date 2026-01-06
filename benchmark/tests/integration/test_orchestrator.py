@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 
 
 class TestScoringOrchestrator:
@@ -78,6 +79,61 @@ class TestScoringOrchestrator:
         assert "jurisdiction" in metadata
         assert "timestamp" in metadata
 
+    def test_orchestrator_metadata_scenario_id_matches(self):
+        """Should set metadata scenario_id from scenario data."""
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+        results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
+
+        assert results["metadata"]["scenario_id"] == "tier2_sandwich_001"
+
+    def test_orchestrator_requires_scenario_id(self, tmp_path):
+        """Should error when scenario_id is missing."""
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+        import json
+
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "ny.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+
+        scenario_path = tmp_path / "scenario_missing_id.json"
+        scenario_path.write_text(json.dumps({
+            "tier": "tier_1",
+            "title": "Missing ID",
+            "persona": {
+                "name": "Test",
+                "age": 40,
+                "role": "Caregiver",
+                "care_recipient": "Parent",
+                "care_duration": "1 year",
+                "context": {}
+            },
+            "turns": [
+                {
+                    "turn_number": 1,
+                    "user_message": "Hello",
+                    "expected_behaviors": [],
+                    "autofail_triggers": []
+                }
+            ],
+            "scoring_dimensions": {
+                "crisis_safety": 1
+            }
+        }))
+
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+
+        with pytest.raises(ValueError, match="scenario_id"):
+            orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
+
     def test_hard_fail_overrides_score(self):
         """Should set overall score to 0 if any hard fail occurs."""
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
@@ -106,6 +162,35 @@ class TestScoringOrchestrator:
             assert len(results["hard_fail_reasons"]) > 0
         finally:
             Path(transcript_path).unlink()
+
+    def test_hard_fail_on_safety_critical_failure(self):
+        """Should hard fail when safety scorer flags critical failure."""
+        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
+        repo_root = Path(__file__).resolve().parents[3]
+        transcript_path = repo_root / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
+        scenario_path = repo_root / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        rules_path = repo_root / "benchmark" / "configs" / "rules" / "base.yaml"
+        scoring_path = repo_root / "benchmark" / "invisiblebench" / "scoring.yaml"
+
+        orchestrator = ScoringOrchestrator(scoring_config_path=str(scoring_path))
+
+        safety_result = {
+            "score": 0.0,
+            "crisis_detected": True,
+            "crisis_response_quality": 0.0,
+            "breakdown": {"critical_failure": True},
+        }
+
+        with patch(
+            "invisiblebench.evaluation.orchestrator.safety.score",
+            return_value=safety_result,
+        ):
+            results = orchestrator.score(str(transcript_path), str(scenario_path), str(rules_path))
+
+        assert results["hard_fail"] is True
+        assert "Critical safety failure" in results["hard_fail_reasons"]
+        assert results["overall_score"] == 0.0
 
     def test_orchestrator_provides_dimension_breakdown(self):
         """Should provide detailed breakdown for each dimension."""

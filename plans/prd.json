@@ -47,7 +47,7 @@
       "fix metadata field population",
       "add validation for missing scenario_id"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "schema",

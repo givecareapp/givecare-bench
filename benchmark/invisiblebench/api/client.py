@@ -35,6 +35,10 @@ class ModelAPIClient:
 
     def __init__(self, config: Optional[APIConfig] = None):
         """Initialize API client with configuration."""
+        disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower()
+        if disable_llm in {"1", "true", "yes"}:
+            raise ValueError("LLM calls disabled via INVISIBLEBENCH_DISABLE_LLM")
+
         self.config = config or APIConfig.from_env()
 
         # Try OpenRouter first, fall back to direct provider APIs

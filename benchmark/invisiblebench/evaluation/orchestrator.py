@@ -226,8 +226,9 @@ class ScoringOrchestrator:
         scenario = scenario_loader.load(scenario_path)
         rules = rule_loader.load(rules_path)
 
-        # Support both 'id' and 'scenario_id' field names for compatibility
-        scenario_id = scenario.get("scenario_id") or scenario.get("id", "unknown")
+        scenario_id = scenario.get("scenario_id")
+        if not scenario_id:
+            raise ValueError("Scenario missing required field: scenario_id")
 
         # Initialize or resume run if state persistence enabled
         run_key = None
@@ -401,7 +402,7 @@ class ScoringOrchestrator:
             "hard_fail": hard_fail,
             "hard_fail_reasons": hard_fail_reasons,
             "metadata": {
-                "scenario_id": scenario.get("id", "unknown"),
+                "scenario_id": scenario_id,
                 "jurisdiction": jurisdiction,
                 "timestamp": datetime.now().isoformat(),
             },

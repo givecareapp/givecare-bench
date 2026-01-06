@@ -1,7 +1,11 @@
 """Pytest configuration and shared fixtures."""
 
-import pytest
+import os
 from pathlib import Path
+
+import pytest
+
+os.environ.setdefault("INVISIBLEBENCH_DISABLE_LLM", "1")
 
 # Project paths
 PROJECT_ROOT = Path(__file__).parent.parent
