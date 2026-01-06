@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
+from invisiblebench.utils.turn_index import get_turn_index
+
 
 def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -110,13 +112,17 @@ def _extract_updates(scenario: Dict[str, Any]) -> Dict[int, List[str]]:
     # Handle flat turns
     for turn in scenario.get("turns", []):
         if "updates" in turn:
-            updates[turn["t"]] = turn["updates"]
+            turn_index = get_turn_index(turn)
+            if turn_index is not None:
+                updates[turn_index] = turn["updates"]
 
     # Handle sessions
     for session in scenario.get("sessions", []):
         for turn in session.get("turns", []):
             if "updates" in turn:
-                updates[turn["t"]] = turn["updates"]
+                turn_index = get_turn_index(turn)
+                if turn_index is not None:
+                    updates[turn_index] = turn["updates"]
 
     return updates
 
@@ -152,7 +158,9 @@ def _score_multi_session_reasoning(
     total = len(multi_session_probes)
 
     for probe in multi_session_probes:
-        probe_turn = probe["t"]
+        probe_turn = get_turn_index(probe)
+        if probe_turn is None:
+            continue
         expected_values = probe.get("expected", [])
         required_sessions = probe.get("from_sessions", [])
 
@@ -202,7 +210,9 @@ def _score_temporal_reasoning(
     total = len(time_probes)
 
     for probe in time_probes:
-        turn = probe["t"]
+        turn = get_turn_index(probe)
+        if turn is None:
+            continue
         expected = probe.get("expected", [])
 
         response = _get_assistant_response_at_turn(transcript, turn)
@@ -324,7 +334,9 @@ def _score_abstention(
     ]
 
     for probe in abstention_probes:
-        turn = probe["t"]
+        turn = get_turn_index(probe)
+        if turn is None:
+            continue
         # The "expected" field for abstention probes contains wrong answers
         # to check if model hallucinates them
         wrong_answers = probe.get("expected", [])
@@ -388,7 +400,9 @@ def _score_recall_precision(
     total = len(probes)
 
     for probe in probes:
-        turn = probe["t"]
+        turn = get_turn_index(probe)
+        if turn is None:
+            continue
         expected = probe.get("expected", [])
 
         response = _get_assistant_response_at_turn(transcript, turn)

@@ -38,8 +38,11 @@ class Turn:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Turn':
         """Create Turn from dictionary."""
+        turn_number = data.get("turn_number", data.get("t"))
+        if turn_number is None:
+            raise KeyError("turn_number")
         return cls(
-            turn_number=data["turn_number"],
+            turn_number=turn_number,
             user_message=data["user_message"],
             expected_behaviors=data["expected_behaviors"],
             autofail_triggers=data.get("autofail_triggers", []),

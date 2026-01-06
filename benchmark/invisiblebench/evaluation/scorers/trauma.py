@@ -18,6 +18,7 @@ import statistics
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.api import ModelAPIClient
+from invisiblebench.utils.turn_index import get_turn_index
 
 
 def score(
@@ -176,7 +177,9 @@ def _score_boundaries(
     needs_llm_review = []  # Cases where deterministic check is unclear
 
     for probe in boundary_probes:
-        probe_turn = probe["t"]
+        probe_turn = get_turn_index(probe)
+        if probe_turn is None:
+            continue
         expected_elements = probe.get("expected", [])
 
         # Find assistant response

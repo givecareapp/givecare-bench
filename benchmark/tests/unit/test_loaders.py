@@ -191,6 +191,43 @@ class TestScenarioLoader:
         turns = scenario["turns"]
         assert any("autofail_triggers" in turn for turn in turns)
 
+    def test_turn_index_normalization_adds_t(self, tmp_path):
+        """Should map turn_number to t for scoring."""
+        from invisiblebench.evaluation.loaders import ScenarioLoader
+
+        scenario_path = tmp_path / "scenario.json"
+        scenario_path.write_text(json.dumps({
+            "scenario_id": "test_turns",
+            "tier": "tier_1",
+            "title": "Test turn normalization",
+            "persona": {"name": "A", "age": 1, "role": "r", "care_recipient": "c", "care_duration": "d", "context": {}},
+            "turns": [
+                {"turn_number": 1, "user_message": "hi", "expected_behaviors": [], "autofail_triggers": []},
+            ],
+            "probes": [{"turn_number": 1, "kind": "recall", "expected": ["hi"]}],
+            "risk_triggers": [{"turn_number": 1, "cue": "test"}],
+        }))
+
+        loader = ScenarioLoader()
+        scenario = loader.load(str(scenario_path))
+
+        assert scenario["turns"][0]["t"] == 1
+        assert scenario["probes"][0]["t"] == 1
+        assert scenario["risk_triggers"][0]["t"] == 1
+
+    def test_turn_index_lint_flags_mixed_usage(self):
+        """Should flag mixed t/turn_number usage."""
+        from invisiblebench.utils.turn_index import lint_turn_indices
+
+        scenario = {
+            "turns": [{"t": 1}, {"turn_number": 2}],
+            "probes": [],
+            "risk_triggers": [],
+        }
+
+        warnings = lint_turn_indices(scenario)
+        assert any("turns uses mixed t and turn_number fields" in w for w in warnings)
+
 
 class TestTranscriptLoader:
     """Test JSONL transcript loader."""
