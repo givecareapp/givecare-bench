@@ -19,6 +19,14 @@ LaTeX source: [`papers/`](./papers/)
 
 ---
 
+## Public Leaderboard
+
+The canonical public UI lives in GiveCare apps (`web-bench`). This repo exports
+leaderboard data at `benchmark/website/data/leaderboard.json` for that app to
+consume. `benchmark/website/` is a static snapshot kept for paper provenance.
+
+---
+
 ## Quick Start
 
 ### Run Evaluation
@@ -119,9 +127,7 @@ Create `.env` file:
 
 ```bash
 # Required for LLM-assisted evaluations
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-proj-...
-OPENROUTER_API_KEY=sk-or-v1-...  # For Gemini models
+OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 ---
@@ -141,35 +147,11 @@ pytest benchmark/tests/test_scorers.py -v
 
 ---
 
-## Community Submissions
-
-Submit your model's results to the leaderboard:
-
-1. Run evaluation:
-   ```bash
-   python benchmark/scripts/validation/run_minimal.py \
-     --model your-model-name \
-     --output results/your-submission
-   ```
-
-2. Fill template:
-   ```bash
-   cp benchmark/community/TEMPLATE.json \
-      benchmark/community/submissions/your-model.json
-   ```
-
-3. Submit PR with results file
-
-See [`benchmark/community/README.md`](./benchmark/community/README.md) for details.
-
----
-
 ## Documentation
 
 - [Benchmark Overview](./benchmark/README.md)
 - [Validation Quickstart](./benchmark/scripts/validation/QUICKSTART.md)
 - [Transcript Format](./benchmark/docs/transcript_format.md)
-- [Community Submissions](./benchmark/community/SUBMISSION_GUIDE.md)
 - [Research Validation](./docs/RESEARCH_VALIDATION.md)
 
 ---

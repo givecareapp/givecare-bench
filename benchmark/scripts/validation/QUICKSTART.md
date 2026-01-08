@@ -4,10 +4,7 @@ This guide will walk you through running the minimal validation script for Invis
 
 ## Prerequisites
 
-1. **API Keys**: You need at least one of these:
-   - OpenRouter API key (recommended - supports all 3 models)
-   - OpenAI API key (for GPT-4o Mini only)
-   - Anthropic API key (for Claude 3.5 Haiku only)
+1. **API Keys**: OpenRouter API key (required - supports all models)
 
 2. **Python Environment**: Python 3.9+
 
@@ -20,8 +17,6 @@ This guide will walk you through running the minimal validation script for Invis
 
 ### 1. Set API Keys
 
-**Option A: OpenRouter (Recommended)**
-
 OpenRouter provides unified access to all models:
 
 ```bash
@@ -29,13 +24,6 @@ export OPENROUTER_API_KEY="sk-or-v1-..."
 ```
 
 Get your key at: https://openrouter.ai/keys
-
-**Option B: Direct Provider APIs**
-
-```bash
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
 
 ### 2. Dry Run (Optional)
 
@@ -363,13 +351,9 @@ SCENARIOS = [
 After validation, run full benchmark with 10 models:
 
 ```bash
-python -m invisiblebench.cli \
-  --scenarios benchmark/scenarios/ \
-  --output results/full_benchmark/ \
-  --export-html
+python benchmark/scripts/validation/run_full.py \
+  --output results/full_benchmark/
 ```
-
-See `OPERATIONS.md` for details.
 
 ### For Custom Analysis
 

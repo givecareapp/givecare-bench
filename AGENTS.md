@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Core code lives in `benchmark/invisiblebench/` (evaluation orchestrators, loaders, models, utils). Scenarios are in `benchmark/scenarios/` grouped by `tier1/`, `tier2/`, `tier3/`; scoring configs in `benchmark/configs/`; runnable helpers in `benchmark/scripts/`. Tests sit in `benchmark/tests/` with fixtures in `benchmark/tests/fixtures/`. Community submissions live in `benchmark/community/`; quick examples in `benchmark/examples/quick_start.py`. Research papers are under `papers/`; working notes and references sit in `docs/`. Generated artifacts (`results/`, `runs/`, coverage outputs) are git-ignored—keep them local.
+- Core code lives in `benchmark/invisiblebench/` (evaluation orchestrators, loaders, models, utils). Scenarios are in `benchmark/scenarios/` grouped by `tier1/`, `tier2/`, `tier3/`; scoring configs in `benchmark/configs/`; runnable helpers in `benchmark/scripts/`. Tests sit in `benchmark/tests/` with fixtures in `benchmark/tests/fixtures/`. Quick examples in `benchmark/examples/quick_start.py`. Research papers are under `papers/`; working notes and references sit in `docs/`. Generated artifacts (`results/`, `runs/`, coverage outputs) are git-ignored—keep them local.
 
 ## Build, Test, and Development Commands
 - Python ≥3.9. Recommended setup: `uv venv && source .venv/bin/activate && uv pip install -e ".[all]"` (or `pip install -e ".[all]"`).  
@@ -23,4 +23,4 @@
 - PRs should summarize scope, highlight scenario/rules changes, and link any issue or paper section they support. Include: (1) commands run with results (`pytest`, validation scripts), (2) sample output paths (e.g., `results/report.html`), and (3) notes on API/model requirements. Screenshots are only needed for website/visual changes.
 
 ## Security & Configuration Tips
-- Keep API keys in `.env` (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`); do not commit secrets. Use small test transcripts when developing to avoid unnecessary spend. When sharing logs, redact PHI/PII from scenarios or transcripts. Clean up cached results before publishing branches.***
+- Keep API keys in `.env` (`OPENROUTER_API_KEY`); do not commit secrets. Use small test transcripts when developing to avoid unnecessary spend. When sharing logs, redact PHI/PII from scenarios or transcripts. Clean up cached results before publishing branches.***

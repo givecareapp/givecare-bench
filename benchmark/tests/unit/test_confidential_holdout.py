@@ -16,36 +16,10 @@ def _load_module(module_name: str, relative_path: str):
     return module
 
 
-def test_validate_confidential_holdout_blocks_by_default() -> None:
-    validate_module = _load_module(
-        "validate_submission",
-        "benchmark/scripts/community/validate_submission.py",
-    )
-    data = {
-        "scenarios": [
-            {"scenario_id": "conf_test", "confidential": True},
-            {"scenario_id": "tier1_public_001", "confidential": False},
-        ]
-    }
-    errors = validate_module.validate_confidential_holdout(
-        data,
-        {"conf_test"},
-        include_confidential=False,
-    )
-    assert errors
-
-    errors_allowed = validate_module.validate_confidential_holdout(
-        data,
-        {"conf_test"},
-        include_confidential=True,
-    )
-    assert errors_allowed == []
-
-
 def test_generate_leaderboard_detects_confidential() -> None:
     leaderboard_module = _load_module(
         "generate_leaderboard",
-        "benchmark/scripts/community/generate_leaderboard.py",
+        "benchmark/scripts/leaderboard/generate_leaderboard.py",
     )
     result = {
         "scenarios": [

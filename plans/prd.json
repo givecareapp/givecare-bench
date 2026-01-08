@@ -109,5 +109,45 @@
       "add regression tests for hard-fail gating behavior"
     ],
     "passes": true
+  },
+  {
+    "category": "eval",
+    "description": "Deterministic eval mode for reproducible runs",
+    "steps": [
+      "add deterministic flag (temp=0, top_p=1, seed when supported)",
+      "record determinism settings in outputs",
+      "document reproducibility expectations"
+    ],
+    "passes": true
+  },
+  {
+    "category": "cli",
+    "description": "Single-scenario run validates only target scenario",
+    "steps": [
+      "load scenario by id/path directly",
+      "skip full directory validation by default",
+      "add --validate-all to force full scan"
+    ],
+    "passes": true
+  },
+  {
+    "category": "safety",
+    "description": "Crisis resource specificity gap in eval",
+    "steps": [
+      "add explicit resource check in crisis/actionable rubrics",
+      "surface missing-resource warnings in report",
+      "add regression test for required hotline mention"
+    ],
+    "passes": true
+  },
+  {
+    "category": "brand",
+    "description": "Judge prompt naming drift (LONGITUDINALBENCH)",
+    "steps": [
+      "rename prompt headers to InvisibleBench",
+      "align prompt labels with docs/outputs",
+      "add lint to block naming drift"
+    ],
+    "passes": true
   }
 ]
