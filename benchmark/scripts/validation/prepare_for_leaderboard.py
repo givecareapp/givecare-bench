@@ -118,7 +118,7 @@ def main():
         print(f"✓ {model_data['model_name']}: {output_file}")
 
     print("\nReady for leaderboard generation!")
-    print("Run: python benchmark/scripts/community/generate_leaderboard.py \\")
+    print("Run: python benchmark/scripts/leaderboard/generate_leaderboard.py \\")
     print(f"       --input {output_dir} \\")
     print("       --output benchmark/website/data/")
 

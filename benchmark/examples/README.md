@@ -6,6 +6,6 @@
 python examples/quick_start.py
 ```
 
-Minimal example demonstrating basic benchmark usage with BenchmarkRunner.
+Minimal example demonstrating transcript scoring with the YAML orchestrator.
 
 See `../README.md` and `../scripts/validation/QUICKSTART.md` for detailed documentation.

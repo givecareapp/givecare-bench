@@ -132,8 +132,6 @@ def main():
     print("\n[API Keys]")
 
     has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
-    has_openai = bool(os.getenv("OPENAI_API_KEY"))
-    has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
 
     check(
         has_openrouter,
@@ -142,25 +140,11 @@ def main():
         warning=True
     )
 
-    check(
-        has_openai,
-        "OPENAI_API_KEY set",
-        "OPENAI_API_KEY not set",
-        warning=True
-    )
-
-    check(
-        has_anthropic,
-        "ANTHROPIC_API_KEY set",
-        "ANTHROPIC_API_KEY not set",
-        warning=True
-    )
-
-    if not (has_openrouter or has_openai or has_anthropic):
+    if not has_openrouter:
         all_passed &= check(
             False,
             "",
-            "At least one API key required (OPENROUTER, OPENAI, or ANTHROPIC)"
+            "OPENROUTER_API_KEY required"
         )
 
     # Check scenarios

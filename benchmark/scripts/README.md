@@ -24,7 +24,6 @@ Utility scripts for running benchmarks, generating leaderboards, and validating 
 
 ```bash
 # Set API keys
-export OPENAI_API_KEY="your_openai_key_here"
 export OPENROUTER_API_KEY="your_openrouter_key_here"
 
 # Install additional dependencies
@@ -93,27 +92,19 @@ Note: Costs are estimates. Actual costs may vary based on response length and AP
 
 ### `generate_leaderboard.py`
 
-**Purpose**: Generate public leaderboard from evaluation results
+**Purpose**: Generate leaderboard JSON from canonical results
 
 **Usage**:
 
 ```bash
-python benchmark/scripts/community/generate_leaderboard.py \
-  --results results/ \
-  --output docs/leaderboard.html
+python benchmark/scripts/leaderboard/generate_leaderboard.py \
+  --input results/leaderboard_ready/ \
+  --output benchmark/website/data/
 ```
 
----
-
-### `run_benchmark.sh`
-
-**Purpose**: Bash wrapper for running full benchmark suite
-
-**Usage**:
-
-```bash
-bash benchmark/scripts/run_benchmark.sh
-```
+**Notes**:
+- Use `benchmark/scripts/validation/prepare_for_leaderboard.py` to convert
+  `all_results.json` into per-model files expected by the generator.
 
 ---
 
@@ -133,13 +124,11 @@ bash scripts/setup_env.sh
 
 ### API Key Issues
 
-**Error**: `At least one API key must be set`
+**Error**: `OPENROUTER_API_KEY required`
 
-**Solution**: Set at least one of:
+**Solution**: Set:
 ```bash
-export OPENROUTER_API_KEY="..."  # Recommended (supports all models)
-export OPENAI_API_KEY="..."      # For direct OpenAI access
-export ANTHROPIC_API_KEY="..."   # For direct Anthropic access
+export OPENROUTER_API_KEY="..."
 ```
 
 ### Rate Limiting
@@ -190,7 +179,7 @@ MODELS = [
     {
         "id": "provider/model-name",
         "name": "Display Name",
-        "provider": "openrouter",  # or "openai", "anthropic"
+        "provider": "openrouter",
         "cost_per_m_input": 0.XX,
         "cost_per_m_output": 0.XX
     },

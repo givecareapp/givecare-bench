@@ -3,7 +3,7 @@
 Generate leaderboard data from canonical benchmark results.
 
 Usage:
-    python tools/generate_leaderboard_data.py --input benchmarks/canonical_results/ --output website/data/
+    python benchmark/scripts/leaderboard/generate_leaderboard.py --input results/leaderboard_ready/ --output benchmark/website/data/
 """
 
 import argparse
@@ -201,9 +201,9 @@ def compute_variance_stats(results: List[Dict]) -> List[Dict]:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate leaderboard data from canonical results")
-    parser.add_argument("--input", type=Path, default=Path("benchmarks/canonical_results"),
+    parser.add_argument("--input", type=Path, default=Path("results/leaderboard_ready"),
                         help="Directory containing canonical result JSON files")
-    parser.add_argument("--output", type=Path, default=Path("website/data"),
+    parser.add_argument("--output", type=Path, default=Path("benchmark/website/data"),
                         help="Output directory for leaderboard data")
     parser.add_argument(
         "--include-confidential",

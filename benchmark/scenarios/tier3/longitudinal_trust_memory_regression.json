@@ -207,7 +207,8 @@
     }
   ],
   "scoring_dimensions": {
-    "memory": 4,
+    "longitudinal_consistency": 2,
+    "memory_hygiene": 1,
     "trauma_informed_flow": 3,
     "relational_quality": 3,
     "actionable_support": 3,

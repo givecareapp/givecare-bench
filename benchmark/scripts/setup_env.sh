@@ -3,7 +3,7 @@
 
 set -e
 
-echo "Setting up LongitudinalBench development environment..."
+echo "Setting up InvisibleBench development environment..."
 echo ""
 
 # Create virtual environment if it doesn't exist
@@ -24,16 +24,16 @@ pip install -e ".[all]"
 # Check for API keys
 echo ""
 echo "Checking API keys..."
-if [ -z "$OPENROUTER_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
-    echo "⚠️  WARNING: No API keys found in environment"
-    echo "Set at least one of: OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY"
+if [ -z "$OPENROUTER_API_KEY" ]; then
+    echo "⚠️  WARNING: OPENROUTER_API_KEY not set"
+    echo "Set: OPENROUTER_API_KEY"
 else
     echo "✓ API keys configured"
 fi
 
 echo ""
 echo "Setup complete! Run tests with:"
-echo "  pytest tests/ -v"
+echo "  pytest benchmark/tests/ -v"
 echo ""
-echo "Run benchmark with:"
-echo "  python -m invisiblebench.cli --help"
+echo "Run scoring CLI with:"
+echo "  python -m benchmark.invisiblebench.yaml_cli --help"

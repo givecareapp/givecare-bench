@@ -9,8 +9,7 @@ Usage:
     python benchmark/scripts/validation/run_full.py --output results/full_benchmark/
 
 Requirements:
-    export OPENAI_API_KEY="your-key"
-    export OPENROUTER_API_KEY="your-key"  # For Claude & Gemini
+    export OPENROUTER_API_KEY="your-key"
 """
 
 import argparse
@@ -756,17 +755,12 @@ def main():
 
     # Check API keys
     if not args.dry_run:
-        has_openai = bool(os.getenv("OPENAI_API_KEY"))
         has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
 
-        if not (has_openai or has_openrouter):
-            print("ERROR: No API keys found")
-            print("Please set OPENAI_API_KEY or OPENROUTER_API_KEY")
-            return 1
-
         if not has_openrouter:
-            print("WARNING: OPENROUTER_API_KEY not set")
-            print("Some models may not be accessible")
+            print("ERROR: No API keys found")
+            print("Please set OPENROUTER_API_KEY")
+            return 1
 
     # Estimate total cost
     total_cost = 0

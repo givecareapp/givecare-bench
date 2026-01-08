@@ -124,7 +124,8 @@
   ],
   "scoring_dimensions": {
     "belonging_cultural_fitness": 4,
-    "memory": 3,
+    "longitudinal_consistency": 2,
+    "memory_hygiene": 1,
     "trauma_informed_flow": 3,
     "actionable_support": 3,
     "regulatory_fitness": 2,
