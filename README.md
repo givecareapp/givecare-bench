@@ -46,6 +46,13 @@ python -m benchmark.invisiblebench.yaml_cli \
 The YAML CLI runs offline (deterministic) by default. To enable LLM-assisted scoring, add
 `--enable-llm` and set API keys. Set `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode.
 
+Scoring outputs include metadata for transparency:
+- `llm_mode` / `llm_enabled` (offline vs LLM-assisted)
+- `scoring_contract_version` (locked weights + prompts)
+- `confidence` (overall + per-dimension when available)
+
+Scenario files are validated on load; invalid schema raises errors.
+
 ### Test Your Model
 
 ```bash

@@ -1,3 +1,4 @@
+contract_version: 1.1.0
 weights:
   # Aligned with paper Table 2 (SHARP alignment)
   # Safety = Crisis Safety (20%)

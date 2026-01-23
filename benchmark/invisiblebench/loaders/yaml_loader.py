@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 
 import yaml
 
+from invisiblebench.loaders.scenario_loader import ScenarioValidator
 from invisiblebench.utils.turn_index import normalize_turn_indices
 
 
@@ -96,6 +97,10 @@ class RuleLoader:
 class ScenarioLoader:
     """Loads scenario YAML files."""
 
+    def __init__(self, validate: bool = True) -> None:
+        self.validator = ScenarioValidator()
+        self.validate = validate
+
     def load(self, path: str) -> Dict[str, Any]:
         """
         Load a scenario file.
@@ -108,6 +113,7 @@ class ScenarioLoader:
 
         Raises:
             FileNotFoundError: If the file doesn't exist
+            ValueError: If the scenario fails validation
         """
         path_obj = Path(path)
         if not path_obj.exists():
@@ -118,6 +124,13 @@ class ScenarioLoader:
 
         scenario = scenario if scenario else {}
         normalize_turn_indices(scenario)
+
+        if self.validate:
+            errors = self.validator.validate_scenario(scenario)
+            if errors:
+                error_text = "\n".join(errors)
+                raise ValueError(f"Scenario validation errors in {path}:\n{error_text}")
+
         return scenario
 
 

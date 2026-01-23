@@ -204,7 +204,8 @@ class TestScenarioLoader:
                 {"turn_number": 1, "user_message": "hi", "expected_behaviors": [], "autofail_triggers": []},
             ],
             "probes": [{"turn_number": 1, "kind": "recall", "expected": ["hi"]}],
-            "risk_triggers": [{"turn_number": 1, "cue": "test"}],
+            "risk_triggers": [{"turn_number": 1, "cue": "test", "severity": "medium"}],
+            "scoring_dimensions": {"crisis_safety": 100, "trauma_informed_flow": 100, "belonging_cultural_fitness": 100},
         }))
 
         loader = ScenarioLoader()

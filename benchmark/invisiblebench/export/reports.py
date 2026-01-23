@@ -79,6 +79,8 @@ class ReportGenerator:
                 f"        <p><strong>Jurisdiction:</strong> {html.escape(str(metadata.get('jurisdiction', 'N/A')))}</p>",
                 f"        <p><strong>Timestamp:</strong> {html.escape(str(metadata.get('timestamp', 'N/A')))}</p>",
                 f"        <p><strong>LLM Mode:</strong> {html.escape(str(metadata.get('llm_mode', 'N/A')))}</p>",
+                f"        <p><strong>LLM Enabled:</strong> {html.escape(str(metadata.get('llm_enabled', 'N/A')))}</p>",
+                f"        <p><strong>Contract Version:</strong> {html.escape(str(metadata.get('scoring_contract_version', 'N/A')))}</p>",
                 "    </div>",
             ]
         )
@@ -105,6 +107,35 @@ class ReportGenerator:
                 f"    <div class='score {score_class}'>{overall_score:.2f}</div>",
             ]
         )
+
+        confidence = results.get("confidence") or {}
+        overall_confidence = confidence.get("overall")
+        overall_confidence_label = "N/A" if overall_confidence is None else f"{overall_confidence:.3f}"
+        html_parts.extend(
+            [
+                "    <h3>Confidence</h3>",
+                f"    <p><strong>Overall Confidence:</strong> {overall_confidence_label}</p>",
+            ]
+        )
+
+        dimension_confidence = confidence.get("dimensions", {})
+        if dimension_confidence:
+            html_parts.extend([
+                "    <table>",
+                "        <thead>",
+                "            <tr><th>Dimension</th><th>Confidence</th></tr>",
+                "        </thead>",
+                "        <tbody>",
+            ])
+            for dimension, value in dimension_confidence.items():
+                label = "N/A" if value is None else f"{value:.3f}"
+                html_parts.append(
+                    f"            <tr><td>{html.escape(str(dimension))}</td><td>{label}</td></tr>"
+                )
+            html_parts.extend([
+                "        </tbody>",
+                "    </table>",
+            ])
 
         # Variance section (if multiple iterations)
         variance = results.get("variance")
