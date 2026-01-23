@@ -135,7 +135,7 @@ python papers/givecare/generate_figures.py
 
 ```
 benchmark/              # Core benchmark package
-  invisiblebench/       # Python package (38 files)
+  invisiblebench/       # Python package (32 files)
     evaluation/         # Scoring orchestrator & scorers
     api/               # Model API client
     loaders/           # YAML/JSON loaders
@@ -143,7 +143,7 @@ benchmark/              # Core benchmark package
     export/            # Report generators
     cli.py             # BenchmarkRunner
     yaml_cli.py        # Main CLI tool
-  scenarios/           # 30 test scenarios (JSON)
+  scenarios/           # 25 test scenarios (JSON)
     tier0/             # 5 smoke tests
     tier1/             # 5 scenarios (3-5 turns)
     tier2/             # 9 scenarios (8-12 turns)
@@ -153,11 +153,11 @@ benchmark/              # Core benchmark package
     rules/             # 7 jurisdiction rules
     scoring.yaml       # Dimension weights
   scripts/             # Execution scripts
-    validation/        # 7 runner scripts
+    validation/        # Runner scripts
     cloud/             # Modal deployment
     community/         # Leaderboard tools
-  tests/               # Test suite (19 tests)
-  docs/                # 5 documentation files
+  tests/               # Test suite (90 tests)
+  docs/                # Documentation
   examples/            # 1 example
   website/             # Leaderboard HTML
   huggingface/         # HF dataset tools
