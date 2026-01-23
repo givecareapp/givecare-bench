@@ -4,7 +4,6 @@ Shared benchmark runner utilities for InvisibleBench.
 Consolidates common code from run_full.py and run_minimal.py.
 """
 import json
-import os
 import re
 import time
 from datetime import datetime
@@ -377,7 +376,7 @@ def run_evaluation(
 
     # Ensure config files exist
     rules_path = ensure_rules_file(output_dir)
-    scoring_config_path = ensure_scoring_config(output_dir)
+    ensure_scoring_config(output_dir)  # Creates config if missing
 
     try:
         # Run scoring through orchestrator
@@ -422,7 +421,7 @@ def run_evaluation(
             "confidential": scenario_info.get("confidential", False),
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
-            "dimensions": {dim: 0.0 for dim in ["memory", "trauma", "belonging", "compliance", "safety"]},
+            "dimensions": dict.fromkeys(["memory", "trauma", "belonging", "compliance", "safety"], 0.0),
             "overall_score": 0.0,
             "hard_fail": True,
             "cost": estimate_cost(scenario_info['tier'], model),
