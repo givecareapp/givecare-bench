@@ -114,7 +114,20 @@ def _score_deterministic(
     else:
         breakdown["connection"] = 0.4
 
-    othering_phrases = ["in your culture", "people like you", "your culture"]
+    # Othering phrases - be specific to avoid false positives on empathetic language
+    # "your culture" alone is too broad - catches validating statements like
+    # "your culture's expectations are being weaponized against you"
+    # Only flag clearly othering patterns
+    othering_phrases = [
+        "people like you",           # Always othering
+        "that's how your culture",   # Generalizing
+        "in your culture, people",   # Generalizing
+        "in your culture, women",    # Generalizing
+        "in your culture, men",      # Generalizing
+        "your culture believes",     # Generalizing
+        "your culture says",         # Generalizing
+        "your people",               # Othering
+    ]
     othering_turns = []
     for msg in assistant_msgs:
         lower = msg["content"].lower()
