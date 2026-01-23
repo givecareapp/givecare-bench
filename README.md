@@ -29,36 +29,57 @@ consume. `benchmark/website/` is a static snapshot kept for paper provenance.
 
 ## Quick Start
 
-### Run Evaluation
+### Installation
 
 ```bash
-# Install
-pip install -e ".[all]"
+# Clone and install
+git clone https://github.com/givecareapp/givecare-bench.git
+cd givecare-bench
+uv venv && source .venv/bin/activate
+uv pip install -e ".[all]"
 
-# Run single scenario
+# Set API key for LLM-assisted scoring
+echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
+```
+
+### Run Benchmark
+
+```bash
+# Quick validation (22 scenarios, ~$0.05)
+python benchmark/scripts/validation/run_minimal.py -y
+
+# Full benchmark (all tiers, ~$30-40)
+python benchmark/scripts/validation/run_full.py -y
+
+# Dry run (cost estimate only)
+python benchmark/scripts/validation/run_minimal.py --dry-run
+```
+
+### Score Single Scenario
+
+```bash
 python -m benchmark.invisiblebench.yaml_cli \
   --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
-  --transcript benchmark/tests/fixtures/sample_transcript.jsonl \
+  --transcript path/to/transcript.jsonl \
   --rules benchmark/configs/rules/base.yaml \
   --out report.html
 ```
 
-The YAML CLI runs offline (deterministic) by default. To enable LLM-assisted scoring, add
-`--enable-llm` and set API keys. Set `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode.
+The CLI runs offline (deterministic) by default. Add `--enable-llm` for LLM-assisted scoring.
 
-Scoring outputs include metadata for transparency:
-- `llm_mode` / `llm_enabled` (offline vs LLM-assisted)
-- `scoring_contract_version` (locked weights + prompts)
-- `confidence` (overall + per-dimension when available)
-
-Scenario files are validated on load; invalid schema raises errors.
-
-### Test Your Model
+### Update Leaderboard
 
 ```bash
-# Full benchmark (3 tiers, ~$30-40)
-python benchmark/scripts/validation/run_minimal.py \
-  --output results/
+python benchmark/scripts/validation/prepare_for_leaderboard.py \
+  --results results/run_*/all_results.json \
+  --output benchmark/website/data/leaderboard.json
+```
+
+### Validation Tools
+
+```bash
+python benchmark/scripts/validation/check_ready.py        # Pre-run checks
+python benchmark/scripts/validation/lint_turn_indices.py  # Validate scenario structure
 ```
 
 ---
@@ -112,44 +133,12 @@ A **Phase 3 safety standard** for relationship AI - testing what happens when 63
 
 ---
 
-## Installation
-
-```bash
-# Clone
-git clone https://github.com/givecareapp/givecare-bench.git
-cd givecare-bench
-
-# Install (with UV - recommended)
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[all]"
-
-# Or with pip
-pip install -e ".[all]"
-```
-
-### Environment Setup
-
-Create `.env` file:
-
-```bash
-# Required for LLM-assisted evaluations
-OPENROUTER_API_KEY=sk-or-v1-...
-```
-
----
-
 ## Running Tests
 
 ```bash
-# All tests
-pytest benchmark/tests/ -v
-
-# With coverage
-pytest benchmark/tests/ -v --cov=benchmark.invisiblebench
-
-# Specific module
-pytest benchmark/tests/test_scorers.py -v
+pytest benchmark/tests/ -v                                  # All tests
+pytest benchmark/tests/ -v --cov=benchmark.invisiblebench   # With coverage
+mypy benchmark/invisiblebench/                              # Type check
 ```
 
 ---
