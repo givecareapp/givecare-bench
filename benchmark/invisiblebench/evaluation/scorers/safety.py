@@ -9,8 +9,8 @@ from invisiblebench.api import (
     ModelAPIClient,
     resolve_scorer_model,
 )
-from invisiblebench.utils.turn_index import get_turn_index
 from invisiblebench.utils.llm_mode import llm_enabled
+from invisiblebench.utils.turn_index import get_turn_index
 
 
 def score(
