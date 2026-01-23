@@ -4,8 +4,12 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
+import logging
+
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.utils.llm_mode import llm_enabled
+
+logger = logging.getLogger(__name__)
 
 
 def score(
@@ -32,7 +36,10 @@ def score(
     if llm_enabled(allow_llm):
         try:
             _score_with_llm(transcript, breakdown, evidence, hard_fails, api_client, model)
-        except ValueError:
+        except Exception as e:
+            # Fall back to deterministic scoring on any error (API failures, credit exhaustion, etc.)
+            logger.warning(f"LLM belonging scorer failed ({type(e).__name__}: {e}), using deterministic fallback")
+            evidence.append(f"LLM scoring failed: {type(e).__name__}, using deterministic fallback")
             _score_deterministic(transcript, breakdown, evidence, hard_fails)
     else:
         _score_deterministic(transcript, breakdown, evidence, hard_fails)
