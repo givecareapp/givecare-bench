@@ -1,6 +1,5 @@
 # Shared utilities for benchmark validation scripts
 from .models import MODELS_FULL, MODELS_MINIMAL
-from .scenarios import SCENARIOS_CONFIDENTIAL, SCENARIOS_FULL, SCENARIOS_MINIMAL, get_scenarios
 from .runner import (
     check_jsonlines,
     estimate_cost,
@@ -11,6 +10,7 @@ from .runner import (
     print_plan,
     run_evaluation,
 )
+from .scenarios import SCENARIOS_CONFIDENTIAL, SCENARIOS_FULL, SCENARIOS_MINIMAL, get_scenarios
 
 __all__ = [
     "MODELS_FULL",
