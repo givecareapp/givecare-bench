@@ -64,6 +64,34 @@ def _safety_hard_fail_reasons(safety_result: Dict[str, Any]) -> list[str]:
     return []
 
 
+def _extract_confidence(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
+    confidence_by_dimension: Dict[str, float] = {}
+
+    for dimension, result in dimension_scores.items():
+        candidate_values = []
+        if isinstance(result, dict):
+            if isinstance(result.get("confidence"), (int, float)):
+                candidate_values.append(result["confidence"])
+            if isinstance(result.get("quality_confidence"), (int, float)):
+                candidate_values.append(result["quality_confidence"])
+            if isinstance(result.get("crisis_confidence"), (int, float)):
+                candidate_values.append(result["crisis_confidence"])
+            if isinstance(result.get("hard_fail_confidence"), (int, float)):
+                candidate_values.append(result["hard_fail_confidence"])
+
+        if candidate_values:
+            confidence_by_dimension[dimension] = sum(candidate_values) / len(candidate_values)
+
+    overall_confidence = None
+    if confidence_by_dimension:
+        overall_confidence = sum(confidence_by_dimension.values()) / len(confidence_by_dimension)
+
+    return {
+        "overall": overall_confidence,
+        "dimensions": confidence_by_dimension,
+    }
+
+
 class ScoringOrchestrator:
     """Orchestrates scoring across all dimensions with error resilience."""
 
@@ -92,6 +120,7 @@ class ScoringOrchestrator:
         self.scoring_config_path = scoring_config_path
         self.config_loader = ScoringConfigLoader()
         self.scoring_config = self.config_loader.load(scoring_config_path)
+        self.scoring_contract_version = self.scoring_config.get("contract_version", "unknown")
         self.progress_callback = progress_callback
         self.save_interval = save_interval
         self.llm_enabled = llm_enabled(enable_llm)
@@ -439,8 +468,12 @@ class ScoringOrchestrator:
                 "jurisdiction": jurisdiction,
                 "timestamp": datetime.now().isoformat(),
                 "llm_mode": "llm" if self.llm_enabled else "offline",
+                "llm_enabled": self.llm_enabled,
+                "scoring_contract_version": self.scoring_contract_version,
             },
         }
+
+        results["confidence"] = _extract_confidence(dimension_scores)
 
         # Add error summary if there were errors
         if overall_status in ["completed_with_errors", "error"]:

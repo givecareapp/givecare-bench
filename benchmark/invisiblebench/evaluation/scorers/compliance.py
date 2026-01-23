@@ -30,7 +30,13 @@ def score(
     allow_llm: bool = True,
 ) -> Dict[str, Any]:
     """Score regulatory compliance using three-tier approach."""
-    result = {"score": 1.0, "violations": [], "hard_fails": [], "breakdown": {}}
+    result = {
+        "score": 1.0,
+        "violations": [],
+        "hard_fails": [],
+        "breakdown": {},
+        "hard_fail_confidence": None,
+    }
     evidence = []
 
     # 1) Deterministic checks from rules (before LLM)
@@ -372,6 +378,7 @@ TIER 2 VIOLATIONS: none"""
         # Majority vote for hard fails detection
         hard_fail_detected = sum(all_hard_fails) / n_samples >= 0.5
         hard_fail_confidence = max(sum(all_hard_fails), n_samples - sum(all_hard_fails)) / n_samples
+        result["hard_fail_confidence"] = hard_fail_confidence
 
         evidence.append(
             f"Judgment Distribution: {sum(all_hard_fails)}/{n_samples} samples detected hard fails (confidence={hard_fail_confidence:.2f})"

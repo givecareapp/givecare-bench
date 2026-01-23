@@ -96,6 +96,13 @@ print(f"Dimension Scores: {results['dimension_scores']}")
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
 
+Scoring outputs include metadata fields for transparency:
+- `llm_mode` / `llm_enabled`
+- `scoring_contract_version`
+- `confidence` (overall + per-dimension when available)
+
+Scenario files are validated on load; invalid schema raises errors.
+
 See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples, cost estimates, and troubleshooting.
 
 ## Key Statistics

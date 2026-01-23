@@ -220,6 +220,27 @@ def aggregate_iteration_results(
         ],
     }
 
+    confidence_entries = [result.get("confidence") for result in iteration_results if result.get("confidence")]
+    if confidence_entries:
+        overall_confidences = [
+            entry.get("overall") for entry in confidence_entries if entry.get("overall") is not None
+        ]
+        dimension_confidence: Dict[str, List[float]] = {}
+        for entry in confidence_entries:
+            for dimension, value in entry.get("dimensions", {}).items():
+                if value is None:
+                    continue
+                dimension_confidence.setdefault(dimension, []).append(value)
+
+        aggregated_confidence = {
+            "overall": statistics.mean(overall_confidences) if overall_confidences else None,
+            "dimensions": {
+                dimension: statistics.mean(values)
+                for dimension, values in dimension_confidence.items()
+            },
+        }
+        aggregated["confidence"] = aggregated_confidence
+
     # Add variance section if multiple iterations
     if num_iterations > 1:
         aggregated["variance"] = {
