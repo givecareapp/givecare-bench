@@ -20,9 +20,9 @@
   },
   "sessions": [
     {
-      "session_id": "session_1",
+      "session_number": 1,
+      "time_elapsed": "2 months after crisis",
       "session_context": "Initial contact 2 months after previous crisis",
-      "time_gap": "2 months",
       "turns": [
         {
           "turn_number": 1,
