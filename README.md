@@ -45,25 +45,45 @@ echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 ### Run Benchmark
 
 ```bash
-# Quick validation with rich terminal output (~$0.15)
-python benchmark/scripts/validation/run.py --minimal -y
+# Quick validation (1 model × all scenarios, ~$0.05)
+uv run bench --minimal -y
 
-# Full benchmark (all tiers, ~$30-40)
-python benchmark/scripts/validation/run.py --full -y
+# Full benchmark (10 models × all scenarios, ~$5-10)
+uv run bench --full -y
+
+# Run specific models (1-indexed, see model list below)
+uv run bench --full -m 1-4 -y           # First 4 models
+uv run bench --full -m 4 -t 3 -y        # Model 4 only, tier 3 only
+uv run bench --full -m 1,3,5 -y         # Specific models
+uv run bench --full -m 4- -y            # Models 4 onwards
+
+# Run specific tiers
+uv run bench --full -t 0,1 -y           # Tier 0 and 1 only
+
+# Parallel execution (multiple models concurrently)
+uv run bench --full -m 1-4 -p 4 -y      # 4 models in parallel
 
 # Dry run (cost estimate only)
-python benchmark/scripts/validation/run.py --dry-run
+uv run bench --dry-run
 
-# Legacy runners (still work)
-python benchmark/scripts/validation/run_minimal.py -y
-python benchmark/scripts/validation/run_full.py -y
+# Write per-scenario JSON + HTML reports with turn flags
+uv run bench --minimal -y --detailed
 ```
 
-The new `run.py` CLI provides:
-- Live progress bars with ETA
-- Colored status output
+**Model indices (1-indexed):**
+| # | Model | # | Model |
+|---|-------|---|-------|
+| 1 | Claude Opus 4.5 | 6 | GPT-5 Mini |
+| 2 | GPT-5.2 | 7 | DeepSeek V3.2 |
+| 3 | Gemini 3 Pro | 8 | Gemini 2.5 Flash |
+| 4 | Claude Sonnet 4.5 | 9 | MiniMax M2.1 |
+| 5 | Grok 4 | 10 | Qwen3 235B |
+
+The `bench` CLI provides:
+- Rich terminal output with live progress
+- Model/tier/scenario filtering with `-m`, `-t`, `-s`
+- Parallel model execution with `-p`
 - Real-time pass/fail tracking
-- Results summary table
 
 ### Score Single Scenario
 
@@ -91,6 +111,14 @@ python benchmark/scripts/validation/prepare_for_leaderboard.py \
 python benchmark/scripts/validation/check_ready.py        # Pre-run checks
 python benchmark/scripts/validation/lint_turn_indices.py  # Validate scenario structure
 ```
+
+### Report Status Semantics
+
+Scenario results use `status` values of `pass`, `fail`, or `error`. Both `fail` and
+`error` are treated as failures in summaries and batch reports.
+
+When running with `--detailed`, per-scenario JSON/HTML reports include a
+`turn_summary` section aggregating violations and hard-fails by turn.
 
 ---
 
