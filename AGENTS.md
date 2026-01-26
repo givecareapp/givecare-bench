@@ -7,12 +7,20 @@
 
 **Setup:** Python ≥3.9. Recommended: `uv venv && source .venv/bin/activate && uv pip install -e ".[all]"`
 
-**Benchmarking:**
+**Benchmarking (primary CLI: `uv run bench`):**
 ```bash
-python benchmark/scripts/validation/run_minimal.py -y      # Quick (22 scenarios, ~$0.05)
-python benchmark/scripts/validation/run_full.py -y         # Full (~$30-40)
-python benchmark/scripts/validation/run_minimal.py --dry-run  # Cost estimate only
+uv run bench --minimal -y               # Quick (1 model, ~$0.05)
+uv run bench --full -y                  # Full (10 models, ~$5-10)
+uv run bench --full -m 1-4 -y           # First 4 models only
+uv run bench --full -m 4 -t 3 -y        # Model 4, tier 3 only
+uv run bench --full -m 1-4 -p 4 -y      # 4 models in parallel
+uv run bench --dry-run                  # Cost estimate only
+uv run bench --minimal -y --detailed    # Per-scenario JSON/HTML reports
 ```
+
+**Model indices (1-indexed):**
+1=Opus 4.5, 2=GPT-5.2, 3=Gemini 3 Pro, 4=Sonnet 4.5, 5=Grok 4,
+6=GPT-5 Mini, 7=DeepSeek V3.2, 8=Gemini 2.5 Flash, 9=MiniMax M2.1, 10=Qwen3 235B
 
 **Single Scenario Scoring:**
 ```bash
@@ -47,6 +55,8 @@ python benchmark/scripts/validation/lint_doc_commands.py    # Validate docs
 
 ## Testing Guidelines
 - Add focused tests in `benchmark/tests/unit/` for pure logic and `benchmark/tests/integration/` for end-to-end flows (scenario loading, scoring pipelines). Use fixtures under `benchmark/tests/fixtures/` for transcripts/rules instead of inlining JSON/YAML. For new scoring rules or scenarios, include at least one regression test proving expected scores or autofail behavior. Run `pytest -v` before raising a PR; include coverage flags when touching evaluators.
+- Scenario `status` values include `pass`, `fail`, and `error`; ensure summaries/reports treat `error` as a failure.
+- Detailed runs (`--detailed`) write full per-scenario outputs under `results/.../scenario_results` (JSON) and `results/.../reports` (HTML).
 
 ## Commit & Pull Request Guidelines
 - Commit messages in this repo are short and descriptive (e.g., “Update papers with latest figures”); use imperative/present tense and group related changes. Avoid committing generated reports, large artifacts, or .env files.

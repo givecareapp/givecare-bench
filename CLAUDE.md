@@ -49,6 +49,8 @@ When benchmark results change, updates flow through this pipeline:
 **Data format:**
 - `overall_leaderboard` — Full benchmark (tier1-3), matches paper v1
 - `tier0_leaderboard` — Smoke tests (5 scenarios), quick validation
+- Scenario `status` values: `pass`, `fail`, `error` (treat `error` as failure)
+- `--detailed` runs write per-scenario JSON/HTML to `results/.../scenario_results` and `results/.../reports`
 
 **Website components:**
 - `LeaderboardTable` — Renders overall_leaderboard
@@ -70,15 +72,34 @@ When benchmark results change, updates flow through this pipeline:
 ## CLI Commands
 
 ```bash
-# === BENCHMARKING ===
-# Quick validation (22 scenarios, ~$0.05)
-python benchmark/scripts/validation/run_minimal.py -y
+# === BENCHMARKING (primary CLI: uv run bench) ===
+# Quick validation (1 model × all scenarios, ~$0.05)
+uv run bench --minimal -y
 
-# Full benchmark (all tiers, ~$30-40)
-python benchmark/scripts/validation/run_full.py -y
+# Full benchmark (10 models × all scenarios, ~$5-10)
+uv run bench --full -y
+
+# Model selection (1-indexed):
+#   1=Opus 4.5, 2=GPT-5.2, 3=Gemini 3 Pro, 4=Sonnet 4.5,
+#   5=Grok 4, 6=GPT-5 Mini, 7=DeepSeek V3.2, 8=Gemini 2.5 Flash,
+#   9=MiniMax M2.1, 10=Qwen3 235B
+uv run bench --full -m 1-4 -y          # First 4 models
+uv run bench --full -m 4 -t 3 -y       # Model 4 (Sonnet), tier 3 only
+uv run bench --full -m 1,3,5 -y        # Specific models
+uv run bench --full -m 4- -y           # Models 4 onwards
+
+# Tier selection
+uv run bench --full -t 0,1 -y          # Tier 0 and 1 only
+uv run bench --full -t 3 -y            # Tier 3 only
+
+# Parallel execution
+uv run bench --full -m 1-4 -p 4 -y     # 4 models in parallel
+
+# Detailed per-scenario JSON/HTML (turn flags)
+uv run bench --minimal -y --detailed
 
 # Dry run (estimate cost only)
-python benchmark/scripts/validation/run_minimal.py --dry-run
+uv run bench --dry-run
 
 # === SCORING (single scenario) ===
 python -m benchmark.invisiblebench.yaml_cli \

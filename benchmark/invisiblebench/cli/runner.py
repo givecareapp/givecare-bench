@@ -124,6 +124,36 @@ def estimate_cost(tier: int, model: Dict) -> float:
     ) * model["cost_per_m_output"]
 
 
+def parse_model_range(range_str: str, total_models: int) -> List[int]:
+    """Parse model range string into list of 0-indexed model indices.
+
+    Formats:
+        '4'     -> [3]           (4th model only, 1-indexed input)
+        '1-4'   -> [0,1,2,3]     (models 1 through 4)
+        '4-'    -> [3,4,5,...]   (4th onwards)
+        '1,3,5' -> [0,2,4]       (specific models)
+    """
+    indices = set()
+
+    for part in range_str.split(","):
+        part = part.strip()
+        if "-" in part:
+            # Range: '1-4' or '4-'
+            left, right = part.split("-", 1)
+            start = int(left) if left else 1
+            end = int(right) if right else total_models
+            for i in range(start, end + 1):
+                if 1 <= i <= total_models:
+                    indices.add(i - 1)  # Convert to 0-indexed
+        else:
+            # Single number
+            i = int(part)
+            if 1 <= i <= total_models:
+                indices.add(i - 1)
+
+    return sorted(indices)
+
+
 class ScenarioDisplay:
     """Renders full scenario list with live status updates. Thread-safe."""
 
@@ -570,27 +600,39 @@ def run_benchmark(
     scenario_filter: Optional[List[str]] = None,
     parallel: Optional[int] = None,
     detailed_output: bool = False,
-    start_model: int = 1,
+    model_filter: Optional[str] = None,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
 
-    models = MODELS_MINIMAL if mode == "minimal" else MODELS_FULL
+    all_models = MODELS_MINIMAL if mode == "minimal" else MODELS_FULL
 
-    # Skip models if --start-model specified
-    if start_model > 1:
-        if start_model > len(models):
+    # Filter models if --models specified
+    if model_filter:
+        try:
+            indices = parse_model_range(model_filter, len(all_models))
+            if not indices:
+                msg = f"No models match filter '{model_filter}' (have {len(all_models)} models)"
+                if RICH_AVAILABLE:
+                    Console().print(f"[red]{msg}[/red]")
+                else:
+                    print(msg)
+                return 1
+            models = [all_models[i] for i in indices]
+            selected = [m["name"] for m in models]
             if RICH_AVAILABLE:
-                Console().print(f"[red]--start-model {start_model} exceeds model count ({len(models)})[/red]")
+                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
             else:
-                print(f"--start-model {start_model} exceeds model count ({len(models)})")
+                print(f"Models: {', '.join(selected)}")
+        except ValueError as e:
+            msg = f"Invalid model filter '{model_filter}': {e}"
+            if RICH_AVAILABLE:
+                Console().print(f"[red]{msg}[/red]")
+            else:
+                print(msg)
             return 1
-        skipped = [m["name"] for m in models[:start_model - 1]]
-        models = models[start_model - 1:]
-        if RICH_AVAILABLE:
-            Console().print(f"[yellow]Skipping models 1-{start_model - 1}: {', '.join(skipped)}[/yellow]")
-        else:
-            print(f"Skipping models 1-{start_model - 1}: {', '.join(skipped)}")
+    else:
+        models = all_models
 
     scenarios = get_scenarios(minimal=(mode == "minimal"))
 
@@ -1130,14 +1172,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  bench --minimal -y              Quick validation (~$0.05)
-  bench --full -y                 Full benchmark (~$5-10)
-  bench --dry-run                 Cost estimate only
-  bench --minimal -y --detailed   Per-scenario JSON/HTML reports
-  bench -t 0,1 -y                 Run tier 0 and 1 only
-  bench -s crisis -y              Run crisis scenarios only
-  bench -p 3 --full -y            Run 3 models in parallel
-  bench report results.json       Regenerate HTML report
+  uv run bench --minimal -y           Quick validation (~$0.05)
+  uv run bench --full -y              Full benchmark (~$5-10)
+  uv run bench --full -m 1-4 -y       Run first 4 models only
+  uv run bench --full -m 4 -t 3 -y    Run 4th model on tier 3 only
+  uv run bench -m 1,3,5 -y            Run models 1, 3, and 5
+  uv run bench -t 0,1 -y              Run tier 0 and 1 only
+  uv run bench -s crisis -y           Run crisis scenarios only
+  uv run bench -p 3 --full -y         Run 3 models in parallel
+  uv run bench report results.json    Regenerate HTML report
         """,
     )
 
@@ -1181,11 +1224,11 @@ Examples:
         help="Run N models in parallel (default: sequential)"
     )
     parser.add_argument(
-        "--start-model",
-        type=int,
-        default=1,
-        metavar="N",
-        help="Start from model N (1-indexed, skips first N-1 models)"
+        "--models", "-m",
+        type=str,
+        default=None,
+        metavar="RANGE",
+        help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)"
     )
 
     args = parser.parse_args(argv)
@@ -1222,7 +1265,7 @@ Examples:
         scenario_filter=scenario_filter,
         parallel=args.parallel,
         detailed_output=args.detailed,
-        start_model=args.start_model,
+        model_filter=args.models,
     )
 
 
