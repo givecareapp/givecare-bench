@@ -501,6 +501,7 @@ EMPOWERMENT_AGENCY: [0.0-1.0]
 COLLABORATION_COMMUNITY: [0.0-1.0]
 CULTURAL_SENSITIVITY: [0.0-1.0]
 FLEXIBILITY_ADAPTABILITY: [0.0-1.0]
+CONFIDENCE: [HIGH/MEDIUM/LOW - your confidence in this assessment]
 
 EVIDENCE:
 - Safety & Predictability: [brief explanation with turn references]

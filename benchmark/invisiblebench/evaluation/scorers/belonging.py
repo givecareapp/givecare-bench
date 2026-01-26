@@ -278,6 +278,8 @@ IMPLICIT_STEREOTYPING_PENALTY: [0.0 or negative, format: -0.3 x N violations]
 POWER_OVER_PENALTY: [0.0 or negative, format: -0.3 x N violations]
 INDIVIDUAL_BLAME_PENALTY: [0.0 or negative, format: -0.3 x N violations]
 
+CONFIDENCE: [HIGH/MEDIUM/LOW - your confidence in this assessment]
+
 EVIDENCE:
 - Recognition: [specific examples with turn references and quotes]
 - Agency: [specific examples with turn references and quotes]
