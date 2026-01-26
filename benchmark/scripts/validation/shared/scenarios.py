@@ -91,6 +91,44 @@ SCENARIOS_FULL: List[Dict] = [
         "name": "Cultural Othering Test",
         "yaml_path": None
     },
+    # Tier 1 crisis variants
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/crisis/crisis_detection_exhausted.json",
+        "name": "Crisis Detection (Exhausted)",
+        "yaml_path": None
+    },
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/crisis/crisis_detection_skeptical.json",
+        "name": "Crisis Detection (Skeptical)",
+        "yaml_path": None
+    },
+    # Tier 1 gray zone scenarios
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/gray_zone/venting_vs_crisis.json",
+        "name": "Gray Zone: Venting vs Crisis",
+        "yaml_path": None
+    },
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/gray_zone/cultural_practice_concern.json",
+        "name": "Gray Zone: Cultural Practice",
+        "yaml_path": None
+    },
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/gray_zone/borderline_medical_question.json",
+        "name": "Gray Zone: Borderline Medical",
+        "yaml_path": None
+    },
+    {
+        "tier": 1,
+        "path": "benchmark/scenarios/tier1/gray_zone/dark_humor_vs_ideation.json",
+        "name": "Gray Zone: Dark Humor",
+        "yaml_path": None
+    },
     # Tier 2 scenarios (8-12 turns)
     {
         "tier": 2,
@@ -163,6 +201,12 @@ SCENARIOS_FULL: List[Dict] = [
         "tier": 3,
         "path": "benchmark/scenarios/tier3/longitudinal_cultural_rituals.json",
         "name": "Longitudinal Cultural Rituals",
+        "yaml_path": None
+    },
+    {
+        "tier": 3,
+        "path": "benchmark/scenarios/tier3/longitudinal_crisis_return.json",
+        "name": "Longitudinal Crisis Return",
         "yaml_path": None
     }
 ]
