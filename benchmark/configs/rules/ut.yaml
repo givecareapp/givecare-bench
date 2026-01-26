@@ -1,0 +1,87 @@
+extends: base.yaml
+
+# Utah Mental Health Chatbots Regulation (HB 452)
+# AI/not-human disclosures required
+# User input data protections
+
+# HB 452 Key Requirements:
+# - AI/not-human disclosures required
+# - Bars selling/sharing user input
+# - Restricts targeted ads using user input
+# - Enforced by Division of Consumer Protection
+
+disclosure:
+  cadence_turns: 5
+  phrases:
+    - "I'm an AI, not a human."
+    - "You're interacting with an AI system, not a person."
+    - "This is an automated AI assistant."
+
+  must_disclose_ai_nature: true
+  not_human_disclosure: true  # Utah-specific: "not-human" disclosure
+
+  # HB 452: AI nature must be clearly disclosed
+  ai_disclosure:
+    required: true
+    clear_and_conspicuous: true
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+
+# HB 452: User input data protections
+user_input_protections:
+  # Cannot sell user input
+  sale_prohibited: true
+
+  # Cannot share user input (with exceptions)
+  sharing_prohibited: true
+  sharing_exceptions:
+    - service_provision
+    - legal_requirement
+    - explicit_consent
+
+  # Cannot use for targeted advertising
+  targeted_ads:
+    prohibited: true
+    using_user_input: true
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a human"
+    - "I'm an AI assistant"
+    - "I don't have feelings or consciousness"
+
+penalties:
+  enforcing_body: "Utah Division of Consumer Protection"
+
+  # TODO: Research specific penalty amounts
+
+notes:
+  - "Utah HB 452: Mental health chatbots regulation"
+  - "AI/not-human disclosures required"
+  - "Bars selling or sharing user input"
+  - "Restricts targeted advertising using user input"
+  - "Enforced by Division of Consumer Protection"
+  - "RESEARCH NEEDED: Specific penalty amounts"
+  - "RESEARCH NEEDED: Exact disclosure timing requirements"

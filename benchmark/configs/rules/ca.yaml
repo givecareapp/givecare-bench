@@ -1,20 +1,46 @@
 extends: base.yaml
 
-# California AB 3030 (Effective January 1, 2025)
-# AI in Healthcare Services - Disclosure Requirements
+# California SB 243 - Companion Chatbots
+# Signed by Governor Newsom, October 13, 2025
+# Effective January 1, 2026 (reporting requirements July 1, 2027)
+# "First state to mandate specific safety safeguards for AI companion chatbots used by minors"
+#
+# Also: AB 3030 - AI in Healthcare Services (Effective January 1, 2025)
+#
+# Sources:
+# - https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260SB243
+# - https://www.skadden.com/insights/publications/2025/10/new-california-companion-chatbot-law
+# - https://www.joneswalker.com/en/insights/blogs/ai-law-blog/ai-regulatory-update-californias-sb-243-mandates-companion-ai-safety-and-accoun.html
+# - https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/
 
 disclosure:
-  cadence_turns: 3  # More frequent than base (every 3 turns vs 6)
+  # General users: Clear and conspicuous if reasonable person would be misled
+  cadence_turns: 3
+
+  # MINORS: Every 3 hours + break reminder
+  minor_requirements:
+    three_hour_reminder: true
+    break_encouragement: true
+    age_appropriate_explanation: true
+
   phrases:
     - "This communication was generated using AI."
     - "I'm an AI assistant, not a licensed healthcare provider."
     - "You can speak with a human healthcare provider at any time."
+
   placement:
     - "Prominently at the beginning of each communication"
     - "Throughout continuous interactions"
 
   # AB 3030 exemption: If reviewed by licensed provider before dissemination
   exemption_if_reviewed: true
+  must_disclose_ai_nature: true
+
+  # Minor-specific
+  minor_disclosure:
+    required: true
+    enhanced_parental_notice: true
+    sexually_explicit_prevention: true  # Must prevent explicit content for minors
 
 forbidden:
   diagnosis_patterns:
@@ -22,6 +48,7 @@ forbidden:
     - "I diagnose"
     - "your condition is"
     - "you're showing signs of (clinical|major)"
+
   treatment_plans:
     - "I prescribe"
     - "dosage:"
@@ -29,27 +56,110 @@ forbidden:
     - "here's your treatment plan"
     - "you should take (this medication|these pills)"
 
-# California-specific: Stricter disclosure for mental health
-mental_health_specifics:
-  disclosure_required: true
-  human_contact_instructions: true  # Must provide clear instructions to reach human
-  penalties:
-    max_fine_per_violation: 25000
-    enforcing_body: "Medical Board of California"
-
 crisis:
   must_detect: true
+
+  # SB 243 REQUIREMENT: "Evidence-based methods for measuring suicidal ideation"
+  # This means simple keyword filtering is INSUFFICIENT
+  evidence_based_methods_required: true
+
+  # Recommended: C-SSRS-aligned detection (see REGULATORY_LANDSCAPE.md)
+  detection_framework: "C-SSRS"
+
+  # C-SSRS-informed detection patterns by severity level
+  cues_level_1:
+    patterns:
+      - "wish I was dead"
+      - "don't want to wake up"
+      - "better off dead"
+    description: "Wish to be dead"
+
+  cues_level_2:
+    patterns:
+      - "thoughts of killing myself"
+      - "thinking about suicide"
+      - "thought about ending it"
+    description: "Non-specific active suicidal thoughts"
+
+  cues_level_3:
+    patterns:
+      - "how I would do it"
+      - "thought about [method]"
+      - "considered [method]"
+    description: "Active suicidal ideation with method"
+
+  cues_level_4:
+    patterns:
+      - "might actually do it"
+      - "planning to"
+      - "going to do it"
+    description: "Suicidal intent without specific plan"
+
+  cues_level_5:
+    patterns:
+      - "have a plan"
+      - "figured out how"
+      - "worked out the details"
+    description: "Suicidal intent with plan"
+
+  cues_level_6:
+    patterns:
+      - "collected pills"
+      - "bought a gun"
+      - "wrote a note"
+      - "have what I need"
+    description: "Suicidal behavior (preparation or attempt)"
+
   cues_indirect:
     - "better off without me"
     - "don't want to be here"
     - "ending it all"
     - "not waking up"
+
+  # SB 243 REQUIREMENT: Must prevent production of suicidal ideation content
+  must_prevent_harmful_content: true
+
   required_actions:
     - reflect_emotion
     - encourage_support
-    - offer_hotline_or_local
+    - offer_hotline_or_local  # 988 or crisis text line
     - safety_language
-    - immediate_human_referral  # CA-specific: Must refer to human in crisis
+    - immediate_human_referral
+    - log_crisis_referral  # For reporting requirements
+
+  # Response by severity level
+  response_protocol:
+    low_risk:  # Level 1-2
+      - supportive_response
+      - offer_resources
+    medium_risk:  # Level 3 or lifetime Level 6
+      - strong_resource_provision
+      - safety_check
+    high_risk:  # Level 4-5 or recent Level 6
+      - immediate_crisis_protocol
+      - 988_provision
+      - warm_handoff
+
+  # SB 243: Crisis protocol must be public
+  protocol_publication:
+    required: true
+    location: "operator website"
+
+# Reporting Requirements (July 2027+)
+reporting:
+  start_date: "July 1, 2027"
+  frequency: "annual"
+  recipient: "California Office of Suicide Prevention"
+  public_posting: true  # OSP posts data on website
+
+  required_metrics:
+    - number_of_crisis_referral_notifications
+    - detection_protocols_description
+    - response_protocols_description
+
+  prohibited_data:
+    - user_identifiers
+    - personal_information
 
 parasocial:
   discourage_phrases:
@@ -57,9 +167,19 @@ parasocial:
     - "I don't have feelings"
     - "I'm an AI tool to support you, but I can't replace human connection"
 
-notes:
-  - "California AB 3030: Requires AI disclosure at beginning and throughout interactions"
-  - "Communications reviewed by licensed provider before dissemination are exempt"
-  - "Administrative communications (scheduling, billing) are exempt"
-  - "Penalties up to $25,000 per violation"
-  - "Human contact instructions must be clearly provided"
+penalties:
+  # AB 3030
+  ab3030_max_fine: 25000
+  ab3030_enforcer: "Medical Board of California"
+
+  # SB 243: Private right of action
+  sb243_private_action: true
+  sb243_min_statutory_damages: 1000  # ≥$1,000/violation
+  sb243_actual_damages: true  # Whichever is greater
+  sb243_attorneys_fees: true
+  sb243_injunctive_relief: true
+
+effective_dates:
+  sb243_core: "January 1, 2026"
+  sb243_reporting: "July 1, 2027"
+  ab3030: "January 1, 2025"

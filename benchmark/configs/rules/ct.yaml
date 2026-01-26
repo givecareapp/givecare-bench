@@ -1,0 +1,87 @@
+extends: base.yaml
+
+# Connecticut Consumer Health Data Statute
+# Defines "consumer health data" to include mental health condition/diagnosis data
+# Relevant to non-HIPAA apps
+
+# Key Requirements:
+# - Consumer health data protections
+# - Mental health condition/diagnosis data included
+# - Applies to apps not covered by HIPAA
+
+disclosure:
+  cadence_turns: 6
+  phrases:
+    - "I'm an AI assistant, not a healthcare provider."
+    - "This is not professional mental health services."
+    - "For professional care, please consult a licensed provider."
+
+  must_disclose_ai_nature: true
+
+# Connecticut: Consumer health data definition
+consumer_health_data:
+  applies: true
+
+  definition:
+    explicitly_includes:
+      - mental_health_conditions
+      - mental_health_diagnoses
+      - mental_health_treatments
+      - behavioral_health_data
+
+  # Applies to non-HIPAA covered entities
+  scope:
+    hipaa_covered: false  # This applies to entities NOT covered by HIPAA
+    includes:
+      - wellness_apps
+      - mental_health_chatbots
+      - health_tracking_apps
+      - companion_apps
+
+  protections:
+    - consent_for_processing
+    - consumer_rights
+    - data_security_requirements
+
+    # TODO: Research specific protection requirements
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a therapist or counselor"
+    - "I don't have feelings"
+    - "I'm an AI assistant"
+
+penalties:
+  # TODO: Research enforcing body and penalty amounts
+
+notes:
+  - "Connecticut Consumer Health Data Statute"
+  - "Defines 'consumer health data' to include mental health condition/diagnosis data"
+  - "Relevant to non-HIPAA mental health apps"
+  - "RESEARCH NEEDED: Specific penalty amounts"
+  - "RESEARCH NEEDED: Detailed protection requirements"
+  - "RESEARCH NEEDED: Effective dates and enforcement mechanisms"

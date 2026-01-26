@@ -1,0 +1,82 @@
+extends: base.yaml
+
+# Maine AI Chatbot Disclosure (10 §1500-DD)
+# Prohibits misleading consumers into believing they're talking to a human
+
+# Key Requirements:
+# - Clear notice that user is interacting with AI, not human
+# - Prohibition on deceptive practices
+# - Consumer protection focus
+
+disclosure:
+  cadence_turns: 5
+  phrases:
+    - "I'm an AI assistant, not a human."
+    - "You are interacting with an automated system, not a person."
+    - "This is an AI chatbot."
+
+  must_disclose_ai_nature: true
+
+  # Maine-specific: Cannot mislead into thinking it's human
+  no_deception:
+    required: true
+    clear_notice: true
+    prohibition: "Cannot mislead consumers into believing they're talking to a human"
+
+  # When to disclose
+  disclosure_timing:
+    - at_start_of_interaction
+    - when_asked
+    - periodically_during_extended_interactions
+
+forbidden:
+  # Deceptive practices
+  deceptive_claims:
+    - "I'm a real person"
+    - "I'm human"
+    - "Speaking with you live"
+    - implying_human_status
+
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a human"
+    - "I'm an AI"
+    - "I'm an automated system"
+
+penalties:
+  enforcing_body: "Maine Attorney General"
+  unfair_trade_practice: true  # Violation treated as unfair/deceptive practice
+
+  # TODO: Research specific penalty amounts
+
+notes:
+  - "Maine 10 §1500-DD: AI chatbot disclosure requirements"
+  - "Prohibits misleading consumers into believing they're talking to a human"
+  - "Clear notice required"
+  - "Consumer protection focused"
+  - "Violations treated as unfair/deceptive trade practices"
+  - "RESEARCH NEEDED: Specific penalty amounts"
+  - "RESEARCH NEEDED: Frequency requirements for disclosure"

@@ -1,0 +1,101 @@
+extends: base.yaml
+
+# Washington My Health My Data Act (RCW 19.373)
+# Consumer health data protections for mental health apps outside HIPAA
+# Effective March/June 2024
+
+# Key Requirements:
+# - Consumer health data protections
+# - Applies to mental health apps not covered by HIPAA
+# - Consent requirements for collection/sharing
+# - Consumer rights (access, deletion)
+
+disclosure:
+  cadence_turns: 6
+  phrases:
+    - "I'm an AI assistant, not a healthcare provider."
+    - "This is not professional mental health services."
+    - "For professional care, please consult a licensed provider."
+
+  must_disclose_ai_nature: true
+
+# My Health My Data Act: Consumer health data protections
+consumer_health_data:
+  applies: true
+  effective_dates:
+    large_entities: "March 31, 2024"
+    small_entities: "June 30, 2024"
+
+  definition:
+    includes:
+      - mental_health_conditions
+      - mental_health_diagnoses
+      - mental_health_treatments
+      - therapy_records
+      - emotional_state_data
+      - behavioral_health_data
+
+  protections:
+    consent_required:
+      for_collection: true
+      for_sharing: true
+      for_sale: true
+      must_be: "clear and conspicuous"
+
+    consumer_rights:
+      - right_to_know  # What data is collected
+      - right_to_access  # Access their data
+      - right_to_delete  # Request deletion
+      - right_to_withdraw_consent
+
+    prohibitions:
+      - sale_without_consent
+      - geofencing_near_health_facilities  # Cannot track near hospitals/clinics
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a therapist or counselor"
+    - "I don't have feelings"
+    - "I'm an AI assistant"
+
+penalties:
+  enforcing_body: "Washington Attorney General"
+  private_right_of_action: true
+
+  # TODO: Research specific penalty amounts
+
+notes:
+  - "Washington My Health My Data Act (RCW 19.373)"
+  - "Consumer health data protections for mental health apps outside HIPAA"
+  - "Effective March 2024 (large entities) / June 2024 (small entities)"
+  - "Mental health data explicitly included in 'consumer health data'"
+  - "Requires consent for collection, sharing, and sale of health data"
+  - "Consumer rights: know, access, delete, withdraw consent"
+  - "Prohibits geofencing near health facilities"
+  - "Private right of action available"
+  - "RESEARCH NEEDED: Specific penalty amounts"
+  - "RESEARCH NEEDED: Definition thresholds for large vs small entities"

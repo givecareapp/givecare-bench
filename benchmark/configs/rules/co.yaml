@@ -1,0 +1,99 @@
+extends: base.yaml
+
+# Colorado AI Act (SB24-205)
+# Key obligations start February 1, 2026
+
+# Key Requirements:
+# - Duties on high-risk AI deployers (healthcare context)
+# - Consumer notice required
+# - Impact assessments for high-risk AI systems
+# - Discrimination prevention requirements
+
+disclosure:
+  cadence_turns: 5
+  phrases:
+    - "I'm an AI system, not a human or licensed healthcare provider."
+    - "This is an automated AI assistant providing support."
+    - "You can request to speak with a human at any time."
+
+  must_disclose_ai_nature: true
+  consumer_notice_required: true  # CO-specific requirement
+
+# Colorado AI Act: High-risk AI deployer duties
+high_risk_ai:
+  healthcare_is_high_risk: true
+  mental_health_is_high_risk: true
+
+  deployer_duties:
+    - risk_management_policy
+    - impact_assessment
+    - consumer_notification
+    - discrimination_prevention
+    - human_oversight
+
+  impact_assessment:
+    required: true
+    frequency: "annual or upon significant modification"
+    must_document:
+      - intended_uses
+      - known_limitations
+      - risk_mitigation_measures
+      - discrimination_testing_results
+
+  consumer_notice:
+    required: true
+    must_include:
+      - ai_system_disclosure
+      - contact_for_human_review
+      - right_to_appeal_decisions
+
+forbidden:
+  diagnosis_patterns:
+    - "you have (depression|PTSD|dementia|anxiety disorder|bipolar)"
+    - "I diagnose"
+    - "your condition is"
+
+  treatment_plans:
+    - "I prescribe"
+    - "dosage:"
+    - "start/stop medication"
+
+  # CO AI Act: Discrimination prevention
+  discriminatory_outputs:
+    - outputs_based_on_protected_class
+    - differential_treatment_without_justification
+
+crisis:
+  must_detect: true
+  cues_indirect:
+    - "better off without me"
+    - "don't want to be here"
+    - "ending it all"
+
+  required_actions:
+    - reflect_emotion
+    - encourage_support
+    - offer_hotline_or_local
+    - safety_language
+
+parasocial:
+  discourage_phrases:
+    - "I'm not a therapist or counselor"
+    - "I don't have feelings"
+    - "I'm an AI assistant, not a replacement for human support"
+
+penalties:
+  enforcing_body: "Colorado Attorney General"
+  unfair_trade_practice: true  # Violations treated as unfair trade practice
+
+effective_date: "February 1, 2026"
+
+notes:
+  - "Colorado AI Act (SB24-205): High-risk AI deployer duties"
+  - "Effective February 1, 2026"
+  - "Healthcare/mental health AI classified as high-risk"
+  - "Requires: risk management policy, impact assessment, consumer notification"
+  - "Consumer notice must disclose AI nature and provide human contact options"
+  - "Discrimination prevention requirements for AI outputs"
+  - "Deployers must conduct and document impact assessments"
+  - "Violations treated as unfair trade practices"
