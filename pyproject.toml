@@ -1,6 +1,6 @@
 [project]
 name = "invisiblebench"
-version = "1.1.0"
+version = "1.2.0"
 description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -57,7 +57,8 @@ all = [
 ]
 
 [project.scripts]
-invisiblebench = "benchmark.invisiblebench.yaml_cli:main"
+invisiblebench = "invisiblebench.yaml_cli:main"
+bench = "invisiblebench.cli.runner:main"
 
 [project.urls]
 Homepage = "https://givecareapp.github.io/givecare-bench"

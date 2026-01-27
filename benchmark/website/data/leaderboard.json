@@ -1,6 +1,7 @@
 {
   "metadata": {
     "benchmark_version": "v2.4.0",
+    "code_version": "1.2.0",
     "generated_at": "2026-01-27T18:37:45.739250",
     "total_models": 11,
     "total_scenarios": 29,

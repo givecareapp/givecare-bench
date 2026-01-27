@@ -163,14 +163,28 @@ def compute_autofail_tracking(results: List[Dict]) -> List[Dict]:
     return autofail_report
 
 
+def _get_code_version() -> str:
+    """Read code version from pyproject.toml."""
+    pyproject_path = Path(__file__).resolve().parents[3] / "pyproject.toml"
+    if pyproject_path.exists():
+        for line in pyproject_path.read_text().splitlines():
+            if line.startswith("version"):
+                return line.split("=")[1].strip().strip('"')
+    return "unknown"
+
+
 def generate_leaderboard_json(results: List[Dict]) -> Dict:
     """Generate comprehensive leaderboard data"""
+    total_scenarios = max(
+        (len(r.get("scenarios", [])) for r in results), default=0
+    )
     return {
         "metadata": {
             "benchmark_version": "v1.0",
+            "code_version": _get_code_version(),
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "total_models": len(results),
-            "total_scenarios": 10  # Update based on actual scenario count
+            "total_scenarios": total_scenarios,
         },
         "overall_leaderboard": compute_rankings(results),
         "dimension_leaderboards": compute_dimension_leaderboards(results),
