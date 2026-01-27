@@ -48,7 +48,7 @@ echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 # Quick validation (1 model × all scenarios, ~$0.05)
 uv run bench --minimal -y
 
-# Full benchmark (10 models × all scenarios, ~$5-10)
+# Full benchmark (11 models × all scenarios, ~$5-10)
 uv run bench --full -y
 
 # Run specific models (1-indexed, see model list below)
@@ -73,11 +73,12 @@ uv run bench --minimal -y --detailed
 **Model indices (1-indexed):**
 | # | Model | # | Model |
 |---|-------|---|-------|
-| 1 | Claude Opus 4.5 | 6 | GPT-5 Mini |
-| 2 | GPT-5.2 | 7 | DeepSeek V3.2 |
-| 3 | Gemini 3 Pro | 8 | Gemini 2.5 Flash |
-| 4 | Claude Sonnet 4.5 | 9 | MiniMax M2.1 |
-| 5 | Grok 4 | 10 | Qwen3 235B |
+| 1 | Claude Opus 4.5 | 7 | DeepSeek V3.2 |
+| 2 | GPT-5.2 | 8 | Gemini 2.5 Flash |
+| 3 | Gemini 3 Pro | 9 | MiniMax M2.1 |
+| 4 | Claude Sonnet 4.5 | 10 | Qwen3 235B |
+| 5 | Grok 4 | 11 | Kimi K2.5 |
+| 6 | GPT-5 Mini | | |
 
 The `bench` CLI provides:
 - Rich terminal output with live progress
@@ -100,9 +101,14 @@ The CLI runs offline (deterministic) by default. Add `--enable-llm` for LLM-assi
 ### Update Leaderboard
 
 ```bash
+# Automatic (after benchmark run)
+uv run bench --full -y --update-leaderboard
+
+# Manual (two-step)
 python benchmark/scripts/validation/prepare_for_leaderboard.py \
-  --results results/run_*/all_results.json \
-  --output benchmark/website/data/leaderboard.json
+  --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
+python benchmark/scripts/leaderboard/generate_leaderboard.py \
+  --input /tmp/lb_ready/ --output benchmark/website/data/
 ```
 
 ### Validation Tools

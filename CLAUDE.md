@@ -30,9 +30,16 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 ## Leaderboard Update Flow
 
-1. Run benchmark → results saved to `results/run_YYYYMMDD_*/`
-2. Push to main → Website auto-fetches from GitHub raw URL
-3. Data: `benchmark/website/data/leaderboard.json`
+1. Run benchmark with auto-update: `uv run bench --full -y --update-leaderboard`
+2. Or manually:
+   ```bash
+   python benchmark/scripts/validation/prepare_for_leaderboard.py \
+     --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
+   python benchmark/scripts/leaderboard/generate_leaderboard.py \
+     --input /tmp/lb_ready/ --output benchmark/website/data/
+   ```
+3. Commit & push → Website auto-fetches from GitHub raw URL
+4. Data: `benchmark/website/data/leaderboard.json`
 
 ## Structure
 

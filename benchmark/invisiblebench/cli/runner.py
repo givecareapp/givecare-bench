@@ -598,6 +598,43 @@ async def evaluate_scenario_async(
             }
 
 
+def _update_leaderboard(results_path: Path) -> None:
+    """Run prepare_for_leaderboard then generate_leaderboard after a benchmark run."""
+    import subprocess
+    import sys
+    import tempfile
+
+    root = get_project_root()
+    leaderboard_output = root / "benchmark" / "website" / "data"
+
+    # Step 1: Prepare per-model files from all_results.json
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        subprocess.run(
+            [
+                sys.executable,
+                str(root / "benchmark" / "scripts" / "validation" / "prepare_for_leaderboard.py"),
+                "--input", str(results_path),
+                "--output", tmp_dir,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        # Step 2: Generate leaderboard.json from per-model files
+        subprocess.run(
+            [
+                sys.executable,
+                str(root / "benchmark" / "scripts" / "leaderboard" / "generate_leaderboard.py"),
+                "--input", tmp_dir,
+                "--output", str(leaderboard_output),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+
 def run_benchmark(
     mode: str,
     output_dir: Path,
@@ -608,6 +645,7 @@ def run_benchmark(
     parallel: Optional[int] = None,
     detailed_output: bool = False,
     model_filter: Optional[str] = None,
+    update_leaderboard: bool = False,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
@@ -909,6 +947,20 @@ def run_benchmark(
                             console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
                             return 1
                         except Exception as e:
+                            results.append({
+                                "model": model["name"],
+                                "model_id": model["id"],
+                                "scenario": scenario["name"],
+                                "scenario_id": scenario_id,
+                                "tier": scenario["tier"],
+                                "overall_score": 0.0,
+                                "hard_fail": True,
+                                "hard_fail_reasons": [f"Transcript generation failed: {e}"],
+                                "failure_categories": {},
+                                "dimensions": {},
+                                "cost": estimate_cost(scenario["tier"], model),
+                                "status": "error",
+                            })
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
                             continue
@@ -968,6 +1020,20 @@ def run_benchmark(
                                 failed += 1
 
                         except Exception as e:
+                            results.append({
+                                "model": model["name"],
+                                "model_id": model["id"],
+                                "scenario": scenario["name"],
+                                "scenario_id": scenario_id,
+                                "tier": scenario["tier"],
+                                "overall_score": 0.0,
+                                "hard_fail": True,
+                                "hard_fail_reasons": [f"Scoring failed: {e}"],
+                                "failure_categories": {},
+                                "dimensions": {},
+                                "cost": estimate_cost(scenario["tier"], model),
+                                "status": "error",
+                            })
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
 
@@ -1008,6 +1074,20 @@ def run_benchmark(
                     return 1
                 except Exception as e:
                     print(f"ERROR ({e})")
+                    results.append({
+                        "model": model["name"],
+                        "model_id": model["id"],
+                        "scenario": scenario["name"],
+                        "scenario_id": scenario_id,
+                        "tier": scenario["tier"],
+                        "overall_score": 0.0,
+                        "hard_fail": True,
+                        "hard_fail_reasons": [f"Transcript generation failed: {e}"],
+                        "failure_categories": {},
+                        "dimensions": {},
+                        "cost": estimate_cost(scenario["tier"], model),
+                        "status": "error",
+                    })
                     failed += 1
                     continue
 
@@ -1063,6 +1143,20 @@ def run_benchmark(
 
                 except Exception as e:
                     print(f"ERROR ({e})")
+                    results.append({
+                        "model": model["name"],
+                        "model_id": model["id"],
+                        "scenario": scenario["name"],
+                        "scenario_id": scenario_id,
+                        "tier": scenario["tier"],
+                        "overall_score": 0.0,
+                        "hard_fail": True,
+                        "hard_fail_reasons": [f"Scoring failed: {e}"],
+                        "failure_categories": {},
+                        "dimensions": {},
+                        "cost": estimate_cost(scenario["tier"], model),
+                        "status": "error",
+                    })
                     failed += 1
 
     elapsed = time.time() - start_time
@@ -1140,6 +1234,22 @@ def run_benchmark(
         print(f"\nComplete: {passed} passed, {failed} failed")
         print(f"Results: {results_path}")
         print(f"Report: {report_path}")
+
+    # Update leaderboard if requested
+    if update_leaderboard:
+        try:
+            _update_leaderboard(results_path)
+            msg = "Leaderboard updated: benchmark/website/data/leaderboard.json"
+            if RICH_AVAILABLE and console:
+                console.print(f"[bold green]✓[/bold green] {msg}")
+            else:
+                print(msg)
+        except Exception as e:
+            msg = f"Warning: Could not update leaderboard: {e}"
+            if RICH_AVAILABLE and console:
+                console.print(f"[yellow]{msg}[/yellow]")
+            else:
+                print(msg)
 
     return 0
 
@@ -1253,6 +1363,11 @@ Examples:
         metavar="RANGE",
         help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)"
     )
+    parser.add_argument(
+        "--update-leaderboard",
+        action="store_true",
+        help="Update leaderboard.json after run completes"
+    )
 
     args = parser.parse_args(argv)
 
@@ -1289,6 +1404,7 @@ Examples:
         parallel=args.parallel,
         detailed_output=args.detailed,
         model_filter=args.models,
+        update_leaderboard=args.update_leaderboard,
     )
 
 
