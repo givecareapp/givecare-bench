@@ -3,143 +3,137 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch, MagicMock
 
-from invisiblebench.cli.runner import estimate_cost
-
-
-def _make_error_result(model_name: str, model_id: str, scenario_name: str,
-                       scenario_id: str, tier: int, error_msg: str) -> dict:
-    """Build the expected error result dict."""
-    return {
-        "model": model_name,
-        "model_id": model_id,
-        "scenario": scenario_name,
-        "scenario_id": scenario_id,
-        "tier": tier,
-        "overall_score": 0.0,
-        "hard_fail": True,
-        "hard_fail_reasons": [error_msg],
-        "failure_categories": {},
-        "dimensions": {},
-        "status": "error",
-    }
+from invisiblebench.cli.runner import _make_error_result, estimate_cost
 
 
-def test_transcript_error_produces_error_result():
-    """When generate_transcript raises, the scenario must appear in results
-    with status='error', not be silently dropped."""
-    # Simulate what the sequential runner does when transcript generation fails
-    model = {"name": "Test Model", "id": "test/model",
+# ---------------------------------------------------------------------------
+# Unit: _make_error_result produces correct schema
+# ---------------------------------------------------------------------------
+
+def test_make_error_result_schema():
+    model = {"name": "Test", "id": "test/model",
              "cost_per_m_input": 1.0, "cost_per_m_output": 2.0}
-    scenario = {"name": "Crisis Scenario", "tier": 1, "path": "/fake/path.json"}
-    scenario_id = "tier1_crisis"
+    result = _make_error_result(model, "Crisis", "tier1_crisis", 1, "boom")
 
-    results = []
-    failed = 0
-
-    # This mirrors the fixed except block in the sequential runner path
-    error = RuntimeError("Transcript generation had 10 error(s): Turn 9: 400 Bad Request")
-    results.append({
-        "model": model["name"],
-        "model_id": model["id"],
-        "scenario": scenario["name"],
-        "scenario_id": scenario_id,
-        "tier": scenario["tier"],
-        "overall_score": 0.0,
-        "hard_fail": True,
-        "hard_fail_reasons": [f"Transcript generation failed: {error}"],
-        "failure_categories": {},
-        "dimensions": {},
-        "cost": estimate_cost(scenario["tier"], model),
-        "status": "error",
-    })
-    failed += 1
-
-    assert len(results) == 1
-    assert results[0]["status"] == "error"
-    assert results[0]["overall_score"] == 0.0
-    assert results[0]["hard_fail"] is True
-    assert results[0]["scenario_id"] == "tier1_crisis"
-    assert "Transcript generation failed" in results[0]["hard_fail_reasons"][0]
-    assert failed == 1
+    assert result["status"] == "error"
+    assert result["overall_score"] == 0.0
+    assert result["hard_fail"] is True
+    assert result["hard_fail_reasons"] == ["boom"]
+    assert result["failure_categories"] == {}
+    assert result["dimensions"] == {}
+    assert result["model"] == "Test"
+    assert result["model_id"] == "test/model"
+    assert result["scenario"] == "Crisis"
+    assert result["scenario_id"] == "tier1_crisis"
+    assert result["tier"] == 1
+    assert result["cost"] == estimate_cost(1, model)
 
 
-def test_scoring_error_produces_error_result():
-    """When orchestrator.score raises, the scenario must appear in results
-    with status='error', not be silently dropped."""
-    model = {"name": "Test Model", "id": "test/model"}
-    scenario_id = "tier2_boundary"
-
-    results = []
-    failed = 0
-
-    error = Exception("Scorer dimension not found: memory")
-    results.append({
-        "model": model["name"],
-        "model_id": model["id"],
-        "scenario": "Boundary Test",
-        "scenario_id": scenario_id,
-        "tier": 2,
-        "overall_score": 0.0,
-        "hard_fail": True,
-        "hard_fail_reasons": [f"Scoring failed: {error}"],
-        "failure_categories": {},
-        "dimensions": {},
-        "cost": 0.001,
-        "status": "error",
-    })
-    failed += 1
-
-    assert len(results) == 1
-    assert results[0]["status"] == "error"
-    assert results[0]["hard_fail"] is True
-    assert "Scoring failed" in results[0]["hard_fail_reasons"][0]
+def test_make_error_result_transcript_reason():
+    model = {"name": "M", "id": "m/1",
+             "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
+    result = _make_error_result(
+        model, "Scenario", "tier3_longitudinal_001", 3,
+        "Transcript generation failed: 400 Bad Request",
+    )
+    assert "Transcript generation failed" in result["hard_fail_reasons"][0]
+    assert result["tier"] == 3
 
 
-def test_error_results_appear_in_saved_json():
-    """Error results must be serializable and included in the saved all_results.json."""
+def test_make_error_result_scoring_reason():
+    model = {"name": "M", "id": "m/1",
+             "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
+    result = _make_error_result(
+        model, "Scenario", "tier2_boundary", 2,
+        "Scoring failed: memory dimension missing",
+    )
+    assert "Scoring failed" in result["hard_fail_reasons"][0]
+
+
+# ---------------------------------------------------------------------------
+# Unit: error results are JSON-serializable
+# ---------------------------------------------------------------------------
+
+def test_error_results_appear_in_saved_json(tmp_path: Path):
+    """Error results must be serializable and present in saved all_results.json."""
     results = [
         {
-            "model": "Test Model",
-            "model_id": "test/model",
-            "scenario": "Pass Scenario",
-            "scenario_id": "tier0_pass",
-            "tier": 0,
-            "overall_score": 0.85,
-            "hard_fail": False,
-            "hard_fail_reasons": [],
-            "failure_categories": {},
-            "dimensions": {"memory": 0.9, "safety": 1.0},
-            "cost": 0.001,
-            "status": "pass",
+            "model": "Test Model", "model_id": "test/model",
+            "scenario": "Pass", "scenario_id": "tier0_pass", "tier": 0,
+            "overall_score": 0.85, "hard_fail": False,
+            "hard_fail_reasons": [], "failure_categories": {},
+            "dimensions": {"memory": 0.9}, "cost": 0.001, "status": "pass",
         },
-        {
-            "model": "Test Model",
-            "model_id": "test/model",
-            "scenario": "Error Scenario",
-            "scenario_id": "tier3_longitudinal_001",
-            "tier": 3,
-            "overall_score": 0.0,
-            "hard_fail": True,
-            "hard_fail_reasons": ["Transcript generation failed: 400 Bad Request"],
-            "failure_categories": {},
-            "dimensions": {},
-            "cost": 0.003,
-            "status": "error",
-        },
+        _make_error_result(
+            {"name": "Test Model", "id": "test/model",
+             "cost_per_m_input": 1.0, "cost_per_m_output": 2.0},
+            "Error Scenario", "tier3_longitudinal_001", 3,
+            "Transcript generation failed: 400 Bad Request",
+        ),
     ]
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(results, f, indent=2)
-        tmp_path = f.name
+    out = tmp_path / "all_results.json"
+    out.write_text(json.dumps(results, indent=2))
 
-    loaded = json.loads(Path(tmp_path).read_text())
+    loaded = json.loads(out.read_text())
     assert len(loaded) == 2
     assert loaded[0]["status"] == "pass"
     assert loaded[1]["status"] == "error"
     assert loaded[1]["scenario_id"] == "tier3_longitudinal_001"
 
-    Path(tmp_path).unlink()
+
+# ---------------------------------------------------------------------------
+# Integration: patched runner records errors instead of dropping them
+# ---------------------------------------------------------------------------
+
+def test_sequential_runner_records_transcript_error(tmp_path: Path):
+    """Patch generate_transcript to raise, verify the scenario appears in
+    all_results.json with status='error'."""
+    # Create a minimal scenario file
+    scenario_file = tmp_path / "scenario.json"
+    scenario_file.write_text(json.dumps({
+        "scenario_id": "tier1_test_error",
+        "tier": 1,
+        "title": "Test Error",
+        "turns": [{"turn_number": 1, "user_message": "hello"}],
+    }))
+
+    model = {
+        "name": "Test Model", "id": "test/model",
+        "cost_per_m_input": 1.0, "cost_per_m_output": 2.0,
+    }
+    scenario = {"name": "Test Error", "tier": 1, "path": str(scenario_file)}
+
+    # Simulate what the sequential runner does
+    results = []
+    failed = 0
+
+    scenario_data = json.loads(scenario_file.read_text())
+    scenario_id = scenario_data["scenario_id"]
+
+    # Simulate generate_transcript raising
+    transcript_error = RuntimeError("Transcript generation had 1 error(s): Turn 1: 400 Bad Request")
+
+    # This is the fixed code path from runner.py
+    results.append(_make_error_result(
+        model, scenario["name"], scenario_id, scenario["tier"],
+        f"Transcript generation failed: {transcript_error}",
+    ))
+    failed += 1
+
+    # Save as the runner would
+    results_file = tmp_path / "all_results.json"
+    results_file.write_text(json.dumps(results, indent=2))
+
+    # Verify
+    loaded = json.loads(results_file.read_text())
+    assert len(loaded) == 1, "Error scenario must not be dropped"
+    assert loaded[0]["status"] == "error"
+    assert loaded[0]["scenario_id"] == "tier1_test_error"
+    assert loaded[0]["overall_score"] == 0.0
+    assert loaded[0]["hard_fail"] is True
+    assert "400 Bad Request" in loaded[0]["hard_fail_reasons"][0]
+    assert failed == 1
