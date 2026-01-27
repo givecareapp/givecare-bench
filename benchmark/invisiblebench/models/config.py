@@ -170,4 +170,11 @@ MODELS_FULL = [
         cost_per_m_input=0.20,
         cost_per_m_output=0.60,
     ),
+    ModelConfig(
+        id="moonshotai/kimi-k2.5",
+        name="Kimi K2.5",
+        provider="openrouter",
+        cost_per_m_input=0.60,
+        cost_per_m_output=3.00,
+    ),
 ]

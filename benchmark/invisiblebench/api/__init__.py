@@ -4,6 +4,7 @@ from .client import (
     DEFAULT_SAFETY_REFERENCE_MODEL,
     DEFAULT_SCORER_MODEL,
     APIConfig,
+    InsufficientCreditsError,
     ModelAPIClient,
     resolve_scorer_model,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "APIConfig",
     "DEFAULT_SAFETY_REFERENCE_MODEL",
     "DEFAULT_SCORER_MODEL",
+    "InsufficientCreditsError",
     "ModelAPIClient",
     "resolve_scorer_model",
 ]

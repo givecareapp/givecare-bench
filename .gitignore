@@ -80,3 +80,7 @@ htmlcov/
 .bv/
 .mcp.json
 runs/
+
+# Ralph Wiggum
+logs/ralph/
+*.tmp

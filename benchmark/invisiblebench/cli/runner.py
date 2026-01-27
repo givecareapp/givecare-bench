@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+from invisiblebench.api.client import InsufficientCreditsError
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.models.config import MODELS_MINIMAL as CONFIG_MODELS_MINIMAL
 
@@ -388,6 +389,8 @@ def generate_transcript(
             transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
             conversation_history.append({"role": "assistant", "content": assistant_msg})
             time.sleep(0.5)
+        except InsufficientCreditsError:
+            raise  # Abort immediately — don't retry or continue
         except Exception as e:
             error_msg = f"Turn {turn_num}: {e}"
             errors.append(error_msg)
@@ -501,6 +504,8 @@ async def evaluate_scenario_async(
                     transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
                     await asyncio.sleep(0.2)  # Small delay between turns
+                except InsufficientCreditsError:
+                    raise  # Abort immediately — don't retry or continue
                 except Exception as e:
                     error_msg = f"Turn {turn_num}: {e}"
                     errors.append(error_msg)
@@ -514,6 +519,8 @@ async def evaluate_scenario_async(
             if errors:
                 raise RuntimeError(f"Transcript generation had {len(errors)} error(s): {errors[0]}")
 
+        except InsufficientCreditsError:
+            raise  # Abort immediately — propagate to runner
         except Exception as e:
             return {
                 "model": model["name"],
@@ -816,6 +823,10 @@ def run_benchmark(
                     else:
                         passed += 1
                 results = all_results
+            except InsufficientCreditsError:
+                console.print("\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits.")
+                console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
+                return 1
             except Exception as e:
                 print(f"ERROR: Parallel execution failed: {e}")
                 return 1
@@ -852,6 +863,10 @@ def run_benchmark(
                         failed += 1
                     else:
                         passed += 1
+            except InsufficientCreditsError:
+                print("\nABORTED: OpenRouter account has insufficient credits.")
+                print("Add credits at https://openrouter.ai/settings/credits")
+                return 1
             except Exception as e:
                 print(f"ERROR: Parallel execution failed: {e}")
                 return 1
@@ -889,6 +904,10 @@ def run_benchmark(
                             transcript_path = generate_transcript(
                                 model["id"], scenario, api_client, transcript_path
                             )
+                        except InsufficientCreditsError:
+                            console.print("\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits.")
+                            console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
+                            return 1
                         except Exception as e:
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
@@ -983,6 +1002,10 @@ def run_benchmark(
                     transcript_path = generate_transcript(
                         model["id"], scenario, api_client, transcript_path
                     )
+                except InsufficientCreditsError:
+                    print("\nABORTED: OpenRouter account has insufficient credits.")
+                    print("Add credits at https://openrouter.ai/settings/credits")
+                    return 1
                 except Exception as e:
                     print(f"ERROR ({e})")
                     failed += 1

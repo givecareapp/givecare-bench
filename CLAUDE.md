@@ -7,7 +7,7 @@ Research benchmark project. Say "done" when finished (no verbose summaries).
 ```bash
 # Benchmark (primary: uv run bench)
 uv run bench --minimal -y              # 1 model (~$0.05)
-uv run bench --full -y                 # 10 models (~$5-10)
+uv run bench --full -y                 # 11 models (~$5-10)
 uv run bench --full -m 1-4 -y          # Models 1-4 only
 uv run bench --full -m 4 -t 3 -y       # Model 4, tier 3
 uv run bench --full -m 1-4 -p 4 -y     # 4 parallel
@@ -16,6 +16,7 @@ uv run bench --minimal -y --detailed   # Per-scenario JSON/HTML
 
 # Models: 1=Opus4.5 2=GPT-5.2 3=Gemini3Pro 4=Sonnet4.5 5=Grok4
 #         6=GPT-5Mini 7=DeepSeekV3.2 8=Gemini2.5Flash 9=MiniMaxM2.1 10=Qwen3-235B
+#         11=KimiK2.5
 
 # Single scenario scoring
 python -m benchmark.invisiblebench.yaml_cli \
