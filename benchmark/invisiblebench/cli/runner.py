@@ -522,20 +522,10 @@ async def evaluate_scenario_async(
         except InsufficientCreditsError:
             raise  # Abort immediately — propagate to runner
         except Exception as e:
-            return {
-                "model": model["name"],
-                "model_id": model["id"],
-                "scenario": scenario["name"],
-                "scenario_id": scenario_id,
-                "tier": scenario["tier"],
-                "overall_score": 0.0,
-                "hard_fail": True,
-                "hard_fail_reasons": [f"Transcript generation failed: {e}"],
-                "failure_categories": {},
-                "dimensions": {},
-                "cost": estimate_cost(scenario["tier"], model),
-                "status": "error",
-            }
+            return _make_error_result(
+                model, scenario["name"], scenario_id, scenario["tier"],
+                f"Transcript generation failed: {e}",
+            )
 
         # Score the transcript (sync - orchestrator isn't async)
         try:
@@ -582,20 +572,30 @@ async def evaluate_scenario_async(
             return summary
 
         except Exception as e:
-            return {
-                "model": model["name"],
-                "model_id": model["id"],
-                "scenario": scenario["name"],
-                "scenario_id": scenario_id,
-                "tier": scenario["tier"],
-                "overall_score": 0.0,
-                "hard_fail": True,
-                "hard_fail_reasons": [f"Scoring failed: {e}"],
-                "failure_categories": {},
-                "dimensions": {},
-                "cost": estimate_cost(scenario["tier"], model),
-                "status": "error",
-            }
+            return _make_error_result(
+                model, scenario["name"], scenario_id, scenario["tier"],
+                f"Scoring failed: {e}",
+            )
+
+
+def _make_error_result(
+    model: Dict, scenario_name: str, scenario_id: str, tier: int, reason: str,
+) -> Dict:
+    """Build a standardized error result dict for failed scenarios."""
+    return {
+        "model": model["name"],
+        "model_id": model["id"],
+        "scenario": scenario_name,
+        "scenario_id": scenario_id,
+        "tier": tier,
+        "overall_score": 0.0,
+        "hard_fail": True,
+        "hard_fail_reasons": [reason],
+        "failure_categories": {},
+        "dimensions": {},
+        "cost": estimate_cost(tier, model),
+        "status": "error",
+    }
 
 
 def _update_leaderboard(results_path: Path) -> None:
@@ -947,20 +947,10 @@ def run_benchmark(
                             console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
                             return 1
                         except Exception as e:
-                            results.append({
-                                "model": model["name"],
-                                "model_id": model["id"],
-                                "scenario": scenario["name"],
-                                "scenario_id": scenario_id,
-                                "tier": scenario["tier"],
-                                "overall_score": 0.0,
-                                "hard_fail": True,
-                                "hard_fail_reasons": [f"Transcript generation failed: {e}"],
-                                "failure_categories": {},
-                                "dimensions": {},
-                                "cost": estimate_cost(scenario["tier"], model),
-                                "status": "error",
-                            })
+                            results.append(_make_error_result(
+                                model, scenario["name"], scenario_id, scenario["tier"],
+                                f"Transcript generation failed: {e}",
+                            ))
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
                             continue
@@ -1020,20 +1010,10 @@ def run_benchmark(
                                 failed += 1
 
                         except Exception as e:
-                            results.append({
-                                "model": model["name"],
-                                "model_id": model["id"],
-                                "scenario": scenario["name"],
-                                "scenario_id": scenario_id,
-                                "tier": scenario["tier"],
-                                "overall_score": 0.0,
-                                "hard_fail": True,
-                                "hard_fail_reasons": [f"Scoring failed: {e}"],
-                                "failure_categories": {},
-                                "dimensions": {},
-                                "cost": estimate_cost(scenario["tier"], model),
-                                "status": "error",
-                            })
+                            results.append(_make_error_result(
+                                model, scenario["name"], scenario_id, scenario["tier"],
+                                f"Scoring failed: {e}",
+                            ))
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
 
@@ -1074,20 +1054,10 @@ def run_benchmark(
                     return 1
                 except Exception as e:
                     print(f"ERROR ({e})")
-                    results.append({
-                        "model": model["name"],
-                        "model_id": model["id"],
-                        "scenario": scenario["name"],
-                        "scenario_id": scenario_id,
-                        "tier": scenario["tier"],
-                        "overall_score": 0.0,
-                        "hard_fail": True,
-                        "hard_fail_reasons": [f"Transcript generation failed: {e}"],
-                        "failure_categories": {},
-                        "dimensions": {},
-                        "cost": estimate_cost(scenario["tier"], model),
-                        "status": "error",
-                    })
+                    results.append(_make_error_result(
+                        model, scenario["name"], scenario_id, scenario["tier"],
+                        f"Transcript generation failed: {e}",
+                    ))
                     failed += 1
                     continue
 
@@ -1143,20 +1113,10 @@ def run_benchmark(
 
                 except Exception as e:
                     print(f"ERROR ({e})")
-                    results.append({
-                        "model": model["name"],
-                        "model_id": model["id"],
-                        "scenario": scenario["name"],
-                        "scenario_id": scenario_id,
-                        "tier": scenario["tier"],
-                        "overall_score": 0.0,
-                        "hard_fail": True,
-                        "hard_fail_reasons": [f"Scoring failed: {e}"],
-                        "failure_categories": {},
-                        "dimensions": {},
-                        "cost": estimate_cost(scenario["tier"], model),
-                        "status": "error",
-                    })
+                    results.append(_make_error_result(
+                        model, scenario["name"], scenario_id, scenario["tier"],
+                        f"Scoring failed: {e}",
+                    ))
                     failed += 1
 
     elapsed = time.time() - start_time
@@ -1245,7 +1205,10 @@ def run_benchmark(
             else:
                 print(msg)
         except Exception as e:
+            detail = getattr(e, "stderr", "") or ""
             msg = f"Warning: Could not update leaderboard: {e}"
+            if detail:
+                msg += f"\n{detail.strip()}"
             if RICH_AVAILABLE and console:
                 console.print(f"[yellow]{msg}[/yellow]")
             else:

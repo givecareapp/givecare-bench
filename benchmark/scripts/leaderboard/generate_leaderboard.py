@@ -165,11 +165,17 @@ def compute_autofail_tracking(results: List[Dict]) -> List[Dict]:
 
 def _get_code_version() -> str:
     """Read code version from pyproject.toml."""
+    import re
+
     pyproject_path = Path(__file__).resolve().parents[3] / "pyproject.toml"
     if pyproject_path.exists():
-        for line in pyproject_path.read_text().splitlines():
-            if line.startswith("version"):
-                return line.split("=")[1].strip().strip('"')
+        match = re.search(
+            r'^version\s*=\s*"([^"]+)"',
+            pyproject_path.read_text(),
+            re.MULTILINE,
+        )
+        if match:
+            return match.group(1)
     return "unknown"
 
 
