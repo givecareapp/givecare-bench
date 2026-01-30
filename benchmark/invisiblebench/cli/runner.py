@@ -382,10 +382,21 @@ def generate_transcript(
         conversation_history.append({"role": "user", "content": user_msg})
 
         try:
-            response = api_client.call_model(
-                model=model_id, messages=conversation_history, temperature=0.7, max_tokens=800
-            )
-            assistant_msg = response["response"]
+            # Retry up to 3 times for empty responses
+            assistant_msg = ""
+            for retry in range(3):
+                response = api_client.call_model(
+                    model=model_id, messages=conversation_history, temperature=0.7, max_tokens=1200
+                )
+                assistant_msg = response["response"] or ""
+                if assistant_msg.strip():
+                    break
+                # Empty response - wait and retry
+                time.sleep(1.0 * (retry + 1))
+            
+            if not assistant_msg.strip():
+                raise RuntimeError("Model returned empty response after 3 retries")
+            
             transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
             conversation_history.append({"role": "assistant", "content": assistant_msg})
             time.sleep(0.5)
@@ -494,16 +505,27 @@ async def evaluate_scenario_async(
                 conversation_history.append({"role": "user", "content": user_msg})
 
                 try:
-                    response = await api_client.call_model_async(
-                        model=model["id"],
-                        messages=conversation_history,
-                        temperature=0.7,
-                        max_tokens=800,
-                    )
-                    assistant_msg = response["response"]
+                    # Retry up to 3 times for empty responses
+                    assistant_msg = ""
+                    for retry in range(3):
+                        response = await api_client.call_model_async(
+                            model=model["id"],
+                            messages=conversation_history,
+                            temperature=0.7,
+                            max_tokens=1200,  # Increased from 800
+                        )
+                        assistant_msg = response["response"] or ""
+                        if assistant_msg.strip():
+                            break
+                        # Empty response - wait and retry
+                        await asyncio.sleep(1.0 * (retry + 1))
+                    
+                    if not assistant_msg.strip():
+                        raise RuntimeError("Model returned empty response after 3 retries")
+                    
                     transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
-                    await asyncio.sleep(0.2)  # Small delay between turns
+                    await asyncio.sleep(0.3)  # Slightly longer delay between turns
                 except InsufficientCreditsError:
                     raise  # Abort immediately — don't retry or continue
                 except Exception as e:
