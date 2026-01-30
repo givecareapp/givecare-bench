@@ -21,6 +21,17 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ---
 
+## [Unreleased]
+
+### Removed
+- Obsolete `specs/` and `plans/` folders
+- Stale AI review files from `reports/`
+
+### Changed
+- Reorganized reports structure: daily changelog now in `reports/YYYY-MM-DD/changelog.md`
+
+---
+
 ## [1.2.0] - 2026-01-27
 
 ### Fixed
