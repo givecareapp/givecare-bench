@@ -1,5 +1,5 @@
 # InvisibleBench: Caregiver AI Safety Benchmark
-## Summary Report for OpenAI Health Team
+## Summary Report
 **Date:** January 30, 2026  
 **Prepared by:** Ali Madad, GiveCare
 
