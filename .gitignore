@@ -87,3 +87,8 @@ logs/ralph/
 
 # Night Nurse
 logs/night-nurse.log
+.night-nurse/
+
+# Automation tool state
+.specify/
+state/
