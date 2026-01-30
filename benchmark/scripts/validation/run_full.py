@@ -72,6 +72,11 @@ def main():
         action="store_true",
         help="Include confidential holdout scenarios (not for public leaderboard).",
     )
+    parser.add_argument(
+        "--detailed",
+        action="store_true",
+        help="Write per-scenario JSON/HTML reports with turn flags",
+    )
 
     args = parser.parse_args()
 
@@ -196,7 +201,8 @@ def main():
                     scenario_info=scenario_info,
                     transcript_path=transcript_path,
                     output_dir=args.output,
-                    orchestrator=orchestrator
+                    orchestrator=orchestrator,
+                    detailed_output=args.detailed,
                 )
                 results.append(result)
             except Exception as e:

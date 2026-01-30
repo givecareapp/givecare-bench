@@ -196,6 +196,7 @@ def run_benchmark(
     skip_transcripts: bool = False,
     dry_run: bool = False,
     auto_confirm: bool = False,
+    detailed_output: bool = False,
 ) -> int:
     """
     Run the benchmark with rich terminal output.
@@ -369,6 +370,7 @@ def run_benchmark(
                             transcript_path=transcript_path,
                             output_dir=output_dir,
                             orchestrator=orchestrator,
+                            detailed_output=detailed_output,
                         )
                         results.append(result)
 
@@ -430,6 +432,7 @@ def run_benchmark(
                         transcript_path=transcript_path,
                         output_dir=output_dir,
                         orchestrator=orchestrator,
+                        detailed_output=detailed_output,
                     )
                     results.append(result)
 
@@ -529,6 +532,11 @@ Examples:
         action="store_true",
         help="Auto-confirm (skip interactive prompt)",
     )
+    parser.add_argument(
+        "--detailed",
+        action="store_true",
+        help="Write per-scenario JSON/HTML reports with turn flags",
+    )
 
     args = parser.parse_args()
 
@@ -554,6 +562,7 @@ Examples:
         skip_transcripts=args.skip_transcripts,
         dry_run=args.dry_run,
         auto_confirm=args.yes,
+        detailed_output=args.detailed,
     )
 
 
