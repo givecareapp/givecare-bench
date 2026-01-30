@@ -5,6 +5,63 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+# Re-export Pydantic config models
+from invisiblebench.models.config import (
+    BenchmarkConfig,
+    ModelConfig,
+    ScoringConfig,
+    MODELS_MINIMAL,
+    MODELS_FULL,
+)
+
+# Re-export Pydantic result models
+from invisiblebench.models.results import (
+    BatchResult,
+    DimensionScores,
+    EvalResult,
+    FailureCategory,
+    ResultTiming,
+    ScenarioResult,
+    TierSummary,
+)
+
+# Re-export Pydantic scenario models
+from invisiblebench.models.scenario import (
+    PersonaModel,
+    ScenarioModel,
+    SessionModel,
+    TurnModel,
+)
+
+__all__ = [
+    # Config models
+    "BenchmarkConfig",
+    "ModelConfig",
+    "ScoringConfig",
+    "MODELS_MINIMAL",
+    "MODELS_FULL",
+    # Result models
+    "BatchResult",
+    "DimensionScores",
+    "EvalResult",
+    "FailureCategory",
+    "ResultTiming",
+    "ScenarioResult",
+    "TierSummary",
+    # Pydantic scenario models
+    "PersonaModel",
+    "ScenarioModel",
+    "SessionModel",
+    "TurnModel",
+    # Legacy dataclass models (backwards compatibility)
+    "TierLevel",
+    "DimensionType",
+    "Turn",
+    "Session",
+    "Persona",
+    "Scenario",
+]
+
 
 class TierLevel(Enum):
     """Benchmark tier levels."""

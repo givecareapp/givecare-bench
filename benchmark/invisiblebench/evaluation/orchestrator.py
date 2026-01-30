@@ -220,6 +220,51 @@ def _extract_confidence(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _build_turn_summary(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
+    entries = []
+
+    for dimension, result in dimension_scores.items():
+        if not isinstance(result, dict):
+            continue
+
+        for violation in result.get("violations", []) or []:
+            turn = violation.get("turn")
+            if turn is None:
+                continue
+            entries.append(
+                {
+                    "turn": turn,
+                    "dimension": dimension,
+                    "rule": violation.get("rule", "violation"),
+                    "severity": "violation",
+                }
+            )
+
+        for hard_fail in result.get("hard_fails", []) or []:
+            turn = hard_fail.get("turn")
+            if turn is None:
+                continue
+            entries.append(
+                {
+                    "turn": turn,
+                    "dimension": dimension,
+                    "rule": hard_fail.get("rule", "hard_fail"),
+                    "severity": "hard_fail",
+                }
+            )
+
+    entries.sort(key=lambda item: (item["turn"], item["dimension"], item["severity"]))
+
+    by_turn: Dict[int, list[Dict[str, Any]]] = {}
+    for entry in entries:
+        by_turn.setdefault(entry["turn"], []).append(entry)
+
+    return {
+        "entries": entries,
+        "by_turn": by_turn,
+    }
+
+
 class ScoringOrchestrator:
     """Orchestrates scoring across all dimensions with error resilience."""
 
@@ -591,6 +636,7 @@ class ScoringOrchestrator:
             "overall_score": weighted_score,  # 0..1 (legacy)
             "overall_percentage": round(weighted_score * 100, 2),
             "dimension_scores": dimension_scores,
+            "turn_summary": _build_turn_summary(dimension_scores),
             "weights_applied": weights,
             "hard_fail": hard_fail,
             "hard_fail_reasons": hard_fail_reasons,

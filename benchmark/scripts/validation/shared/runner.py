@@ -349,7 +349,8 @@ def run_evaluation(
     scenario_info: Dict,
     transcript_path: Path,
     output_dir: Path,
-    orchestrator: Any
+    orchestrator: Any,
+    detailed_output: bool = False,
 ) -> Dict:
     """
     Run single model x scenario evaluation.
@@ -361,6 +362,7 @@ def run_evaluation(
         transcript_path: Path to transcript JSONL
         output_dir: Output directory for results
         orchestrator: ScoringOrchestrator instance
+        detailed_output: Write per-scenario JSON/HTML reports
 
     Returns:
         Result dictionary with scores and metadata
@@ -393,6 +395,24 @@ def run_evaluation(
             dim_result = results["dimension_scores"].get(dim, {})
             dimension_scores[dim] = dim_result.get("score", 0.0)
 
+        detail_json_path = None
+        detail_html_path = None
+        if detailed_output:
+            from invisiblebench.export.reports import ReportGenerator
+
+            detail_dir = output_dir / "scenario_results"
+            report_dir = output_dir / "reports"
+            detail_dir.mkdir(parents=True, exist_ok=True)
+            report_dir.mkdir(parents=True, exist_ok=True)
+
+            base_name = f"{model['id'].replace('/', '_')}_{scenario['scenario_id']}"
+            detail_json_path = detail_dir / f"{base_name}.json"
+            detail_html_path = report_dir / f"{base_name}.html"
+
+            report_gen = ReportGenerator()
+            report_gen.generate_json(results, str(detail_json_path))
+            report_gen.generate_html(results, str(detail_html_path))
+
         result = {
             "model": model["name"],
             "model_id": model["id"],
@@ -405,8 +425,13 @@ def run_evaluation(
             "overall_score": results.get("overall_score", 0.0),
             "hard_fail": results.get("hard_fail", False),
             "cost": estimate_cost(scenario_info['tier'], model),
-            "status": results.get("status", "unknown")
+            "status": results.get("status", "unknown"),
         }
+
+        if detail_json_path:
+            result["detail_json"] = str(detail_json_path)
+        if detail_html_path:
+            result["detail_html"] = str(detail_html_path)
 
     except Exception as e:
         print(f"  ERROR during evaluation: {e}")

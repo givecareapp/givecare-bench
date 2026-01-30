@@ -84,3 +84,6 @@ runs/
 # Ralph Wiggum
 logs/ralph/
 *.tmp
+
+# Night Nurse
+logs/night-nurse.log

@@ -1204,6 +1204,15 @@ def run_benchmark(
                 console.print(f"[bold green]✓[/bold green] {msg}")
             else:
                 print(msg)
+            
+            # Auto-run health check after leaderboard update
+            try:
+                from invisiblebench.cli.health import run_health
+                run_health(verbose=False)
+            except Exception as he:
+                if RICH_AVAILABLE and console:
+                    console.print(f"[dim]Health check skipped: {he}[/dim]")
+                    
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
             msg = f"Warning: Could not update leaderboard: {e}"
@@ -1277,6 +1286,10 @@ Examples:
   uv run bench -s crisis -y           Run crisis scenarios only
   uv run bench -p 3 --full -y         Run 3 models in parallel
   uv run bench report results.json    Regenerate HTML report
+  uv run bench health                 Check leaderboard for issues
+  uv run bench runs                   List all benchmark runs
+  uv run bench archive                Archive runs before today
+  uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
 
@@ -1286,6 +1299,27 @@ Examples:
     report_parser = subparsers.add_parser("report", help="Generate HTML report from results JSON")
     report_parser.add_argument("results", type=str, help="Path to all_results.json")
     report_parser.add_argument("--output", "-o", type=str, default=None, help="Output HTML path")
+
+    # Health subcommand
+    health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
+    health_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+
+    # Archive subcommand
+    archive_parser = subparsers.add_parser("archive", help="Archive old benchmark runs")
+    archive_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
+    archive_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
+    archive_parser.add_argument("--list", action="store_true", dest="list_runs", help="List runs (dry run)")
+    archive_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
+
+    # Clean subcommand (alias for archive)
+    clean_parser = subparsers.add_parser("clean", help="Clean up old runs (alias for archive)")
+    clean_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
+    clean_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
+    clean_parser.add_argument("--list", action="store_true", dest="list_runs", help="List runs (dry run)")
+    clean_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
+
+    # Runs subcommand (list runs)
+    runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
 
     # Main run arguments (default command)
     mode_group = parser.add_mutually_exclusive_group()
@@ -1337,6 +1371,20 @@ Examples:
     # Handle subcommands
     if args.command == "report":
         return report_command(args)
+    
+    if args.command == "health":
+        from invisiblebench.cli.health import run_health
+        return run_health(verbose=args.verbose)
+    
+    if args.command in ("archive", "clean"):
+        from invisiblebench.cli.archive import run_archive, run_list
+        if args.list_runs:
+            return run_list()
+        return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
+    
+    if args.command == "runs":
+        from invisiblebench.cli.archive import run_list
+        return run_list()
 
     # Default: run benchmark
     mode = "full" if args.full else "minimal"

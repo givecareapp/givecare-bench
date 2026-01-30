@@ -62,6 +62,7 @@ class ReportGenerator:
             "        .breakdown { font-size: 14px; color: #666; }",
             "        .violation { background: #fff3cd; padding: 10px; margin: 5px 0; border-left: 4px solid #ffc107; }",
             "        .hard-fail-banner { background: #f8d7da; border: 2px solid #f5c6cb; padding: 20px; margin: 20px 0; }",
+            "        .turn-flag { background: #eef6ff; padding: 6px 10px; border-radius: 6px; font-size: 12px; display: inline-block; }",
             "        table { width: 100%; border-collapse: collapse; margin: 20px 0; }",
             "        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }",
             "        th { background-color: #f2f2f2; }",
@@ -107,6 +108,30 @@ class ReportGenerator:
                 f"    <div class='score {score_class}'>{overall_score:.2f}</div>",
             ]
         )
+
+        turn_summary = results.get("turn_summary", {})
+        turn_entries = turn_summary.get("entries", []) if isinstance(turn_summary, dict) else []
+        if turn_entries:
+            html_parts.extend(
+                [
+                    "    <h2>Turn Flags</h2>",
+                    "    <table>",
+                    "        <thead>",
+                    "            <tr><th>Turn</th><th>Dimension</th><th>Severity</th><th>Rule</th></tr>",
+                    "        </thead>",
+                    "        <tbody>",
+                ]
+            )
+            for entry in turn_entries:
+                html_parts.append(
+                    "            <tr>"
+                    f"<td>{html.escape(str(entry.get('turn', 'N/A')))}</td>"
+                    f"<td>{html.escape(str(entry.get('dimension', 'unknown')))}</td>"
+                    f"<td><span class='turn-flag'>{html.escape(str(entry.get('severity', '')))}</span></td>"
+                    f"<td>{html.escape(str(entry.get('rule', '')))}</td>"
+                    "</tr>"
+                )
+            html_parts.extend(["        </tbody>", "    </table>"])
 
         confidence = results.get("confidence") or {}
         overall_confidence = confidence.get("overall")
@@ -229,5 +254,154 @@ class ReportGenerator:
 
         # Close HTML
         html_parts.extend(["</body>", "</html>"])
+
+        return "\n".join(html_parts)
+
+    def generate_batch_report(self, results: list, output_path: str, metadata: dict = None) -> None:
+        """
+        Generate batch HTML report summarizing all scenario results.
+
+        Args:
+            results: List of scenario result dictionaries
+            output_path: Path to write HTML file
+            metadata: Optional run metadata (model, mode, etc.)
+        """
+        html_content = self._build_batch_html(results, metadata or {})
+        with open(output_path, "w") as f:
+            f.write(html_content)
+
+    def _build_batch_html(self, results: list, metadata: dict) -> str:
+        """Build batch summary HTML."""
+        def is_failure(result: dict) -> bool:
+            status = result.get("status")
+            return (
+                status in {"fail", "error"}
+                or result.get("hard_fail")
+                or result.get("overall_score", 1) < 0.5
+            )
+
+        # Calculate stats
+        total = len(results)
+        failures = [r for r in results if is_failure(r)]
+        passed = total - len(failures)
+        failed = len(failures)
+        avg_score = sum(r.get("overall_score", 0) for r in results) / total if total else 0
+        total_cost = sum(r.get("cost", 0) for r in results)
+
+        # Group by tier
+        by_tier = {}
+        for r in results:
+            tier = r.get("tier", 0)
+            if tier not in by_tier:
+                by_tier[tier] = []
+            by_tier[tier].append(r)
+
+        html_parts = [
+            "<!DOCTYPE html>",
+            "<html>",
+            "<head>",
+            "    <title>InvisibleBench Batch Report</title>",
+            "    <style>",
+            "        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f5f5f5; }",
+            "        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
+            "        h1 { color: #333; margin-bottom: 10px; }",
+            "        .subtitle { color: #666; margin-bottom: 30px; }",
+            "        .stats { display: flex; gap: 30px; margin: 30px 0; }",
+            "        .stat { text-align: center; }",
+            "        .stat-value { font-size: 36px; font-weight: bold; }",
+            "        .stat-label { color: #666; font-size: 14px; }",
+            "        .pass { color: #28a745; }",
+            "        .fail { color: #dc3545; }",
+            "        .tier-section { margin: 30px 0; }",
+            "        .tier-header { font-size: 18px; font-weight: bold; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }",
+            "        .scenario-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }",
+            "        .scenario-name { flex: 1; }",
+            "        .scenario-score { width: 80px; text-align: right; font-weight: bold; }",
+            "        .scenario-status { width: 30px; text-align: center; }",
+            "        .failure-section { background: #fff8f8; border: 1px solid #ffdddd; border-radius: 8px; padding: 20px; margin: 30px 0; }",
+            "        .failure-item { margin: 20px 0; padding: 15px; background: white; border-left: 4px solid #dc3545; }",
+            "        .failure-title { font-weight: bold; margin-bottom: 10px; }",
+            "        .failure-reason { color: #dc3545; margin: 5px 0 5px 15px; }",
+            "        .failure-detail { color: #666; font-size: 14px; margin: 3px 0 3px 15px; }",
+            "        .dim-low { color: #856404; background: #fff3cd; padding: 2px 6px; border-radius: 3px; font-size: 12px; margin-right: 5px; }",
+            "    </style>",
+            "</head>",
+            "<body>",
+            "    <div class='container'>",
+            "        <h1>InvisibleBench Report</h1>",
+            f"        <div class='subtitle'>{html.escape(metadata.get('model', 'Unknown Model'))} &bull; {html.escape(metadata.get('mode', 'benchmark').upper())}</div>",
+            "",
+            "        <div class='stats'>",
+            f"            <div class='stat'><div class='stat-value'>{avg_score*100:.0f}%</div><div class='stat-label'>Overall Score</div></div>",
+            f"            <div class='stat'><div class='stat-value pass'>{passed}</div><div class='stat-label'>Passed</div></div>",
+            f"            <div class='stat'><div class='stat-value fail'>{failed}</div><div class='stat-label'>Failed</div></div>",
+            f"            <div class='stat'><div class='stat-value'>${total_cost:.3f}</div><div class='stat-label'>Cost</div></div>",
+            "        </div>",
+        ]
+
+        # Results by tier
+        for tier in sorted(by_tier.keys()):
+            tier_results = by_tier[tier]
+            tier_avg = sum(r.get("overall_score", 0) for r in tier_results) / len(tier_results) if tier_results else 0
+            html_parts.extend([
+                f"        <div class='tier-section'>",
+                f"            <div class='tier-header'>Tier {tier} &mdash; {tier_avg*100:.0f}%</div>",
+            ])
+            for r in tier_results:
+                score = r.get("overall_score", 0)
+                is_fail = r.get("hard_fail") or score < 0.5
+                status = "✗" if is_fail else "✓"
+                status_class = "fail" if is_fail else "pass"
+                html_parts.append(
+                    f"            <div class='scenario-row'>"
+                    f"<span class='scenario-status {status_class}'>{status}</span>"
+                    f"<span class='scenario-name'>{html.escape(r.get('scenario', 'Unknown'))}</span>"
+                    f"<span class='scenario-score'>{score*100:.0f}%</span>"
+                    f"</div>"
+                )
+            html_parts.append("        </div>")
+
+        # Failures section
+        if failures:
+            html_parts.extend([
+                "        <div class='failure-section'>",
+                "            <h2 style='color: #dc3545; margin-top: 0;'>Failures &amp; Violations</h2>",
+            ])
+            for f in failures:
+                score_pct = int(f.get("overall_score", 0) * 100)
+                html_parts.append(
+                    f"            <div class='failure-item'>"
+                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} (T{f.get('tier', '?')}) &mdash; {score_pct}%</div>"
+                )
+
+                # Hard fail reasons
+                for reason in f.get("hard_fail_reasons", []):
+                    html_parts.append(f"                <div class='failure-reason'>→ {html.escape(str(reason))}</div>")
+
+                # Failure categories
+                categories = f.get("failure_categories", {})
+                for cat, details in categories.get("details", {}).items():
+                    cat_display = cat.replace("_", " ").title()
+                    html_parts.append(f"                <div class='failure-detail'>• {html.escape(cat_display)}</div>")
+                    for detail in details[:2]:
+                        html_parts.append(f"                <div class='failure-detail' style='margin-left: 25px;'>{html.escape(str(detail))}</div>")
+
+                # Low dimensions
+                dims = f.get("dimensions", {})
+                low_dims = [(k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5]
+                if low_dims:
+                    html_parts.append("                <div style='margin-top: 10px;'>")
+                    for k, v in sorted(low_dims, key=lambda x: x[1]):
+                        html_parts.append(f"                    <span class='dim-low'>{html.escape(k)}: {int(v*100)}%</span>")
+                    html_parts.append("                </div>")
+
+                html_parts.append("            </div>")
+            html_parts.append("        </div>")
+
+        html_parts.extend([
+            "    </div>",
+            "</body>",
+            "</html>",
+        ])
 
         return "\n".join(html_parts)

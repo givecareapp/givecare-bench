@@ -1,0 +1,70 @@
+{
+  "spec": "010-orchestrator-reloads-files-on-every-iteration",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Investigate score() and _score_with_iterations() data flow",
+      "description": "Read orchestrator.py to confirm that _score_with_iterations calls self.score() in a loop, and each score() call re-instantiates TranscriptLoader, ScenarioLoader, and RuleLoader and re-reads the same files from disk. Identify all lines involved and confirm that transcript, scenario, and rules data are not mutated by scorers.",
+      "acceptanceCriteria": [
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` lines 427-433 instantiate TranscriptLoader, ScenarioLoader, RuleLoader and call .load() on each — confirmed by reading the file",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` lines 709-720 show _score_with_iterations calling self.score() in a loop with file paths, re-loading on every iteration — confirmed by reading the file",
+        "Scorers (memory, trauma, belonging, compliance, safety) receive transcript/scenario/rules as read-only inputs and do not mutate them — confirmed by reading scorer call sites"
+      ],
+      "passes": false
+    },
+    {
+      "id": "T-002",
+      "title": "Add pre-loaded data parameters to score() method",
+      "description": "Add optional parameters _transcript, _scenario, and _rules to score() so that pre-loaded data can be passed in, bypassing disk I/O. When these parameters are provided and not None, skip loader instantiation and use the pre-loaded values directly. When they are None (default), load from disk as before. This preserves the public API.",
+      "acceptanceCriteria": [
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` contains `_transcript: Optional` in the score() method signature",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` contains `_scenario: Optional` in the score() method signature",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` contains `_rules: Optional` in the score() method signature",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` contains a conditional that skips TranscriptLoader/ScenarioLoader/RuleLoader instantiation when pre-loaded data is provided"
+      ],
+      "passes": false
+    },
+    {
+      "id": "T-003",
+      "title": "Update _score_with_iterations to load files once and pass through",
+      "description": "Modify _score_with_iterations to instantiate TranscriptLoader, ScenarioLoader, and RuleLoader once before the loop, load the data, and pass the loaded transcript, scenario, and rules to each self.score() call via the new _transcript, _scenario, _rules parameters.",
+      "acceptanceCriteria": [
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` method _score_with_iterations contains `TranscriptLoader` instantiation before the iteration loop",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` method _score_with_iterations contains `ScenarioLoader` instantiation before the iteration loop",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` method _score_with_iterations contains `RuleLoader` instantiation before the iteration loop",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` method _score_with_iterations passes `_transcript=`, `_scenario=`, `_rules=` to self.score() inside the loop",
+        "grep -c 'TranscriptLoader\\|ScenarioLoader\\|RuleLoader' benchmark/invisiblebench/evaluation/orchestrator.py — returns exactly 6 (3 imports + 3 in _score_with_iterations) after score() no longer unconditionally instantiates them"
+      ],
+      "passes": false
+    },
+    {
+      "id": "T-004",
+      "title": "Verify score() still loads from disk when called directly",
+      "description": "Ensure that calling score() without the new _transcript/_scenario/_rules parameters (the normal public API) still loads files from disk via the loaders. This preserves backward compatibility for all existing callers.",
+      "acceptanceCriteria": [
+        "Run `python -c \"from invisiblebench.evaluation.orchestrator import ScoringOrchestrator; import inspect; src=inspect.getsource(ScoringOrchestrator.score); assert 'TranscriptLoader' in src or '_transcript is None' in src\"` from benchmark/ — exits with code 0",
+        "File `benchmark/invisiblebench/evaluation/orchestrator.py` score() method contains fallback logic that loads from disk when _transcript/_scenario/_rules are None"
+      ],
+      "passes": false
+    },
+    {
+      "id": "T-005",
+      "title": "Compile all Python files to verify syntax",
+      "description": "Run py_compile on orchestrator.py and related files to ensure there are no syntax errors after the refactor.",
+      "acceptanceCriteria": [
+        "Run `python -m py_compile benchmark/invisiblebench/evaluation/orchestrator.py` from /home/deploy/gc-repos/givecare-bench — exits with code 0",
+        "Run `python -m py_compile benchmark/invisiblebench/loaders/yaml_loader.py` from /home/deploy/gc-repos/givecare-bench — exits with code 0"
+      ],
+      "passes": false
+    },
+    {
+      "id": "T-006",
+      "title": "Run existing test suite to verify no regressions",
+      "description": "Run pytest on the existing orchestrator tests (integration and unit) to confirm the refactoring does not break any existing functionality.",
+      "acceptanceCriteria": [
+        "Run `cd /home/deploy/gc-repos/givecare-bench && pytest benchmark/tests/integration/test_orchestrator.py benchmark/tests/unit/test_orchestrator_hard_fails.py benchmark/tests/unit/test_orchestrator_safety.py --tb=short -q` — exits with code 0"
+      ],
+      "passes": false
+    }
+  ]
+}

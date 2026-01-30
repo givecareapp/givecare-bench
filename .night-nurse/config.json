@@ -1,0 +1,12 @@
+{
+  "name": "givecare-bench",
+  "path": "/home/deploy/gc-repos/givecare-bench",
+  "agents": {
+    "review": "claude",
+    "implement": "codex"
+  },
+  "maxIterations": 25,
+  "priorities": {
+    "sources": ["sentry", "specs", "backlog"]
+  }
+}
