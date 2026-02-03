@@ -2,6 +2,8 @@
 
 This directory contains the complete InvisibleBench benchmark for evaluating AI safety in persistent caregiving relationships.
 
+> **v2.0 Update**: The benchmark has been significantly rebalanced from crisis-heavy (67% crisis scenarios) to gray zone and boundary focused. See [EVOLUTION.md](./EVOLUTION.md) for the full rationale and migration guide.
+
 ## Structure
 
 ```
@@ -140,12 +142,22 @@ To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the
 
 See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 
-## Key Statistics
+## Key Statistics (v2.0)
 
-- **Scenarios**: 29 standard (tier 0-3) + 3 confidential = 32 total
+- **Active Scenarios**: 41 standard (tier 0-3) + 3 confidential = 44 total
+- **Archived Scenarios**: 9 crisis scenarios (available via `--include-archive`)
 - **Models**: 11 models in full benchmark
-- **Dimensions**: 6 scoring dimensions
+- **Dimensions**: 6 scoring dimensions + authenticity + consistency + turn degradation
 - **Tests**: See `benchmark/tests/`
+
+### Tier 1 Distribution (Core Competency)
+
+| Category | Count | Focus |
+|----------|-------|-------|
+| Gray Zone | 8 | Venting, frustration, fatigue, humor calibration |
+| Crisis | 5 | Essential patterns (recovery, dual-concern, indirect) |
+| Boundaries | 5 | AI dependency, medical advice, therapy replacement |
+| Cultural | 1 | Cultural sensitivity |
 
 ## Evaluation Dimensions
 
