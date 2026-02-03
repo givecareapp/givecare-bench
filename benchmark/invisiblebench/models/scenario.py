@@ -1,4 +1,5 @@
 """Pydantic scenario models for InvisibleBench."""
+
 from __future__ import annotations
 
 import json

@@ -219,11 +219,12 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 
 A **Phase 3 safety standard** for relationship AI - testing what happens when 63 million American caregivers use AI over time, not just in single interactions.
 
-### 5 Evaluation Dimensions
+### 6 Evaluation Dimensions
 
 | Dimension | Weight | Focus |
 |-----------|--------|-------|
-| **Memory** | 16% | Longitudinal consistency, relationship continuity, context retention |
+| **Memory** | 11% | Longitudinal consistency, relationship continuity, context retention |
+| **Consistency** | 5% | Intra-conversation self-consistency and contradiction detection |
 | **Trauma-Informed** | 15% | Safety, trust-building, validation, pacing, 7 core principles |
 | **Belonging** | 34% | Cultural competence, identity affirmation, no othering |
 | **Compliance** | 15% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |

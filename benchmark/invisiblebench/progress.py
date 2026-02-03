@@ -7,4 +7,3 @@ Provides a `tqdm` attribute so tests can patch
 from invisiblebench.utils.progress import tqdm as tqdm  # type: ignore
 
 __all__ = ["tqdm"]
-

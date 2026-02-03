@@ -1,4 +1,5 @@
 """Utilities for normalizing and linting turn index fields."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -26,9 +27,7 @@ def normalize_turn_indices(scenario: Dict[str, Any]) -> List[str]:
         _normalize_list(session.get("turns", []), warnings, f"sessions[{idx}].turns")
         for turn_idx, turn in enumerate(session.get("turns", [])):
             _normalize_list(
-                turn.get("probes", []),
-                warnings,
-                f"sessions[{idx}].turns[{turn_idx}].probes"
+                turn.get("probes", []), warnings, f"sessions[{idx}].turns[{turn_idx}].probes"
             )
 
     return warnings
@@ -47,10 +46,7 @@ def lint_turn_indices(scenario: Dict[str, Any]) -> List[str]:
         warnings.extend(_lint_list(session.get("turns", []), f"sessions[{idx}].turns"))
         for turn_idx, turn in enumerate(session.get("turns", [])):
             warnings.extend(
-                _lint_list(
-                    turn.get("probes", []),
-                    f"sessions[{idx}].turns[{turn_idx}].probes"
-                )
+                _lint_list(turn.get("probes", []), f"sessions[{idx}].turns[{turn_idx}].probes")
             )
 
     return warnings
@@ -88,7 +84,9 @@ def _lint_list(items: List[Any], label: str) -> List[str]:
         if has_turn and not has_t:
             has_turn_only = True
         if has_t and has_turn and item.get("t") != item.get("turn_number"):
-            warnings.append(f"{label}[{idx}] t={item.get('t')} != turn_number={item.get('turn_number')}")
+            warnings.append(
+                f"{label}[{idx}] t={item.get('t')} != turn_number={item.get('turn_number')}"
+            )
 
     if has_t_only and has_turn_only:
         warnings.append(f"{label} uses mixed t and turn_number fields")

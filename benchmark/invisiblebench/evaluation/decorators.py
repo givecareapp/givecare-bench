@@ -20,6 +20,7 @@ Usage:
     for scorer in registry.scorers:
         result = scorer(transcript, scenario, rules)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

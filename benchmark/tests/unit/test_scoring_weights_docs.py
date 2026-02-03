@@ -1,4 +1,5 @@
 """Ensure doc-reported scoring weights stay in sync with scoring config."""
+
 from __future__ import annotations
 
 import re
@@ -10,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCORING_CONFIG = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 PACKAGE_SCORING_CONFIG = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
 
-EXPECTED_KEYS = {"memory", "trauma", "belonging", "compliance", "safety"}
+EXPECTED_KEYS = {"memory", "consistency", "trauma", "belonging", "compliance", "safety"}
 
 
 def _load_weights(path: Path) -> dict[str, float]:
@@ -27,6 +28,8 @@ def _label_to_key(label: str) -> str:
     normalized = label.strip().lower()
     if "memory" in normalized:
         return "memory"
+    if "consistency" in normalized:
+        return "consistency"
     if "trauma" in normalized:
         return "trauma"
     if "belonging" in normalized:
@@ -39,7 +42,7 @@ def _label_to_key(label: str) -> str:
 
 
 def _parse_root_readme_weights(text: str) -> dict[str, int]:
-    header = "### 5 Evaluation Dimensions"
+    header = "### 6 Evaluation Dimensions"
     start = text.find(header)
     assert start != -1, "README.md missing '5 Evaluation Dimensions' section"
 
@@ -71,7 +74,7 @@ def _parse_dimensions_line(text: str) -> dict[str, int]:
 
 
 def _parse_yaml_orchestrator_list(text: str) -> dict[str, int]:
-    header = "### YAML Orchestrator (5 dimensions)"
+    header = "### YAML Orchestrator (6 dimensions)"
     start = text.find(header)
     assert start != -1, "benchmark/README.md missing YAML Orchestrator section"
 
@@ -91,12 +94,12 @@ def _parse_yaml_orchestrator_list(text: str) -> dict[str, int]:
 
 
 def _parse_scripts_dimensions_list(text: str) -> dict[str, int]:
-    marker = "Scores each transcript across 5 dimensions:"
+    marker = "Scores each transcript across 6 dimensions:"
     lines = text.splitlines()
     for idx, line in enumerate(lines):
         if marker in line:
             weights: dict[str, int] = {}
-            for follow in lines[idx + 1:]:
+            for follow in lines[idx + 1 :]:
                 stripped = follow.strip()
                 if not stripped.startswith("-"):
                     if weights:
@@ -121,7 +124,7 @@ def _parse_scripts_weights_snippet(text: str) -> dict[str, float]:
     fence_end = text.find("```", fence_start + len("```yaml"))
     assert fence_end != -1, "benchmark/scripts/README.md missing closing YAML code fence"
 
-    snippet = text[fence_start + len("```yaml"):fence_end].strip()
+    snippet = text[fence_start + len("```yaml") : fence_end].strip()
     data = yaml.safe_load(snippet) if snippet else {}
     return data.get("weights", {})
 
@@ -142,7 +145,9 @@ def test_scoring_weights_match_docs() -> None:
     list_weights = _parse_yaml_orchestrator_list(benchmark_readme)
     assert list_weights == expected_percent
 
-    scripts_readme = (PROJECT_ROOT / "benchmark" / "scripts" / "README.md").read_text(encoding="utf-8")
+    scripts_readme = (PROJECT_ROOT / "benchmark" / "scripts" / "README.md").read_text(
+        encoding="utf-8"
+    )
     bullet_weights = _parse_scripts_dimensions_list(scripts_readme)
     assert bullet_weights == expected_percent
 

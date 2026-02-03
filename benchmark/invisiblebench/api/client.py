@@ -1,6 +1,7 @@
 """
 API client for calling models via OpenRouter.
 """
+
 import asyncio
 import os
 import time
@@ -26,6 +27,7 @@ try:
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
+
 
 class InsufficientCreditsError(RuntimeError):
     """Raised when the OpenRouter account has insufficient credits (HTTP 402)."""

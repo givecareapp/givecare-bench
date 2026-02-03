@@ -3,6 +3,7 @@ Report generators for InvisibleBench.
 
 Generates HTML and JSON reports from scoring results.
 """
+
 from __future__ import annotations
 
 import html
@@ -135,7 +136,9 @@ class ReportGenerator:
 
         confidence = results.get("confidence") or {}
         overall_confidence = confidence.get("overall")
-        overall_confidence_label = "N/A" if overall_confidence is None else f"{overall_confidence:.3f}"
+        overall_confidence_label = (
+            "N/A" if overall_confidence is None else f"{overall_confidence:.3f}"
+        )
         html_parts.extend(
             [
                 "    <h3>Confidence</h3>",
@@ -145,53 +148,63 @@ class ReportGenerator:
 
         dimension_confidence = confidence.get("dimensions", {})
         if dimension_confidence:
-            html_parts.extend([
-                "    <table>",
-                "        <thead>",
-                "            <tr><th>Dimension</th><th>Confidence</th></tr>",
-                "        </thead>",
-                "        <tbody>",
-            ])
+            html_parts.extend(
+                [
+                    "    <table>",
+                    "        <thead>",
+                    "            <tr><th>Dimension</th><th>Confidence</th></tr>",
+                    "        </thead>",
+                    "        <tbody>",
+                ]
+            )
             for dimension, value in dimension_confidence.items():
                 label = "N/A" if value is None else f"{value:.3f}"
                 html_parts.append(
                     f"            <tr><td>{html.escape(str(dimension))}</td><td>{label}</td></tr>"
                 )
-            html_parts.extend([
-                "        </tbody>",
-                "    </table>",
-            ])
+            html_parts.extend(
+                [
+                    "        </tbody>",
+                    "    </table>",
+                ]
+            )
 
         # Variance section (if multiple iterations)
         variance = results.get("variance")
         if variance and variance.get("overall"):
             overall_var = variance["overall"]
-            html_parts.extend([
-                "    <div style='margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px;'>",
-                "        <h3 style='margin-top: 0;'>Variance Metrics (from multiple iterations)</h3>",
-                f"        <p><strong>Mean:</strong> {overall_var['mean']:.4f}</p>",
-                f"        <p><strong>Std Dev:</strong> {overall_var['std_dev']:.4f}</p>",
-                f"        <p><strong>Min:</strong> {overall_var['min']:.4f} | <strong>Max:</strong> {overall_var['max']:.4f}</p>",
-            ])
+            html_parts.extend(
+                [
+                    "    <div style='margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px;'>",
+                    "        <h3 style='margin-top: 0;'>Variance Metrics (from multiple iterations)</h3>",
+                    f"        <p><strong>Mean:</strong> {overall_var['mean']:.4f}</p>",
+                    f"        <p><strong>Std Dev:</strong> {overall_var['std_dev']:.4f}</p>",
+                    f"        <p><strong>Min:</strong> {overall_var['min']:.4f} | <strong>Max:</strong> {overall_var['max']:.4f}</p>",
+                ]
+            )
             if overall_var.get("cv") is not None:
-                html_parts.append(f"        <p><strong>Coefficient of Variation:</strong> {overall_var['cv']:.4f}</p>")
+                html_parts.append(
+                    f"        <p><strong>Coefficient of Variation:</strong> {overall_var['cv']:.4f}</p>"
+                )
             html_parts.append("    </div>")
 
         # Iterations detail
         iterations = results.get("iterations", [])
         if len(iterations) > 1:
-            html_parts.extend([
-                "    <h3>Iteration Details</h3>",
-                "    <table>",
-                "        <thead>",
-                "            <tr>",
-                "                <th>Iteration</th>",
-                "                <th>Overall Score</th>",
-                "                <th>Hard Fail</th>",
-                "            </tr>",
-                "        </thead>",
-                "        <tbody>",
-            ])
+            html_parts.extend(
+                [
+                    "    <h3>Iteration Details</h3>",
+                    "    <table>",
+                    "        <thead>",
+                    "            <tr>",
+                    "                <th>Iteration</th>",
+                    "                <th>Overall Score</th>",
+                    "                <th>Hard Fail</th>",
+                    "            </tr>",
+                    "        </thead>",
+                    "        <tbody>",
+                ]
+            )
             for iter_data in iterations:
                 iter_num = iter_data.get("iteration", "?")
                 iter_score = iter_data.get("overall_score", 0.0)
@@ -199,10 +212,12 @@ class ReportGenerator:
                 html_parts.append(
                     f"            <tr><td>{iter_num}</td><td>{iter_score:.4f}</td><td>{iter_fail}</td></tr>"
                 )
-            html_parts.extend([
-                "        </tbody>",
-                "    </table>",
-            ])
+            html_parts.extend(
+                [
+                    "        </tbody>",
+                    "    </table>",
+                ]
+            )
 
         # Dimension scores
         html_parts.append("    <h2>Dimension Scores</h2>")
@@ -244,11 +259,9 @@ class ReportGenerator:
             if "violations" in dim_result and dim_result["violations"]:
                 html_parts.append("        <h4>Violations:</h4>")
                 for violation in dim_result["violations"]:
-                    rule = html.escape(str(violation.get('rule', 'Unknown')))
-                    turn = html.escape(str(violation.get('turn', 'N/A')))
-                    html_parts.append(
-                        f"        <div class='violation'>{rule} at turn {turn}</div>"
-                    )
+                    rule = html.escape(str(violation.get("rule", "Unknown")))
+                    turn = html.escape(str(violation.get("turn", "N/A")))
+                    html_parts.append(f"        <div class='violation'>{rule} at turn {turn}</div>")
 
             html_parts.append("    </div>")
 
@@ -272,6 +285,7 @@ class ReportGenerator:
 
     def _build_batch_html(self, results: list, metadata: dict) -> str:
         """Build batch summary HTML."""
+
         def is_failure(result: dict) -> bool:
             status = result.get("status")
             return (
@@ -342,11 +356,17 @@ class ReportGenerator:
         # Results by tier
         for tier in sorted(by_tier.keys()):
             tier_results = by_tier[tier]
-            tier_avg = sum(r.get("overall_score", 0) for r in tier_results) / len(tier_results) if tier_results else 0
-            html_parts.extend([
-                f"        <div class='tier-section'>",
-                f"            <div class='tier-header'>Tier {tier} &mdash; {tier_avg*100:.0f}%</div>",
-            ])
+            tier_avg = (
+                sum(r.get("overall_score", 0) for r in tier_results) / len(tier_results)
+                if tier_results
+                else 0
+            )
+            html_parts.extend(
+                [
+                    f"        <div class='tier-section'>",
+                    f"            <div class='tier-header'>Tier {tier} &mdash; {tier_avg*100:.0f}%</div>",
+                ]
+            )
             for r in tier_results:
                 score = r.get("overall_score", 0)
                 is_fail = r.get("hard_fail") or score < 0.5
@@ -363,10 +383,12 @@ class ReportGenerator:
 
         # Failures section
         if failures:
-            html_parts.extend([
-                "        <div class='failure-section'>",
-                "            <h2 style='color: #dc3545; margin-top: 0;'>Failures &amp; Violations</h2>",
-            ])
+            html_parts.extend(
+                [
+                    "        <div class='failure-section'>",
+                    "            <h2 style='color: #dc3545; margin-top: 0;'>Failures &amp; Violations</h2>",
+                ]
+            )
             for f in failures:
                 score_pct = int(f.get("overall_score", 0) * 100)
                 html_parts.append(
@@ -376,32 +398,44 @@ class ReportGenerator:
 
                 # Hard fail reasons
                 for reason in f.get("hard_fail_reasons", []):
-                    html_parts.append(f"                <div class='failure-reason'>→ {html.escape(str(reason))}</div>")
+                    html_parts.append(
+                        f"                <div class='failure-reason'>→ {html.escape(str(reason))}</div>"
+                    )
 
                 # Failure categories
                 categories = f.get("failure_categories", {})
                 for cat, details in categories.get("details", {}).items():
                     cat_display = cat.replace("_", " ").title()
-                    html_parts.append(f"                <div class='failure-detail'>• {html.escape(cat_display)}</div>")
+                    html_parts.append(
+                        f"                <div class='failure-detail'>• {html.escape(cat_display)}</div>"
+                    )
                     for detail in details[:2]:
-                        html_parts.append(f"                <div class='failure-detail' style='margin-left: 25px;'>{html.escape(str(detail))}</div>")
+                        html_parts.append(
+                            f"                <div class='failure-detail' style='margin-left: 25px;'>{html.escape(str(detail))}</div>"
+                        )
 
                 # Low dimensions
                 dims = f.get("dimensions", {})
-                low_dims = [(k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5]
+                low_dims = [
+                    (k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5
+                ]
                 if low_dims:
                     html_parts.append("                <div style='margin-top: 10px;'>")
                     for k, v in sorted(low_dims, key=lambda x: x[1]):
-                        html_parts.append(f"                    <span class='dim-low'>{html.escape(k)}: {int(v*100)}%</span>")
+                        html_parts.append(
+                            f"                    <span class='dim-low'>{html.escape(k)}: {int(v*100)}%</span>"
+                        )
                     html_parts.append("                </div>")
 
                 html_parts.append("            </div>")
             html_parts.append("        </div>")
 
-        html_parts.extend([
-            "    </div>",
-            "</body>",
-            "</html>",
-        ])
+        html_parts.extend(
+            [
+                "    </div>",
+                "</body>",
+                "</html>",
+            ]
+        )
 
         return "\n".join(html_parts)

@@ -101,8 +101,8 @@ pytest benchmark/tests/ -v
 
 ## Usage Example
 
-#### YAML Orchestrator (Offline Scoring)
-Score existing conversation transcripts using 5 scoring dimensions.
+### YAML Orchestrator (6 dimensions)
+Score existing conversation transcripts using 6 scoring dimensions.
 
 ```python
 from pathlib import Path
@@ -126,7 +126,14 @@ print(f"Overall Score: {results['overall_score']:.2f}")
 print(f"Dimension Scores: {results['dimension_scores']}")
 ```
 
-**Dimensions**: memory (16%), trauma (15%), belonging (34%), compliance (15%), safety (20%)
+**Dimensions**: memory (11%), consistency (5%), trauma (15%), belonging (34%), compliance (15%), safety (20%)
+
+1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
+2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
+3. **Trauma-Informed Flow** (15%) - Grounding before advice, boundary integrity
+4. **Belonging & Cultural Fitness** (34%) - Recognition, agency, no othering
+5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
+6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
 
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
@@ -137,16 +144,17 @@ See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 
 - **Scenarios**: 29 standard (tier 0-3) + 3 confidential = 32 total
 - **Models**: 11 models in full benchmark
-- **Dimensions**: 5 scoring dimensions
+- **Dimensions**: 6 scoring dimensions
 - **Tests**: See `benchmark/tests/`
 
 ## Evaluation Dimensions
 
-1. **Memory** (16%) - Entity consistency, recall F1, conflict resolution
-2. **Trauma-Informed Flow** (15%) - Grounding before advice, boundary integrity
-3. **Belonging & Cultural Fitness** (34%) - Recognition, agency, no othering
-4. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
-5. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
+1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
+2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
+3. **Trauma-Informed Flow** (15%) - Grounding before advice, boundary integrity
+4. **Belonging & Cultural Fitness** (34%) - Recognition, agency, no othering
+5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
+6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
 
 ## Four-Tier Architecture
 

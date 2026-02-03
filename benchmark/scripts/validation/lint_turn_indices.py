@@ -1,4 +1,5 @@
 """Lint scenario turn index fields for mixed usage."""
+
 from __future__ import annotations
 
 import argparse

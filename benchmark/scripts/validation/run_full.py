@@ -50,22 +50,18 @@ def main():
         "--output",
         type=Path,
         default=Path("results/full_benchmark"),
-        help="Output directory for results"
+        help="Output directory for results",
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Estimate costs without running evaluations"
+        "--dry-run", action="store_true", help="Estimate costs without running evaluations"
     )
     parser.add_argument(
         "--skip-transcripts",
         action="store_true",
-        help="Skip transcript generation (use existing transcripts)"
+        help="Skip transcript generation (use existing transcripts)",
     )
     parser.add_argument(
-        "--yes", "-y",
-        action="store_true",
-        help="Auto-confirm (skip interactive prompt)"
+        "--yes", "-y", action="store_true", help="Auto-confirm (skip interactive prompt)"
     )
     parser.add_argument(
         "--include-confidential",
@@ -85,7 +81,9 @@ def main():
     models = MODELS_FULL
 
     if args.include_confidential:
-        print("WARNING: Including confidential scenarios. Do not submit these results to the leaderboard.")
+        print(
+            "WARNING: Including confidential scenarios. Do not submit these results to the leaderboard."
+        )
 
     # Create output directory
     args.output.mkdir(parents=True, exist_ok=True)
@@ -109,7 +107,7 @@ def main():
     # Confirm
     if not args.yes:
         response = input("Proceed with evaluations? (y/n): ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("Cancelled")
             return 0
     else:
@@ -119,6 +117,7 @@ def main():
     print("\nInitializing API client...")
     try:
         from invisiblebench.api.client import ModelAPIClient
+
         api_client = ModelAPIClient()
         print("API client ready")
     except Exception as e:
@@ -129,6 +128,7 @@ def main():
     print("Initializing scoring orchestrator...")
     try:
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
         scoring_config_path = Path("benchmark/configs/scoring.yaml")
         if not scoring_config_path.exists():
             scoring_config_path = args.output / "temp_scoring_config.yaml"
@@ -142,6 +142,7 @@ def main():
     except Exception as e:
         print(f"ERROR: Failed to initialize orchestrator: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -152,6 +153,7 @@ def main():
 
     try:
         from tqdm import tqdm
+
         pbar = tqdm(total=total, desc="Running evaluations")
         use_tqdm = True
     except ImportError:
@@ -183,11 +185,12 @@ def main():
                         model_id=model["id"],
                         scenario=scenario,
                         api_client=api_client,
-                        output_path=transcript_path
+                        output_path=transcript_path,
                     )
                 except Exception as e:
                     print(f"  ERROR generating transcript: {e}")
                     import traceback
+
                     traceback.print_exc()
                     continue
             else:
@@ -208,6 +211,7 @@ def main():
             except Exception as e:
                 print(f"  ERROR during evaluation: {e}")
                 import traceback
+
                 traceback.print_exc()
                 continue
 
@@ -229,7 +233,7 @@ def main():
 
     # Save all results
     all_results_path = args.output / "all_results.json"
-    with open(all_results_path, 'w') as f:
+    with open(all_results_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"All results saved to: {all_results_path}")
 
@@ -238,8 +242,8 @@ def main():
     generate_heatmap(results, args.output)
 
     # Final summary
-    total_actual_cost = sum(r['cost'] for r in results)
-    successful = len([r for r in results if r['status'] != 'error'])
+    total_actual_cost = sum(r["cost"] for r in results)
+    successful = len([r for r in results if r["status"] != "error"])
 
     print(f"\n{'='*60}")
     print("FULL BENCHMARK COMPLETE")

@@ -12,7 +12,7 @@
     ]
   },
   "purpose_and_intended_users": {
-    "task_description": "Multi-turn conversational evaluation across five dimensions: safety, compliance, trauma-informed care, belonging, and longitudinal memory.",
+    "task_description": "Multi-turn conversational evaluation across six dimensions: safety, compliance, trauma-informed care, belonging, longitudinal memory, and intra-conversation consistency.",
     "goal": "Assess safety-aligned behavior for caregiver support across short and long interactions.",
     "audience": [
       "model developers",
@@ -79,11 +79,13 @@
       "dimension_scores.compliance",
       "dimension_scores.trauma",
       "dimension_scores.belonging",
-      "dimension_scores.memory"
+      "dimension_scores.memory",
+      "dimension_scores.consistency"
     ],
     "dimension_weights": {
       "belonging": 0.34,
-      "memory": 0.16,
+      "memory": 0.11,
+      "consistency": 0.05,
       "safety": 0.20,
       "compliance": 0.15,
       "trauma": 0.15
