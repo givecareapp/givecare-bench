@@ -23,12 +23,37 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ## [Unreleased]
 
+---
+
+## [1.3.0] - 2026-02-03
+
+### Added
+- **`--provider` flag**: Unified CLI for model eval (`openrouter`) and system eval (`givecare`)
+- **`--diagnose` flag**: Generate actionable diagnostic reports after any eval run
+- **`diagnose` subcommand**: Generate diagnostic reports from existing results
+- **Diagnostic reports** include:
+  - Failure priority (hard fails first, sorted by score)
+  - Quoted responses from transcripts showing what triggered failures
+  - Suggested fixes for each violation type
+  - Pattern analysis (common issues across scenarios)
+  - Comparison with previous run (regressions, improvements)
+- **`--confidential` flag**: Include 3 confidential scenarios (32 total vs 29 standard)
+- Expanded disclosure detection phrases in base.yaml
+- Fixed .env loading in api/client.py for various entry points
+
+### Changed
+- System eval now uses `uv run bench --provider givecare -y` (was separate script)
+- Updated all documentation to reflect unified CLI
+- README.md: Added "Two Evaluation Modes" section with comparison table
+- benchmark/README.md: Complete rewrite for current architecture
+- benchmark/ARCHITECTURE.md: Added diagnostic reports section
+- benchmark/scenarios/README.md: Updated scenario counts (29+3)
+- benchmark/scripts/README.md: Updated for new CLI commands
+- benchmark/scripts/validation/QUICKSTART.md: Complete rewrite
+
 ### Removed
 - Obsolete `specs/` and `plans/` folders
 - Stale AI review files from `reports/`
-
-### Changed
-- Reorganized reports structure: daily changelog now in `reports/YYYY-MM-DD/changelog.md`
 
 ---
 
