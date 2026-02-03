@@ -66,6 +66,178 @@ MODELS_MINIMAL = [model.model_dump() for model in CONFIG_MODELS_MINIMAL]
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
+def run_givecare_eval(
+    tier_filter: Optional[List[int]] = None,
+    include_confidential: bool = False,
+    verbose: bool = True,
+    dry_run: bool = False,
+    auto_confirm: bool = False,
+) -> int:
+    """Run GiveCare/Mira system evaluation.
+
+    This tests the full Mira product stack, not raw LLM capability.
+    Uses the givecare_provider module to generate transcripts via the gc CLI.
+    """
+    # Import givecare provider
+    import sys
+    from pathlib import Path
+
+    root = get_project_root()
+    scripts_dir = root / "benchmark" / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+
+    try:
+        from givecare_provider import (
+            GiveCareProvider,
+            get_scenarios as get_givecare_scenarios,
+            run_scenario,
+            format_result,
+            MODEL_NAME,
+            PROVIDER_NAME,
+            PROVIDER_VERSION,
+            MODEL_ID,
+        )
+    except ImportError as e:
+        print(f"Error: Could not import givecare_provider: {e}")
+        print("Make sure benchmark/scripts/givecare_provider.py exists")
+        return 1
+
+    scenarios_dir = root / "benchmark" / "scenarios"
+    output_dir = root / "results" / "givecare"
+
+    # Get scenarios
+    scenario_paths = get_givecare_scenarios(
+        scenarios_dir,
+        tier_filter=tier_filter,
+        include_confidential=include_confidential,
+    )
+
+    if not scenario_paths:
+        print("No scenarios found")
+        return 1
+
+    scenario_count = len(scenario_paths)
+    conf_note = " (including confidential)" if include_confidential else ""
+    print(f"GiveCare System Eval: {scenario_count} scenario(s){conf_note}")
+
+    if dry_run:
+        print("\nDry run - no transcripts will be generated")
+        for p in scenario_paths:
+            print(f"  - {p.stem}")
+        return 0
+
+    if not auto_confirm:
+        confirm = input(f"\nRun {scenario_count} scenarios against Mira? [y/N] ")
+        if confirm.lower() != "y":
+            print("Aborted")
+            return 0
+
+    # Run scenarios
+    provider = GiveCareProvider(deployment="dev", wait_ms=6000)
+    transcript_data = []
+
+    try:
+        for scenario_path in scenario_paths:
+            provider.phone = provider._generate_phone()
+            transcript_path, scenario_data = run_scenario(
+                provider,
+                str(scenario_path),
+                output_dir / "transcripts",
+                verbose=verbose,
+            )
+            transcript_data.append((transcript_path, scenario_path, scenario_data))
+    finally:
+        provider.close()
+
+    print(f"\nGenerated {len(transcript_data)} transcript(s)")
+
+    # Score transcripts
+    print("\nScoring transcripts...")
+    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
+    scoring_config = root / "benchmark" / "configs" / "scoring.yaml"
+    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
+
+    orchestrator = ScoringOrchestrator(
+        scoring_config_path=str(scoring_config),
+        enable_state_persistence=False,
+        enable_llm=True,
+    )
+
+    results = []
+    for transcript_path, scenario_path, scenario_data in transcript_data:
+        try:
+            score_result = orchestrator.score(
+                transcript_path=str(transcript_path),
+                scenario_path=str(scenario_path),
+                rules_path=str(rules_path),
+                model_name=MODEL_NAME,
+            )
+            formatted = format_result(scenario_path, scenario_data, score_result)
+            results.append(formatted)
+
+            score = formatted["overall_score"]
+            status = "FAIL" if formatted["hard_fail"] else "PASS"
+            print(f"  {formatted['scenario']}: {status} ({int(score * 100)}%)")
+        except Exception as e:
+            print(f"  {scenario_path.stem}: ERROR ({e})")
+            from givecare_provider import get_scenario_title, get_tier_from_path
+            results.append({
+                "model": MODEL_NAME,
+                "model_id": MODEL_ID,
+                "provider": PROVIDER_NAME,
+                "scenario": get_scenario_title(scenario_data, scenario_path),
+                "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
+                "tier": get_tier_from_path(scenario_path),
+                "overall_score": 0.0,
+                "hard_fail": True,
+                "hard_fail_reasons": [str(e)],
+                "failure_categories": {"categories": ["error"], "details": {}, "primary_category": "error", "count": 1},
+                "dimensions": {},
+                "status": "error",
+                "error": str(e),
+            })
+
+    # Save results
+    from datetime import datetime
+    run_timestamp = datetime.now().isoformat()
+    output_data = {
+        "metadata": {
+            "provider": PROVIDER_NAME,
+            "provider_version": PROVIDER_VERSION,
+            "model": MODEL_NAME,
+            "model_id": MODEL_ID,
+            "deployment": "dev",
+            "timestamp": run_timestamp,
+            "scenario_count": len(results),
+            "include_confidential": include_confidential,
+        },
+        "results": results,
+    }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    results_path = output_dir / "givecare_results.json"
+    with open(results_path, "w") as f:
+        json.dump(output_data, f, indent=2)
+
+    # Summary
+    passed = sum(1 for r in results if not r.get("hard_fail"))
+    failed = len(results) - passed
+    avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
+
+    print(f"\n{'='*50}")
+    print(f"GiveCare System Eval Results")
+    print(f"{'='*50}")
+    print(f"Scenarios: {len(results)}")
+    print(f"Passed:    {passed}")
+    print(f"Failed:    {failed}")
+    print(f"Average:   {avg_score:.1f}%")
+    print(f"{'='*50}")
+    print(f"Saved: {results_path}")
+
+    return 0 if failed == 0 else 1
+
+
 def get_project_root() -> Path:
     """Find the project root (where pyproject.toml is)."""
     current = Path(__file__).resolve()
@@ -1299,18 +1471,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Model Evaluation (raw LLM capability)
   uv run bench --minimal -y           Quick validation (~$0.05)
   uv run bench --full -y              Full benchmark (~$5-10)
   uv run bench --full -m 1-4 -y       Run first 4 models only
-  uv run bench --full -m 4 -t 3 -y    Run 4th model on tier 3 only
-  uv run bench -m 1,3,5 -y            Run models 1, 3, and 5
   uv run bench -t 0,1 -y              Run tier 0 and 1 only
-  uv run bench -s crisis -y           Run crisis scenarios only
-  uv run bench -p 3 --full -y         Run 3 models in parallel
+
+  # System Evaluation (GiveCare/Mira product)
+  uv run bench --provider givecare -y           Standard (29 scenarios)
+  uv run bench --provider givecare -y --confidential  Full (32 scenarios)
+  uv run bench --provider givecare -t 1 -y      Tier 1 only
+
+  # Utilities
   uv run bench report results.json    Regenerate HTML report
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
-  uv run bench archive                Archive runs before today
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -1387,6 +1562,18 @@ Examples:
         action="store_true",
         help="Update leaderboard.json after run completes"
     )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        choices=["openrouter", "givecare"],
+        default="openrouter",
+        help="Provider for transcript generation: 'openrouter' (raw LLM) or 'givecare' (Mira product)"
+    )
+    parser.add_argument(
+        "--confidential",
+        action="store_true",
+        help="Include confidential scenarios (32 vs 29) - only for givecare provider"
+    )
 
     args = parser.parse_args(argv)
 
@@ -1408,13 +1595,23 @@ Examples:
         from invisiblebench.cli.archive import run_list
         return run_list()
 
-    # Default: run benchmark
-    mode = "full" if args.full else "minimal"
-
     # Parse tier filter
     tier_filter = None
     if args.tier:
         tier_filter = [int(t.strip()) for t in args.tier.split(",")]
+
+    # Handle GiveCare provider (system eval)
+    if args.provider == "givecare":
+        return run_givecare_eval(
+            tier_filter=tier_filter,
+            include_confidential=args.confidential,
+            verbose=True,
+            dry_run=args.dry_run,
+            auto_confirm=args.yes,
+        )
+
+    # Default: run benchmark with OpenRouter (model eval)
+    mode = "full" if args.full else "minimal"
 
     # Parse scenario filter
     scenario_filter = None

@@ -22,9 +22,9 @@ uv run bench --full -m 2 -y --update-leaderboard   # Rerun GPT-5.2
 #         11=KimiK2.5
 
 # GiveCare Provider - tests Mira product (not raw LLM)
-uv run python benchmark/scripts/givecare_provider.py --all --score -v      # Standard (29 scenarios)
-uv run python benchmark/scripts/givecare_provider.py --all --score --confidential  # Full (32 scenarios)
-uv run python benchmark/scripts/givecare_provider.py --all --tier 1 --score  # Tier 1 only
+uv run bench --provider givecare -y                    # Standard (29 scenarios)
+uv run bench --provider givecare -y --confidential     # Full (32 scenarios)
+uv run bench --provider givecare -t 1 -y               # Tier 1 only
 
 # Health & Maintenance
 uv run bench health                    # Check leaderboard for issues
@@ -48,10 +48,10 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Benchmark | `uv run bench` | Raw LLM capability | 29 |
-| GiveCare | `givecare_provider.py` | Mira product behavior | 29 (or 32 with --confidential) |
+| Model Eval | `uv run bench --full -y` | Raw LLM capability | 29 |
+| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 29 (or 32 with --confidential) |
 
-**Scores are NOT directly comparable** - benchmark tests raw models with simple prompt, GiveCare tests full product stack (tools, memory, SMS constraints).
+**Scores are NOT directly comparable** - model eval tests raw models with simple prompt, system eval tests full product stack (tools, memory, SMS constraints).
 
 ## Leaderboard Update Flow
 
@@ -78,16 +78,16 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 ```
 benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
-benchmark/invisiblebench/cli/   # CLI commands (runner, health, archive)
-benchmark/scripts/              # Provider scripts
-  givecare_provider.py          # GiveCare/Mira product eval
+benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
+benchmark/scripts/              # Provider implementations
+  givecare_provider.py          # GiveCare/Mira system provider
 benchmark/scenarios/            # tier0-3/ (29) + confidential/ (3)
 benchmark/configs/rules/        # Jurisdiction rules (base, ca, ny, il, etc.)
 benchmark/tests/                # pytest suite
 papers/                         # LaTeX (givecare/, invisiblebench/)
-results/                        # Benchmark outputs (gitignored)
-  run_YYYYMMDD_HHMMSS/          # Model benchmark runs
-  givecare/                     # GiveCare eval results
+results/                        # Outputs (gitignored)
+  run_YYYYMMDD_HHMMSS/          # Model eval runs (--provider openrouter)
+  givecare/                     # System eval runs (--provider givecare)
     transcripts/                # Conversation transcripts
     givecare_results.json       # Scored results
   archive/                      # Archived old runs
