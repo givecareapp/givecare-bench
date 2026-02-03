@@ -3,6 +3,7 @@ Error resilience and recovery utilities for InvisibleBench.
 
 Provides retry decorators, atomic file writes, and error handling patterns.
 """
+
 from __future__ import annotations
 
 import json
@@ -51,9 +52,7 @@ def retry_on_io_error(
 
                     # Don't retry on last attempt
                     if attempt == max_retries:
-                        logger.error(
-                            f"Failed after {max_retries} retries: {func.__name__}"
-                        )
+                        logger.error(f"Failed after {max_retries} retries: {func.__name__}")
                         raise
 
                     # Calculate exponential backoff delay
@@ -152,8 +151,7 @@ def load_state(state_path: "Path | str") -> Dict[str, Any]:
 
     if not state_path.exists():
         raise FileNotFoundError(
-            f"Resume state file not found: {state_path}. "
-            "Cannot resume from non-existent state."
+            f"Resume state file not found: {state_path}. " "Cannot resume from non-existent state."
         )
 
     try:

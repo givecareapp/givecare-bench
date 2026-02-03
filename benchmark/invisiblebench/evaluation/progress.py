@@ -8,4 +8,3 @@ evaluation namespace to satisfy tests importing
 from invisiblebench.utils.progress import IterationTracker, ProgressTracker
 
 __all__ = ["ProgressTracker", "IterationTracker"]
-

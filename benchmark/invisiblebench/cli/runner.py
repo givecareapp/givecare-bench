@@ -30,7 +30,14 @@ try:
 
     from rich.console import Console
     from rich.live import Live
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TaskProgressColumn, TimeElapsedColumn
+    from rich.progress import (
+        Progress,
+        SpinnerColumn,
+        BarColumn,
+        TextColumn,
+        TaskProgressColumn,
+        TimeElapsedColumn,
+    )
     from rich.table import Table
     from rich.text import Text
 
@@ -45,8 +52,8 @@ load_dotenv()
 # Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
 # conversation history growth, and scorer LLM calls
 TOKEN_ESTIMATES = {
-    0: {"input": 2200, "output": 600},    # 2 turns
-    1: {"input": 5500, "output": 1400},   # 3-5 turns
+    0: {"input": 2200, "output": 600},  # 2 turns
+    1: {"input": 5500, "output": 1400},  # 3-5 turns
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
 }
@@ -183,24 +190,33 @@ def run_givecare_eval(
         except Exception as e:
             print(f"  {scenario_path.stem}: ERROR ({e})")
             from givecare_provider import get_scenario_title, get_tier_from_path
-            results.append({
-                "model": MODEL_NAME,
-                "model_id": MODEL_ID,
-                "provider": PROVIDER_NAME,
-                "scenario": get_scenario_title(scenario_data, scenario_path),
-                "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
-                "tier": get_tier_from_path(scenario_path),
-                "overall_score": 0.0,
-                "hard_fail": True,
-                "hard_fail_reasons": [str(e)],
-                "failure_categories": {"categories": ["error"], "details": {}, "primary_category": "error", "count": 1},
-                "dimensions": {},
-                "status": "error",
-                "error": str(e),
-            })
+
+            results.append(
+                {
+                    "model": MODEL_NAME,
+                    "model_id": MODEL_ID,
+                    "provider": PROVIDER_NAME,
+                    "scenario": get_scenario_title(scenario_data, scenario_path),
+                    "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
+                    "tier": get_tier_from_path(scenario_path),
+                    "overall_score": 0.0,
+                    "hard_fail": True,
+                    "hard_fail_reasons": [str(e)],
+                    "failure_categories": {
+                        "categories": ["error"],
+                        "details": {},
+                        "primary_category": "error",
+                        "count": 1,
+                    },
+                    "dimensions": {},
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     # Save results
     from datetime import datetime
+
     run_timestamp = datetime.now().isoformat()
     output_data = {
         "metadata": {
@@ -465,8 +481,7 @@ class ScenarioDisplay:
                 tier_done = self.tier_done[tier]
                 tier_scores = self.tier_scores[tier]
                 has_running = any(
-                    self.states[s["path"]]["status"] == "running"
-                    for s in self.by_tier[tier]
+                    self.states[s["path"]]["status"] == "running" for s in self.by_tier[tier]
                 )
 
                 if tier_done and tier_scores:
@@ -537,9 +552,7 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
 
 
-def generate_transcript(
-    model_id: str, scenario: Dict, api_client: Any, output_path: Path
-) -> Path:
+def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_path: Path) -> Path:
     """Generate model transcript from scenario.
 
     Raises:
@@ -584,10 +597,10 @@ def generate_transcript(
                     break
                 # Empty response - wait and retry
                 time.sleep(1.0 * (retry + 1))
-            
+
             if not assistant_msg.strip():
                 raise RuntimeError("Model returned empty response after 3 retries")
-            
+
             transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
             conversation_history.append({"role": "assistant", "content": assistant_msg})
             time.sleep(0.5)
@@ -596,7 +609,9 @@ def generate_transcript(
         except Exception as e:
             error_msg = f"Turn {turn_num}: {e}"
             errors.append(error_msg)
-            transcript.append({"turn": turn_num, "role": "assistant", "content": f"[ERROR: {e}]", "error": True})
+            transcript.append(
+                {"turn": turn_num, "role": "assistant", "content": f"[ERROR: {e}]", "error": True}
+            )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with jsonlines.open(output_path, "w") as writer:
@@ -710,11 +725,13 @@ async def evaluate_scenario_async(
                             break
                         # Empty response - wait and retry
                         await asyncio.sleep(1.0 * (retry + 1))
-                    
+
                     if not assistant_msg.strip():
                         raise RuntimeError("Model returned empty response after 3 retries")
-                    
-                    transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
+
+                    transcript.append(
+                        {"turn": turn_num, "role": "assistant", "content": assistant_msg}
+                    )
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
                     await asyncio.sleep(0.3)  # Slightly longer delay between turns
                 except InsufficientCreditsError:
@@ -722,7 +739,14 @@ async def evaluate_scenario_async(
                 except Exception as e:
                     error_msg = f"Turn {turn_num}: {e}"
                     errors.append(error_msg)
-                    transcript.append({"turn": turn_num, "role": "assistant", "content": f"[ERROR: {e}]", "error": True})
+                    transcript.append(
+                        {
+                            "turn": turn_num,
+                            "role": "assistant",
+                            "content": f"[ERROR: {e}]",
+                            "error": True,
+                        }
+                    )
 
             transcript_path.parent.mkdir(parents=True, exist_ok=True)
             with jsonlines.open(transcript_path, "w") as writer:
@@ -736,7 +760,10 @@ async def evaluate_scenario_async(
             raise  # Abort immediately — propagate to runner
         except Exception as e:
             return _make_error_result(
-                model, scenario["name"], scenario_id, scenario["tier"],
+                model,
+                scenario["name"],
+                scenario_id,
+                scenario["tier"],
                 f"Transcript generation failed: {e}",
             )
 
@@ -786,13 +813,20 @@ async def evaluate_scenario_async(
 
         except Exception as e:
             return _make_error_result(
-                model, scenario["name"], scenario_id, scenario["tier"],
+                model,
+                scenario["name"],
+                scenario_id,
+                scenario["tier"],
                 f"Scoring failed: {e}",
             )
 
 
 def _make_error_result(
-    model: Dict, scenario_name: str, scenario_id: str, tier: int, reason: str,
+    model: Dict,
+    scenario_name: str,
+    scenario_id: str,
+    tier: int,
+    reason: str,
 ) -> Dict:
     """Build a standardized error result dict for failed scenarios."""
     return {
@@ -826,8 +860,10 @@ def _update_leaderboard(results_path: Path) -> None:
             [
                 sys.executable,
                 str(root / "benchmark" / "scripts" / "validation" / "prepare_for_leaderboard.py"),
-                "--input", str(results_path),
-                "--output", tmp_dir,
+                "--input",
+                str(results_path),
+                "--output",
+                tmp_dir,
             ],
             check=True,
             capture_output=True,
@@ -839,8 +875,10 @@ def _update_leaderboard(results_path: Path) -> None:
             [
                 sys.executable,
                 str(root / "benchmark" / "scripts" / "leaderboard" / "generate_leaderboard.py"),
-                "--input", tmp_dir,
-                "--output", str(leaderboard_output),
+                "--input",
+                tmp_dir,
+                "--output",
+                str(leaderboard_output),
             ],
             check=True,
             capture_output=True,
@@ -982,7 +1020,9 @@ def run_benchmark(
 
         if RICH_AVAILABLE and console:
             # Track progress per model
-            model_progress: Dict[str, tuple] = {}  # model_name -> (completed, total, current_scenario)
+            model_progress: Dict[str, tuple] = (
+                {}
+            )  # model_name -> (completed, total, current_scenario)
             progress_lock = threading.Lock()
             all_results: List[Dict] = []
             results_lock = threading.Lock()
@@ -999,8 +1039,13 @@ def run_benchmark(
                     # Use a dummy semaphore (no limit within model)
                     dummy_sem = asyncio.Semaphore(1)
                     result = await evaluate_scenario_async(
-                        model, scenario, api_client, orchestrator, output_dir,
-                        dummy_sem, detailed_output=detailed_output,
+                        model,
+                        scenario,
+                        api_client,
+                        orchestrator,
+                        output_dir,
+                        dummy_sem,
+                        detailed_output=detailed_output,
                     )
                     model_results.append(result)
 
@@ -1026,6 +1071,7 @@ def run_benchmark(
 
             async def run_and_display():
                 import asyncio as aio
+
                 task = aio.create_task(run_models_parallel())
 
                 with Progress(
@@ -1046,7 +1092,7 @@ def run_benchmark(
                             model["name"],
                             total=len(scenarios),
                             model_name=model["name"],
-                            scenario="waiting..."
+                            scenario="waiting...",
                         )
 
                     while not task.done():
@@ -1056,14 +1102,16 @@ def run_benchmark(
                                     progress.update(
                                         model_tasks[mname],
                                         completed=comp,
-                                        scenario=scen if comp < tot else "[green]Done[/green]"
+                                        scenario=scen if comp < tot else "[green]Done[/green]",
                                     )
 
                         await aio.sleep(0.3)
 
                     # Final update - mark all complete
                     for mname, task_id in model_tasks.items():
-                        progress.update(task_id, completed=len(scenarios), scenario="[green]Done[/green]")
+                        progress.update(
+                            task_id, completed=len(scenarios), scenario="[green]Done[/green]"
+                        )
 
                 return await task
 
@@ -1076,8 +1124,12 @@ def run_benchmark(
                         passed += 1
                 results = all_results
             except InsufficientCreditsError:
-                console.print("\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits.")
-                console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
+                console.print(
+                    "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
+                )
+                console.print(
+                    "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
+                )
                 return 1
             except Exception as e:
                 print(f"ERROR: Parallel execution failed: {e}")
@@ -1091,8 +1143,13 @@ def run_benchmark(
                 for scenario in scenarios:
                     dummy_sem = asyncio.Semaphore(1)
                     result = await evaluate_scenario_async(
-                        model, scenario, api_client, orchestrator, output_dir,
-                        dummy_sem, detailed_output=detailed_output,
+                        model,
+                        scenario,
+                        api_client,
+                        orchestrator,
+                        output_dir,
+                        dummy_sem,
+                        detailed_output=detailed_output,
                     )
                     model_results.append(result)
                 return model_results
@@ -1132,7 +1189,13 @@ def run_benchmark(
             display = ScenarioDisplay(model["name"], scenarios, start_time)
 
             # Use transient=True to clear display when done; vertical_overflow for long lists
-            with Live(display, console=console, refresh_per_second=4, transient=True, vertical_overflow="visible") as live:
+            with Live(
+                display,
+                console=console,
+                refresh_per_second=4,
+                transient=True,
+                vertical_overflow="visible",
+            ) as live:
                 for tier in tiers:
                     tier_scenarios = scenarios_by_tier[tier]
 
@@ -1157,14 +1220,23 @@ def run_benchmark(
                                 model["id"], scenario, api_client, transcript_path
                             )
                         except InsufficientCreditsError:
-                            console.print("\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits.")
-                            console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
+                            console.print(
+                                "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
+                            )
+                            console.print(
+                                "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
+                            )
                             return 1
                         except Exception as e:
-                            results.append(_make_error_result(
-                                model, scenario["name"], scenario_id, scenario["tier"],
-                                f"Transcript generation failed: {e}",
-                            ))
+                            results.append(
+                                _make_error_result(
+                                    model,
+                                    scenario["name"],
+                                    scenario_id,
+                                    scenario["tier"],
+                                    f"Transcript generation failed: {e}",
+                                )
+                            )
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
                             continue
@@ -1224,10 +1296,15 @@ def run_benchmark(
                                 failed += 1
 
                         except Exception as e:
-                            results.append(_make_error_result(
-                                model, scenario["name"], scenario_id, scenario["tier"],
-                                f"Scoring failed: {e}",
-                            ))
+                            results.append(
+                                _make_error_result(
+                                    model,
+                                    scenario["name"],
+                                    scenario_id,
+                                    scenario["tier"],
+                                    f"Scoring failed: {e}",
+                                )
+                            )
                             display.set_complete(scenario["path"], 0.0, False, tier)
                             failed += 1
 
@@ -1243,7 +1320,11 @@ def run_benchmark(
         for model in models:
             for scenario in scenarios:
                 eval_num += 1
-                print(f"[{eval_num}/{total}] {model['name']} → {scenario['name']}", end=" ", flush=True)
+                print(
+                    f"[{eval_num}/{total}] {model['name']} → {scenario['name']}",
+                    end=" ",
+                    flush=True,
+                )
 
                 scenario_path = Path(scenario["path"])
                 if not scenario_path.exists():
@@ -1268,10 +1349,15 @@ def run_benchmark(
                     return 1
                 except Exception as e:
                     print(f"ERROR ({e})")
-                    results.append(_make_error_result(
-                        model, scenario["name"], scenario_id, scenario["tier"],
-                        f"Transcript generation failed: {e}",
-                    ))
+                    results.append(
+                        _make_error_result(
+                            model,
+                            scenario["name"],
+                            scenario_id,
+                            scenario["tier"],
+                            f"Transcript generation failed: {e}",
+                        )
+                    )
                     failed += 1
                     continue
 
@@ -1327,10 +1413,15 @@ def run_benchmark(
 
                 except Exception as e:
                     print(f"ERROR ({e})")
-                    results.append(_make_error_result(
-                        model, scenario["name"], scenario_id, scenario["tier"],
-                        f"Scoring failed: {e}",
-                    ))
+                    results.append(
+                        _make_error_result(
+                            model,
+                            scenario["name"],
+                            scenario_id,
+                            scenario["tier"],
+                            f"Scoring failed: {e}",
+                        )
+                    )
                     failed += 1
 
     elapsed = time.time() - start_time
@@ -1389,14 +1480,17 @@ def run_benchmark(
 
         # Failure report - include hard fails, low scores, or status=fail
         failures = [
-            r for r in results
+            r
+            for r in results
             if r.get("hard_fail") or r.get("overall_score", 1) < 0.5 or r.get("status") == "fail"
         ]
         if failures:
             console.print("\n[bold red]Failures & Violations[/bold red]")
             for f in failures:
                 score_pct = int(f["overall_score"] * 100)
-                console.print(f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]T{f['tier']}[/dim]  {score_pct}%")
+                console.print(
+                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]T{f['tier']}[/dim]  {score_pct}%"
+                )
 
                 # Show hard fail reasons
                 if f.get("hard_fail_reasons"):
@@ -1414,9 +1508,13 @@ def run_benchmark(
 
                 # Show low dimension scores
                 dims = f.get("dimensions", {})
-                low_dims = [(k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5]
+                low_dims = [
+                    (k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5
+                ]
                 if low_dims:
-                    dim_strs = [f"{k}:{int(v*100)}%" for k, v in sorted(low_dims, key=lambda x: x[1])]
+                    dim_strs = [
+                        f"{k}:{int(v*100)}%" for k, v in sorted(low_dims, key=lambda x: x[1])
+                    ]
                     console.print(f"    [dim]Low: {', '.join(dim_strs)}[/dim]")
 
         console.print(f"\n[dim]{results_path}[/dim]")
@@ -1439,15 +1537,16 @@ def run_benchmark(
                 console.print(f"[bold green]✓[/bold green] {msg}")
             else:
                 print(msg)
-            
+
             # Auto-run health check after leaderboard update
             try:
                 from invisiblebench.cli.health import run_health
+
                 run_health(verbose=False)
             except Exception as he:
                 if RICH_AVAILABLE and console:
                     console.print(f"[dim]Health check skipped: {he}[/dim]")
-                    
+
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
             msg = f"Warning: Could not update leaderboard: {e}"
@@ -1559,7 +1658,7 @@ def diagnose_command(args) -> int:
 
         if summary_start and console:
             console.print("\n[bold]Summary:[/bold]")
-            for line in lines[summary_start+2:summary_start+10]:
+            for line in lines[summary_start + 2 : summary_start + 10]:
                 if line.strip():
                     console.print(f"  {line}")
 
@@ -1571,6 +1670,7 @@ def diagnose_command(args) -> int:
         else:
             print(msg)
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -1620,24 +1720,34 @@ Examples:
     archive_parser = subparsers.add_parser("archive", help="Archive old benchmark runs")
     archive_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
     archive_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
-    archive_parser.add_argument("--list", action="store_true", dest="list_runs", help="List runs (dry run)")
-    archive_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
+    archive_parser.add_argument(
+        "--list", action="store_true", dest="list_runs", help="List runs (dry run)"
+    )
+    archive_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be archived"
+    )
 
     # Clean subcommand (alias for archive)
     clean_parser = subparsers.add_parser("clean", help="Clean up old runs (alias for archive)")
     clean_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
     clean_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
-    clean_parser.add_argument("--list", action="store_true", dest="list_runs", help="List runs (dry run)")
+    clean_parser.add_argument(
+        "--list", action="store_true", dest="list_runs", help="List runs (dry run)"
+    )
     clean_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
 
     # Runs subcommand (list runs)
     runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
 
     # Diagnose subcommand
-    diagnose_parser = subparsers.add_parser("diagnose", help="Generate diagnostic report from results")
+    diagnose_parser = subparsers.add_parser(
+        "diagnose", help="Generate diagnostic report from results"
+    )
     diagnose_parser.add_argument("results", type=str, help="Path to results JSON")
     diagnose_parser.add_argument("--transcripts", "-t", type=str, help="Transcripts directory")
-    diagnose_parser.add_argument("--previous", "-p", type=str, help="Previous results for comparison")
+    diagnose_parser.add_argument(
+        "--previous", "-p", type=str, help="Previous results for comparison"
+    )
     diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
 
     # Main run arguments (default command)
@@ -1654,52 +1764,56 @@ Examples:
         help="Write per-scenario JSON/HTML reports with turn flags",
     )
     parser.add_argument(
-        "--tier", "-t",
+        "--tier",
+        "-t",
         type=str,
         default=None,
-        help="Filter to specific tiers (e.g., '0' or '0,1,2')"
+        help="Filter to specific tiers (e.g., '0' or '0,1,2')",
     )
     parser.add_argument(
-        "--scenario", "-s",
+        "--scenario",
+        "-s",
         type=str,
         default=None,
-        help="Filter to specific scenarios by ID or name (comma-separated)"
+        help="Filter to specific scenarios by ID or name (comma-separated)",
     )
     parser.add_argument(
-        "--parallel", "-p",
+        "--parallel",
+        "-p",
         type=int,
         default=None,
         metavar="N",
-        help="Run N models in parallel (default: sequential)"
+        help="Run N models in parallel (default: sequential)",
     )
     parser.add_argument(
-        "--models", "-m",
+        "--models",
+        "-m",
         type=str,
         default=None,
         metavar="RANGE",
-        help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)"
+        help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)",
     )
     parser.add_argument(
         "--update-leaderboard",
         action="store_true",
-        help="Update leaderboard.json after run completes"
+        help="Update leaderboard.json after run completes",
     )
     parser.add_argument(
         "--provider",
         type=str,
         choices=["openrouter", "givecare"],
         default="openrouter",
-        help="Provider for transcript generation: 'openrouter' (raw LLM) or 'givecare' (Mira product)"
+        help="Provider for transcript generation: 'openrouter' (raw LLM) or 'givecare' (Mira product)",
     )
     parser.add_argument(
         "--confidential",
         action="store_true",
-        help="Include confidential scenarios (32 vs 29) - only for givecare provider"
+        help="Include confidential scenarios (32 vs 29) - only for givecare provider",
     )
     parser.add_argument(
         "--diagnose",
         action="store_true",
-        help="Generate diagnostic report after run (actionable fix suggestions)"
+        help="Generate diagnostic report after run (actionable fix suggestions)",
     )
 
     args = parser.parse_args(argv)
@@ -1707,19 +1821,22 @@ Examples:
     # Handle subcommands
     if args.command == "report":
         return report_command(args)
-    
+
     if args.command == "health":
         from invisiblebench.cli.health import run_health
+
         return run_health(verbose=args.verbose)
-    
+
     if args.command in ("archive", "clean"):
         from invisiblebench.cli.archive import run_archive, run_list
+
         if args.list_runs:
             return run_list()
         return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
-    
+
     if args.command == "runs":
         from invisiblebench.cli.archive import run_list
+
         return run_list()
 
     if args.command == "diagnose":

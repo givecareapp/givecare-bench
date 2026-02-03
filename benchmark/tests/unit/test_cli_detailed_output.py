@@ -12,7 +12,9 @@ def test_write_detailed_outputs_creates_files(tmp_path: Path) -> None:
         "metadata": {"scenario_id": "test"},
     }
 
-    paths = write_detailed_outputs(results, tmp_path, model_id="test/model", scenario_id="scenario_1")
+    paths = write_detailed_outputs(
+        results, tmp_path, model_id="test/model", scenario_id="scenario_1"
+    )
 
     detail_json = Path(paths["detail_json"])
     detail_html = Path(paths["detail_html"])

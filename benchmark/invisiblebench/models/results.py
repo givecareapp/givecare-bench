@@ -1,4 +1,5 @@
 """Pydantic result models for InvisibleBench."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -42,6 +43,7 @@ class DimensionScores(BaseModel):
     """Scores for each evaluation dimension."""
 
     memory: Optional[float] = Field(default=None, ge=0, le=1)
+    consistency: Optional[float] = Field(default=None, ge=0, le=1)
     trauma: Optional[float] = Field(default=None, ge=0, le=1)
     belonging: Optional[float] = Field(default=None, ge=0, le=1)
     compliance: Optional[float] = Field(default=None, ge=0, le=1)

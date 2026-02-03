@@ -158,6 +158,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             enable_llm = False
 
         from invisiblebench.utils.llm_mode import llm_enabled
+
         actual_llm_enabled = llm_enabled(enable_llm)
 
         print("InvisibleBench scoring")
@@ -186,13 +187,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         scoring_config = Path(__file__).parent.parent / "configs" / "scoring.yaml"
 
         # Create progress tracker
-        quiet = getattr(args, 'quiet', False)
-        verbose = getattr(args, 'verbose', False)
+        quiet = getattr(args, "quiet", False)
+        verbose = getattr(args, "verbose", False)
         progress_tracker = ProgressTracker(
             callback=None,  # We'll use the tracker directly
             verbose=verbose,
             quiet=quiet,
-            use_tqdm=True
+            use_tqdm=True,
         )
 
         # Run scoring pipeline with iterations and run tracking
@@ -212,7 +213,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             run_id=args.run_id,
             iterations=args.iterations,
             resume=args.resume,
-            resume_file=args.resume_file
+            resume_file=args.resume_file,
         )
 
         # Generate reports
@@ -248,11 +249,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     except FileNotFoundError as e:
-        print(f"Error: {e}", file=__import__('sys').stderr)
+        print(f"Error: {e}", file=__import__("sys").stderr)
         return 1
     except Exception as e:
-        print(f"Error during scoring: {e}", file=__import__('sys').stderr)
+        print(f"Error during scoring: {e}", file=__import__("sys").stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 
