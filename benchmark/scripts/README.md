@@ -177,7 +177,7 @@ MODELS_FULL = [
 
 ### Customizing Scoring Weights
 
-Edit `benchmark/configs/scoring.yaml`:
+Edit scoring weights in `benchmark/configs/scoring.yaml`:
 
 ```yaml
 weights:

@@ -718,8 +718,7 @@ class ScoringOrchestrator:
         # Consistency
         if dimension_scores["consistency"].get("status") != "completed":
             dimension_scores["consistency"] = self._run_scorer_safely(
-                lambda: consistency.score(transcript),
-                "consistency"
+                lambda: consistency.score(transcript), "consistency"
             )
             scorers_completed += 1
             if scorers_completed % self.save_interval == 0:
