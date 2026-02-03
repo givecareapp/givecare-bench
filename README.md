@@ -42,7 +42,18 @@ uv pip install -e ".[all]"
 echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 ```
 
-### Run Benchmark
+### Two Evaluation Modes
+
+InvisibleBench supports two distinct evaluation modes:
+
+| Mode | Command | What it tests | Scenarios |
+|------|---------|---------------|-----------|
+| **Model Eval** | `uv run bench --full -y` | Raw LLM capability | 29 |
+| **System Eval** | `uv run bench --provider givecare -y` | Full product stack (Mira) | 29 (or 32 with `--confidential`) |
+
+**Scores are NOT directly comparable** across modes. Model eval uses a minimal 91-word prompt; system eval tests the full product with tools, memory, and SMS constraints.
+
+### Model Evaluation (Raw LLM)
 
 ```bash
 # Quick validation (1 model × all scenarios, ~$0.05)
@@ -68,6 +79,22 @@ uv run bench --dry-run
 
 # Write per-scenario JSON + HTML reports with turn flags
 uv run bench --minimal -y --detailed
+```
+
+### System Evaluation (GiveCare/Mira)
+
+```bash
+# Standard evaluation (29 scenarios)
+uv run bench --provider givecare -y
+
+# Include confidential scenarios (32 total)
+uv run bench --provider givecare -y --confidential
+
+# Run specific tier only
+uv run bench --provider givecare -t 1 -y
+
+# Dry run
+uv run bench --provider givecare --dry-run
 ```
 
 **Model indices (1-indexed):**
@@ -111,6 +138,16 @@ python benchmark/scripts/leaderboard/generate_leaderboard.py \
   --input /tmp/lb_ready/ --output benchmark/website/data/
 ```
 
+### Health & Maintenance
+
+```bash
+uv run bench health                    # Check leaderboard for issues
+uv run bench health -v                 # Verbose (show failed scenarios)
+uv run bench runs                      # List all benchmark runs
+uv run bench archive                   # Archive runs before today
+uv run bench archive --keep 5          # Keep only 5 most recent runs
+```
+
 ### Validation Tools
 
 ```bash
@@ -132,15 +169,22 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 
 ```
 ├── benchmark/              # InvisibleBench evaluation framework
-│   ├── invisiblebench/     # Python package
-│   ├── scenarios/          # Test scenarios (tier1/tier2/tier3)
-│   ├── configs/            # Scoring rules (YAML)
-│   ├── scripts/            # Validation scripts
-│   └── tests/              # Test suite
+│   ├── invisiblebench/     # Core package (evaluation, api, models, export)
+│   │   └── cli/            # CLI commands (runner with --provider flag)
+│   ├── scenarios/          # Test scenarios: tier0-3/ (29) + confidential/ (3)
+│   ├── configs/rules/      # Jurisdiction rules (base, ca, ny, il, etc.)
+│   ├── scripts/            # Provider implementations & validation
+│   │   └── givecare_provider.py  # GiveCare/Mira system provider
+│   └── tests/              # pytest suite
 │
 ├── papers/                 # Research papers (LaTeX + PDF)
 │   ├── givecare/           # GiveCare system paper
 │   └── invisiblebench/     # InvisibleBench benchmark paper
+│
+├── results/                # Outputs (gitignored)
+│   ├── run_YYYYMMDD_*/     # Model eval runs
+│   ├── givecare/           # System eval runs
+│   └── archive/            # Archived old runs
 │
 └── docs/                   # Documentation
 ```
@@ -161,8 +205,9 @@ A **Phase 3 safety standard** for relationship AI - testing what happens when 63
 | **Compliance** | 15% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |
 | **Safety** | 20% | Crisis detection, appropriate urgency, resource provision |
 
-### 3 Testing Tiers
+### 4 Testing Tiers
 
+- **Tier 0** (Core Safety): 1-3 turns - explicit crisis signals, mandatory safety gates
 - **Tier 1** (Crisis Detection): 3-5 turns - immediate safety, crisis recognition, gray zones
 - **Tier 2** (Boundary Durability): 8-12 turns - warmth vs. compliance, relational dynamics
 - **Tier 3** (Longitudinal Memory): 5-20+ turns across multiple sessions - memory consistency, crisis return
