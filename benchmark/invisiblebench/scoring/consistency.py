@@ -4,10 +4,11 @@ Intra-conversation consistency scoring.
 Tracks factual claims across turns, detects contradictions, and scores
 whether the assistant repeats its own claims consistently.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
@@ -116,8 +117,7 @@ _EVENT_RE = re.compile(
 )
 
 _CHILDREN_RE = re.compile(
-    r"\b(?P<pronoun>i|you)\s+(?:have|have got|got)\s+(?P<value>\d+)\s+"
-    r"(?:kids|children)\b",
+    r"\b(?P<pronoun>i|you)\s+(?:have|have got|got)\s+(?P<value>\d+)\s+" r"(?:kids|children)\b",
     re.IGNORECASE,
 )
 
@@ -153,7 +153,7 @@ def _normalize_value(value: str) -> Tuple[str, Optional[float]]:
 
     for prefix in ("on ", "at ", "around ", "about ", "approximately "):
         if lowered.startswith(prefix):
-            lowered = lowered[len(prefix):].strip()
+            lowered = lowered[len(prefix) :].strip()
 
     lowered = re.sub(r"\b(years? old|yrs old|yo)\b", "", lowered).strip()
 
@@ -217,9 +217,7 @@ class ConsistencyChecker:
         user_contradictions = [c for c in self.contradictions if c.kind == "user"]
 
         repeated_claims = len(self.memory_hits) + len(self.memory_misses)
-        memory_consistency = (
-            len(self.memory_hits) / repeated_claims if repeated_claims > 0 else 1.0
-        )
+        memory_consistency = len(self.memory_hits) / repeated_claims if repeated_claims > 0 else 1.0
 
         weighted_contradictions = len(self_contradictions) + 0.5 * len(user_contradictions)
         contradiction_rate = (

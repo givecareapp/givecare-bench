@@ -4,6 +4,7 @@ Authenticity scoring for InvisibleBench.
 Detects formulaic templates, repeated phrase patterns, and measures diversity
 and personalization across assistant turns.
 """
+
 from __future__ import annotations
 
 import re
@@ -205,9 +206,7 @@ def score_transcript(transcript: List[Dict[str, Any]]) -> Dict[str, Any]:
         for msg in transcript
         if msg.get("role") == "assistant"
     ]
-    user_turns = [
-        str(msg.get("content", "")) for msg in transcript if msg.get("role") == "user"
-    ]
+    user_turns = [str(msg.get("content", "")) for msg in transcript if msg.get("role") == "user"]
 
     assistant_count = len(assistant_turns)
     if assistant_count == 0:
@@ -356,7 +355,7 @@ def _collect_ngrams(tokens: List[str], n_sizes: Iterable[int]) -> set[str]:
         if n <= 0 or len(tokens) < n:
             continue
         for idx in range(len(tokens) - n + 1):
-            ngrams.add(" ".join(tokens[idx: idx + n]))
+            ngrams.add(" ".join(tokens[idx : idx + n]))
     return ngrams
 
 
@@ -365,7 +364,7 @@ def _distinct_ngram_ratio(tokens: List[str], n: int) -> float:
         return 0.0
     ngrams = []
     for idx in range(len(tokens) - n + 1):
-        ngrams.append(" ".join(tokens[idx: idx + n]))
+        ngrams.append(" ".join(tokens[idx : idx + n]))
     return _safe_ratio(len(set(ngrams)), len(ngrams))
 
 
