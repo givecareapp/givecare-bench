@@ -2,42 +2,62 @@
 
 This directory contains test scenarios organized by tier and category.
 
+> **Note**: InvisibleBench v2.0 significantly rebalanced scenarios from crisis-heavy to gray zone and boundary focused. See [EVOLUTION.md](../EVOLUTION.md) for the rationale.
+
 ## Structure
 
 ```
 scenarios/
-├── tier0/          # 1-3 turn scenarios (core safety gates)
-│   └── *.json          # Smoke tests for critical safety
+├── tier0/              # 1-3 turn scenarios (core safety gates)
+│   └── *.json              # Smoke tests for critical safety
 │
-├── tier1/          # 3-5 turn scenarios (crisis detection)
-│   ├── crisis/         # Crisis detection scenarios
-│   ├── boundaries/     # Boundary violation scenarios
-│   ├── cultural/       # Cultural sensitivity scenarios
-│   └── gray_zones/     # Ambiguous situations
+├── tier1/              # 3-5 turn scenarios (core competency)
+│   ├── gray_zone/          # Venting vs crisis, humor vs ideation (8)
+│   ├── crisis/             # Essential crisis patterns only (5)
+│   ├── boundaries/         # AI dependency, medical, therapy limits (5)
+│   └── cultural/           # Cultural sensitivity (1)
 │
-├── tier2/          # 8-12 turn scenarios (boundary durability)
-│   ├── longitudinal/   # Attachment and relationship patterns
-│   ├── cultural/       # Cultural and identity scenarios
-│   └── burnout/        # Caregiver burnout scenarios
+├── tier2/              # 8-12 turn scenarios (boundary durability)
+│   ├── cultural/           # Cultural and identity scenarios
+│   ├── burnout/            # Caregiver burnout scenarios
+│   ├── regulatory/         # Compliance scenarios (CA SB 243, etc.)
+│   └── longitudinal/       # Attachment patterns
 │
-├── tier3/          # 20+ turn scenarios (multi-session)
-│   └── *.json          # Long-term relationship scenarios
+├── tier3/              # 20+ turn scenarios (multi-session)
+│   └── *.json              # Long-term relationship scenarios
 │
-└── confidential/   # Security testing scenarios (not for public leaderboard)
-    └── *.json          # Adversarial and edge case scenarios (3 scenarios)
+├── confidential/       # Security testing (not for public leaderboard)
+│   └── *.json              # Adversarial and edge case scenarios (3)
+│
+└── archive/            # Archived scenarios (available but not in default runs)
+    └── crisis/             # Archived crisis scenarios (9)
 ```
 
-## Scenario Counts
+## Scenario Counts (v2.0)
 
 | Tier | Count | Description |
 |------|-------|-------------|
 | Tier 0 | 5 | Core safety gates |
-| Tier 1 | 11 | Crisis detection, gray zones |
-| Tier 2 | 9 | Boundary durability, relationships |
+| Tier 1 | 19 | Gray zones (8), crisis (5), boundaries (5), cultural (1) |
+| Tier 2 | 13 | Boundary durability, relationships, regulatory |
 | Tier 3 | 4 | Longitudinal memory |
-| **Standard Total** | **29** | |
+| **Active Total** | **41** | |
 | Confidential | 3 | Security testing |
-| **Full Total** | **32** | |
+| Archive | 9 | Archived crisis scenarios |
+| **Full Total** | **53** | |
+
+## v2.0 Rebalancing
+
+The benchmark was rebalanced to focus on what makes caregiving AI unique:
+
+| Category | v1.0 | v2.0 | Change |
+|----------|------|------|--------|
+| Crisis | 14 | 5 | -9 (archived) |
+| Gray Zone | 4 | 8 | +4 |
+| Boundaries | 2 | 5 | +3 |
+| Cultural | 1 | 1 | — |
+
+**Why?** Crisis detection is important but not our differentiator. Specialized benchmarks (CARE, C-SSRS tools) own comprehensive crisis testing. InvisibleBench's unique value is testing gray zone calibration and boundary navigation specific to caregiving AI.
 
 ## Tiers
 
