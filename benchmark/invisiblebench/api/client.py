@@ -5,9 +5,20 @@ import asyncio
 import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
 import requests
+
+# Always try to load .env from project root (handles various entry points)
+_project_root = Path(__file__).parent.parent.parent.parent
+_env_file = _project_root / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+else:
+    # Fallback to CWD
+    load_dotenv()
 
 try:
     import httpx
