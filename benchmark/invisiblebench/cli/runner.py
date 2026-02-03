@@ -72,6 +72,7 @@ def run_givecare_eval(
     verbose: bool = True,
     dry_run: bool = False,
     auto_confirm: bool = False,
+    generate_diagnostic: bool = False,
 ) -> int:
     """Run GiveCare/Mira system evaluation.
 
@@ -234,6 +235,24 @@ def run_givecare_eval(
     print(f"Average:   {avg_score:.1f}%")
     print(f"{'='*50}")
     print(f"Saved: {results_path}")
+
+    # Generate diagnostic report if requested
+    if generate_diagnostic:
+        print("\nGenerating diagnostic report...")
+        try:
+            from invisiblebench.export.diagnostic import generate_diagnostic_report
+
+            diag_path = output_dir / "diagnostic_report.md"
+            transcripts_path = output_dir / "transcripts"
+
+            generate_diagnostic_report(
+                results_path=str(results_path),
+                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
+                output_path=str(diag_path),
+            )
+            print(f"Diagnostic: {diag_path}")
+        except Exception as e:
+            print(f"Warning: Could not generate diagnostic report: {e}")
 
     return 0 if failed == 0 else 1
 
@@ -840,6 +859,7 @@ def run_benchmark(
     detailed_output: bool = False,
     model_filter: Optional[str] = None,
     update_leaderboard: bool = False,
+    generate_diagnostic: bool = False,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
@@ -1335,6 +1355,23 @@ def run_benchmark(
     except Exception as e:
         print(f"Warning: Could not generate HTML report: {e}")
 
+    # Generate diagnostic report if requested
+    diag_path = None
+    if generate_diagnostic:
+        try:
+            from invisiblebench.export.diagnostic import generate_diagnostic_report
+
+            diag_path = output_dir / "diagnostic_report.md"
+            transcripts_path = output_dir / "transcripts"
+
+            generate_diagnostic_report(
+                results_path=str(results_path),
+                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
+                output_path=str(diag_path),
+            )
+        except Exception as e:
+            print(f"Warning: Could not generate diagnostic report: {e}")
+
     # Print summary
     if RICH_AVAILABLE and console:
         avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
@@ -1384,10 +1421,14 @@ def run_benchmark(
 
         console.print(f"\n[dim]{results_path}[/dim]")
         console.print(f"[dim]{report_path}[/dim]")
+        if diag_path:
+            console.print(f"[dim]{diag_path}[/dim]")
     else:
         print(f"\nComplete: {passed} passed, {failed} failed")
         print(f"Results: {results_path}")
         print(f"Report: {report_path}")
+        if diag_path:
+            print(f"Diagnostic: {diag_path}")
 
     # Update leaderboard if requested
     if update_leaderboard:
@@ -1464,6 +1505,76 @@ def report_command(args) -> int:
         return 1
 
 
+def diagnose_command(args) -> int:
+    """Generate diagnostic report from results JSON."""
+    console = Console() if RICH_AVAILABLE else None
+
+    results_path = Path(args.results)
+    if not results_path.exists():
+        msg = f"Results file not found: {results_path}"
+        if console:
+            console.print(f"[red]{msg}[/red]")
+        else:
+            print(msg)
+        return 1
+
+    # Determine transcripts directory
+    transcripts_dir = None
+    if args.transcripts:
+        transcripts_dir = Path(args.transcripts)
+    else:
+        # Try to find transcripts relative to results
+        parent = results_path.parent
+        if (parent / "transcripts").exists():
+            transcripts_dir = parent / "transcripts"
+
+    # Determine output path
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = results_path.parent / "diagnostic_report.md"
+
+    try:
+        from invisiblebench.export.diagnostic import generate_diagnostic_report
+
+        report = generate_diagnostic_report(
+            results_path=str(results_path),
+            transcripts_dir=str(transcripts_dir) if transcripts_dir else None,
+            previous_results_path=args.previous,
+            output_path=str(output_path),
+        )
+
+        if console:
+            console.print(f"[green]✓[/green] Diagnostic report generated: {output_path}")
+        else:
+            print(f"Diagnostic report generated: {output_path}")
+
+        # Print summary
+        lines = report.split("\n")
+        summary_start = None
+        for i, line in enumerate(lines):
+            if line.startswith("## Summary"):
+                summary_start = i
+                break
+
+        if summary_start and console:
+            console.print("\n[bold]Summary:[/bold]")
+            for line in lines[summary_start+2:summary_start+10]:
+                if line.strip():
+                    console.print(f"  {line}")
+
+        return 0
+    except Exception as e:
+        msg = f"Failed to generate diagnostic report: {e}"
+        if console:
+            console.print(f"[red]{msg}[/red]")
+        else:
+            print(msg)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1481,6 +1592,10 @@ Examples:
   uv run bench --provider givecare -y           Standard (29 scenarios)
   uv run bench --provider givecare -y --confidential  Full (32 scenarios)
   uv run bench --provider givecare -t 1 -y      Tier 1 only
+
+  # Diagnostics
+  uv run bench --provider givecare -y --diagnose  Run with diagnostic report
+  uv run bench diagnose results.json              Generate diagnostic from results
 
   # Utilities
   uv run bench report results.json    Regenerate HTML report
@@ -1517,6 +1632,13 @@ Examples:
 
     # Runs subcommand (list runs)
     runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
+
+    # Diagnose subcommand
+    diagnose_parser = subparsers.add_parser("diagnose", help="Generate diagnostic report from results")
+    diagnose_parser.add_argument("results", type=str, help="Path to results JSON")
+    diagnose_parser.add_argument("--transcripts", "-t", type=str, help="Transcripts directory")
+    diagnose_parser.add_argument("--previous", "-p", type=str, help="Previous results for comparison")
+    diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
 
     # Main run arguments (default command)
     mode_group = parser.add_mutually_exclusive_group()
@@ -1574,6 +1696,11 @@ Examples:
         action="store_true",
         help="Include confidential scenarios (32 vs 29) - only for givecare provider"
     )
+    parser.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="Generate diagnostic report after run (actionable fix suggestions)"
+    )
 
     args = parser.parse_args(argv)
 
@@ -1595,6 +1722,9 @@ Examples:
         from invisiblebench.cli.archive import run_list
         return run_list()
 
+    if args.command == "diagnose":
+        return diagnose_command(args)
+
     # Parse tier filter
     tier_filter = None
     if args.tier:
@@ -1608,6 +1738,7 @@ Examples:
             verbose=True,
             dry_run=args.dry_run,
             auto_confirm=args.yes,
+            generate_diagnostic=args.diagnose,
         )
 
     # Default: run benchmark with OpenRouter (model eval)
@@ -1635,6 +1766,7 @@ Examples:
         detailed_output=args.detailed,
         model_filter=args.models,
         update_leaderboard=args.update_leaderboard,
+        generate_diagnostic=args.diagnose,
     )
 
 

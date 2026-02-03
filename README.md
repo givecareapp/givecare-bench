@@ -138,6 +138,30 @@ python benchmark/scripts/leaderboard/generate_leaderboard.py \
   --input /tmp/lb_ready/ --output benchmark/website/data/
 ```
 
+### Diagnostic Reports
+
+Generate actionable reports to identify and fix issues:
+
+```bash
+# Generate after run (--diagnose flag)
+uv run bench --provider givecare -y --diagnose
+uv run bench --minimal -y --diagnose
+
+# Generate from existing results
+uv run bench diagnose results/givecare/givecare_results.json
+uv run bench diagnose results/run_*/all_results.json
+
+# Compare with previous run
+uv run bench diagnose results.json --previous old_results.json
+```
+
+Diagnostic reports include:
+- **Failure priority** - hard fails first, sorted by score
+- **Quoted responses** - actual messages that triggered failures
+- **Suggested fixes** - specific prompt changes to investigate
+- **Pattern analysis** - common issues across scenarios
+- **Comparison** - what improved or regressed from previous run
+
 ### Health & Maintenance
 
 ```bash

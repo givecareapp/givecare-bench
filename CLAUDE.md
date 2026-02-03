@@ -25,6 +25,12 @@ uv run bench --full -m 2 -y --update-leaderboard   # Rerun GPT-5.2
 uv run bench --provider givecare -y                    # Standard (29 scenarios)
 uv run bench --provider givecare -y --confidential     # Full (32 scenarios)
 uv run bench --provider givecare -t 1 -y               # Tier 1 only
+uv run bench --provider givecare -y --diagnose         # With diagnostic report
+
+# Diagnostic Reports (actionable fix suggestions)
+uv run bench diagnose results/givecare/givecare_results.json   # From givecare results
+uv run bench diagnose results/run_*/all_results.json           # From model eval
+uv run bench diagnose results.json -p previous.json            # With comparison
 
 # Health & Maintenance
 uv run bench health                    # Check leaderboard for issues
@@ -93,9 +99,23 @@ results/                        # Outputs (gitignored)
   archive/                      # Archived old runs
 ```
 
+## Diagnostic Reports
+
+`--diagnose` generates actionable markdown reports with:
+
+- **Failure priority** - hard fails first, then by score
+- **Quoted responses** - actual user/assistant messages from transcripts
+- **Violation details** - turn number, rule violated, dimension
+- **Suggested fixes** - specific prompt/code changes to investigate
+- **Pattern analysis** - common issues across scenarios
+- **Comparison** - diff from previous run (if `-p` provided)
+
+Output: `diagnostic_report.md` in results directory
+
 ## Rules
 
 - Type hints required, pytest for tests
 - Status values: `pass`, `fail`, `error` (treat `error` as failure)
 - `--detailed` writes to `results/.../scenario_results/` and `results/.../reports/`
+- `--diagnose` writes `diagnostic_report.md` with actionable fixes
 - After `--update-leaderboard`, health check runs automatically
