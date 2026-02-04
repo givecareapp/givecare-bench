@@ -4,6 +4,7 @@ Diagnostic report generator for InvisibleBench.
 Generates actionable markdown reports that help identify and fix issues
 in AI systems being evaluated.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,7 +36,9 @@ class DiagnosticReport:
         self.previous_results_path = Path(previous_results_path) if previous_results_path else None
 
         self.results_data = self._load_json(self.results_path)
-        self.previous_data = self._load_json(self.previous_results_path) if self.previous_results_path else None
+        self.previous_data = (
+            self._load_json(self.previous_results_path) if self.previous_results_path else None
+        )
         self.transcripts: Dict[str, List[Dict]] = {}
 
     def _load_json(self, path: Path) -> Optional[Dict]:
@@ -112,23 +115,27 @@ class DiagnosticReport:
 
             # Get violations
             for v in dim_data.get("violations", []) or []:
-                violations.append({
-                    "dimension": dim_name,
-                    "type": "violation",
-                    "rule": v.get("rule", "unknown"),
-                    "turn": v.get("turn", -1),
-                    "evidence": v.get("evidence", ""),
-                })
+                violations.append(
+                    {
+                        "dimension": dim_name,
+                        "type": "violation",
+                        "rule": v.get("rule", "unknown"),
+                        "turn": v.get("turn", -1),
+                        "evidence": v.get("evidence", ""),
+                    }
+                )
 
             # Get hard fails
             for hf in dim_data.get("hard_fails", []) or []:
-                violations.append({
-                    "dimension": dim_name,
-                    "type": "hard_fail",
-                    "rule": hf.get("rule", "unknown"),
-                    "turn": hf.get("turn", -1),
-                    "evidence": hf.get("evidence", ""),
-                })
+                violations.append(
+                    {
+                        "dimension": dim_name,
+                        "type": "hard_fail",
+                        "rule": hf.get("rule", "unknown"),
+                        "turn": hf.get("turn", -1),
+                        "evidence": hf.get("evidence", ""),
+                    }
+                )
 
         return sorted(violations, key=lambda x: (x["type"] != "hard_fail", x["turn"]))
 
@@ -163,26 +170,32 @@ class DiagnosticReport:
 
             # Track low dimensions
             for dim, score in self._get_low_dimensions(r):
-                patterns["by_dimension"][dim].append({
-                    "scenario": r.get("scenario_id", r.get("scenario", "unknown")),
-                    "score": score,
-                })
+                patterns["by_dimension"][dim].append(
+                    {
+                        "scenario": r.get("scenario_id", r.get("scenario", "unknown")),
+                        "score": score,
+                    }
+                )
 
             # Track violations
             for v in self._extract_violations(r):
-                patterns["by_rule"][v["rule"]].append({
-                    "scenario": r.get("scenario_id", r.get("scenario", "unknown")),
-                    "dimension": v["dimension"],
-                })
+                patterns["by_rule"][v["rule"]].append(
+                    {
+                        "scenario": r.get("scenario_id", r.get("scenario", "unknown")),
+                        "dimension": v["dimension"],
+                    }
+                )
 
         # Find common issues (appear in 2+ scenarios)
         for rule, occurrences in patterns["by_rule"].items():
             if len(occurrences) >= 2:
-                patterns["common_issues"].append({
-                    "rule": rule,
-                    "count": len(occurrences),
-                    "scenarios": [o["scenario"] for o in occurrences],
-                })
+                patterns["common_issues"].append(
+                    {
+                        "rule": rule,
+                        "count": len(occurrences),
+                        "scenarios": [o["scenario"] for o in occurrences],
+                    }
+                )
 
         patterns["common_issues"].sort(key=lambda x: -x["count"])
 
@@ -224,42 +237,54 @@ class DiagnosticReport:
                 delta = curr_score - prev_score
 
                 if prev_fail and not curr_fail:
-                    comparison["fixed"].append({
-                        "scenario": sid,
-                        "prev_score": prev_score,
-                        "curr_score": curr_score,
-                    })
+                    comparison["fixed"].append(
+                        {
+                            "scenario": sid,
+                            "prev_score": prev_score,
+                            "curr_score": curr_score,
+                        }
+                    )
                 elif not prev_fail and curr_fail:
-                    comparison["regressed"].append({
-                        "scenario": sid,
-                        "prev_score": prev_score,
-                        "curr_score": curr_score,
-                    })
+                    comparison["regressed"].append(
+                        {
+                            "scenario": sid,
+                            "prev_score": prev_score,
+                            "curr_score": curr_score,
+                        }
+                    )
                 elif curr_fail and prev_fail:
-                    comparison["unchanged_failures"].append({
-                        "scenario": sid,
-                        "prev_score": prev_score,
-                        "curr_score": curr_score,
-                    })
+                    comparison["unchanged_failures"].append(
+                        {
+                            "scenario": sid,
+                            "prev_score": prev_score,
+                            "curr_score": curr_score,
+                        }
+                    )
                 elif delta > 0.05:
-                    comparison["improved"].append({
-                        "scenario": sid,
-                        "prev_score": prev_score,
-                        "curr_score": curr_score,
-                        "delta": delta,
-                    })
+                    comparison["improved"].append(
+                        {
+                            "scenario": sid,
+                            "prev_score": prev_score,
+                            "curr_score": curr_score,
+                            "delta": delta,
+                        }
+                    )
                 elif delta < -0.05:
-                    comparison["regressed"].append({
-                        "scenario": sid,
-                        "prev_score": prev_score,
-                        "curr_score": curr_score,
-                        "delta": delta,
-                    })
+                    comparison["regressed"].append(
+                        {
+                            "scenario": sid,
+                            "prev_score": prev_score,
+                            "curr_score": curr_score,
+                            "delta": delta,
+                        }
+                    )
             elif curr_fail:
-                comparison["new_failures"].append({
-                    "scenario": sid,
-                    "score": curr_score,
-                })
+                comparison["new_failures"].append(
+                    {
+                        "scenario": sid,
+                        "score": curr_score,
+                    }
+                )
 
         return comparison
 
@@ -335,38 +360,48 @@ class DiagnosticReport:
 
         # Summary stats
         passed = len(results) - len(failures)
-        avg_score = sum(r.get("overall_score", 0) for r in results) / len(results) * 100 if results else 0
-        lines.extend([
-            "## Summary",
-            "",
-            f"| Metric | Value |",
-            f"|--------|-------|",
-            f"| Total Scenarios | {len(results)} |",
-            f"| Passed | {passed} |",
-            f"| Failed | {len(failures)} |",
-            f"| Average Score | {avg_score:.1f}% |",
-            "",
-        ])
+        avg_score = (
+            sum(r.get("overall_score", 0) for r in results) / len(results) * 100 if results else 0
+        )
+        lines.extend(
+            [
+                "## Summary",
+                "",
+                f"| Metric | Value |",
+                f"|--------|-------|",
+                f"| Total Scenarios | {len(results)} |",
+                f"| Passed | {passed} |",
+                f"| Failed | {len(failures)} |",
+                f"| Average Score | {avg_score:.1f}% |",
+                "",
+            ]
+        )
 
         # Comparison with previous run
         if comparison:
-            lines.extend([
-                "## Changes from Previous Run",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Changes from Previous Run",
+                    "",
+                ]
+            )
 
             if comparison["fixed"]:
                 lines.append("### Fixed (was failing, now passing)")
                 for item in comparison["fixed"]:
-                    lines.append(f"- **{item['scenario']}**: {item['prev_score']*100:.0f}% -> {item['curr_score']*100:.0f}%")
+                    lines.append(
+                        f"- **{item['scenario']}**: {item['prev_score']*100:.0f}% -> {item['curr_score']*100:.0f}%"
+                    )
                 lines.append("")
 
             if comparison["regressed"]:
                 lines.append("### Regressed (was better, now worse)")
                 for item in comparison["regressed"]:
-                    prev = item['prev_score']*100
-                    curr = item['curr_score']*100
-                    lines.append(f"- **{item['scenario']}**: {prev:.0f}% -> {curr:.0f}% ({curr-prev:+.0f}%)")
+                    prev = item["prev_score"] * 100
+                    curr = item["curr_score"] * 100
+                    lines.append(
+                        f"- **{item['scenario']}**: {prev:.0f}% -> {curr:.0f}% ({curr-prev:+.0f}%)"
+                    )
                 lines.append("")
 
             if comparison["new_failures"]:
@@ -380,10 +415,12 @@ class DiagnosticReport:
                 lines.append("")
 
         # Pattern analysis
-        lines.extend([
-            "## Failure Patterns",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Failure Patterns",
+                "",
+            ]
+        )
 
         if patterns["common_issues"]:
             lines.append("### Common Issues (appear in 2+ scenarios)")
@@ -397,7 +434,9 @@ class DiagnosticReport:
             lines.append("")
 
         # Dimension hotspots
-        dim_issues = [(dim, items) for dim, items in patterns["by_dimension"].items() if len(items) >= 2]
+        dim_issues = [
+            (dim, items) for dim, items in patterns["by_dimension"].items() if len(items) >= 2
+        ]
         if dim_issues:
             lines.append("### Dimension Hotspots (low scores in 2+ scenarios)")
             lines.append("")
@@ -413,23 +452,26 @@ class DiagnosticReport:
         lines.append("|------|-------|--------|-----------|")
         for tier in sorted(patterns["by_tier"].keys()):
             stats = patterns["by_tier"][tier]
-            rate = (stats["total"] - stats["failed"]) / stats["total"] * 100 if stats["total"] else 0
+            rate = (
+                (stats["total"] - stats["failed"]) / stats["total"] * 100 if stats["total"] else 0
+            )
             lines.append(f"| {tier} | {stats['total']} | {stats['failed']} | {rate:.0f}% |")
         lines.append("")
 
         # Detailed failures
         if failures:
-            lines.extend([
-                "## Failure Details",
-                "",
-                "Failures sorted by priority (hard fails first, then by score).",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Failure Details",
+                    "",
+                    "Failures sorted by priority (hard fails first, then by score).",
+                    "",
+                ]
+            )
 
             # Sort: hard fails first, then by score ascending
             sorted_failures = sorted(
-                failures,
-                key=lambda x: (not x.get("hard_fail", False), x.get("overall_score", 0))
+                failures, key=lambda x: (not x.get("hard_fail", False), x.get("overall_score", 0))
             )
 
             for i, result in enumerate(sorted_failures, 1):
@@ -441,7 +483,9 @@ class DiagnosticReport:
 
                 lines.append(f"### {i}. {scenario_name}")
                 lines.append("")
-                lines.append(f"**Tier:** {tier} | **Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}")
+                lines.append(
+                    f"**Tier:** {tier} | **Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}"
+                )
                 lines.append("")
 
                 # Hard fail reasons
@@ -476,11 +520,17 @@ class DiagnosticReport:
                             user_msg, assistant_msg = self._get_turn_content(transcript, v["turn"])
                             if user_msg:
                                 # Truncate long messages
-                                user_display = user_msg[:200] + "..." if len(user_msg) > 200 else user_msg
+                                user_display = (
+                                    user_msg[:200] + "..." if len(user_msg) > 200 else user_msg
+                                )
                                 lines.append(f"  - **User (turn {v['turn']}):** \"{user_display}\"")
                             if assistant_msg:
-                                assistant_display = assistant_msg[:300] + "..." if len(assistant_msg) > 300 else assistant_msg
-                                lines.append(f"  - **Assistant:** \"{assistant_display}\"")
+                                assistant_display = (
+                                    assistant_msg[:300] + "..."
+                                    if len(assistant_msg) > 300
+                                    else assistant_msg
+                                )
+                                lines.append(f'  - **Assistant:** "{assistant_display}"')
 
                         # Suggest fix
                         suggestion = self._suggest_fix(v, v["dimension"])
@@ -495,40 +545,52 @@ class DiagnosticReport:
                 lines.append("")
 
         # Actionable next steps
-        lines.extend([
-            "## Recommended Actions",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Recommended Actions",
+                "",
+            ]
+        )
 
         actions = []
 
         # Prioritize by impact
         if patterns["common_issues"]:
             top_issue = patterns["common_issues"][0]
-            actions.append(f"1. **Fix '{top_issue['rule']}'** - affects {top_issue['count']} scenarios")
+            actions.append(
+                f"1. **Fix '{top_issue['rule']}'** - affects {top_issue['count']} scenarios"
+            )
 
         if dim_issues:
             worst_dim = max(dim_issues, key=lambda x: len(x[1]))
-            actions.append(f"2. **Improve {worst_dim[0]} dimension** - low in {len(worst_dim[1])} scenarios")
+            actions.append(
+                f"2. **Improve {worst_dim[0]} dimension** - low in {len(worst_dim[1])} scenarios"
+            )
 
         if comparison and comparison["regressed"]:
-            actions.append(f"3. **Investigate regressions** - {len(comparison['regressed'])} scenarios got worse")
+            actions.append(
+                f"3. **Investigate regressions** - {len(comparison['regressed'])} scenarios got worse"
+            )
 
         hard_fail_count = sum(1 for r in failures if r.get("hard_fail"))
         if hard_fail_count:
             actions.append(f"4. **Address hard fails first** - {hard_fail_count} critical failures")
 
         if not actions:
-            actions.append("No critical issues found. Consider reviewing low-scoring scenarios for optimization.")
+            actions.append(
+                "No critical issues found. Consider reviewing low-scoring scenarios for optimization."
+            )
 
         lines.extend(actions)
         lines.append("")
 
         # Footer
-        lines.extend([
-            "---",
-            f"*Report generated from: {self.results_path.name}*",
-        ])
+        lines.extend(
+            [
+                "---",
+                f"*Report generated from: {self.results_path.name}*",
+            ]
+        )
 
         content = "\n".join(lines)
 

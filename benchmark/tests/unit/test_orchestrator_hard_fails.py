@@ -66,7 +66,7 @@ def _run_with_overrides(
     scenario_path = _write_scenario(tmp_path)
 
     default_result = {"score": 1.0, "breakdown": {}}
-    for name in ["memory", "trauma", "belonging", "compliance", "safety"]:
+    for name in ["memory", "consistency", "trauma", "belonging", "compliance", "safety"]:
         result = overrides.get(name, default_result)
         monkeypatch.setattr(
             getattr(orchestrator_module, name),

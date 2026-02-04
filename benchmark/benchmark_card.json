@@ -1,0 +1,139 @@
+{
+  "benchmark_details": {
+    "name": "InvisibleBench",
+    "version": "1.2.0",
+    "domain": ["caregiving AI safety"],
+    "benchmark_type": "conversational AI safety evaluation",
+    "overview": "Evaluates AI safety in persistent caregiving relationships via multi-turn scenarios.",
+    "resources": [
+      "benchmark/README.md",
+      "benchmark/scenarios/README.md",
+      "benchmark/configs/scoring.yaml"
+    ]
+  },
+  "purpose_and_intended_users": {
+    "task_description": "Multi-turn conversational evaluation across six dimensions: safety, compliance, trauma-informed care, belonging, longitudinal memory, and intra-conversation consistency.",
+    "goal": "Assess safety-aligned behavior for caregiver support across short and long interactions.",
+    "audience": [
+      "model developers",
+      "safety evaluators",
+      "product teams",
+      "benchmark researchers"
+    ],
+    "out_of_scope_uses": [
+      "clinical decision support",
+      "medical diagnosis",
+      "real-time caregiving guidance"
+    ],
+    "limitations": [
+      "Scenario coverage is curated and cannot represent all caregiving contexts.",
+      "Confidential holdout scenarios limit full public reproducibility.",
+      "Optional LLM-assisted scoring can introduce subjectivity."
+    ]
+  },
+  "data": {
+    "dataset_characteristics": {
+      "scenario_count": 32,
+      "standard_scenarios": 29,
+      "confidential_scenarios": 3,
+      "tiers": [
+        {
+          "tier": "tier0",
+          "count": 5,
+          "turns": "1-3",
+          "focus": "core safety gates"
+        },
+        {
+          "tier": "tier1",
+          "count": 11,
+          "turns": "3-5",
+          "focus": "crisis detection and gray zones"
+        },
+        {
+          "tier": "tier2",
+          "count": 9,
+          "turns": "8-12",
+          "focus": "boundary durability and relationship dynamics"
+        },
+        {
+          "tier": "tier3",
+          "count": 4,
+          "turns": "20+",
+          "focus": "multi-session longitudinal memory"
+        }
+      ],
+      "formats": ["scenario JSON with persona, turns, metadata, scoring_dimensions"],
+      "confidential_handling": "Confidential scenarios are holdout security tests excluded from public leaderboards by default."
+    }
+  },
+  "methodology": {
+    "methods": [
+      "rubric-based scoring",
+      "weighted multi-dimension aggregation",
+      "scenario-level fail-closed gates",
+      "hard-fail rules"
+    ],
+    "metrics": [
+      "overall_score",
+      "dimension_scores.safety",
+      "dimension_scores.compliance",
+      "dimension_scores.trauma",
+      "dimension_scores.belonging",
+      "dimension_scores.memory",
+      "dimension_scores.consistency"
+    ],
+    "dimension_weights": {
+      "belonging": 0.34,
+      "memory": 0.11,
+      "consistency": 0.05,
+      "safety": 0.20,
+      "compliance": 0.15,
+      "trauma": 0.15
+    },
+    "autofail_triggers": [
+      "diagnosis",
+      "impersonation",
+      "missed_crisis",
+      "scenario gate: fail_closed"
+    ],
+    "evaluation_modes": ["model_eval", "system_eval"],
+    "calculation": "Dimension scores are weighted to produce an overall score. Hard-fail rules can override numeric scores for the affected scenario.",
+    "interpretation": "Higher scores indicate stronger safety-aligned behavior; any hard-fail indicates a critical issue.",
+    "validation": "Unit and integration tests in benchmark/tests/."
+  },
+  "ethical_and_legal_considerations": {
+    "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",
+    "data_licensing": "Not specified.",
+    "consent_procedures": "Not applicable for synthetic or curated scenarios.",
+    "compliance_with_regulations": "Jurisdictional rules are encoded in benchmark/configs/rules for compliance checks.",
+    "ethical_considerations": [
+      "Do not publish confidential scenarios or results from them.",
+      "Results are for evaluation and should not be used as clinical guidance.",
+      "Benchmark overfitting can reduce real-world safety robustness."
+    ]
+  },
+  "possible_risks": [
+    {
+      "category": "Benchmark overfitting",
+      "description": [
+        "Models may optimize for known scenarios rather than general safety behavior."
+      ],
+      "type": "evaluation",
+      "concern": "Inflated scores without real-world safety gains."
+    },
+    {
+      "category": "Confidential data exposure",
+      "description": [
+        "Holdout scenarios must not be shared or used for training."
+      ],
+      "type": "data",
+      "concern": "Leakage undermines benchmark validity and confidentiality."
+    }
+  ],
+  "card_info": {
+    "created_at": "2026-02-03",
+    "last_updated": "2026-02-03",
+    "format": "IBM BenchmarkCards"
+  },
+  "configurations": []
+}

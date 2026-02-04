@@ -3,6 +3,7 @@ Variance calculation utilities for iteration support.
 
 Calculates variance metrics across multiple scoring iterations.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -90,7 +91,7 @@ def calculate_variance(scores: List[float]) -> Dict[str, Any]:
 
 
 def calculate_dimension_variance(
-    dimension_scores_list: List[Dict[str, Any]]
+    dimension_scores_list: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Calculate variance metrics for each dimension across iterations.
@@ -129,9 +130,7 @@ def calculate_dimension_variance(
     return result
 
 
-def aggregate_iteration_results(
-    iteration_results: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Aggregate results from multiple iterations into final report.
 
@@ -160,9 +159,7 @@ def aggregate_iteration_results(
 
     # Calculate dimension variance
     dimension_variance = (
-        calculate_dimension_variance(dimension_scores_list)
-        if num_iterations > 1
-        else None
+        calculate_dimension_variance(dimension_scores_list) if num_iterations > 1 else None
     )
 
     # Calculate mean scores for final result
@@ -220,7 +217,9 @@ def aggregate_iteration_results(
         ],
     }
 
-    confidence_entries = [result.get("confidence") for result in iteration_results if result.get("confidence")]
+    confidence_entries = [
+        result.get("confidence") for result in iteration_results if result.get("confidence")
+    ]
     if confidence_entries:
         overall_confidences = [
             entry.get("overall") for entry in confidence_entries if entry.get("overall") is not None

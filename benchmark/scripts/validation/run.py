@@ -178,7 +178,11 @@ def print_results_summary(console: Console, results: list, elapsed_seconds: floa
     for r in sorted(results, key=lambda x: (x["model"], x["scenario"])):
         score = r["overall_score"]
         score_style = "green" if score >= 0.7 else "yellow" if score >= 0.5 else "red"
-        status = "[green]✓[/green]" if r["status"] != "error" and not r.get("hard_fail") else "[red]✗[/red]"
+        status = (
+            "[green]✓[/green]"
+            if r["status"] != "error" and not r.get("hard_fail")
+            else "[red]✗[/red]"
+        )
 
         results_table.add_row(
             r["model"],
@@ -354,9 +358,7 @@ def run_benchmark(
                                 output_path=transcript_path,
                             )
                         except Exception as e:
-                            progress.console.print(
-                                f"[red]ERROR generating transcript: {e}[/red]"
-                            )
+                            progress.console.print(f"[red]ERROR generating transcript: {e}[/red]")
                             failed += 1
                             progress.advance(task)
                             continue
@@ -528,7 +530,8 @@ Examples:
         help="Skip transcript generation (use existing)",
     )
     parser.add_argument(
-        "--yes", "-y",
+        "--yes",
+        "-y",
         action="store_true",
         help="Auto-confirm (skip interactive prompt)",
     )

@@ -6,6 +6,7 @@ function returning a structured result for that dimension.
 
 # Expose submodules for direct import in orchestrator and tests
 __all__ = [
+    "consistency",
     "memory",
     "trauma",
     "belonging",

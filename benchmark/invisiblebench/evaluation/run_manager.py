@@ -4,6 +4,7 @@ State persistence and run tracking for InvisibleBench.
 This module provides RunManager for saving/loading benchmark run state,
 enabling resumption and preventing duplicate evaluations.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,11 +36,7 @@ class RunManager:
         self.runs_dir = Path(runs_dir)
         self.runs_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_run_key(
-        self,
-        model_name: str,
-        run_id: Optional[str] = None
-    ) -> str:
+    def generate_run_key(self, model_name: str, run_id: Optional[str] = None) -> str:
         """
         Generate unique run key for a model evaluation.
 
@@ -59,12 +56,12 @@ class RunManager:
             "test001_openai_gpt-4o"
         """
         # Sanitize model name for filesystem
-        sanitized = re.sub(r'[^a-zA-Z0-9_.-]+', '_', model_name)
+        sanitized = re.sub(r"[^a-zA-Z0-9_.-]+", "_", model_name)
 
         # Generate or use provided run_id prefix
         # SECURITY: Sanitize run_id to prevent path traversal attacks
         if run_id:
-            prefix = re.sub(r'[^a-zA-Z0-9_.-]+', '_', run_id)
+            prefix = re.sub(r"[^a-zA-Z0-9_.-]+", "_", run_id)
         else:
             prefix = uuid.uuid4().hex[:8]
 
@@ -85,7 +82,7 @@ class RunManager:
             True if save succeeded, False otherwise
         """
         file_path = self.runs_dir / f"{run_key}.json"
-        temp_path = file_path.with_suffix('.json.tmp')
+        temp_path = file_path.with_suffix(".json.tmp")
 
         try:
             # Ensure run_key is in the data
@@ -94,7 +91,7 @@ class RunManager:
                 save_data["run_key"] = run_key
 
             # Write to temp file first
-            with open(temp_path, 'w') as f:
+            with open(temp_path, "w") as f:
                 json.dump(save_data, f, indent=2, sort_keys=True)
 
             # Atomic rename
@@ -126,7 +123,7 @@ class RunManager:
             return None
 
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError, OSError):
             return None
@@ -151,11 +148,11 @@ class RunManager:
 
         for file_path in json_files:
             # Skip temp files
-            if file_path.suffix == '.tmp':
+            if file_path.suffix == ".tmp":
                 continue
 
             try:
-                with open(file_path, 'r') as f:
+                with open(file_path, "r") as f:
                     run_data = json.load(f)
 
                 # Apply model name filter if provided
@@ -172,11 +169,7 @@ class RunManager:
 
         return runs
 
-    def detect_duplicate(
-        self,
-        model_name: str,
-        scenario_id: str
-    ) -> bool:
+    def detect_duplicate(self, model_name: str, scenario_id: str) -> bool:
         """
         Check if a completed run exists for this model+scenario combination.
 

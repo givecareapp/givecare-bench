@@ -5,7 +5,9 @@
 [![Website](https://img.shields.io/badge/website-bench.givecareapp.com-blue)](https://bench.givecareapp.com)
 [![Papers](https://img.shields.io/badge/papers-preprints-green)](https://github.com/givecareapp/givecare-bench/releases/tag/v1.1-preprint)
 
-Testing AI models on crisis detection, regulatory compliance, and care quality across multi-turn conversations.
+Testing AI models on **gray zone navigation**, **boundary management**, and **caregiving-specific nuance** across multi-turn conversations.
+
+> **v2.0**: Benchmark rebalanced from crisis-heavy to gray zone and boundary focused. Crisis detection is important but not our differentiator—specialized benchmarks like CARE own that space. InvisibleBench tests what makes caregiving AI uniquely challenging. See [EVOLUTION.md](./benchmark/EVOLUTION.md).
 
 ---
 
@@ -219,30 +221,51 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 
 A **Phase 3 safety standard** for relationship AI - testing what happens when 63 million American caregivers use AI over time, not just in single interactions.
 
-### 5 Evaluation Dimensions
+### Core Focus: Gray Zones & Boundaries
+
+**v2.0** shifted focus from comprehensive crisis detection (which CARE and other benchmarks cover) to caregiving-specific challenges:
+
+| Category | Count | What It Tests |
+|----------|-------|---------------|
+| **Gray Zone** | 8 | Venting ≠ crisis, frustration ≠ abuse, numbness ≠ depression |
+| **Boundaries** | 5 | AI dependency, medical advice limits, therapy replacement |
+| **Crisis** | 5 | Essential patterns only (recovery, dual-concern, indirect) |
+
+### 6 Evaluation Dimensions
 
 | Dimension | Weight | Focus |
 |-----------|--------|-------|
-| **Memory** | 16% | Longitudinal consistency, relationship continuity, context retention |
+| **Memory** | 11% | Longitudinal consistency, relationship continuity, context retention |
+| **Consistency** | 5% | Intra-conversation self-consistency and contradiction detection |
 | **Trauma-Informed** | 15% | Safety, trust-building, validation, pacing, 7 core principles |
 | **Belonging** | 34% | Cultural competence, identity affirmation, no othering |
 | **Compliance** | 15% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |
 | **Safety** | 20% | Crisis detection, appropriate urgency, resource provision |
 
+**Plus**: Authenticity scoring (formulaic response detection), turn-by-turn degradation tracking
+
 ### 4 Testing Tiers
 
 - **Tier 0** (Core Safety): 1-3 turns - explicit crisis signals, mandatory safety gates
-- **Tier 1** (Crisis Detection): 3-5 turns - immediate safety, crisis recognition, gray zones
+- **Tier 1** (Core Competency): 3-5 turns - gray zones, boundaries, essential crisis
 - **Tier 2** (Boundary Durability): 8-12 turns - warmth vs. compliance, relational dynamics
 - **Tier 3** (Longitudinal Memory): 5-20+ turns across multiple sessions - memory consistency, crisis return
 
-### Gray Zone Scenarios
+### Gray Zone Scenarios (Key Differentiator)
 
-Tests calibration between safety and over-refusal:
-- Venting vs. crisis ("I can't do this anymore")
-- Cultural practices vs. medical concern
-- Borderline medical questions (navigation vs. advice)
-- Dark humor vs. ideation
+Tests calibration between safety and over-pathologizing:
+- **Exhaustion venting** - tiredness ≠ depression
+- **Care recipient frustration** - anger expression ≠ abuse indicator
+- **Compassion fatigue** - emotional numbness ≠ clinical depression
+- **Dark humor coping** - gallows humor ≠ suicidal ideation
+- **Venting vs. crisis** - "I can't do this anymore" requires context
+
+### Boundary Scenarios (AI-Specific)
+
+Tests limits unique to AI companionship:
+- **AI dependency** - preferring AI to human connection
+- **Medical advice boundary** - information vs. prescription
+- **Therapist replacement** - complement vs. replacement positioning
 
 ### Autofail Conditions
 
@@ -284,7 +307,9 @@ mypy benchmark/invisiblebench/                              # Type check
 
 ## Documentation
 
+- [**Benchmark Evolution**](./benchmark/EVOLUTION.md) - How v2.0 diverged from the paper
 - [Benchmark Overview](./benchmark/README.md)
+- [Scenarios Guide](./benchmark/scenarios/README.md)
 - [Validation Quickstart](./benchmark/scripts/validation/QUICKSTART.md)
 - [Transcript Format](./benchmark/docs/transcript_format.md)
 - [Research Validation](./docs/RESEARCH_VALIDATION.md)
@@ -320,4 +345,4 @@ MIT License - see [LICENSE](./LICENSE)
 
 ---
 
-**v1.1.0** | Built for 63 million American caregivers | Trauma-Informed & Belonging scorers updated
+**v2.0.0** | Built for 63 million American caregivers | Gray zone & boundary focused | [See what changed](./benchmark/EVOLUTION.md)

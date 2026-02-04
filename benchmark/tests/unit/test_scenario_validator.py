@@ -1,4 +1,5 @@
 """Scenario validator regression coverage."""
+
 from __future__ import annotations
 
 from invisiblebench.loaders.scenario_loader import ScenarioValidator

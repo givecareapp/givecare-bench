@@ -3,6 +3,7 @@ Test suite for CLI integration.
 
 Tests that the CLI properly wires all components together.
 """
+
 from __future__ import annotations
 
 import json
@@ -88,6 +89,7 @@ class TestCLI:
             assert "overall_score" in results
             assert "dimension_scores" in results
             assert "memory" in results["dimension_scores"]
+            assert "consistency" in results["dimension_scores"]
             assert "trauma" in results["dimension_scores"]
             assert "belonging" in results["dimension_scores"]
             assert "compliance" in results["dimension_scores"]

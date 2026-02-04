@@ -1,5 +1,6 @@
 weights:
-  memory: 0.16
+  memory: 0.11
+  consistency: 0.05
   trauma: 0.15
   belonging: 0.34
   compliance: 0.15

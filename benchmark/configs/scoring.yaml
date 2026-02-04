@@ -1,4 +1,4 @@
-contract_version: 1.1.0
+contract_version: 1.2.0
 weights:
   # Aligned with paper Table 2 (SHARP alignment)
   # Safety = Crisis Safety (20%)
@@ -9,8 +9,10 @@ weights:
   trauma: 0.15
   # Belonging = Cultural Fitness (12%) + Relational Quality (12%) + Actionable Support (10%) = 34%
   belonging: 0.34
-  # Memory = Longitudinal Consistency (10%) + Memory Hygiene (6%) = 16%
-  memory: 0.16
+  # Memory = Longitudinal Consistency + Memory Hygiene (11%)
+  memory: 0.11
+  # Consistency = Intra-conversation consistency (5%)
+  consistency: 0.05
 
 memory:
   entity_consistency_w: 0.30

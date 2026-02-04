@@ -1,6 +1,7 @@
 """
 Data models for InvisibleBench scenarios and turns.
 """
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -65,6 +66,7 @@ __all__ = [
 
 class TierLevel(Enum):
     """Benchmark tier levels."""
+
     TIER_0 = "tier_0"  # 1-2 turns, smoke tests
     TIER_1 = "tier_1"  # 3-5 turns, foundational
     TIER_2 = "tier_2"  # 8-12 turns, attachment
@@ -73,6 +75,7 @@ class TierLevel(Enum):
 
 class DimensionType(Enum):
     """Scenario sub-dimensions used for rubric metadata."""
+
     CRISIS_SAFETY = "crisis_safety"
     REGULATORY_FITNESS = "regulatory_fitness"
     TRAUMA_INFORMED_FLOW = "trauma_informed_flow"
@@ -81,11 +84,14 @@ class DimensionType(Enum):
     ACTIONABLE_SUPPORT = "actionable_support"
     LONGITUDINAL_CONSISTENCY = "longitudinal_consistency"
     MEMORY_HYGIENE = "memory_hygiene"
+    BOUNDARIES = "boundaries"
+    GRAY_ZONE = "gray_zone"
 
 
 @dataclass
 class Turn:
     """A single conversational turn in a scenario."""
+
     turn_number: int
     user_message: str
     expected_behaviors: List[str] = field(default_factory=list)
@@ -97,7 +103,7 @@ class Turn:
     context_notes: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Turn':
+    def from_dict(cls, data: Dict[str, Any]) -> "Turn":
         """Create Turn from dictionary."""
         turn_number = data.get("turn_number", data.get("t"))
         if turn_number is None:
@@ -111,32 +117,34 @@ class Turn:
             updates=data.get("updates", []),
             rubric_criteria=data.get("rubric_criteria", []),
             probes=data.get("probes", []),
-            context_notes=data.get("context_notes")
+            context_notes=data.get("context_notes"),
         )
 
 
 @dataclass
 class Session:
     """A session within a Tier 3 multi-session scenario."""
+
     session_number: int
     time_elapsed: str  # e.g., "3 months"
     turns: List[Turn]
     session_context: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Session':
+    def from_dict(cls, data: Dict[str, Any]) -> "Session":
         """Create Session from dictionary."""
         return cls(
             session_number=data["session_number"],
             time_elapsed=data["time_elapsed"],
             turns=[Turn.from_dict(t) for t in data["turns"]],
-            session_context=data.get("session_context")
+            session_context=data.get("session_context"),
         )
 
 
 @dataclass
 class Persona:
     """User persona with demographic and context information."""
+
     name: str
     age: int
     care_recipient: str
@@ -153,7 +161,7 @@ class Persona:
     living_situation: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Persona':
+    def from_dict(cls, data: Dict[str, Any]) -> "Persona":
         """Create Persona from dictionary."""
         return cls(
             name=data["name"],
@@ -176,6 +184,7 @@ class Persona:
 @dataclass
 class Scenario:
     """A complete test scenario."""
+
     scenario_id: str
     tier: TierLevel
     title: str
@@ -202,7 +211,7 @@ class Scenario:
         return len(self.turns)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Scenario':
+    def from_dict(cls, data: Dict[str, Any]) -> "Scenario":
         """Create Scenario from dictionary."""
         tier = TierLevel(data["tier"])
         persona = Persona.from_dict(data["persona"])
