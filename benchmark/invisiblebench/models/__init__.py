@@ -84,6 +84,8 @@ class DimensionType(Enum):
     ACTIONABLE_SUPPORT = "actionable_support"
     LONGITUDINAL_CONSISTENCY = "longitudinal_consistency"
     MEMORY_HYGIENE = "memory_hygiene"
+    BOUNDARIES = "boundaries"
+    GRAY_ZONE = "gray_zone"
 
 
 @dataclass
