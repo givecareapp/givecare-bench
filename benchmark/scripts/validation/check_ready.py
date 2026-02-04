@@ -14,13 +14,14 @@ from typing import Optional, Tuple
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # Color codes for terminal output
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-RESET = '\033[0m'
-CHECK = '✓'
-CROSS = '✗'
-WARN = '⚠'
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
+CHECK = "✓"
+CROSS = "✗"
+WARN = "⚠"
+
 
 def check(condition, success_msg, fail_msg, warning=False):
     """Print check result."""
@@ -35,9 +36,11 @@ def check(condition, success_msg, fail_msg, warning=False):
             print(f"{RED}{CROSS}{RESET} {fail_msg}")
             return False
 
+
 def has_module(module_name: str) -> bool:
     """Return True if module can be found without importing it."""
     return importlib.util.find_spec(module_name) is not None
+
 
 def importable(module_name: str) -> Tuple[bool, Optional[str]]:
     """Return True if module imports cleanly, otherwise False + error message."""
@@ -46,6 +49,7 @@ def importable(module_name: str) -> Tuple[bool, Optional[str]]:
         return True, None
     except Exception as exc:
         return False, str(exc)
+
 
 def main():
     print("InvisibleBench Validation - Pre-flight Check")
@@ -59,28 +63,26 @@ def main():
     all_passed &= check(
         py_version >= (3, 9),
         f"Python {py_version.major}.{py_version.minor}.{py_version.micro}",
-        f"Python {py_version.major}.{py_version.minor} - Need 3.9+"
+        f"Python {py_version.major}.{py_version.minor} - Need 3.9+",
     )
 
     # Check dependencies
     print("\n[Core Dependencies]")
 
     all_passed &= check(
-        has_module("yaml"),
-        "pyyaml installed",
-        "pyyaml not installed (pip install pyyaml)"
+        has_module("yaml"), "pyyaml installed", "pyyaml not installed (pip install pyyaml)"
     )
 
     all_passed &= check(
         has_module("jsonlines"),
         "jsonlines installed",
-        "jsonlines not installed (pip install jsonlines)"
+        "jsonlines not installed (pip install jsonlines)",
     )
 
     all_passed &= check(
         has_module("requests"),
         "requests installed",
-        "requests not installed (pip install requests)"
+        "requests not installed (pip install requests)",
     )
 
     # Check optional dependencies
@@ -90,28 +92,28 @@ def main():
         has_module("pandas"),
         "pandas installed",
         "pandas not installed (pip install pandas) - summary table will be skipped",
-        warning=True
+        warning=True,
     )
 
     check(
         has_module("matplotlib"),
         "matplotlib installed",
         "matplotlib not installed (pip install matplotlib) - heatmap will be skipped",
-        warning=True
+        warning=True,
     )
 
     check(
         has_module("seaborn"),
         "seaborn installed",
         "seaborn not installed (pip install seaborn) - heatmap will be skipped",
-        warning=True
+        warning=True,
     )
 
     check(
         has_module("tqdm"),
         "tqdm installed",
         "tqdm not installed (pip install tqdm) - no progress bars",
-        warning=True
+        warning=True,
     )
 
     # Check InvisibleBench modules
@@ -137,15 +139,11 @@ def main():
         has_openrouter,
         "OPENROUTER_API_KEY set",
         "OPENROUTER_API_KEY not set (export OPENROUTER_API_KEY='...')",
-        warning=True
+        warning=True,
     )
 
     if not has_openrouter:
-        all_passed &= check(
-            False,
-            "",
-            "OPENROUTER_API_KEY required"
-        )
+        all_passed &= check(False, "", "OPENROUTER_API_KEY required")
 
     # Check scenarios
     print("\n[Scenarios]")
@@ -154,16 +152,12 @@ def main():
     scenarios = [
         "benchmark/scenarios/tier1/crisis/crisis_detection.json",
         "benchmark/scenarios/tier2/burnout/sandwich_generation_burnout.json",
-        "benchmark/scenarios/tier3/longitudinal_trust.json"
+        "benchmark/scenarios/tier3/longitudinal_trust.json",
     ]
 
     for scenario_path in scenarios:
         full_path = repo_root / scenario_path
-        all_passed &= check(
-            full_path.exists(),
-            f"{scenario_path}",
-            f"{scenario_path} not found"
-        )
+        all_passed &= check(full_path.exists(), f"{scenario_path}", f"{scenario_path} not found")
 
     # Check output directory
     print("\n[Output Directory]")
@@ -173,24 +167,20 @@ def main():
         results_dir.exists(),
         "results/ directory ready",
         "results/ directory will be created on run",
-        warning=True
+        warning=True,
     )
 
     # Check script
     print("\n[Validation Script]")
 
     script_path = repo_root / "benchmark" / "scripts" / "validation" / "run_minimal.py"
-    all_passed &= check(
-        script_path.exists(),
-        "run_minimal.py found",
-        "run_minimal.py not found"
-    )
+    all_passed &= check(script_path.exists(), "run_minimal.py found", "run_minimal.py not found")
 
     if script_path.exists():
         all_passed &= check(
             os.access(script_path, os.X_OK) or True,  # Doesn't need to be executable
             "Script is readable",
-            ""
+            "",
         )
 
     # Final summary
@@ -206,6 +196,7 @@ def main():
         print("\nFix the issues above, then run:")
         print("  python benchmark/scripts/validation/check_ready.py")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

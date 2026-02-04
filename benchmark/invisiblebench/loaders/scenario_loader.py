@@ -1,6 +1,7 @@
 """
 Utilities for loading and validating scenarios.
 """
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -85,11 +86,11 @@ class ScenarioValidator:
                 errors.append(f"{label}[{idx}].autofail_triggers must be a list")
 
             if "expected_behaviors" not in turn and "rubric_criteria" not in turn:
-                errors.append(
-                    f"{label}[{idx}] must include expected_behaviors or rubric_criteria"
-                )
+                errors.append(f"{label}[{idx}] must include expected_behaviors or rubric_criteria")
 
-            if "expected_behaviors" in turn and not isinstance(turn.get("expected_behaviors"), list):
+            if "expected_behaviors" in turn and not isinstance(
+                turn.get("expected_behaviors"), list
+            ):
                 errors.append(f"{label}[{idx}].expected_behaviors must be a list")
 
             if "rubric_criteria" in turn and not isinstance(turn.get("rubric_criteria"), list):
@@ -103,9 +104,7 @@ class ScenarioValidator:
 
             if "probes" in turn:
                 ScenarioValidator._validate_probe_list(
-                    turn.get("probes"),
-                    errors,
-                    f"{label}[{idx}].probes"
+                    turn.get("probes"), errors, f"{label}[{idx}].probes"
                 )
 
     @staticmethod
@@ -171,9 +170,7 @@ class ScenarioValidator:
                     if "time_elapsed" not in session:
                         errors.append(f"sessions[{idx}] missing time_elapsed")
                     ScenarioValidator._validate_turn_list(
-                        session.get("turns"),
-                        errors,
-                        f"sessions[{idx}].turns"
+                        session.get("turns"), errors, f"sessions[{idx}].turns"
                     )
 
         # Validate scoring dimensions
@@ -191,9 +188,7 @@ class ScenarioValidator:
 
         if "risk_triggers" in data:
             ScenarioValidator._validate_risk_triggers(
-                data.get("risk_triggers"),
-                errors,
-                "risk_triggers"
+                data.get("risk_triggers"), errors, "risk_triggers"
             )
 
         if "metadata" in data and not isinstance(data.get("metadata"), dict):
@@ -231,7 +226,7 @@ class ScenarioLoader:
 
     def load_scenario(self, file_path: Path) -> Scenario:
         """Load single scenario from file."""
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
 
         normalize_turn_indices(data)
@@ -281,20 +276,15 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                 "context": {
                     "living_situation": "Parent lives with user",
                     "employment": "Full-time employed",
-                    "support_system": "Limited family support"
-                }
+                    "support_system": "Limited family support",
+                },
             },
             "turns": [
                 {
                     "turn_number": 1,
                     "user_message": "Example user message",
-                    "expected_behaviors": [
-                        "Expected behavior 1",
-                        "Expected behavior 2"
-                    ],
-                    "autofail_triggers": [
-                        "Autofail condition 1"
-                    ]
+                    "expected_behaviors": ["Expected behavior 1", "Expected behavior 2"],
+                    "autofail_triggers": ["Autofail condition 1"],
                 }
             ],
             "scoring_dimensions": {
@@ -303,9 +293,9 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                 "trauma_informed_flow": 3,
                 "belonging_cultural_fitness": 2,
                 "relational_quality": 3,
-                "actionable_support": 3
+                "actionable_support": 3,
             },
-            "dif_variables": ["income", "race"]
+            "dif_variables": ["income", "race"],
         }
     elif tier == TierLevel.TIER_3:
         return {
@@ -320,8 +310,8 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                 "care_duration": "2 years",
                 "context": {
                     "living_situation": "Parent lives with user",
-                    "employment": "Full-time employed"
-                }
+                    "employment": "Full-time employed",
+                },
             },
             "sessions": [
                 {
@@ -333,9 +323,9 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                             "turn_number": 1,
                             "user_message": "Example message",
                             "expected_behaviors": ["Expected behavior"],
-                            "autofail_triggers": []
+                            "autofail_triggers": [],
                         }
-                    ]
+                    ],
                 },
                 {
                     "session_number": 2,
@@ -346,10 +336,10 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                             "turn_number": 2,
                             "user_message": "Example follow-up message",
                             "expected_behaviors": ["Remember prior conversation"],
-                            "autofail_triggers": []
+                            "autofail_triggers": [],
                         }
-                    ]
-                }
+                    ],
+                },
             ],
             "scoring_dimensions": {
                 "crisis_safety": 3,
@@ -359,9 +349,9 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
                 "relational_quality": 3,
                 "actionable_support": 3,
                 "longitudinal_consistency": 2,
-                "memory_hygiene": 1
+                "memory_hygiene": 1,
             },
-            "dif_variables": ["income", "race"]
+            "dif_variables": ["income", "race"],
         }
 
     return {}

@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Load .env for API keys
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 try:
@@ -74,7 +75,14 @@ class GiveCareProvider:
         self.phone = self._generate_phone()
 
         # Path to gc CLI (in givecare repo)
-        self.gc_cli = Path(__file__).parent.parent.parent.parent / "givecare" / "packages" / "cli" / "dist" / "index.js"
+        self.gc_cli = (
+            Path(__file__).parent.parent.parent.parent
+            / "givecare"
+            / "packages"
+            / "cli"
+            / "dist"
+            / "index.js"
+        )
         self.givecare_dir = Path(__file__).parent.parent.parent.parent / "givecare"
 
         if not self.gc_cli.exists():
@@ -106,13 +114,19 @@ class GiveCareProvider:
 
     def send_message(self, message: str) -> str:
         """Send a message and get Mira's response."""
-        output = self._run_gc([
-            "simulate",
-            "--message", message,
-            "--phone", self.phone,
-            "--deployment", self.deployment,
-            "--wait", str(self.wait_ms),
-        ])
+        output = self._run_gc(
+            [
+                "simulate",
+                "--message",
+                message,
+                "--phone",
+                self.phone,
+                "--deployment",
+                self.deployment,
+                "--wait",
+                str(self.wait_ms),
+            ]
+        )
 
         # Parse response from output
         # Format: "User: ...\nMira: <response>\n(XXXms)"
@@ -203,11 +217,13 @@ def run_scenario(
         if verbose:
             print(f"[{turn_num}] User: {user_msg}")
 
-        transcript.append({
-            "turn": turn_num,
-            "role": "user",
-            "content": user_msg,
-        })
+        transcript.append(
+            {
+                "turn": turn_num,
+                "role": "user",
+                "content": user_msg,
+            }
+        )
 
         try:
             response = provider.send_message(user_msg)
@@ -215,21 +231,25 @@ def run_scenario(
             if verbose:
                 print(f"    Mira: {response[:100]}{'...' if len(response) > 100 else ''}")
 
-            transcript.append({
-                "turn": turn_num,
-                "role": "assistant",
-                "content": response,
-            })
+            transcript.append(
+                {
+                    "turn": turn_num,
+                    "role": "assistant",
+                    "content": response,
+                }
+            )
         except Exception as e:
             error_msg = f"[ERROR: {e}]"
             if verbose:
                 print(f"    ERROR: {e}")
-            transcript.append({
-                "turn": turn_num,
-                "role": "assistant",
-                "content": error_msg,
-                "error": True,
-            })
+            transcript.append(
+                {
+                    "turn": turn_num,
+                    "role": "assistant",
+                    "content": error_msg,
+                    "error": True,
+                }
+            )
 
     # Save transcript
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -355,11 +375,17 @@ Examples:
     )
     parser.add_argument("--scenario", "-s", help="Single scenario JSON file")
     parser.add_argument("--all", "-a", action="store_true", help="Run all scenarios")
-    parser.add_argument("--tier", "-t", type=int, action="append", help="Filter by tier (can repeat)")
-    parser.add_argument("--confidential", action="store_true", help="Include confidential scenarios (32 vs 29)")
+    parser.add_argument(
+        "--tier", "-t", type=int, action="append", help="Filter by tier (can repeat)"
+    )
+    parser.add_argument(
+        "--confidential", action="store_true", help="Include confidential scenarios (32 vs 29)"
+    )
     parser.add_argument("--deployment", "-d", default=DEFAULT_DEPLOYMENT, choices=["dev", "prod"])
     parser.add_argument("--output", "-o", default="results/givecare", help="Output directory")
-    parser.add_argument("--wait", "-w", type=int, default=6000, help="Wait time between send/receive (ms)")
+    parser.add_argument(
+        "--wait", "-w", type=int, default=6000, help="Wait time between send/receive (ms)"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--score", action="store_true", help="Score transcripts after generation")
 
@@ -450,21 +476,28 @@ Examples:
                 print(f"  {scenario_path.stem}: ERROR ({e})")
                 # Create error result in standard format
                 scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-                results.append({
-                    "model": MODEL_NAME,
-                    "model_id": MODEL_ID,
-                    "provider": PROVIDER_NAME,
-                    "scenario": get_scenario_title(scenario_data, scenario_path),
-                    "scenario_id": scenario_id,
-                    "tier": get_tier_from_path(scenario_path),
-                    "overall_score": 0.0,
-                    "hard_fail": True,
-                    "hard_fail_reasons": [str(e)],
-                    "failure_categories": {"categories": ["error"], "details": {}, "primary_category": "error", "count": 1},
-                    "dimensions": {},
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "model": MODEL_NAME,
+                        "model_id": MODEL_ID,
+                        "provider": PROVIDER_NAME,
+                        "scenario": get_scenario_title(scenario_data, scenario_path),
+                        "scenario_id": scenario_id,
+                        "tier": get_tier_from_path(scenario_path),
+                        "overall_score": 0.0,
+                        "hard_fail": True,
+                        "hard_fail_reasons": [str(e)],
+                        "failure_categories": {
+                            "categories": ["error"],
+                            "details": {},
+                            "primary_category": "error",
+                            "count": 1,
+                        },
+                        "dimensions": {},
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
         # Save results with metadata
         run_timestamp = datetime.now().isoformat()

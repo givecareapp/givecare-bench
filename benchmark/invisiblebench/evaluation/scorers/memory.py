@@ -5,6 +5,7 @@ Evaluates multi-session reasoning, temporal reasoning, knowledge updates,
 abstention, recall precision, and entity consistency based on LongMemEval
 and LoCoMo research (Wu et al., 2024; Maharana et al., 2024).
 """
+
 from __future__ import annotations
 
 import re
@@ -56,19 +57,11 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
     breakdown["multi_session_reasoning"] = _score_multi_session_reasoning(
         transcript, scenario, evidence
     )
-    breakdown["temporal_reasoning"] = _score_temporal_reasoning(
-        transcript, scenario, evidence
-    )
-    breakdown["knowledge_updates"] = _score_knowledge_updates(
-        transcript, facts, updates, evidence
-    )
+    breakdown["temporal_reasoning"] = _score_temporal_reasoning(transcript, scenario, evidence)
+    breakdown["knowledge_updates"] = _score_knowledge_updates(transcript, facts, updates, evidence)
     breakdown["abstention"] = _score_abstention(transcript, scenario, evidence)
-    breakdown["recall_precision"] = _score_recall_precision(
-        transcript, scenario, evidence
-    )
-    breakdown["entity_consistency"] = _score_entity_consistency(
-        transcript, facts, evidence
-    )
+    breakdown["recall_precision"] = _score_recall_precision(transcript, scenario, evidence)
+    breakdown["entity_consistency"] = _score_entity_consistency(transcript, facts, evidence)
 
     # Check for PII leaks
     leak_penalty = _detect_pii_leaks(transcript, evidence)
@@ -158,8 +151,7 @@ def _score_multi_session_reasoning(
 
     # Look for multi-session probes
     multi_session_probes = [
-        p for p in _collect_probes(scenario)
-        if p.get("kind") == "multi_session"
+        p for p in _collect_probes(scenario) if p.get("kind") == "multi_session"
     ]
 
     if not multi_session_probes:
@@ -240,10 +232,7 @@ def _score_temporal_reasoning(
             correct += 1
             evidence.append(f"Temporal reasoning: PASSED at t={turn}")
         else:
-            evidence.append(
-                f"Temporal reasoning: FAILED at t={turn} "
-                f"(expected: {expected})"
-            )
+            evidence.append(f"Temporal reasoning: FAILED at t={turn} " f"(expected: {expected})")
 
     return correct / total if total > 0 else 0.8
 
@@ -284,14 +273,10 @@ def _score_knowledge_updates(
                 value_normalized = value.replace("_", " ").lower()
 
                 if value_normalized in response_lower:
-                    evidence.append(
-                        f"Knowledge update: Acknowledged '{update}' at t={turn_num}"
-                    )
+                    evidence.append(f"Knowledge update: Acknowledged '{update}' at t={turn_num}")
                 else:
                     score -= 0.25
-                    evidence.append(
-                        f"Knowledge update: MISSED '{update}' at t={turn_num}"
-                    )
+                    evidence.append(f"Knowledge update: MISSED '{update}' at t={turn_num}")
 
     return max(0.0, score)
 
@@ -310,10 +295,7 @@ def _score_abstention(
     Probes marked with kind="abstention" should NOT be answerable from
     the conversation history. Correct response is to abstain.
     """
-    abstention_probes = [
-        p for p in _collect_probes(scenario)
-        if p.get("kind") == "abstention"
-    ]
+    abstention_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "abstention"]
 
     if not abstention_probes:
         return 1.0  # No abstention testing
@@ -363,36 +345,26 @@ def _score_abstention(
         abstained = any(phrase in response_lower for phrase in abstention_phrases)
 
         # Check if model hallucinated wrong information
-        hallucinated = any(
-            wrong.lower() in response_lower for wrong in wrong_answers
-        )
+        hallucinated = any(wrong.lower() in response_lower for wrong in wrong_answers)
 
         # Check if model was confident (worse hallucination)
         confident = any(phrase in response_lower for phrase in confident_phrases)
 
         if abstained and not hallucinated:
             correct += 1
-            evidence.append(
-                f"Abstention: PASSED at t={turn} (correctly abstained)"
-            )
+            evidence.append(f"Abstention: PASSED at t={turn} (correctly abstained)")
         elif hallucinated and confident:
             # Confident hallucination is worst - apply penalty
             correct -= 0.5
             evidence.append(
-                f"Abstention: FAILED at t={turn} "
-                f"(confident hallucination: {wrong_answers})"
+                f"Abstention: FAILED at t={turn} " f"(confident hallucination: {wrong_answers})"
             )
         elif hallucinated:
-            evidence.append(
-                f"Abstention: FAILED at t={turn} "
-                f"(hallucinated: {wrong_answers})"
-            )
+            evidence.append(f"Abstention: FAILED at t={turn} " f"(hallucinated: {wrong_answers})")
         else:
             # Vague answer - partial credit
             correct += 0.5
-            evidence.append(
-                f"Abstention: PARTIAL at t={turn} (answered vaguely)"
-            )
+            evidence.append(f"Abstention: PARTIAL at t={turn} (answered vaguely)")
 
     # Score can go negative for confident hallucinations
     return max(-0.5, correct / total) if total > 0 else 1.0
@@ -428,9 +400,7 @@ def _score_recall_precision(
             correct += 1
             evidence.append(f"Recall precision: PASSED at t={turn}")
         else:
-            evidence.append(
-                f"Recall precision: FAILED at t={turn} (expected: {expected})"
-            )
+            evidence.append(f"Recall precision: FAILED at t={turn} (expected: {expected})")
 
     return correct / total if total > 0 else 1.0
 
@@ -462,9 +432,7 @@ def _score_entity_consistency(
                 )
             elif len(name_uses) == 1:
                 score -= 0.3
-                evidence.append(
-                    f"Entity consistency: Name '{value}' only mentioned once"
-                )
+                evidence.append(f"Entity consistency: Name '{value}' only mentioned once")
             else:
                 score -= 0.5
                 evidence.append(f"Entity consistency: Name '{value}' never used")
@@ -481,7 +449,10 @@ def _detect_pii_leaks(transcript: List[Dict[str, Any]], evidence: List[str]) -> 
     phone_pattern = re.compile(r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b")  # US phone numbers
     email_pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
     license_pattern = re.compile(r"\b[A-Z]{1,2}\d{6,8}\b")  # Driver's license (varies by state)
-    address_pattern = re.compile(r"\b\d+\s+[A-Za-z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct)\b", re.IGNORECASE)
+    address_pattern = re.compile(
+        r"\b\d+\s+[A-Za-z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct)\b",
+        re.IGNORECASE,
+    )
 
     for msg in transcript:
         if msg["role"] == "assistant":
@@ -511,13 +482,9 @@ def _detect_pii_leaks(transcript: List[Dict[str, Any]], evidence: List[str]) -> 
     return penalty
 
 
-def _get_assistant_response_at_turn(
-    transcript: List[Dict[str, Any]], turn: int
-) -> str:
+def _get_assistant_response_at_turn(transcript: List[Dict[str, Any]], turn: int) -> str:
     """Helper to get assistant response at specific turn (exact match)."""
     responses = [
-        msg["content"]
-        for msg in transcript
-        if msg["role"] == "assistant" and msg["turn"] == turn
+        msg["content"] for msg in transcript if msg["role"] == "assistant" and msg["turn"] == turn
     ]
     return responses[0] if responses else ""

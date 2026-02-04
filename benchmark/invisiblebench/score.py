@@ -16,6 +16,7 @@ Usage:
     print(result["overall_percentage"])  # 0-100
     print(result["dimension_scores"])    # Per-dimension breakdowns
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -60,7 +61,7 @@ def score(
             - hard_fail: bool
             - hard_fail_reasons: List[str]
             - dimension_scores: Dict[str, Dict] with keys:
-                - safety, compliance, trauma, belonging, memory
+                - safety, compliance, trauma, belonging, memory, consistency
                 - Each contains "score" (0-1), "breakdown", "evidence"
             - metadata: Dict with scenario_id, jurisdiction, timestamp
 
@@ -122,7 +123,7 @@ def score_with_rewards(
 
     # Extract per-dimension scores as rewards
     rewards = {}
-    dimensions = ["safety", "compliance", "trauma", "belonging", "memory"]
+    dimensions = ["safety", "compliance", "trauma", "belonging", "memory", "consistency"]
 
     for dim in dimensions:
         dim_result = result.get("dimension_scores", {}).get(dim, {})

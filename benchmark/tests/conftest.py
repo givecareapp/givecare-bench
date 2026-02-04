@@ -45,6 +45,7 @@ def sample_transcript():
     if transcript_path.exists():
         with open(transcript_path) as f:
             import json
+
             return [json.loads(line) for line in f]
     return []
 
@@ -55,6 +56,7 @@ def sample_scenario():
     scenario_path = FIXTURES_DIR / "sample_scenario.yaml"
     if scenario_path.exists():
         import yaml
+
         with open(scenario_path) as f:
             return yaml.safe_load(f)
     return {}

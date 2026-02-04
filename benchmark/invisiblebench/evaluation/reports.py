@@ -7,4 +7,3 @@ evaluation namespace for test compatibility.
 from invisiblebench.export.reports import ReportGenerator
 
 __all__ = ["ReportGenerator"]
-

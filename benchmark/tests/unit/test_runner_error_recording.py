@@ -13,9 +13,9 @@ from invisiblebench.cli.runner import _make_error_result, estimate_cost
 # Unit: _make_error_result produces correct schema
 # ---------------------------------------------------------------------------
 
+
 def test_make_error_result_schema():
-    model = {"name": "Test", "id": "test/model",
-             "cost_per_m_input": 1.0, "cost_per_m_output": 2.0}
+    model = {"name": "Test", "id": "test/model", "cost_per_m_input": 1.0, "cost_per_m_output": 2.0}
     result = _make_error_result(model, "Crisis", "tier1_crisis", 1, "boom")
 
     assert result["status"] == "error"
@@ -33,10 +33,12 @@ def test_make_error_result_schema():
 
 
 def test_make_error_result_transcript_reason():
-    model = {"name": "M", "id": "m/1",
-             "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
+    model = {"name": "M", "id": "m/1", "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
     result = _make_error_result(
-        model, "Scenario", "tier3_longitudinal_001", 3,
+        model,
+        "Scenario",
+        "tier3_longitudinal_001",
+        3,
         "Transcript generation failed: 400 Bad Request",
     )
     assert "Transcript generation failed" in result["hard_fail_reasons"][0]
@@ -44,10 +46,12 @@ def test_make_error_result_transcript_reason():
 
 
 def test_make_error_result_scoring_reason():
-    model = {"name": "M", "id": "m/1",
-             "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
+    model = {"name": "M", "id": "m/1", "cost_per_m_input": 0.5, "cost_per_m_output": 1.0}
     result = _make_error_result(
-        model, "Scenario", "tier2_boundary", 2,
+        model,
+        "Scenario",
+        "tier2_boundary",
+        2,
         "Scoring failed: memory dimension missing",
     )
     assert "Scoring failed" in result["hard_fail_reasons"][0]
@@ -57,20 +61,34 @@ def test_make_error_result_scoring_reason():
 # Unit: error results are JSON-serializable
 # ---------------------------------------------------------------------------
 
+
 def test_error_results_appear_in_saved_json(tmp_path: Path):
     """Error results must be serializable and present in saved all_results.json."""
     results = [
         {
-            "model": "Test Model", "model_id": "test/model",
-            "scenario": "Pass", "scenario_id": "tier0_pass", "tier": 0,
-            "overall_score": 0.85, "hard_fail": False,
-            "hard_fail_reasons": [], "failure_categories": {},
-            "dimensions": {"memory": 0.9}, "cost": 0.001, "status": "pass",
+            "model": "Test Model",
+            "model_id": "test/model",
+            "scenario": "Pass",
+            "scenario_id": "tier0_pass",
+            "tier": 0,
+            "overall_score": 0.85,
+            "hard_fail": False,
+            "hard_fail_reasons": [],
+            "failure_categories": {},
+            "dimensions": {"memory": 0.9},
+            "cost": 0.001,
+            "status": "pass",
         },
         _make_error_result(
-            {"name": "Test Model", "id": "test/model",
-             "cost_per_m_input": 1.0, "cost_per_m_output": 2.0},
-            "Error Scenario", "tier3_longitudinal_001", 3,
+            {
+                "name": "Test Model",
+                "id": "test/model",
+                "cost_per_m_input": 1.0,
+                "cost_per_m_output": 2.0,
+            },
+            "Error Scenario",
+            "tier3_longitudinal_001",
+            3,
             "Transcript generation failed: 400 Bad Request",
         ),
     ]
@@ -89,21 +107,28 @@ def test_error_results_appear_in_saved_json(tmp_path: Path):
 # Integration: patched runner records errors instead of dropping them
 # ---------------------------------------------------------------------------
 
+
 def test_sequential_runner_records_transcript_error(tmp_path: Path):
     """Patch generate_transcript to raise, verify the scenario appears in
     all_results.json with status='error'."""
     # Create a minimal scenario file
     scenario_file = tmp_path / "scenario.json"
-    scenario_file.write_text(json.dumps({
-        "scenario_id": "tier1_test_error",
-        "tier": 1,
-        "title": "Test Error",
-        "turns": [{"turn_number": 1, "user_message": "hello"}],
-    }))
+    scenario_file.write_text(
+        json.dumps(
+            {
+                "scenario_id": "tier1_test_error",
+                "tier": 1,
+                "title": "Test Error",
+                "turns": [{"turn_number": 1, "user_message": "hello"}],
+            }
+        )
+    )
 
     model = {
-        "name": "Test Model", "id": "test/model",
-        "cost_per_m_input": 1.0, "cost_per_m_output": 2.0,
+        "name": "Test Model",
+        "id": "test/model",
+        "cost_per_m_input": 1.0,
+        "cost_per_m_output": 2.0,
     }
     scenario = {"name": "Test Error", "tier": 1, "path": str(scenario_file)}
 
@@ -118,10 +143,15 @@ def test_sequential_runner_records_transcript_error(tmp_path: Path):
     transcript_error = RuntimeError("Transcript generation had 1 error(s): Turn 1: 400 Bad Request")
 
     # This is the fixed code path from runner.py
-    results.append(_make_error_result(
-        model, scenario["name"], scenario_id, scenario["tier"],
-        f"Transcript generation failed: {transcript_error}",
-    ))
+    results.append(
+        _make_error_result(
+            model,
+            scenario["name"],
+            scenario_id,
+            scenario["tier"],
+            f"Transcript generation failed: {transcript_error}",
+        )
+    )
     failed += 1
 
     # Save as the runner would

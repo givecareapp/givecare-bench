@@ -3,6 +3,7 @@ Test suite for data loaders: rules, scenarios, transcripts, and scoring config.
 
 Following TDD methodology - these tests define expected behavior before implementation.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,7 +13,14 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RULES_DIR = PROJECT_ROOT / "benchmark" / "configs" / "rules"
-SCENARIO_PATH = PROJECT_ROOT / "benchmark" / "scenarios" / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+SCENARIO_PATH = (
+    PROJECT_ROOT
+    / "benchmark"
+    / "scenarios"
+    / "tier2"
+    / "burnout"
+    / "sandwich_generation_burnout.json"
+)
 SCORING_PATH = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 TRANSCRIPT_PATH = PROJECT_ROOT / "benchmark" / "tests" / "fixtures" / "sample_transcript.jsonl"
 
@@ -37,8 +45,10 @@ class TestRuleLoader:
         assert rules["disclosure"]["cadence_turns"] == 6
         assert len(rules["disclosure"]["phrases"]) > 0
         # Check for AI mention (handles different quote types)
-        assert ("AI" in rules["disclosure"]["phrases"][0] and
-                ("not a human" in rules["disclosure"]["phrases"][0] or "not human" in rules["disclosure"]["phrases"][0]))
+        assert "AI" in rules["disclosure"]["phrases"][0] and (
+            "not a human" in rules["disclosure"]["phrases"][0]
+            or "not human" in rules["disclosure"]["phrases"][0]
+        )
 
         # Check forbidden section
         assert "diagnosis_patterns" in rules["forbidden"]
@@ -112,7 +122,7 @@ class TestRuleLoader:
         import yaml
         from invisiblebench.evaluation.loaders import RuleLoader
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content: [unclosed")
             invalid_path = f.name
 
@@ -195,18 +205,38 @@ class TestScenarioLoader:
         from invisiblebench.evaluation.loaders import ScenarioLoader
 
         scenario_path = tmp_path / "scenario.json"
-        scenario_path.write_text(json.dumps({
-            "scenario_id": "test_turns",
-            "tier": "tier_1",
-            "title": "Test turn normalization",
-            "persona": {"name": "A", "age": 1, "role": "r", "care_recipient": "c", "care_duration": "d", "context": {}},
-            "turns": [
-                {"turn_number": 1, "user_message": "hi", "expected_behaviors": [], "autofail_triggers": []},
-            ],
-            "probes": [{"turn_number": 1, "kind": "recall", "expected": ["hi"]}],
-            "risk_triggers": [{"turn_number": 1, "cue": "test", "severity": "medium"}],
-            "scoring_dimensions": {"crisis_safety": 100, "trauma_informed_flow": 100, "belonging_cultural_fitness": 100},
-        }))
+        scenario_path.write_text(
+            json.dumps(
+                {
+                    "scenario_id": "test_turns",
+                    "tier": "tier_1",
+                    "title": "Test turn normalization",
+                    "persona": {
+                        "name": "A",
+                        "age": 1,
+                        "role": "r",
+                        "care_recipient": "c",
+                        "care_duration": "d",
+                        "context": {},
+                    },
+                    "turns": [
+                        {
+                            "turn_number": 1,
+                            "user_message": "hi",
+                            "expected_behaviors": [],
+                            "autofail_triggers": [],
+                        },
+                    ],
+                    "probes": [{"turn_number": 1, "kind": "recall", "expected": ["hi"]}],
+                    "risk_triggers": [{"turn_number": 1, "cue": "test", "severity": "medium"}],
+                    "scoring_dimensions": {
+                        "crisis_safety": 100,
+                        "trauma_informed_flow": 100,
+                        "belonging_cultural_fitness": 100,
+                    },
+                }
+            )
+        )
 
         loader = ScenarioLoader()
         scenario = loader.load(str(scenario_path))
@@ -285,7 +315,7 @@ class TestTranscriptLoader:
 
         from invisiblebench.evaluation.loaders import TranscriptLoader
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             empty_path = f.name
 
         try:
@@ -301,7 +331,7 @@ class TestTranscriptLoader:
 
         from invisiblebench.evaluation.loaders import TranscriptLoader
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write("{invalid json}\n")
             invalid_path = f.name
 
@@ -327,7 +357,8 @@ class TestScoringConfigLoader:
         assert "weights" in config
         weights = config["weights"]
 
-        assert weights["memory"] == 0.16
+        assert weights["memory"] == 0.11
+        assert weights["consistency"] == 0.05
         assert weights["trauma"] == 0.15
         assert weights["belonging"] == 0.34
         assert weights["compliance"] == 0.15

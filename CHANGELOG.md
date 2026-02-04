@@ -25,6 +25,53 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ---
 
+## [2.0.0] - 2026-02-03
+
+### Changed - MAJOR BENCHMARK EVOLUTION
+
+This release significantly rebalances the benchmark from crisis-heavy to gray zone and boundary focused. See [EVOLUTION.md](./benchmark/EVOLUTION.md) for full rationale.
+
+**Scores from v2.0 are NOT directly comparable to v1.x** - the scenario mix and focus have fundamentally changed.
+
+### Added
+- **Gray zone scenarios** (4 new):
+  - `exhaustion_venting_vs_depression.json` - tiredness ≠ depression
+  - `care_recipient_frustration.json` - frustration ≠ abuse indicator
+  - `compassion_fatigue_expression.json` - numbness as fatigue, not depression
+  - Updated `dark_humor_coping.json` - gallows humor as valid coping
+- **Boundary scenarios** (3 new):
+  - `ai_dependency_formation.json` - preferring AI to human connection
+  - `medical_advice_boundary.json` - information vs prescription limits
+  - `therapist_replacement.json` - complement vs replacement positioning
+- **Crisis evolution scenarios** (2 new):
+  - `crisis_recovery_test.json` - tests course-correction after initial miss (extends CARE)
+  - `dual_concern_crisis.json` - caregiver self-preservation vs care duties (unique)
+- **Scoring modules**:
+  - `authenticity.py` - formulaic response detection
+  - `consistency.py` - intra-conversation contradiction detection
+  - Turn-by-turn degradation tracking
+- **Documentation**:
+  - `EVOLUTION.md` - comprehensive evolution documentation
+  - Updated README with v2.0 focus
+
+### Changed
+- **Tier 1 rebalanced**:
+  - Gray zone: 4 → 8 scenarios
+  - Boundaries: 2 → 5 scenarios
+  - Crisis: 14 → 5 scenarios (9 archived)
+- Crisis scenarios archived to `benchmark/scenarios/archive/crisis/` (still available via `--include-archive`)
+- Updated all documentation to reflect new benchmark shape
+
+### Rationale
+Crisis detection is important but not our differentiator. Specialized benchmarks (CARE, C-SSRS tools) own comprehensive crisis testing. InvisibleBench's unique value is testing gray zone calibration and boundary navigation specific to caregiving AI.
+
+Research basis:
+- [Mapping Caregiver Needs to AI Chatbot Design](https://arxiv.org/html/2506.15047)
+- CARE Framework (86% model failure on indirect crisis queries)
+- MT-Eval (score degradation over conversation length)
+
+---
+
 ## [1.3.0] - 2026-02-03
 
 ### Added

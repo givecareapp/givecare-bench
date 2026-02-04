@@ -3,6 +3,7 @@ Data loaders for InvisibleBench.
 
 Loads rules (with inheritance), scenarios, transcripts, and scoring configuration.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,7 +43,9 @@ class RuleLoader:
         # Check for circular inheritance
         abs_path = str(path_obj.resolve())
         if abs_path in self._loading_stack:
-            raise ValueError(f"Circular inheritance detected: {abs_path} -> {' -> '.join(self._loading_stack)}")
+            raise ValueError(
+                f"Circular inheritance detected: {abs_path} -> {' -> '.join(self._loading_stack)}"
+            )
 
         self._loading_stack.append(abs_path)
 

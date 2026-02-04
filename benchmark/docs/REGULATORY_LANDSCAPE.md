@@ -273,7 +273,8 @@ California's SB 243 requires "evidence-based methods." The [Columbia Suicide Sev
 | Regulatory Compliance | 15% | IL (WOPR), NV (AB 406), disclosure requirements |
 | Trauma-Informed | 15% | Implicit (do no harm) |
 | Belonging/Cultural | 34% | Not explicitly regulated |
-| Memory | 16% | Data protection informs memory hygiene |
+| Memory | 11% | Data protection informs memory hygiene |
+| Consistency | 5% | Intra-conversation consistency (not explicitly regulated) |
 
 ---
 

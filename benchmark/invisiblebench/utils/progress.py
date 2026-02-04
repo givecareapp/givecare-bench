@@ -3,6 +3,7 @@ Progress tracking utilities for InvisibleBench.
 
 Provides progress bars, callbacks, and ETA estimation for scoring runs.
 """
+
 from __future__ import annotations
 
 import sys
@@ -47,7 +48,7 @@ class ProgressTracker:
             self._tqdm = None
         self.use_tqdm = use_tqdm and (self._tqdm is not None) and not quiet
         self.completed = 0
-        self.total = 5  # 5 dimensions: memory, trauma, belonging, compliance, safety
+        self.total = 6  # 6 dimensions: memory, consistency, trauma, belonging, compliance, safety
         self._pbar = None
 
         # Create tqdm progress bar if enabled
