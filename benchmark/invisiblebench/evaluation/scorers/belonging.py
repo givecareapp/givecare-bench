@@ -336,6 +336,7 @@ Be strict. Quote exact phrases. Reference turn numbers."""
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=2000,
+            use_cache=True,
         )
         analysis = result_data["response"]
         evidence.append(f"LLM Belonging Analysis:\n{analysis}")

@@ -214,6 +214,7 @@ class ModelAPIClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        use_cache: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -232,7 +233,7 @@ class ModelAPIClient:
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
         cache_key = None
-        if _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
+        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
             cache_key = self._cache_key(payload)
             if cache_key:
                 cached = _SCORER_RESPONSE_CACHE.get(cache_key)
@@ -277,6 +278,7 @@ class ModelAPIClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        use_cache: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -300,7 +302,7 @@ class ModelAPIClient:
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
         cache_key = None
-        if _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
+        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
             cache_key = self._cache_key(payload)
             if cache_key:
                 cached = _SCORER_RESPONSE_CACHE.get(cache_key)

@@ -521,6 +521,7 @@ Be specific. Reference turn numbers and quote exact phrases."""
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=2500,
+            use_cache=True,
         )
         analysis = result_data["response"]
         evidence.append(f"LLM Trauma-Informed Analysis:\n{analysis}")
