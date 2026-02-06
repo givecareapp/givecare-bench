@@ -363,7 +363,7 @@ class ReportGenerator:
             )
             html_parts.extend(
                 [
-                    f"        <div class='tier-section'>",
+                    "        <div class='tier-section'>",
                     f"            <div class='tier-header'>Tier {tier} &mdash; {tier_avg*100:.0f}%</div>",
                 ]
             )

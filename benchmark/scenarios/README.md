@@ -102,6 +102,20 @@ Tests long-term relationship dynamics:
 
 **Cost per eval**: ~$0.06-0.10
 
+## Conditional Branching
+
+5 scenarios include **conditional branches** where the user's next message adapts based on the model's response. This tests failure escalation and recovery:
+
+| Scenario | Tier | Branch At | Tests |
+|----------|------|-----------|-------|
+| `medical_boundary_violation` | 1 | T3 | Model provides dosing → user escalates |
+| `venting_vs_crisis` | 1 | T2 | Model over-escalates → user pushes back |
+| `crisis_recovery_test` | 1 | T2 | Model misses cue → user probes further |
+| `attachment_formation` | 2 | T7 | Model over-bonds → user deepens dependency |
+| `longitudinal_trust` | 3 | T9 | Model forgets → user calls out memory failure |
+
+Branching is automatic during transcript generation. Branch conditions use keyword/regex matching (deterministic, no LLM cost). See `SCENARIO_SCHEMA.yaml` for the `branches` field specification.
+
 ## Running Scenarios
 
 ### All Standard Scenarios (29)
@@ -139,9 +153,19 @@ Quick template:
   },
   "turns": [
     {
-      "turn": 1,
-      "role": "user",
-      "content": "User message..."
+      "turn_number": 1,
+      "user_message": "User message...",
+      "expected_behaviors": ["..."],
+      "autofail_triggers": ["..."],
+      "branches": [
+        {
+          "branch_id": "failure_path",
+          "condition": {"type": "contains_any", "values": ["keyword"]},
+          "user_message": "Alternate message when model fails...",
+          "expected_behaviors": ["..."],
+          "autofail_triggers": ["..."]
+        }
+      ]
     }
   ],
   "scoring_dimensions": {

@@ -232,4 +232,32 @@ Scores from v2.0 are **not directly comparable** to v1.0:
 
 ---
 
+## v2.1 Direction: Conditional Branching
+
+### The Limitation of Fixed Turns
+
+v2.0 uses scripted user messages: every model sees the exact same conversation regardless of how it responds. This ensures reproducibility but misses a critical class of failures — **escalation after initial error**.
+
+When a model provides dosing advice in a medical boundary scenario, the scripted user says "You're right, I'll call 911" — as if the model had refused. The model never faces the consequence of its failure.
+
+### Conditional Branching (Implemented)
+
+5 key scenarios now include **branch points** where the user's next message depends on the model's response:
+
+| Scenario | What It Tests |
+|----------|---------------|
+| Medical boundary | Does a model that provides dosing info get pushed further into unsafe territory? |
+| Venting vs crisis | Does a model that over-escalates face user pushback and need to repair trust? |
+| Crisis recovery | Does a model that missed a subtle cue face an escalating follow-up? |
+| Attachment formation | Does a model that over-bonds face deepening dependency? |
+| Longitudinal trust | Does a model without memory face a user calling out the gap? |
+
+### Why Not Full Agent Simulation?
+
+Research ("Lost in Simulation", 2025) showed that using LLMs to simulate users introduces 9+ point variance across user models. Conditional branching is the middle path: adaptive at critical moments, deterministic everywhere else.
+
+**Branching conditions are keyword/regex-based** — no LLM calls, fully deterministic, zero additional cost.
+
+---
+
 *Last updated: February 2026*

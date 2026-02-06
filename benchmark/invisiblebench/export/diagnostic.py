@@ -367,8 +367,8 @@ class DiagnosticReport:
             [
                 "## Summary",
                 "",
-                f"| Metric | Value |",
-                f"|--------|-------|",
+                "| Metric | Value |",
+                "|--------|-------|",
                 f"| Total Scenarios | {len(results)} |",
                 f"| Passed | {passed} |",
                 f"| Failed | {len(failures)} |",
