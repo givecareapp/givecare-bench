@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
 import requests
+from dotenv import load_dotenv
 
 # Always try to load .env from project root (handles various entry points)
 _project_root = Path(__file__).parent.parent.parent.parent
@@ -260,8 +260,8 @@ class ModelAPIClient:
                 status_code = getattr(getattr(e, "response", None), "status_code", None)
                 if status_code == 402:
                     raise InsufficientCreditsError(
-                        f"OpenRouter account has insufficient credits. "
-                        f"Add credits at https://openrouter.ai/settings/credits"
+                        "OpenRouter account has insufficient credits. "
+                        "Add credits at https://openrouter.ai/settings/credits"
                     ) from e
                 if attempt < self.config.max_retries - 1:
                     time.sleep(self.config.retry_delay * (attempt + 1))
@@ -335,8 +335,8 @@ class ModelAPIClient:
                     status_code = getattr(getattr(e, "response", None), "status_code", None)
                     if status_code == 402:
                         raise InsufficientCreditsError(
-                            f"OpenRouter account has insufficient credits. "
-                            f"Add credits at https://openrouter.ai/settings/credits"
+                            "OpenRouter account has insufficient credits. "
+                            "Add credits at https://openrouter.ai/settings/credits"
                         ) from e
                     if attempt < self.config.max_retries - 1:
                         await asyncio.sleep(self.config.retry_delay * (attempt + 1))

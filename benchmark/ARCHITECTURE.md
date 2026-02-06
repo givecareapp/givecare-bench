@@ -195,6 +195,66 @@ The *behavior* is different by design. Comparing scores would be misleading.
 | Investigating user complaints | | ✓ | ✓ |
 | Understanding regressions | | | ✓ |
 
+## Conditional Branching
+
+Scenarios can include **conditional branches** that adapt user messages based on model behavior. This enables testing whether models double down on failures or recover gracefully.
+
+```
+Turn N: User sends message → Model responds
+                                    ↓
+Turn N+1: resolve_branch(turn, prev_response)
+              ↓                          ↓
+         condition matches?         no match
+              ↓                          ↓
+         branch user_message      default user_message
+              ↓                          ↓
+         (branch_id in JSONL)     (normal path)
+              ↓                          ↓
+         Model responds ←────────────────┘
+```
+
+**Condition types** (all deterministic, no LLM cost):
+- `contains_any` — any keyword in assistant response (case-insensitive)
+- `contains_all` — all keywords present
+- `not_contains` — none of the keywords present
+- `regex` — regex pattern match
+
+**Coverage**: Both model eval (`runner.py`) and system eval (`givecare_provider.py`) resolve branches identically.
+
+**5 branched scenarios** across tiers 1-3:
+
+| Scenario | Turn | Condition | Branch Tests |
+|----------|------|-----------|-------------|
+| `tier1_medical_001` | T3 | `contains_any` dosing terms | Model provided dosing → user escalates |
+| `tier1_gray_venting_001` | T2 | `contains_any` crisis terms | Model over-escalated → user pushes back |
+| `tier1_crisis_recovery_001` | T2 | `contains_any` toxicity info | Model missed cue → user probes further |
+| `tier2_attachment_001` | T7 | `regex` attachment language | Model over-bonded → user deepens dependency |
+| `tier3_longitudinal_001` | T9 | `not_contains` memory markers | Model forgot prior sessions → user calls it out |
+
+**Impact on scoring**: None. Scorers evaluate the actual conversation regardless of which branch was taken. Branching changes the stimulus, not the evaluation criteria.
+
+## Scorer Caching Layer
+
+LLM-based scorers (belonging, safety, trauma) use an LRU cache for deterministic calls:
+
+```
+Scorer → call_model(use_cache=True, temperature=0.0)
+           ↓
+     _is_cacheable(payload)?  ──no──→  API call
+           ↓ yes
+     _cache_key(SHA256(normalized_payload))
+           ↓
+     _SCORER_RESPONSE_CACHE.get(key)?  ──miss──→  API call → cache.set(key, deepcopy(result))
+           ↓ hit
+     return deepcopy(cached_result)
+```
+
+- **Thread-safe**: `_LRUCache` wraps `OrderedDict` with `threading.Lock`
+- **Deterministic only**: Only caches `temperature == 0.0` (non-streaming) calls
+- **Configurable**: `INVISIBLEBENCH_SCORER_CACHE_SIZE` env var (default: 256, 0 to disable)
+- **Safe**: Returns `deepcopy` on read/write to prevent mutation
+- **Impact**: ~40% cost reduction on repeated evaluations (same scenario scored by multiple dimensions)
+
 ## Adding New Providers
 
 To add a new system provider:

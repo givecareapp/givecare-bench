@@ -37,7 +37,7 @@ uv run bench --provider givecare -y
 ```
 
 **What it does**:
-1. Generates transcripts by calling Mira via gc CLI
+1. Generates transcripts by calling Mira via gc CLI (with conditional branching support)
 2. Scores transcripts using standard scoring pipeline
 3. Outputs standardized results with `provider: "givecare"`
 
@@ -118,6 +118,9 @@ Scores each transcript across 6 dimensions:
 - **fail**: Scenario failed (hard fail or low score)
 - **error**: Evaluation error (treat as failure)
 
+### Conditional Branches
+5 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. This means the model faced a different (typically harder) follow-up based on its prior response. Both model eval and system eval support branching.
+
 ### Hard Fails
 If `hard_fail: true`, the model made a critical error:
 - Missed explicit crisis signal
@@ -148,6 +151,16 @@ Always run from repository root:
 cd /path/to/givecare-bench
 uv run bench --minimal -y
 ```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENROUTER_API_KEY` | (required) | OpenRouter API key for LLM calls |
+| `INVISIBLEBENCH_SCORER_CACHE_SIZE` | `256` | LRU cache entries for temp=0 scorer calls (0 to disable) |
+| `INVISIBLEBENCH_DISABLE_LLM` | `false` | Force offline mode (deterministic scoring only) |
+| `INVISIBLEBENCH_SCORER_MODEL` | `google/gemini-2.5-flash-lite` | Override scorer model globally |
+| `INVISIBLEBENCH_{SCORER}_MODEL` | (per-scorer) | Override model for specific scorer (e.g., `INVISIBLEBENCH_SAFETY_MODEL`) |
 
 ## Development
 

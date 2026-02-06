@@ -68,7 +68,7 @@ def get_run_info(run_path: Path) -> Dict[str, Any]:
                 data = json.load(f)
                 if isinstance(data, list):
                     info["scenarios"] = len(data)
-                    info["models"] = list(set(r.get("model", "unknown") for r in data))
+                    info["models"] = list({r.get("model", "unknown") for r in data})
         except (json.JSONDecodeError, KeyError):
             pass
 
@@ -172,7 +172,7 @@ def print_archive_report(
 
     action = "Would archive" if dry_run else "Archived"
 
-    out(f"\n[bold]═══ Archive Report ═══[/bold]\n", "bold")
+    out("\n[bold]═══ Archive Report ═══[/bold]\n", "bold")
 
     if to_archive:
         out(f"[yellow]{action} {len(to_archive)} run(s):[/yellow]")

@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from invisiblebench.cli.runner import _make_error_result, estimate_cost
-
 
 # ---------------------------------------------------------------------------
 # Unit: _make_error_result produces correct schema

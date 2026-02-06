@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Dict, List, Optional
-
-import logging
 
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.utils.llm_mode import llm_enabled

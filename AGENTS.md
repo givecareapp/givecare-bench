@@ -32,6 +32,14 @@ pytest benchmark/tests/ -v
 mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 ```
 
+## GiveCare Provider
+
+```bash
+uv run bench --provider givecare -y                    # Standard (29 scenarios)
+uv run bench --provider givecare -y --confidential     # Full (32 scenarios)
+uv run bench --provider givecare -y --diagnose         # With diagnostic report
+```
+
 ## Results
 
 - Active: `results/run_*/` | Archived: `results/archive/`
@@ -42,6 +50,20 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 - Black-formatted, 100-char lines, type hints for new code
 - Tests: `test_*.py`, fixtures in `benchmark/tests/fixtures/`
 - Status values: `pass`, `fail`, `error` (treat `error` as failure)
+
+## Conditional Branching
+
+5 scenarios have adaptive branches — user messages change based on model behavior:
+- Automatic (no CLI flags), works in both model eval and system eval
+- Branch conditions: `contains_any`, `contains_all`, `not_contains`, `regex`
+- Branch IDs in transcript JSONL for audit
+- Module: `evaluation/branching.py` | Tests: `tests/unit/test_branching.py` (20 tests)
+
+## Scorer Cache
+
+Scorer LLM calls (temp=0) are cached via LRU in `api/client.py`:
+- Configure: `INVISIBLEBENCH_SCORER_CACHE_SIZE=256` (default, 0 to disable)
+- Applies to: belonging, safety, trauma scorers with `use_cache=True`
 
 ## Session End (MANDATORY)
 1. Run quality gates if code changed
