@@ -24,7 +24,6 @@ from dotenv import load_dotenv
 # Rich imports for pretty terminal output
 try:
     from rich.console import Console
-    from rich.live import Live
     from rich.panel import Panel
     from rich.progress import (
         BarColumn,
@@ -37,7 +36,6 @@ try:
         TimeRemainingColumn,
     )
     from rich.table import Table
-    from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -113,8 +111,8 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
     console.print(
         Panel(
-            f"[bold cyan]InvisibleBench[/bold cyan] [dim]v1.1.0[/dim]\n"
-            f"[dim]AI Safety Benchmark for Caregiving Relationships[/dim]",
+            "[bold cyan]InvisibleBench[/bold cyan] [dim]v1.1.0[/dim]\n"
+            "[dim]AI Safety Benchmark for Caregiving Relationships[/dim]",
             border_style="cyan",
         )
     )
@@ -138,7 +136,7 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
 
     # List scenarios by tier
     console.print("\n[bold]Scenarios:[/bold]")
-    for tier in sorted(set(s["tier"] for s in scenarios)):
+    for tier in sorted({s["tier"] for s in scenarios}):
         tier_scenarios = [s for s in scenarios if s["tier"] == tier]
         console.print(f"  [yellow]Tier {tier}:[/yellow]")
         for s in tier_scenarios:

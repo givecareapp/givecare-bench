@@ -3,14 +3,19 @@ API client for calling models via OpenRouter.
 """
 
 import asyncio
+import hashlib
+import json
 import os
+import threading
 import time
+from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
 import requests
+from dotenv import load_dotenv
 
 # Always try to load .env from project root (handles various entry points)
 _project_root = Path(__file__).parent.parent.parent.parent
@@ -27,6 +32,48 @@ try:
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
+
+
+def _load_scorer_cache_size(default: int = 256) -> int:
+    raw = os.getenv("INVISIBLEBENCH_SCORER_CACHE_SIZE", "").strip()
+    if not raw:
+        return default
+    try:
+        size = int(raw)
+    except ValueError:
+        return default
+    return max(size, 0)
+
+
+class _LRUCache:
+    """Simple thread-safe LRU cache for scorer responses."""
+
+    def __init__(self, max_entries: int):
+        self.max_entries = max_entries
+        self._data: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, key: str) -> Optional[Dict[str, Any]]:
+        if self.max_entries <= 0:
+            return None
+        with self._lock:
+            if key not in self._data:
+                return None
+            self._data.move_to_end(key)
+            return deepcopy(self._data[key])
+
+    def set(self, key: str, value: Dict[str, Any]) -> None:
+        if self.max_entries <= 0:
+            return
+        with self._lock:
+            self._data[key] = deepcopy(value)
+            self._data.move_to_end(key)
+            if len(self._data) > self.max_entries:
+                self._data.popitem(last=False)
+
+
+_SCORER_CACHE_MAX_ENTRIES = _load_scorer_cache_size()
+_SCORER_RESPONSE_CACHE = _LRUCache(_SCORER_CACHE_MAX_ENTRIES)
 
 
 class InsufficientCreditsError(RuntimeError):
@@ -116,6 +163,35 @@ class ModelAPIClient:
         return payload
 
     @staticmethod
+    def _is_cacheable(payload: Dict[str, Any]) -> bool:
+        if payload.get("stream"):
+            return False
+        temp = payload.get("temperature")
+        try:
+            return float(temp) == 0.0
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
+    def _cache_key(payload: Dict[str, Any]) -> Optional[str]:
+        normalized = dict(payload)
+        if "temperature" in normalized:
+            try:
+                normalized["temperature"] = float(normalized["temperature"])
+            except (TypeError, ValueError):
+                pass
+        try:
+            payload_json = json.dumps(
+                normalized,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            )
+        except (TypeError, ValueError):
+            return None
+        return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+
+    @staticmethod
     def _parse_response(data: Dict[str, Any], model: str, start_time: float) -> Dict[str, Any]:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"No choices in response: {data}")
@@ -138,6 +214,7 @@ class ModelAPIClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        use_cache: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -155,6 +232,13 @@ class ModelAPIClient:
         """
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
+        cache_key = None
+        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
+            cache_key = self._cache_key(payload)
+            if cache_key:
+                cached = _SCORER_RESPONSE_CACHE.get(cache_key)
+                if cached is not None:
+                    return cached
 
         for attempt in range(self.config.max_retries):
             try:
@@ -166,15 +250,18 @@ class ModelAPIClient:
                 response.raise_for_status()
 
                 data = response.json()
-                return self._parse_response(data, model, start_time)
+                result = self._parse_response(data, model, start_time)
+                if cache_key:
+                    _SCORER_RESPONSE_CACHE.set(cache_key, result)
+                return result
 
             except requests.exceptions.RequestException as e:
                 error_detail = self._format_request_error(e)
                 status_code = getattr(getattr(e, "response", None), "status_code", None)
                 if status_code == 402:
                     raise InsufficientCreditsError(
-                        f"OpenRouter account has insufficient credits. "
-                        f"Add credits at https://openrouter.ai/settings/credits"
+                        "OpenRouter account has insufficient credits. "
+                        "Add credits at https://openrouter.ai/settings/credits"
                     ) from e
                 if attempt < self.config.max_retries - 1:
                     time.sleep(self.config.retry_delay * (attempt + 1))
@@ -191,6 +278,7 @@ class ModelAPIClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        use_cache: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -213,6 +301,13 @@ class ModelAPIClient:
 
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
+        cache_key = None
+        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
+            cache_key = self._cache_key(payload)
+            if cache_key:
+                cached = _SCORER_RESPONSE_CACHE.get(cache_key)
+                if cached is not None:
+                    return cached
 
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(self.config.timeout),
@@ -229,7 +324,10 @@ class ModelAPIClient:
                     response.raise_for_status()
 
                     data = response.json()
-                    return self._parse_response(data, model, start_time)
+                    result = self._parse_response(data, model, start_time)
+                    if cache_key:
+                        _SCORER_RESPONSE_CACHE.set(cache_key, result)
+                    return result
 
                 except (httpx.HTTPStatusError, httpx.RequestError) as e:
                     last_error = e
@@ -237,8 +335,8 @@ class ModelAPIClient:
                     status_code = getattr(getattr(e, "response", None), "status_code", None)
                     if status_code == 402:
                         raise InsufficientCreditsError(
-                            f"OpenRouter account has insufficient credits. "
-                            f"Add credits at https://openrouter.ai/settings/credits"
+                            "OpenRouter account has insufficient credits. "
+                            "Add credits at https://openrouter.ai/settings/credits"
                         ) from e
                     if attempt < self.config.max_retries - 1:
                         await asyncio.sleep(self.config.retry_delay * (attempt + 1))

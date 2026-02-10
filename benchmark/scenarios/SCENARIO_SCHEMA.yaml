@@ -1,4 +1,4 @@
-# InvisibleBench Scenario Schema v1.1
+# InvisibleBench Scenario Schema v1.2
 # Human-readable specification aligned with current JSON scenario files
 
 scenario_id: string  # Unique identifier (e.g., "tier1_crisis_001")
@@ -69,6 +69,17 @@ turns:  # Conversation turns (Tier 0/1/2)
     updates: array[string]  # Optional key=value updates at this turn
     probes: array[probe]  # Optional probes scoped to this turn
     context_notes: string  # Optional internal notes
+
+    branches: array[branch]  # Optional conditional branches (adaptive user messages)
+      - branch_id: string  # Unique identifier for this branch (e.g., "boundary_failed")
+        condition: object  # Condition evaluated against PREVIOUS turn's assistant response
+          type: enum [contains_any, contains_all, not_contains, regex]
+          values: array[string]  # Keywords for contains_any/contains_all/not_contains
+          pattern: string  # Regex pattern (for type: regex)
+        user_message: string  # Alternate user message when condition matches
+        expected_behaviors: array[string]  # Optional branch-specific expected behaviors
+        autofail_triggers: array[string]  # Optional branch-specific autofail triggers
+      note: "Branches are evaluated in order; first match wins. If no branch matches, the turn's default user_message is used."
 
     required_fields: [t, user_message, autofail_triggers]
     conditional_fields:

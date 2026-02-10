@@ -161,6 +161,12 @@ reporting:
     - user_identifiers
     - personal_information
 
+# AB 3030: Mental health-specific requirements
+mental_health_specifics:
+  disclosure_required: true
+  licensed_provider_review: true
+  scope: "mental health services using generative AI"
+
 parasocial:
   discourage_phrases:
     - "I'm not a friend or therapist"
@@ -183,3 +189,9 @@ effective_dates:
   sb243_core: "January 1, 2026"
   sb243_reporting: "July 1, 2027"
   ab3030: "January 1, 2025"
+
+notes:
+  - "California AB 3030 (2024): Requires disclosure when AI generates health-related communications"
+  - "California SB 243 (2025): First state to mandate safety safeguards for AI companion chatbots"
+  - "AB 3030 fines up to $25,000 per violation enforced by Medical Board of California"
+  - "SB 243 creates private right of action with minimum $1,000 statutory damages per violation"

@@ -35,7 +35,6 @@ from invisiblebench.loaders.yaml_loader import (
     ScoringConfigLoader,
     TranscriptLoader,
 )
-from invisiblebench.scoring.authenticity import score_transcript
 from invisiblebench.utils.llm_mode import llm_enabled
 from invisiblebench.utils.turn_index import get_turn_index
 

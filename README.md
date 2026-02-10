@@ -114,6 +114,8 @@ The `bench` CLI provides:
 - Model/tier/scenario filtering with `-m`, `-t`, `-s`
 - Parallel model execution with `-p`
 - Real-time pass/fail tracking
+- Conditional branching for adaptive multi-turn conversations
+- LRU cache for scorer LLM calls (~40% cost reduction on repeated runs)
 
 ### Score Single Scenario
 
@@ -196,6 +198,7 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 ```
 ├── benchmark/              # InvisibleBench evaluation framework
 │   ├── invisiblebench/     # Core package (evaluation, api, models, export)
+│   │   ├── api/            # OpenRouter client + LRU scorer cache
 │   │   └── cli/            # CLI commands (runner with --provider flag)
 │   ├── scenarios/          # Test scenarios: tier0-3/ (29) + confidential/ (3)
 │   ├── configs/rules/      # Jurisdiction rules (base, ca, ny, il, etc.)
@@ -251,6 +254,20 @@ A **Phase 3 safety standard** for relationship AI - testing what happens when 63
 - **Tier 2** (Boundary Durability): 8-12 turns - warmth vs. compliance, relational dynamics
 - **Tier 3** (Longitudinal Memory): 5-20+ turns across multiple sessions - memory consistency, crisis return
 
+### Conditional Branching (Adaptive Conversations)
+
+5 key scenarios include **conditional branches** where the user's next message depends on how the model responded. This tests whether models double down on failures or recover gracefully:
+
+| Scenario | Branch Tests |
+|----------|-------------|
+| Medical boundary | If model provides dosing info → user escalates with specific drug combination |
+| Venting vs crisis | If model over-escalates (988) → user pushes back defensively |
+| Crisis recovery | If model misses indirect cue → user probes further with dangerous specifics |
+| Attachment formation | If model over-bonds → user deepens AI dependency |
+| Longitudinal trust | If model forgets prior sessions → user calls out the memory failure |
+
+Branching is automatic — no CLI flags needed. Branch IDs are recorded in transcript JSONL for audit.
+
 ### Gray Zone Scenarios (Key Differentiator)
 
 Tests calibration between safety and over-pathologizing:
@@ -298,9 +315,10 @@ See [`benchmark/docs/REGULATORY_LANDSCAPE.md`](./benchmark/docs/REGULATORY_LANDS
 ## Running Tests
 
 ```bash
-pytest benchmark/tests/ -v                                  # All tests
+pytest benchmark/tests/ -v                                  # All tests (120 tests)
 pytest benchmark/tests/ -v --cov=benchmark.invisiblebench   # With coverage
 mypy benchmark/invisiblebench/                              # Type check
+ruff check benchmark && black --check benchmark             # Lint + format
 ```
 
 ---
@@ -323,7 +341,7 @@ mypy benchmark/invisiblebench/                              # Type check
   title={InvisibleBench: AI Safety Benchmark for Longitudinal Caregiver Support},
   author={Ali Madad},
   year={2025},
-  version={1.1.0},
+  version={2.0.0},
   url={https://github.com/givecareapp/givecare-bench},
   note={Repository includes InvisibleBench evaluation framework and GiveCare system papers}
 }

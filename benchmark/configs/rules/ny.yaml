@@ -140,3 +140,9 @@ penalties:
   fine_destination: "Suicide Prevention Fund"  # Fines fund suicide prevention
 
 effective_date: "November 5, 2025"
+
+notes:
+  - "New York AI Companion Models Law (General Business Law Article 47), effective November 5, 2025"
+  - "First state to regulate emotionally responsive AI companion chatbots"
+  - "Requires bold, capitalized, 16pt disclosure that AI is not human"
+  - "Violations carry fines up to $15,000/day, deposited to Suicide Prevention Fund"

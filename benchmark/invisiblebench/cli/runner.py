@@ -20,7 +20,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+
 from invisiblebench.api.client import InsufficientCreditsError
+from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.models.config import MODELS_MINIMAL as CONFIG_MODELS_MINIMAL
 
@@ -31,14 +33,11 @@ try:
     from rich.console import Console
     from rich.live import Live
     from rich.progress import (
+        BarColumn,
         Progress,
         SpinnerColumn,
-        BarColumn,
         TextColumn,
-        TaskProgressColumn,
-        TimeElapsedColumn,
     )
-    from rich.table import Table
     from rich.text import Text
 
     RICH_AVAILABLE = True
@@ -88,7 +87,6 @@ def run_givecare_eval(
     """
     # Import givecare provider
     import sys
-    from pathlib import Path
 
     root = get_project_root()
     scripts_dir = root / "benchmark" / "scripts"
@@ -96,14 +94,16 @@ def run_givecare_eval(
 
     try:
         from givecare_provider import (
-            GiveCareProvider,
-            get_scenarios as get_givecare_scenarios,
-            run_scenario,
-            format_result,
+            MODEL_ID,
             MODEL_NAME,
             PROVIDER_NAME,
             PROVIDER_VERSION,
-            MODEL_ID,
+            GiveCareProvider,
+            format_result,
+            run_scenario,
+        )
+        from givecare_provider import (
+            get_scenarios as get_givecare_scenarios,
         )
     except ImportError as e:
         print(f"Error: Could not import givecare_provider: {e}")
@@ -243,7 +243,7 @@ def run_givecare_eval(
     avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
 
     print(f"\n{'='*50}")
-    print(f"GiveCare System Eval Results")
+    print("GiveCare System Eval Results")
     print(f"{'='*50}")
     print(f"Scenarios: {len(results)}")
     print(f"Passed:    {passed}")
@@ -375,7 +375,7 @@ class ScenarioDisplay:
         self._spin_idx = 0
 
         # Group by tier
-        self.tiers = sorted(set(s["tier"] for s in scenarios))
+        self.tiers = sorted({s["tier"] for s in scenarios})
         self.by_tier = {t: [s for s in scenarios if s["tier"] == t] for t in self.tiers}
 
         # State tracking: scenario path -> {"status": pending|running|pass|fail, "score": int|None}
@@ -385,9 +385,9 @@ class ScenarioDisplay:
 
         # Tier summaries
         self.tier_scores: Dict[int, List[float]] = {t: [] for t in self.tiers}
-        self.tier_done: Dict[int, bool] = {t: False for t in self.tiers}
+        self.tier_done: Dict[int, bool] = dict.fromkeys(self.tiers, False)
         self.tier_start_time: Dict[int, float] = {}
-        self.tier_elapsed: Dict[int, float] = {t: 0.0 for t in self.tiers}
+        self.tier_elapsed: Dict[int, float] = dict.fromkeys(self.tiers, 0.0)
 
         # Counters
         self.completed = 0
@@ -537,7 +537,7 @@ class ScenarioDisplay:
 def print_banner(console: Console, mode: str, models: list, scenarios: list, total_cost: float):
     """Print startup banner."""
     tier_counts = []
-    for tier in sorted(set(s["tier"] for s in scenarios)):
+    for tier in sorted({s["tier"] for s in scenarios}):
         count = len([s for s in scenarios if s["tier"] == tier])
         tier_counts.append(f"T{tier}:{count}")
     tiers_str = " ".join(tier_counts)
@@ -560,8 +560,8 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_p
     """
     try:
         import jsonlines
-    except ImportError:
-        raise RuntimeError("jsonlines not installed. Run: pip install jsonlines")
+    except ImportError as err:
+        raise RuntimeError("jsonlines not installed. Run: pip install jsonlines") from err
 
     with open(scenario["path"]) as f:
         scenario_data = json.load(f)
@@ -578,11 +578,17 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_p
     else:
         all_turns = scenario_data.get("turns", [])
 
+    prev_assistant_msg: Optional[str] = None
     for turn in all_turns:
         turn_num = turn["turn_number"]
-        user_msg = turn["user_message"]
 
-        transcript.append({"turn": turn_num, "role": "user", "content": user_msg})
+        # Resolve conditional branch (adaptive user message).
+        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+
+        user_entry: Dict[str, Any] = {"turn": turn_num, "role": "user", "content": user_msg}
+        if branch_id is not None:
+            user_entry["branch_id"] = branch_id
+        transcript.append(user_entry)
         conversation_history.append({"role": "user", "content": user_msg})
 
         try:
@@ -603,6 +609,7 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_p
 
             transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
             conversation_history.append({"role": "assistant", "content": assistant_msg})
+            prev_assistant_msg = assistant_msg
             time.sleep(0.5)
         except InsufficientCreditsError:
             raise  # Abort immediately — don't retry or continue
@@ -612,6 +619,7 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_p
             transcript.append(
                 {"turn": turn_num, "role": "assistant", "content": f"[ERROR: {e}]", "error": True}
             )
+            prev_assistant_msg = None
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with jsonlines.open(output_path, "w") as writer:
@@ -703,11 +711,21 @@ async def evaluate_scenario_async(
             else:
                 all_turns = scenario_data.get("turns", [])
 
+            prev_assistant_msg: Optional[str] = None
             for turn in all_turns:
                 turn_num = turn["turn_number"]
-                user_msg = turn["user_message"]
 
-                transcript.append({"turn": turn_num, "role": "user", "content": user_msg})
+                # Resolve conditional branch (adaptive user message).
+                user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+
+                user_entry: Dict[str, Any] = {
+                    "turn": turn_num,
+                    "role": "user",
+                    "content": user_msg,
+                }
+                if branch_id is not None:
+                    user_entry["branch_id"] = branch_id
+                transcript.append(user_entry)
                 conversation_history.append({"role": "user", "content": user_msg})
 
                 try:
@@ -733,6 +751,7 @@ async def evaluate_scenario_async(
                         {"turn": turn_num, "role": "assistant", "content": assistant_msg}
                     )
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
+                    prev_assistant_msg = assistant_msg
                     await asyncio.sleep(0.3)  # Slightly longer delay between turns
                 except InsufficientCreditsError:
                     raise  # Abort immediately — don't retry or continue
@@ -747,6 +766,7 @@ async def evaluate_scenario_async(
                             "error": True,
                         }
                     )
+                    prev_assistant_msg = None
 
             transcript_path.parent.mkdir(parents=True, exist_ok=True)
             with jsonlines.open(transcript_path, "w") as writer:
@@ -1016,8 +1036,6 @@ def run_benchmark(
 
     # Parallel execution mode - runs N MODELS in parallel
     if parallel and parallel > 1:
-        total_scenarios = len(models) * len(scenarios)
-
         if RICH_AVAILABLE and console:
             # Track progress per model
             model_progress: Dict[str, tuple] = (
@@ -1108,7 +1126,7 @@ def run_benchmark(
                         await aio.sleep(0.3)
 
                     # Final update - mark all complete
-                    for mname, task_id in model_tasks.items():
+                    for _mname, task_id in model_tasks.items():
                         progress.update(
                             task_id, completed=len(scenarios), scenario="[green]Done[/green]"
                         )
@@ -1182,7 +1200,7 @@ def run_benchmark(
 
     elif RICH_AVAILABLE and console:
         # Group scenarios by tier
-        tiers = sorted(set(s["tier"] for s in scenarios))
+        tiers = sorted({s["tier"] for s in scenarios})
         scenarios_by_tier = {t: [s for s in scenarios if s["tier"] == t] for t in tiers}
 
         for model in models:
@@ -1195,7 +1213,7 @@ def run_benchmark(
                 refresh_per_second=4,
                 transient=True,
                 vertical_overflow="visible",
-            ) as live:
+            ) as _live:
                 for tier in tiers:
                     tier_scenarios = scenarios_by_tier[tier]
 
@@ -1737,7 +1755,7 @@ Examples:
     clean_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
 
     # Runs subcommand (list runs)
-    runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
+    subparsers.add_parser("runs", help="List all benchmark runs")
 
     # Diagnose subcommand
     diagnose_parser = subparsers.add_parser(

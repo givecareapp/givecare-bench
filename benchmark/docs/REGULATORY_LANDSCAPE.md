@@ -1,6 +1,6 @@
 # AI Mental Health Chatbot Regulatory Landscape
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 **Research Sources:** State legislature websites, law firm analyses, academic papers
 **Scope:** AI companion chatbots, mental health chatbots, consumer health data laws
 

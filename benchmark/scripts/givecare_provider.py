@@ -21,14 +21,12 @@ Usage:
 
 import argparse
 import json
-import os
-import sys
-import time
 import random
 import string
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -37,12 +35,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
-
-try:
-    import httpx
-except ImportError:
-    print("httpx required: pip install httpx")
-    sys.exit(1)
 
 try:
     import jsonlines
@@ -208,22 +200,29 @@ def run_scenario(
     # Reset user before scenario
     provider.reset()
 
+    from invisiblebench.evaluation.branching import resolve_branch
+
     transcript = []
+    prev_assistant_msg: Optional[str] = None
 
     for turn in turns:
         turn_num = turn["turn_number"]
-        user_msg = turn["user_message"]
+
+        # Resolve conditional branch (adaptive user message).
+        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
 
         if verbose:
-            print(f"[{turn_num}] User: {user_msg}")
+            branch_label = f" [branch:{branch_id}]" if branch_id else ""
+            print(f"[{turn_num}] User{branch_label}: {user_msg}")
 
-        transcript.append(
-            {
-                "turn": turn_num,
-                "role": "user",
-                "content": user_msg,
-            }
-        )
+        user_entry: Dict = {
+            "turn": turn_num,
+            "role": "user",
+            "content": user_msg,
+        }
+        if branch_id is not None:
+            user_entry["branch_id"] = branch_id
+        transcript.append(user_entry)
 
         try:
             response = provider.send_message(user_msg)
@@ -238,6 +237,7 @@ def run_scenario(
                     "content": response,
                 }
             )
+            prev_assistant_msg = response
         except Exception as e:
             error_msg = f"[ERROR: {e}]"
             if verbose:
@@ -250,6 +250,7 @@ def run_scenario(
                     "error": True,
                 }
             )
+            prev_assistant_msg = None
 
     # Save transcript
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -525,7 +526,7 @@ Examples:
         avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
 
         print(f"\n{'='*50}")
-        print(f"GiveCare Eval Results")
+        print("GiveCare Eval Results")
         print(f"{'='*50}")
         print(f"Scenarios: {len(results)}")
         print(f"Passed:    {passed}")

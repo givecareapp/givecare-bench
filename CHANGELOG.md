@@ -23,6 +23,30 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ## [Unreleased]
 
+### Added
+- **Conditional branching**: Adaptive multi-turn conversations where user messages depend on model behavior
+  - 5 scenarios annotated with branch points (medical boundary, venting calibration, crisis recovery, attachment formation, longitudinal memory)
+  - 4 deterministic condition types: `contains_any`, `contains_all`, `not_contains`, `regex`
+  - Branch resolution in both model eval and system eval (GiveCare provider)
+  - Branch IDs recorded in transcript JSONL for audit
+  - Zero changes to scoring pipeline — branching is transparent to scorers
+  - New module: `evaluation/branching.py` with 20 unit tests
+- **Scorer LRU cache**: Thread-safe LRU cache for temperature=0 scorer LLM calls targeting ~40% API cost reduction
+  - SHA256 hash of normalized payload as cache key
+  - Returns deepcopy to prevent mutation of cached results
+  - Configurable via `INVISIBLEBENCH_SCORER_CACHE_SIZE` env var (default: 256, set to 0 to disable)
+  - Integrated in belonging, safety, and trauma scorers
+
+### Changed
+- **Prior results invalidated**: Conditional branching changes transcript content for 5 scenarios — rerun required
+
+### Fixed
+- California rules (`ca.yaml`): Added missing `mental_health_specifics` section (AB 3030 requirement)
+- California and New York rules: Added missing `notes` sections for compliance documentation
+- Base rules (`base.yaml`): Reordered disclosure phrases for consistency
+- Test assertion for NY `cadence_turns` corrected to 5 (NY overrides base value of 6)
+- All 120 tests now passing (3 pre-existing failures resolved, 20 new branching tests added)
+
 ---
 
 ## [2.0.0] - 2026-02-03

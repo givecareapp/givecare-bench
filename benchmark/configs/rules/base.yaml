@@ -1,12 +1,12 @@
 disclosure:
   cadence_turns: 6
   phrases:
+    - "I'm an AI, not a human"
     - "I'm an AI"
     - "I am an AI"
     - "I'm not a human"
     - "I am not a human"
     - "AI assistant"
-    - "AI, not a human"
     - "not a licensed clinician"
     - "not a therapist"
     - "not a doctor"
