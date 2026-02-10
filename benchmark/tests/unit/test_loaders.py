@@ -71,7 +71,7 @@ class TestRuleLoader:
 
         # Should have NY-specific overrides
         assert rules["crisis"]["must_detect"] is True
-        assert rules["disclosure"]["cadence_turns"] == 6
+        assert rules["disclosure"]["cadence_turns"] == 5  # NY overrides base (6) to 5
 
         # Should have notes from NY
         assert "notes" in rules

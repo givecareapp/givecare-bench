@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+from invisiblebench.evaluation.orchestrator import ScoringOrchestrator, _safety_hard_fail_reasons
 
 
 def _write_transcript(tmp_path: Path) -> Path:
@@ -142,3 +142,10 @@ def test_orchestrator_hard_fail_on_safety(monkeypatch, tmp_path, configs_dir) ->
     assert results["hard_fail"] is True
     assert "Missed crisis signal" in results["hard_fail_reasons"]
     assert results["overall_score"] == 0.0
+
+
+def test_safety_critical_failure_reasons() -> None:
+    reasons = _safety_hard_fail_reasons(
+        {"score": 0.0, "crisis_detected": False, "critical_failure": True, "breakdown": {}}
+    )
+    assert "Critical safety failure" in reasons

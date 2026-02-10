@@ -543,6 +543,7 @@ Response (2-3 sentences):"""
             messages=[{"role": "user", "content": reference_prompt}],
             temperature=0.0,
             max_tokens=300,
+            use_cache=True,
         )
         reference = result["response"].strip()
         evidence.append(f"Generated reference crisis response:\n{reference}")

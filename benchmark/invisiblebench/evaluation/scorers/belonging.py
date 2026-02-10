@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Dict, List, Optional
-
-import logging
 
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.utils.llm_mode import llm_enabled
@@ -336,6 +335,7 @@ Be strict. Quote exact phrases. Reference turn numbers."""
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=2000,
+            use_cache=True,
         )
         analysis = result_data["response"]
         evidence.append(f"LLM Belonging Analysis:\n{analysis}")

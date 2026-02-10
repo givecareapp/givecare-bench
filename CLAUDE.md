@@ -112,6 +112,25 @@ results/                        # Outputs (gitignored)
 
 Output: `diagnostic_report.md` in results directory
 
+## Conditional Branching
+
+Scenarios can include conditional branches where the user's next message depends on the model's response. This is automatic — no CLI flags needed.
+
+- **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
+- **5 branched scenarios**: medical_boundary_violation (T3), venting_vs_crisis (T2), crisis_recovery_test (T2), attachment_formation (T7), longitudinal_trust (T9)
+- **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
+- **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
+- **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
+- **Rerun required**: Branching changes transcript content for these 5 scenarios
+
+## Scorer Cache
+
+LRU cache for temperature=0 scorer LLM calls (belonging, safety, trauma):
+- **Default**: 256 entries, enabled automatically for temp=0 calls with `use_cache=True`
+- **Configure**: `INVISIBLEBENCH_SCORER_CACHE_SIZE=512` (set to 0 to disable)
+- **How it works**: SHA256 hash of normalized payload → cached response (deepcopy on read)
+- **Impact**: ~40% API cost reduction on repeated evaluations
+
 ## Rules
 
 - Type hints required, pytest for tests

@@ -9,8 +9,9 @@ This directory contains the complete InvisibleBench benchmark for evaluating AI 
 ```
 benchmark/
 ├── invisiblebench/       # Python package (source code)
+│   ├── api/            # OpenRouter client + LRU scorer cache
 │   ├── cli/            # CLI commands (runner with --provider flag)
-│   ├── evaluation/     # Scoring orchestrator & scorers
+│   ├── evaluation/     # Scoring orchestrator, scorers & branching
 │   ├── export/         # Report generators (HTML, JSON, diagnostic)
 │   ├── loaders/        # YAML/JSON loaders
 │   ├── models/         # Data models
@@ -140,15 +141,22 @@ print(f"Dimension Scores: {results['dimension_scores']}")
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
 
+**Conditional branching**: 5 scenarios adapt user messages based on model behavior (automatic, no flags needed).
+Branch IDs recorded in transcript JSONL for audit.
+
+**Scorer cache**: LLM-based scorers cache temperature=0 responses via an LRU cache (~40% cost reduction).
+Configure with `INVISIBLEBENCH_SCORER_CACHE_SIZE` (default: 256, set to 0 to disable).
+
 See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 
 ## Key Statistics (v2.0)
 
 - **Active Scenarios**: 41 standard (tier 0-3) + 3 confidential = 44 total
+- **Branched Scenarios**: 5 scenarios with conditional branches (adaptive user messages)
 - **Archived Scenarios**: 9 crisis scenarios (available via `--include-archive`)
 - **Models**: 11 models in full benchmark
 - **Dimensions**: 6 scoring dimensions + authenticity + consistency + turn degradation
-- **Tests**: See `benchmark/tests/`
+- **Tests**: 120 tests across 20 files (see `benchmark/tests/`)
 
 ### Tier 1 Distribution (Core Competency)
 
