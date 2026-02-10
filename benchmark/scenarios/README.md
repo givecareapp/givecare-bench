@@ -8,18 +8,18 @@ This directory contains test scenarios organized by tier and category.
 
 ```
 scenarios/
-├── tier0/              # 1-3 turn scenarios (core safety gates)
-│   └── *.json              # Smoke tests for critical safety
-│
 ├── tier1/              # 3-5 turn scenarios (core competency)
-│   ├── gray_zone/          # Venting vs crisis, humor vs ideation (8)
-│   ├── crisis/             # Essential crisis patterns only (5)
-│   ├── boundaries/         # AI dependency, medical, therapy limits (5)
+│   ├── gray_zone/          # Venting vs crisis, humor vs ideation (4)
+│   ├── crisis/             # Essential crisis patterns only (4)
+│   ├── boundaries/         # AI dependency, medical, therapy limits (3)
+│   ├── false_refusal/      # Inappropriate refusal of caregiving topics (4)
 │   └── cultural/           # Cultural sensitivity (1)
 │
 ├── tier2/              # 8-12 turn scenarios (boundary durability)
 │   ├── cultural/           # Cultural and identity scenarios
 │   ├── burnout/            # Caregiver burnout scenarios
+│   ├── belonging/          # Identity and belonging
+│   ├── grief/              # Grief and loss
 │   ├── regulatory/         # Compliance scenarios (CA SB 243, etc.)
 │   └── longitudinal/       # Attachment patterns
 │
@@ -30,6 +30,10 @@ scenarios/
 │   └── *.json              # Adversarial and edge case scenarios (3)
 │
 └── archive/            # Archived scenarios (available but not in default runs)
+    ├── tier0/              # Archived smoke tests (5)
+    ├── tier1/              # Archived tier 1 scenarios (7)
+    ├── tier2/              # Archived tier 2 scenarios (3)
+    ├── tier3/              # Archived tier 3 scenarios (1)
     └── crisis/             # Archived crisis scenarios (9)
 ```
 
@@ -37,14 +41,13 @@ scenarios/
 
 | Tier | Count | Description |
 |------|-------|-------------|
-| Tier 0 | 5 | Core safety gates |
-| Tier 1 | 19 | Gray zones (8), crisis (5), boundaries (5), cultural (1) |
-| Tier 2 | 13 | Boundary durability, relationships, regulatory |
-| Tier 3 | 4 | Longitudinal memory |
-| **Active Total** | **41** | |
+| Tier 1 | 16 | Gray zones (4), crisis (4), boundaries (3), false refusal (4), cultural (1) |
+| Tier 2 | 10 | Boundary durability, relationships, regulatory |
+| Tier 3 | 3 | Longitudinal memory |
+| **Active Total** | **29** | |
 | Confidential | 3 | Security testing |
-| Archive | 9 | Archived crisis scenarios |
-| **Full Total** | **53** | |
+| Archive | 25 | Archived scenarios from v1 |
+| **Full Total** | **57** | |
 
 ## v2.0 Rebalancing
 
@@ -61,18 +64,7 @@ The benchmark was rebalanced to focus on what makes caregiving AI unique:
 
 ## Tiers
 
-### Tier 0: Core Safety (1-3 turns)
-Tests fundamental safety gates that must never fail:
-- Explicit crisis signals (suicidal ideation)
-- Diagnosis traps (asking for medical diagnosis)
-- Treatment/dosing traps (asking for medication advice)
-- Attachment engineering (emotional manipulation)
-
-**These are smoke tests** - any failure indicates a critical system issue.
-
-**Cost per eval**: ~$0.01-0.02
-
-### Tier 1: Crisis Detection (3-5 turns)
+### Tier 1: Core Competency (3-5 turns)
 Tests foundational safety requirements:
 - Crisis detection and response
 - Regulatory boundary adherence
@@ -131,7 +123,7 @@ uv run bench --provider givecare -y --confidential
 
 ### Specific Tier
 ```bash
-uv run bench --full -t 0 -y               # Tier 0 only
+uv run bench --full -t 1 -y               # Tier 1 only
 uv run bench --provider givecare -t 1 -y  # Tier 1 only
 ```
 

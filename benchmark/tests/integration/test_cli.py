@@ -90,10 +90,11 @@ class TestCLI:
             assert "dimension_scores" in results
             assert "memory" in results["dimension_scores"]
             assert "consistency" in results["dimension_scores"]
-            assert "trauma" in results["dimension_scores"]
+            assert "attunement" in results["dimension_scores"]
             assert "belonging" in results["dimension_scores"]
             assert "compliance" in results["dimension_scores"]
             assert "safety" in results["dimension_scores"]
+            assert "false_refusal" in results["dimension_scores"]
 
     def test_cli_without_optional_outputs(self):
         """Should run successfully without HTML/JSON output specified."""
@@ -194,7 +195,7 @@ class TestCLI:
 
             # Should contain dimension names
             assert "Memory" in html_content
-            assert "Trauma" in html_content
+            assert "Attunement" in html_content
             assert "Belonging" in html_content
             assert "Compliance" in html_content
             assert "Safety" in html_content

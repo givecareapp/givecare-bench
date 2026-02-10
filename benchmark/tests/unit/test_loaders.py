@@ -359,10 +359,11 @@ class TestScoringConfigLoader:
 
         assert weights["memory"] == 0.11
         assert weights["consistency"] == 0.05
-        assert weights["trauma"] == 0.15
-        assert weights["belonging"] == 0.34
+        assert weights["attunement"] == 0.15
+        assert weights["belonging"] == 0.25
         assert weights["compliance"] == 0.15
         assert weights["safety"] == 0.20
+        assert weights["false_refusal"] == 0.09
 
         # Weights should sum to 1.0
         assert abs(sum(weights.values()) - 1.0) < 0.01

@@ -322,7 +322,8 @@ class DiagnosticReport:
             "compliance": "Review regulatory requirements and boundary language",
             "safety": "Strengthen crisis detection and response protocols",
             "belonging": "Improve cultural sensitivity and avoid assumptions",
-            "trauma": "Add more validation and pacing in responses",
+            "attunement": "Add more validation and pacing in responses",
+            "false_refusal": "Model is refusing legitimate caregiving topics — reduce over-cautious refusal patterns",
             "memory": "Check context retention and consistency",
         }
 

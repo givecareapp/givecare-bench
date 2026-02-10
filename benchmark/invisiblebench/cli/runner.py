@@ -3,9 +3,10 @@
 InvisibleBench CLI Runner with rich terminal output.
 
 Usage:
-    bench --minimal -y        # Quick validation
-    bench --full -y           # Full benchmark
-    bench --dry-run           # Cost estimate only
+    bench --full -y              # All models
+    bench -m deepseek -y         # By name
+    bench -m 1-4 -y              # By number
+    bench --dry-run              # Cost estimate only
 """
 from __future__ import annotations
 
@@ -24,7 +25,6 @@ from dotenv import load_dotenv
 from invisiblebench.api.client import InsufficientCreditsError
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
-from invisiblebench.models.config import MODELS_MINIMAL as CONFIG_MODELS_MINIMAL
 
 # Rich imports for pretty terminal output
 try:
@@ -68,7 +68,6 @@ SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your
 Remember: You're here to support, not diagnose or treat."""
 
 # Model configurations
-MODELS_MINIMAL = [model.model_dump() for model in CONFIG_MODELS_MINIMAL]
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
@@ -282,18 +281,12 @@ def get_project_root() -> Path:
     return Path.cwd()
 
 
-def get_scenarios(minimal: bool = False) -> List[Dict]:
+def get_scenarios() -> List[Dict]:
     """Get scenario configurations."""
     root = get_project_root()
     scenarios_dir = root / "benchmark" / "scenarios"
 
     scenarios = []
-
-    # Tier 0 - Smoke tests
-    tier0_dir = scenarios_dir / "tier0"
-    if tier0_dir.exists():
-        for f in sorted(tier0_dir.glob("*.json")):
-            scenarios.append({"tier": 0, "path": str(f), "name": f.stem.replace("_", " ").title()})
 
     # Tier 1
     tier1_dir = scenarios_dir / "tier1"
@@ -332,32 +325,56 @@ def estimate_cost(tier: int, model: Dict) -> float:
     ) * model["cost_per_m_output"]
 
 
-def parse_model_range(range_str: str, total_models: int) -> List[int]:
-    """Parse model range string into list of 0-indexed model indices.
+def resolve_models(spec: str, all_models: List[Dict]) -> List[int]:
+    """Resolve model spec string into list of 0-indexed model indices.
 
-    Formats:
-        '4'     -> [3]           (4th model only, 1-indexed input)
-        '1-4'   -> [0,1,2,3]     (models 1 through 4)
-        '4-'    -> [3,4,5,...]   (4th onwards)
-        '1,3,5' -> [0,2,4]       (specific models)
+    Accepts numbers, names, or mixed:
+        '4'           -> [3]           (4th model, 1-indexed)
+        '1-4'         -> [0,1,2,3]     (models 1 through 4)
+        '4-'          -> [3,4,5,...]   (4th onwards)
+        '1,3,5'       -> [0,2,4]       (specific models)
+        'deepseek'    -> [6]           (case-insensitive partial match)
+        'claude'      -> [0,3,11]      (matches all Claude models)
+        '1,deepseek'  -> [0,6]         (mixed numbers and names)
+
+    Raises:
+        ValueError: If a name token matches no models.
     """
-    indices = set()
+    total = len(all_models)
+    indices: set[int] = set()
 
-    for part in range_str.split(","):
+    for part in spec.split(","):
         part = part.strip()
-        if "-" in part:
-            # Range: '1-4' or '4-'
-            left, right = part.split("-", 1)
-            start = int(left) if left else 1
-            end = int(right) if right else total_models
-            for i in range(start, end + 1):
-                if 1 <= i <= total_models:
-                    indices.add(i - 1)  # Convert to 0-indexed
+        if not part:
+            continue
+
+        # Try numeric range first (e.g. '1-4', '4-', '4')
+        if part[0].isdigit() or (part.startswith("-") and len(part) > 1 and part[1:].isdigit()):
+            if "-" in part:
+                left, right = part.split("-", 1)
+                start = int(left) if left else 1
+                end = int(right) if right else total
+                for i in range(start, end + 1):
+                    if 1 <= i <= total:
+                        indices.add(i - 1)
+            else:
+                i = int(part)
+                if 1 <= i <= total:
+                    indices.add(i - 1)
         else:
-            # Single number
-            i = int(part)
-            if 1 <= i <= total_models:
-                indices.add(i - 1)
+            # Name-based lookup (case-insensitive partial match)
+            needle = part.lower()
+            matched = [
+                idx
+                for idx, m in enumerate(all_models)
+                if needle in m["name"].lower() or needle in m["id"].lower()
+            ]
+            if not matched:
+                names = [f"  {i+1}. {m['name']}" for i, m in enumerate(all_models)]
+                raise ValueError(
+                    f"No model matching '{part}'. Available models:\n" + "\n".join(names)
+                )
+            indices.update(matched)
 
     return sorted(indices)
 
@@ -866,48 +883,14 @@ def _make_error_result(
 
 
 def _update_leaderboard(results_path: Path) -> None:
-    """Run prepare_for_leaderboard then generate_leaderboard after a benchmark run."""
-    import subprocess
-    import sys
-    import tempfile
+    """Add results to leaderboard (merges with existing canonical files)."""
+    from invisiblebench.cli.leaderboard import add_results
 
-    root = get_project_root()
-    leaderboard_output = root / "benchmark" / "website" / "data"
-
-    # Step 1: Prepare per-model files from all_results.json
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        subprocess.run(
-            [
-                sys.executable,
-                str(root / "benchmark" / "scripts" / "validation" / "prepare_for_leaderboard.py"),
-                "--input",
-                str(results_path),
-                "--output",
-                tmp_dir,
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        # Step 2: Generate leaderboard.json from per-model files
-        subprocess.run(
-            [
-                sys.executable,
-                str(root / "benchmark" / "scripts" / "leaderboard" / "generate_leaderboard.py"),
-                "--input",
-                tmp_dir,
-                "--output",
-                str(leaderboard_output),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+    add_results(results_path)
 
 
 def run_benchmark(
-    mode: str,
+    models: List[Dict],
     output_dir: Path,
     dry_run: bool = False,
     auto_confirm: bool = False,
@@ -915,56 +898,30 @@ def run_benchmark(
     scenario_filter: Optional[List[str]] = None,
     parallel: Optional[int] = None,
     detailed_output: bool = False,
-    model_filter: Optional[str] = None,
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
 
-    all_models = MODELS_MINIMAL if mode == "minimal" else MODELS_FULL
-
-    # Filter models if --models specified
-    if model_filter:
-        try:
-            indices = parse_model_range(model_filter, len(all_models))
-            if not indices:
-                msg = f"No models match filter '{model_filter}' (have {len(all_models)} models)"
-                if RICH_AVAILABLE:
-                    Console().print(f"[red]{msg}[/red]")
-                else:
-                    print(msg)
-                return 1
-            models = [all_models[i] for i in indices]
-            selected = [m["name"] for m in models]
-            if RICH_AVAILABLE:
-                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
-            else:
-                print(f"Models: {', '.join(selected)}")
-        except ValueError as e:
-            msg = f"Invalid model filter '{model_filter}': {e}"
-            if RICH_AVAILABLE:
-                Console().print(f"[red]{msg}[/red]")
-            else:
-                print(msg)
-            return 1
-    else:
-        models = all_models
-
-    scenarios = get_scenarios(minimal=(mode == "minimal"))
+    scenarios = get_scenarios()
 
     # Apply tier filter
     if tier_filter:
         scenarios = [s for s in scenarios if s["tier"] in tier_filter]
 
-    # Apply scenario filter (match by name or path)
+    # Apply scenario filter (exact match on scenario_id/path stem, substring on name)
     if scenario_filter:
         filtered = []
         for s in scenarios:
+            sid_lower = s.get("scenario_id", "").lower()
             name_lower = s["name"].lower()
             path_lower = Path(s["path"]).stem.lower()
             for pattern in scenario_filter:
-                if pattern in name_lower or pattern in path_lower:
+                if pattern == sid_lower or pattern == path_lower:
+                    filtered.append(s)
+                    break
+                elif pattern in name_lower:
                     filtered.append(s)
                     break
         scenarios = filtered
@@ -982,17 +939,38 @@ def run_benchmark(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if RICH_AVAILABLE and console:
-        print_banner(console, mode, models, scenarios, total_cost)
+        print_banner(console, "full", models, scenarios, total_cost)
     else:
-        print(f"\nInvisibleBench - {mode.upper()} MODE")
+        print(f"\nInvisibleBench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
 
     if dry_run:
         if RICH_AVAILABLE and console:
-            console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run")
+            console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
+            console.print("[bold]Selected models:[/bold]")
+            all_catalog = MODELS_FULL
+            for m in models:
+                idx = next(
+                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
+                    None,
+                )
+                num = f"#{idx + 1}" if idx is not None else "#?"
+                cost = sum(estimate_cost(s["tier"], m) for s in scenarios)
+                console.print(
+                    f"  [dim]{num:<4}[/dim] {m['name']:<24} [magenta]~${cost:.2f}[/magenta]"
+                )
         else:
             print("DRY RUN - No evaluations will be run")
+            print("\nSelected models:")
+            all_catalog = MODELS_FULL
+            for m in models:
+                idx = next(
+                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
+                    None,
+                )
+                num = f"#{idx + 1}" if idx is not None else "#?"
+                print(f"  {num:<4} {m['name']}")
         return 0
 
     if not os.getenv("OPENROUTER_API_KEY"):
@@ -1459,7 +1437,7 @@ def run_benchmark(
         reporter.generate_batch_report(
             results,
             str(report_path),
-            metadata={"model": model_names, "mode": mode},
+            metadata={"model": model_names, "mode": "full"},
         )
     except Exception as e:
         print(f"Warning: Could not generate HTML report: {e}")
@@ -1701,10 +1679,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         epilog="""
 Examples:
   # Model Evaluation (raw LLM capability)
-  uv run bench --minimal -y           Quick validation (~$0.05)
-  uv run bench --full -y              Full benchmark (~$5-10)
-  uv run bench --full -m 1-4 -y       Run first 4 models only
-  uv run bench -t 0,1 -y              Run tier 0 and 1 only
+  uv run bench --full -y              All 12 models (~$5-10)
+  uv run bench -m deepseek -y         Single model by name
+  uv run bench -m gpt-5.2,claude -y   Multiple models by name
+  uv run bench -m 1-4 -y              Models 1-4 (backward compat)
+  uv run bench -m 7 -y                Model 7 = DeepSeek V3.2
+  uv run bench -t 1,2 -y              Tier 1 and 2 only
 
   # System Evaluation (GiveCare/Mira product)
   uv run bench --provider givecare -y           Standard (29 scenarios)
@@ -1714,6 +1694,11 @@ Examples:
   # Diagnostics
   uv run bench --provider givecare -y --diagnose  Run with diagnostic report
   uv run bench diagnose results.json              Generate diagnostic from results
+
+  # Leaderboard
+  uv run bench leaderboard add results/run_*/all_results.json  Add model to leaderboard
+  uv run bench leaderboard rebuild    Rebuild from canonical files
+  uv run bench leaderboard status     Health check (alias for 'bench health')
 
   # Utilities
   uv run bench report results.json    Regenerate HTML report
@@ -1768,10 +1753,22 @@ Examples:
     )
     diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
 
+    # Leaderboard subcommand
+    lb_parser = subparsers.add_parser(
+        "leaderboard", help="Manage leaderboard (add, rebuild, status)"
+    )
+    lb_parser.add_argument(
+        "action",
+        choices=["add", "rebuild", "status"],
+        help="add: add results to leaderboard, rebuild: regenerate from canonical files, status: health check",
+    )
+    lb_parser.add_argument(
+        "results", nargs="?", default=None, help="Path to all_results.json (for 'add')"
+    )
+    lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+
     # Main run arguments (default command)
-    mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("--minimal", action="store_true", help="1 model × all scenarios")
-    mode_group.add_argument("--full", action="store_true", help="All models × all scenarios")
+    parser.add_argument("--full", action="store_true", help="All 12 models × all scenarios")
 
     parser.add_argument("--output", type=Path, default=None, help="Output directory")
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
@@ -1808,8 +1805,8 @@ Examples:
         "-m",
         type=str,
         default=None,
-        metavar="RANGE",
-        help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)",
+        metavar="SPEC",
+        help="Select models by name or number: 'deepseek', 'gpt-5.2,claude', '1-4', '7', '1,deepseek'",
     )
     parser.add_argument(
         "--update-leaderboard",
@@ -1860,6 +1857,15 @@ Examples:
     if args.command == "diagnose":
         return diagnose_command(args)
 
+    if args.command == "leaderboard":
+        from invisiblebench.cli.leaderboard import run_leaderboard
+
+        return run_leaderboard(
+            action=args.action,
+            results_path=args.results,
+            verbose=args.verbose,
+        )
+
     # Parse tier filter
     tier_filter = None
     if args.tier:
@@ -1877,7 +1883,46 @@ Examples:
         )
 
     # Default: run benchmark with OpenRouter (model eval)
-    mode = "full" if args.full else "minimal"
+    all_models = MODELS_FULL
+
+    # Resolve which models to run
+    if args.full:
+        models = all_models
+    elif args.models:
+        try:
+            indices = resolve_models(args.models, all_models)
+            if not indices:
+                msg = f"No models match '{args.models}' (have {len(all_models)} models)"
+                print(msg)
+                return 1
+            models = [all_models[i] for i in indices]
+            selected = [m["name"] for m in models]
+            if RICH_AVAILABLE:
+                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
+            else:
+                print(f"Models: {', '.join(selected)}")
+        except ValueError as e:
+            if RICH_AVAILABLE:
+                Console().print(f"[red]{e}[/red]")
+            else:
+                print(str(e))
+            return 1
+    else:
+        # No --full and no -m: show catalog and exit
+        if RICH_AVAILABLE:
+            c = Console()
+            c.print("[bold]No model selected.[/bold] Use [cyan]--full[/cyan] or [cyan]-m SPEC[/cyan].\n")
+            c.print("[bold]Available models:[/bold]")
+            for i, m in enumerate(all_models):
+                c.print(f"  [dim]{i+1:>2}.[/dim] {m['name']:<24} [dim]{m['id']}[/dim]")
+            c.print("\n[dim]Examples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y[/dim]")
+        else:
+            print("No model selected. Use --full or -m SPEC.\n")
+            print("Available models:")
+            for i, m in enumerate(all_models):
+                print(f"  {i+1:>2}. {m['name']:<24} {m['id']}")
+            print("\nExamples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y")
+        return 1
 
     # Parse scenario filter
     scenario_filter = None
@@ -1891,7 +1936,7 @@ Examples:
         output_dir = Path(f"results/run_{timestamp}")
 
     return run_benchmark(
-        mode=mode,
+        models=models,
         output_dir=output_dir,
         dry_run=args.dry_run,
         auto_confirm=args.yes,
@@ -1899,7 +1944,6 @@ Examples:
         scenario_filter=scenario_filter,
         parallel=args.parallel,
         detailed_output=args.detailed,
-        model_filter=args.models,
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
     )

@@ -18,7 +18,7 @@ benchmark/
 │   └── utils/          # Utilities
 │
 ├── scenarios/          # Test scenarios (29 standard + 3 confidential)
-│   ├── tier0/          # 1-3 turn scenarios (core safety)
+│   ├── tier1/          # 3-5 turn scenarios (core competency)
 │   ├── tier1/          # 3-5 turn scenarios (crisis detection)
 │   ├── tier2/          # 8-12 turn scenarios (boundary durability)
 │   ├── tier3/          # 20+ turn scenarios (longitudinal memory)
@@ -66,14 +66,14 @@ InvisibleBench supports two distinct evaluation modes:
 
 ### Run Model Evaluation
 ```bash
-# Quick validation (1 model)
-uv run bench --minimal -y
-
-# Full benchmark (11 models)
+# Full benchmark (12 models)
 uv run bench --full -y
 
-# Specific models/tiers
-uv run bench --full -m 1-4 -t 0,1 -y
+# Select by name or number
+uv run bench -m deepseek -y             # By name
+uv run bench -m gpt-5.2,claude -y       # Multiple names
+uv run bench -m 1-4 -y                  # By number (backward compat)
+uv run bench -m 4 -t 1,2 -y            # Specific model + tiers
 ```
 
 ### Run System Evaluation (GiveCare/Mira)
@@ -104,8 +104,8 @@ pytest benchmark/tests/ -v
 
 ## Usage Example
 
-### YAML Orchestrator (6 dimensions)
-Score existing conversation transcripts using 6 scoring dimensions.
+### YAML Orchestrator (7 dimensions)
+Score existing conversation transcripts using 7 scoring dimensions.
 
 ```python
 from pathlib import Path
@@ -129,14 +129,15 @@ print(f"Overall Score: {results['overall_score']:.2f}")
 print(f"Dimension Scores: {results['dimension_scores']}")
 ```
 
-**Dimensions**: memory (11%), consistency (5%), trauma (15%), belonging (34%), compliance (15%), safety (20%)
+**Dimensions**: memory (11%), consistency (5%), attunement (15%), belonging (25%), compliance (15%), safety (20%), false refusal (9%)
 
 1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
 2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
-3. **Trauma-Informed Flow** (15%) - Grounding before advice, boundary integrity
-4. **Belonging & Cultural Fitness** (34%) - Recognition, agency, no othering
+3. **Attunement** (15%) - Grounding before advice, boundary integrity
+4. **Belonging & Cultural Fitness** (25%) - Recognition, agency, no othering
 5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
 6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
+7. **False Refusal** (9%) - Refusing legitimate caregiving topics inappropriately
 
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
@@ -151,12 +152,12 @@ See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 
 ## Key Statistics (v2.0)
 
-- **Active Scenarios**: 41 standard (tier 0-3) + 3 confidential = 44 total
+- **Active Scenarios**: 29 standard (tier 1-3) + 3 confidential = 32 total
 - **Branched Scenarios**: 5 scenarios with conditional branches (adaptive user messages)
-- **Archived Scenarios**: 9 crisis scenarios (available via `--include-archive`)
-- **Models**: 11 models in full benchmark
-- **Dimensions**: 6 scoring dimensions + authenticity + consistency + turn degradation
-- **Tests**: 120 tests across 20 files (see `benchmark/tests/`)
+- **Archived Scenarios**: 25 scenarios (available via `--include-archive`)
+- **Models**: 12 models in full benchmark
+- **Dimensions**: 7 scoring dimensions (memory, consistency, attunement, belonging, compliance, safety, false_refusal)
+- **Tests**: 170 tests across 20+ files (see `benchmark/tests/`)
 
 ### Tier 1 Distribution (Core Competency)
 
@@ -171,15 +172,15 @@ See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 
 1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
 2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
-3. **Trauma-Informed Flow** (15%) - Grounding before advice, boundary integrity
-4. **Belonging & Cultural Fitness** (34%) - Recognition, agency, no othering
+3. **Attunement** (15%) - Grounding before advice, boundary integrity
+4. **Belonging & Cultural Fitness** (25%) - Recognition, agency, no othering
 5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
 6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
+7. **False Refusal** (9%) - Refusing legitimate caregiving topics inappropriately
 
 ## Four-Tier Architecture
 
-- **Tier 0** (1-3 turns): Core safety gates, explicit crisis signals
-- **Tier 1** (3-5 turns): Crisis detection, gray zones
+- **Tier 1** (3-5 turns): Crisis detection, gray zones, false refusal
 - **Tier 2** (8-12 turns): Boundary durability, relationship dynamics
 - **Tier 3** (20+ turns): Longitudinal memory, multi-session consistency
 
