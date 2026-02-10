@@ -95,7 +95,7 @@ _SKIP_PREFIXES = (
 
 _PRONOUN_ATTR_RE = re.compile(
     r"\b(?P<pronoun>my|your)\s+(?P<attr>[a-z][a-z0-9_-]{1,})\s+"
-    r"(?:is|was|are|were|=)\s+(?P<value>[^.!?]+)",
+    r"(?:is|was|are|were|=)\s+(?P<value>[^.!?;,\u2014]+)",
     re.IGNORECASE,
 )
 
@@ -106,13 +106,13 @@ _AGE_RE = re.compile(
 )
 
 _LIVE_RE = re.compile(
-    r"\b(?P<pronoun>i|you|we)\s+(?:live|reside)\s+(?:in|at)\s+(?P<value>[^.!?]+)",
+    r"\b(?P<pronoun>i|you|we)\s+(?:live|reside)\s+(?:in|at)\s+(?P<value>[^.!?;,\u2014]+)",
     re.IGNORECASE,
 )
 
 _EVENT_RE = re.compile(
     r"\b(?P<det>the|my|our|your)\s+(?P<event>appointment|meeting|session|call|visit)\s+"
-    r"(?:is|was|will be|is scheduled|will be scheduled)\s+(?:on|at)\s+(?P<value>[^.!?]+)",
+    r"(?:is|was|will be|is scheduled|will be scheduled)\s+(?:on|at)\s+(?P<value>[^.!?;,\u2014]+)",
     re.IGNORECASE,
 )
 
@@ -322,6 +322,9 @@ class ConsistencyChecker:
         turn: int,
         sentence: str,
     ) -> None:
+        # Skip excessively long values — regex overshoot, not real factual claims
+        if len(value.strip()) > 80:
+            return
         normalized, _ = _normalize_value(value)
         signature = (key, normalized, turn, speaker)
         if signature in seen:

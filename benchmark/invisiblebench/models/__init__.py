@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 # Re-export Pydantic config models
 from invisiblebench.models.config import (
     MODELS_FULL,
-    MODELS_MINIMAL,
     BenchmarkConfig,
     ModelConfig,
     ScoringConfig,
@@ -39,7 +38,6 @@ __all__ = [
     "BenchmarkConfig",
     "ModelConfig",
     "ScoringConfig",
-    "MODELS_MINIMAL",
     "MODELS_FULL",
     # Result models
     "BatchResult",

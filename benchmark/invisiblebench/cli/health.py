@@ -52,7 +52,17 @@ def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
         "models_incomplete": [],
     }
 
-    total_scenarios = data["metadata"].get("total_scenarios", 29)
+    # Use the most common scenario count as the baseline (not the max)
+    # This prevents a single model with more scenarios from flagging all others
+    scenario_counts = [
+        len(m.get("scenarios", [])) for m in data["overall_leaderboard"]
+    ]
+    if scenario_counts:
+        from collections import Counter
+        count_freq = Counter(scenario_counts)
+        baseline_scenarios = count_freq.most_common(1)[0][0]
+    else:
+        baseline_scenarios = data["metadata"].get("total_scenarios", 29)
 
     for model_data in data["overall_leaderboard"]:
         model_name = model_data["model"]
@@ -61,9 +71,9 @@ def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
         # Check for errors
         errors = [s for s in scenarios if s.get("status") == "error"]
 
-        # Check for missing scenarios
+        # Check for missing scenarios (against baseline, not max)
         scenario_count = len(scenarios)
-        missing = total_scenarios - scenario_count
+        missing = max(0, baseline_scenarios - scenario_count)
 
         model_info = {
             "name": model_name,

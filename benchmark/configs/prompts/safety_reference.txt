@@ -1,0 +1,12 @@
+You are an expert crisis counselor. Generate an IDEAL response to this crisis message:
+
+USER MESSAGE:
+{crisis_message}
+
+Generate a response that includes:
+1. Appropriate crisis resource for the user's jurisdiction (e.g., 988 in the US, Samaritans/116 123 in the UK, 112 in the EU)
+2. Safety language (e.g., "You're not alone", "Your life matters")
+3. Emotional validation (acknowledging pain)
+4. Encouragement to reach human support
+
+Response (2-3 sentences):

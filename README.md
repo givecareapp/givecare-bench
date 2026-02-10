@@ -58,29 +58,34 @@ InvisibleBench supports two distinct evaluation modes:
 ### Model Evaluation (Raw LLM)
 
 ```bash
-# Quick validation (1 model × all scenarios, ~$0.05)
-uv run bench --minimal -y
-
-# Full benchmark (11 models × all scenarios, ~$5-10)
+# Full benchmark (12 models × all scenarios, ~$5-10)
 uv run bench --full -y
 
-# Run specific models (1-indexed, see model list below)
-uv run bench --full -m 1-4 -y           # First 4 models
-uv run bench --full -m 4 -t 3 -y        # Model 4 only, tier 3 only
-uv run bench --full -m 1,3,5 -y         # Specific models
-uv run bench --full -m 4- -y            # Models 4 onwards
+# Select models by name (case-insensitive partial match)
+uv run bench -m deepseek -y             # DeepSeek V3.2
+uv run bench -m gpt-5.2,claude -y       # GPT-5.2 + all Claude models
+uv run bench -m gemini -y               # All Gemini models
+
+# Select models by number (backward compatible)
+uv run bench -m 1-4 -y                  # First 4 models
+uv run bench -m 4 -t 3 -y              # Model 4 only, tier 3 only
+uv run bench -m 1,3,5 -y               # Specific models
+uv run bench -m 4- -y                  # Models 4 onwards
+
+# Mixed: names and numbers
+uv run bench -m 1,deepseek -y           # Model 1 + DeepSeek
 
 # Run specific tiers
-uv run bench --full -t 0,1 -y           # Tier 0 and 1 only
+uv run bench -m deepseek -t 1,2 -y      # Tier 1 and 2 only
 
 # Parallel execution (multiple models concurrently)
-uv run bench --full -m 1-4 -p 4 -y      # 4 models in parallel
+uv run bench -m 1-4 -p 4 -y             # 4 models in parallel
 
-# Dry run (cost estimate only)
+# Dry run (cost estimate + model catalog)
 uv run bench --dry-run
 
 # Write per-scenario JSON + HTML reports with turn flags
-uv run bench --minimal -y --detailed
+uv run bench -m deepseek -y --detailed
 ```
 
 ### System Evaluation (GiveCare/Mira)
@@ -99,7 +104,7 @@ uv run bench --provider givecare -t 1 -y
 uv run bench --provider givecare --dry-run
 ```
 
-**Model indices (1-indexed):**
+**Models (selectable by name or number with `-m`):**
 | # | Model | # | Model |
 |---|-------|---|-------|
 | 1 | Claude Opus 4.5 | 7 | DeepSeek V3.2 |
@@ -107,7 +112,9 @@ uv run bench --provider givecare --dry-run
 | 3 | Gemini 3 Pro | 9 | MiniMax M2.1 |
 | 4 | Claude Sonnet 4.5 | 10 | Qwen3 235B |
 | 5 | Grok 4 | 11 | Kimi K2.5 |
-| 6 | GPT-5 Mini | | |
+| 6 | GPT-5 Mini | 12 | Claude Opus 4.6 |
+
+Use `-m deepseek` or `-m 7` — both select DeepSeek V3.2. Partial names match case-insensitively.
 
 The `bench` CLI provides:
 - Rich terminal output with live progress
@@ -149,7 +156,7 @@ Generate actionable reports to identify and fix issues:
 ```bash
 # Generate after run (--diagnose flag)
 uv run bench --provider givecare -y --diagnose
-uv run bench --minimal -y --diagnose
+uv run bench -m deepseek -y --diagnose
 
 # Generate from existing results
 uv run bench diagnose results/givecare/givecare_results.json
@@ -200,7 +207,7 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 │   ├── invisiblebench/     # Core package (evaluation, api, models, export)
 │   │   ├── api/            # OpenRouter client + LRU scorer cache
 │   │   └── cli/            # CLI commands (runner with --provider flag)
-│   ├── scenarios/          # Test scenarios: tier0-3/ (29) + confidential/ (3)
+│   ├── scenarios/          # Test scenarios: tier1-3/ (29) + confidential/ (3)
 │   ├── configs/rules/      # Jurisdiction rules (base, ca, ny, il, etc.)
 │   ├── scripts/            # Provider implementations & validation
 │   │   └── givecare_provider.py  # GiveCare/Mira system provider
@@ -234,23 +241,23 @@ A **Phase 3 safety standard** for relationship AI - testing what happens when 63
 | **Boundaries** | 5 | AI dependency, medical advice limits, therapy replacement |
 | **Crisis** | 5 | Essential patterns only (recovery, dual-concern, indirect) |
 
-### 6 Evaluation Dimensions
+### 7 Evaluation Dimensions
 
 | Dimension | Weight | Focus |
 |-----------|--------|-------|
 | **Memory** | 11% | Longitudinal consistency, relationship continuity, context retention |
 | **Consistency** | 5% | Intra-conversation self-consistency and contradiction detection |
-| **Trauma-Informed** | 15% | Safety, trust-building, validation, pacing, 7 core principles |
-| **Belonging** | 34% | Cultural competence, identity affirmation, no othering |
+| **Attunement** | 15% | Trauma-informed flow, trust-building, validation, pacing |
+| **Belonging** | 25% | Cultural competence, identity affirmation, no othering |
 | **Compliance** | 15% | Regulatory fitness (WOPR Act), no diagnosis/treatment advice |
 | **Safety** | 20% | Crisis detection, appropriate urgency, resource provision |
+| **False Refusal** | 9% | Refusing legitimate caregiving topics inappropriately |
 
 **Plus**: Authenticity scoring (formulaic response detection), turn-by-turn degradation tracking
 
 ### 4 Testing Tiers
 
-- **Tier 0** (Core Safety): 1-3 turns - explicit crisis signals, mandatory safety gates
-- **Tier 1** (Core Competency): 3-5 turns - gray zones, boundaries, essential crisis
+- **Tier 1** (Core Competency): 3-5 turns - gray zones, boundaries, crisis, false refusal
 - **Tier 2** (Boundary Durability): 8-12 turns - warmth vs. compliance, relational dynamics
 - **Tier 3** (Longitudinal Memory): 5-20+ turns across multiple sessions - memory consistency, crisis return
 

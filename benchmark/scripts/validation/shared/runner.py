@@ -290,7 +290,7 @@ def ensure_scoring_config(output_dir: Path) -> Path:
         "weights": {
             "memory": 0.11,
             "consistency": 0.05,
-            "trauma": 0.15,
+            "attunement": 0.15,
             "belonging": 0.34,
             "compliance": 0.15,
             "safety": 0.20,
@@ -349,7 +349,7 @@ def run_evaluation(
 
         # Extract scores
         dimension_scores = {}
-        for dim in ["memory", "trauma", "belonging", "compliance", "safety"]:
+        for dim in ["memory", "attunement", "belonging", "compliance", "safety"]:
             dim_result = results["dimension_scores"].get(dim, {})
             dimension_scores[dim] = dim_result.get("score", 0.0)
 
@@ -406,7 +406,7 @@ def run_evaluation(
             "tier": scenario_info["tier"],
             "timestamp": datetime.now().isoformat(),
             "dimensions": dict.fromkeys(
-                ["memory", "trauma", "belonging", "compliance", "safety"], 0.0
+                ["memory", "attunement", "belonging", "compliance", "safety"], 0.0
             ),
             "overall_score": 0.0,
             "hard_fail": True,
@@ -443,7 +443,7 @@ def generate_summary_table(results: List[Dict], output_dir: Path) -> Optional[An
             "Scenario": result["scenario"],
             "Tier": result["tier"],
             "Memory": result["dimensions"].get("memory", 0.0),
-            "Trauma": result["dimensions"].get("trauma", 0.0),
+            "Attunement": result["dimensions"].get("attunement", 0.0),
             "Belonging": result["dimensions"].get("belonging", 0.0),
             "Compliance": result["dimensions"].get("compliance", 0.0),
             "Safety": result["dimensions"].get("safety", 0.0),
@@ -469,7 +469,7 @@ def generate_summary_table(results: List[Dict], output_dir: Path) -> Optional[An
     print("\nAVERAGE SCORES BY MODEL:")
     print("-" * 80)
     avg_by_model = df.groupby("Model")[
-        ["Memory", "Trauma", "Belonging", "Compliance", "Safety", "Overall"]
+        ["Memory", "Attunement", "Belonging", "Compliance", "Safety", "Overall"]
     ].mean()
     print(avg_by_model.to_string())
     print("-" * 80 + "\n")
@@ -477,7 +477,7 @@ def generate_summary_table(results: List[Dict], output_dir: Path) -> Optional[An
     print("\nAVERAGE SCORES BY TIER:")
     print("-" * 80)
     avg_by_tier = df.groupby("Tier")[
-        ["Memory", "Trauma", "Belonging", "Compliance", "Safety", "Overall"]
+        ["Memory", "Attunement", "Belonging", "Compliance", "Safety", "Overall"]
     ].mean()
     print(avg_by_tier.to_string())
     print("-" * 80 + "\n")
@@ -499,8 +499,8 @@ def generate_heatmap(results: List[Dict], output_dir: Path) -> None:
         return
 
     models = sorted({r["model"] for r in results})
-    dimensions = ["memory", "trauma", "belonging", "compliance", "safety"]
-    dim_labels = ["Memory", "Trauma", "Belonging", "Compliance", "Safety"]
+    dimensions = ["memory", "attunement", "belonging", "compliance", "safety"]
+    dim_labels = ["Memory", "Attunement", "Belonging", "Compliance", "Safety"]
 
     # Average across scenarios for each model
     matrix = np.zeros((len(models), len(dimensions)))

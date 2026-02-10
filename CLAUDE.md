@@ -6,20 +6,22 @@ Research benchmark project. Say "done" when finished (no verbose summaries).
 
 ```bash
 # Benchmark (primary: uv run bench) - tests raw LLMs
-uv run bench --minimal -y              # 1 model (~$0.05)
-uv run bench --full -y                 # 11 models (~$5-10)
-uv run bench --full -m 1-4 -y          # Models 1-4 only
-uv run bench --full -m 4 -t 3 -y       # Model 4, tier 3
-uv run bench --full -m 1-4 -p 4 -y     # 4 parallel
-uv run bench --dry-run                 # Cost estimate
-uv run bench --minimal -y --detailed   # Per-scenario JSON/HTML
+uv run bench --full -y                 # All 12 models (~$5-10)
+uv run bench -m deepseek -y            # Single model by name
+uv run bench -m gpt-5.2,claude -y      # Multiple models by name
+uv run bench -m 1-4 -y                 # Models 1-4 (backward compat)
+uv run bench -m 4 -t 3 -y             # Model 4, tier 3
+uv run bench -m 1-4 -p 4 -y           # 4 parallel
+uv run bench --dry-run                 # Cost estimate + model catalog
+uv run bench -m deepseek -y --detailed # Per-scenario JSON/HTML
 
 # Rerun specific model (use after errors)
-uv run bench --full -m 2 -y --update-leaderboard   # Rerun GPT-5.2
+uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 
 # Models: 1=Opus4.5 2=GPT-5.2 3=Gemini3Pro 4=Sonnet4.5 5=Grok4
 #         6=GPT-5Mini 7=DeepSeekV3.2 8=Gemini2.5Flash 9=MiniMaxM2.1 10=Qwen3-235B
-#         11=KimiK2.5
+#         11=KimiK2.5 12=Opus4.6
+# -m accepts names (partial, case-insensitive) or numbers
 
 # GiveCare Provider - tests Mira product (not raw LLM)
 uv run bench --provider givecare -y                    # Standard (29 scenarios)
@@ -59,19 +61,26 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 **Scores are NOT directly comparable** - model eval tests raw models with simple prompt, system eval tests full product stack (tools, memory, SMS constraints).
 
-## Leaderboard Update Flow
+## Leaderboard Management
 
-1. Run benchmark with auto-update: `uv run bench --full -y --update-leaderboard`
-   - Auto-runs health check after updating leaderboard
-2. Or manually:
-   ```bash
-   python benchmark/scripts/validation/prepare_for_leaderboard.py \
-     --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
-   python benchmark/scripts/leaderboard/generate_leaderboard.py \
-     --input /tmp/lb_ready/ --output benchmark/website/data/
-   ```
-3. Commit & push → Website auto-fetches from GitHub raw URL
-4. Data: `benchmark/website/data/leaderboard.json`
+```bash
+# Add model results to leaderboard (merges, doesn't overwrite)
+uv run bench leaderboard add results/run_YYYYMMDD_*/all_results.json
+
+# Rebuild from canonical files (results/leaderboard_ready/)
+uv run bench leaderboard rebuild
+
+# Health check
+uv run bench leaderboard status       # or: uv run bench health
+
+# Auto-update after benchmark run
+uv run bench -m opus-4.6 -y --update-leaderboard
+```
+
+- Canonical per-model files: `results/leaderboard_ready/`
+- Generated data: `benchmark/website/data/leaderboard.json`
+- Commit & push → Website auto-fetches from GitHub raw URL
+- Health check uses most-common scenario count as baseline (mixed counts OK)
 
 ## Results Management
 
@@ -87,7 +96,7 @@ benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
 benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
 benchmark/scripts/              # Provider implementations
   givecare_provider.py          # GiveCare/Mira system provider
-benchmark/scenarios/            # tier0-3/ (29) + confidential/ (3)
+benchmark/scenarios/            # tier1-3/ (29) + confidential/ (3)
 benchmark/configs/rules/        # Jurisdiction rules (base, ca, ny, il, etc.)
 benchmark/tests/                # pytest suite
 papers/                         # LaTeX (givecare/, invisiblebench/)
@@ -125,7 +134,7 @@ Scenarios can include conditional branches where the user's next message depends
 
 ## Scorer Cache
 
-LRU cache for temperature=0 scorer LLM calls (belonging, safety, trauma):
+LRU cache for temperature=0 scorer LLM calls (belonging, safety, attunement, false_refusal):
 - **Default**: 256 entries, enabled automatically for temp=0 calls with `use_cache=True`
 - **Configure**: `INVISIBLEBENCH_SCORER_CACHE_SIZE=512` (set to 0 to disable)
 - **How it works**: SHA256 hash of normalized payload → cached response (deepcopy on read)

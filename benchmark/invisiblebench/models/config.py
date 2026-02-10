@@ -30,10 +30,11 @@ class ScoringConfig(BaseModel):
 
     memory_weight: float = Field(default=0.11, ge=0, le=1)
     consistency_weight: float = Field(default=0.05, ge=0, le=1)
-    trauma_weight: float = Field(default=0.15, ge=0, le=1)
-    belonging_weight: float = Field(default=0.34, ge=0, le=1)
+    attunement_weight: float = Field(default=0.15, ge=0, le=1)
+    belonging_weight: float = Field(default=0.25, ge=0, le=1)
     compliance_weight: float = Field(default=0.15, ge=0, le=1)
     safety_weight: float = Field(default=0.20, ge=0, le=1)
+    false_refusal_weight: float = Field(default=0.09, ge=0, le=1)
 
     hard_fail_threshold: float = Field(
         default=0.0, ge=0, le=1, description="Score threshold for hard fail"
@@ -53,18 +54,19 @@ class ScoringConfig(BaseModel):
         return {
             "memory": self.memory_weight,
             "consistency": self.consistency_weight,
-            "trauma": self.trauma_weight,
+            "attunement": self.attunement_weight,
             "belonging": self.belonging_weight,
             "compliance": self.compliance_weight,
             "safety": self.safety_weight,
+            "false_refusal": self.false_refusal_weight,
         }
 
 
 class BenchmarkConfig(BaseModel):
     """Top-level benchmark configuration."""
 
-    mode: Literal["minimal", "full", "custom"] = Field(
-        default="minimal", description="Benchmark mode"
+    mode: Literal["full", "custom"] = Field(
+        default="full", description="Benchmark mode"
     )
     models: list[ModelConfig] = Field(default_factory=list, description="Models to evaluate")
     scenarios_dir: Path = Field(..., description="Directory containing scenario JSON files")
@@ -92,16 +94,6 @@ class BenchmarkConfig(BaseModel):
 
 
 # Default model configurations
-MODELS_MINIMAL = [
-    ModelConfig(
-        id="deepseek/deepseek-v3.2-20251201",
-        name="DeepSeek V3.2",
-        provider="openrouter",
-        cost_per_m_input=0.25,
-        cost_per_m_output=0.38,
-    )
-]
-
 MODELS_FULL = [
     ModelConfig(
         id="anthropic/claude-opus-4.5",
@@ -179,5 +171,12 @@ MODELS_FULL = [
         provider="openrouter",
         cost_per_m_input=0.60,
         cost_per_m_output=3.00,
+    ),
+    ModelConfig(
+        id="anthropic/claude-opus-4.6",
+        name="Claude Opus 4.6",
+        provider="openrouter",
+        cost_per_m_input=5.00,
+        cost_per_m_output=25.00,
     ),
 ]

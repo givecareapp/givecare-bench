@@ -543,12 +543,18 @@ Examples:
 
     # Determine mode
     if args.minimal:
-        mode = "minimal"
+        import warnings
+
+        warnings.warn(
+            "--minimal is deprecated. Use 'uv run bench -m deepseek -y' instead.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+        mode = "full"  # Will be filtered to cheapest model by shared.MODELS_MINIMAL
     elif args.full:
         mode = "full"
     else:
-        # Default to minimal for safety
-        mode = "minimal"
+        mode = "full"
 
     # Set output directory
     if args.output:
