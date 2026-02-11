@@ -1991,6 +1991,13 @@ Examples:
   uv run bench leaderboard rebuild    Rebuild from canonical files
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
+  # Statistics & Reliability
+  uv run bench stats results/run_*/all_results.json       Score distributions + bootstrap CIs
+  uv run bench stats results/leaderboard_ready/ -o s.md   With markdown output
+  uv run bench reliability results/run_20260211/           Scorer inter-rater reliability
+  uv run bench annotate export results/run_20260211/       Export annotation kit
+  uv run bench annotate import results/annotations/scores.csv  Compute agreement
+
   # Utilities
   uv run bench report results.json    Regenerate HTML report
   uv run bench health                 Check leaderboard for issues
@@ -2063,6 +2070,59 @@ Examples:
         "results", nargs="?", default=None, help="Path to all_results.json (for 'add')"
     )
     lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+
+    # Stats subcommand
+    stats_parser = subparsers.add_parser(
+        "stats", help="Statistical analysis: distributions, bootstrap CIs, pairwise comparisons"
+    )
+    stats_parser.add_argument(
+        "results", type=str, help="Path to all_results.json or leaderboard_ready/ directory"
+    )
+    stats_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output markdown path"
+    )
+    stats_parser.add_argument(
+        "--bootstrap", type=int, default=10000, help="Number of bootstrap samples (default: 10000)"
+    )
+
+    # Reliability subcommand
+    rel_parser = subparsers.add_parser(
+        "reliability", help="Scorer inter-rater reliability (runs LLM scorers N times)"
+    )
+    rel_parser.add_argument(
+        "results", type=str, help="Path to results directory with transcripts"
+    )
+    rel_parser.add_argument(
+        "--runs", "-n", type=int, default=5, help="Number of scoring runs (default: 5)"
+    )
+    rel_parser.add_argument(
+        "--sample", type=int, default=10, help="Number of transcripts to sample (default: 10)"
+    )
+    rel_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output directory for raw data"
+    )
+
+    # Annotate subcommand
+    annotate_parser = subparsers.add_parser(
+        "annotate", help="Human annotation kit for human-LLM agreement"
+    )
+    annotate_parser.add_argument(
+        "action",
+        choices=["export", "import"],
+        help="export: create scoring forms, import: compute agreement",
+    )
+    annotate_parser.add_argument(
+        "path", type=str, help="Results path (export) or annotations CSV path (import)"
+    )
+    annotate_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output directory (export) or unused (import)"
+    )
+    annotate_parser.add_argument(
+        "--sample", type=int, default=20, help="Number of transcripts to sample (default: 20)"
+    )
+    annotate_parser.add_argument(
+        "--llm-scores", type=str, default=None, help="Path to _llm_scores.json (for import)"
+    )
 
     # Main run arguments (default command)
     parser.add_argument("--full", action="store_true", help="All 12 models × all scenarios")
@@ -2165,6 +2225,74 @@ Examples:
             results_path=args.results,
             verbose=args.verbose,
         )
+
+    if args.command == "stats":
+        from invisiblebench.stats.analysis import (
+            compute_stats,
+            format_stats_markdown,
+            format_stats_report,
+        )
+
+        stats = compute_stats(args.results, n_bootstrap=args.bootstrap)
+        if "error" in stats:
+            print(f"Error: {stats['error']}")
+            return 1
+        print(format_stats_report(stats))
+        if args.output:
+            Path(args.output).write_text(format_stats_markdown(stats))
+            print(f"\nMarkdown report written to {args.output}")
+        return 0
+
+    if args.command == "reliability":
+        from invisiblebench.stats.reliability import (
+            format_reliability_report,
+            run_reliability,
+        )
+
+        print(f"Running reliability analysis ({args.runs} runs x {args.sample} transcripts)...")
+        print("This will make multiple LLM API calls. Cache is disabled for this test.\n")
+        results = run_reliability(
+            args.results,
+            n_runs=args.runs,
+            sample_size=args.sample,
+            output_dir=args.output,
+        )
+        if "error" in results:
+            print(f"Error: {results['error']}")
+            return 1
+        print(format_reliability_report(results))
+        if args.output:
+            print(f"\nRaw data saved to {args.output}/reliability_raw.json")
+        return 0
+
+    if args.command == "annotate":
+        if args.action == "export":
+            from invisiblebench.stats.annotation import export_annotation_kit
+
+            out_dir = args.output or "results/annotations"
+            result = export_annotation_kit(
+                args.path, out_dir, sample_size=args.sample
+            )
+            if "error" in result:
+                print(f"Error: {result['error']}")
+                return 1
+            print(f"Exported {result['exported']} transcripts to {result['output_dir']}/")
+            print(f"  Forms: {len(result['files']['forms'])} markdown files")
+            print(f"  CSV template: {result['files']['csv_template']}")
+            print(f"  Instructions: {result['files']['instructions']}")
+            return 0
+        else:  # import
+            from invisiblebench.stats.annotation import (
+                format_agreement_report,
+                import_annotations,
+            )
+
+            result = import_annotations(args.path, llm_scores_path=args.llm_scores)
+            if "error" in result:
+                print(f"Error: {result['error']}")
+                return 1
+            print(format_agreement_report(result))
+            return 0
 
     # Parse category filter
     category_filter = None

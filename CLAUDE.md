@@ -42,6 +42,18 @@ uv run bench archive                   # Archive runs before today
 uv run bench archive --keep 5          # Keep only 5 most recent runs
 uv run bench archive --dry-run         # Preview what would be archived
 
+# Statistical Analysis
+uv run bench stats results/leaderboard_ready/          # Score distributions + CIs
+uv run bench stats results/run_*/all_results.json      # From a run
+uv run bench stats results/leaderboard_ready/ -o stats.md  # Save markdown
+
+# Scorer Reliability (inter-rater agreement)
+uv run bench reliability results/run_20260211/ --runs 5 --sample 10
+
+# Human Annotation Kit
+uv run bench annotate export results/run_20260211/     # Export scoring forms
+uv run bench annotate import annotations/scores.csv    # Import + compute agreement
+
 # Single scenario scoring
 python -m benchmark.invisiblebench.yaml_cli \
   --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json \
@@ -104,6 +116,7 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 ```
 benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
 benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
+benchmark/invisiblebench/stats/ # Statistical analysis (CIs, reliability, annotation)
 benchmark/scripts/              # Provider implementations
   givecare_provider.py          # GiveCare/Mira system provider
 benchmark/scenarios/            # MECE categories + confidential/
@@ -146,6 +159,14 @@ Scenarios can include conditional branches where the user's next message depends
 - **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
 - **Rerun required**: Branching changes transcript content for branched scenarios
+
+## Statistical Analysis
+
+Three tools for research rigor (no numpy dependency — stdlib only):
+
+- **`bench stats`**: Score distributions, bootstrap 95% CIs, hard-fail rates, pairwise model comparisons with significance testing. Works on `all_results.json` or `leaderboard_ready/` directory.
+- **`bench reliability`**: Scorer inter-rater reliability. Runs LLM scorers N times with cache disabled, computes Cohen's kappa per dimension. Measures whether the LLM-as-judge is consistent.
+- **`bench annotate`**: Human annotation kit. Exports transcript scoring forms + CSV template for human raters. Imports completed annotations and computes human-human and human-LLM agreement (kappa).
 
 ## Scorer Cache
 
