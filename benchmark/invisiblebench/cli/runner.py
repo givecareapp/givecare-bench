@@ -52,7 +52,6 @@ load_dotenv()
 # Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
 # conversation history growth, and scorer LLM calls
 TOKEN_ESTIMATES = {
-    0: {"input": 2200, "output": 600},  # 2 turns
     1: {"input": 5500, "output": 1400},  # 3-5 turns
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
@@ -2180,7 +2179,7 @@ Examples:
     parser.add_argument(
         "--confidential",
         action="store_true",
-        help="Include confidential scenarios (32 vs 29) - only for givecare provider",
+        help="Include confidential scenarios (38 vs 35) - only for givecare provider",
     )
     parser.add_argument(
         "--diagnose",

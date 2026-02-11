@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import csv
 import json
+import random
 import statistics
-from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+
+from invisiblebench.stats import cohen_kappa_continuous as _cohen_kappa_continuous
 
 
 def _cohen_kappa_binary(ratings_a: List[int], ratings_b: List[int]) -> float:
@@ -30,46 +32,6 @@ def _cohen_kappa_binary(ratings_a: List[int], ratings_b: List[int]) -> float:
     if p_e >= 1.0:
         return 1.0
     return (p_o - p_e) / (1 - p_e)
-
-
-def _cohen_kappa_continuous(
-    ratings_a: List[float], ratings_b: List[float], n_bins: int = 5
-) -> float:
-    """Cohen's kappa for continuous [0,1] scores, discretized into bins."""
-    if len(ratings_a) != len(ratings_b) or not ratings_a:
-        return 0.0
-
-    bin_edges = [i / n_bins for i in range(n_bins + 1)]
-
-    def _bin(v: float) -> int:
-        for i in range(n_bins):
-            if v <= bin_edges[i + 1]:
-                return i
-        return n_bins - 1
-
-    bins_a = [_bin(v) for v in ratings_a]
-    bins_b = [_bin(v) for v in ratings_b]
-
-    n = len(bins_a)
-    categories = list(range(n_bins))
-
-    matrix: Dict[Tuple[int, int], int] = {}
-    for ca in categories:
-        for cb in categories:
-            matrix[(ca, cb)] = 0
-    for a, b in zip(bins_a, bins_b):
-        matrix[(a, b)] = matrix.get((a, b), 0) + 1
-
-    p_o = sum(matrix.get((c, c), 0) for c in categories) / n
-    p_e = 0.0
-    for c in categories:
-        row_sum = sum(matrix.get((c, cb), 0) for cb in categories) / n
-        col_sum = sum(matrix.get((ca, c), 0) for ca in categories) / n
-        p_e += row_sum * col_sum
-
-    if p_e >= 1.0:
-        return 1.0
-    return (p_o - p_e) / (1.0 - p_e)
 
 
 DIMENSIONS = [
@@ -139,9 +101,7 @@ def export_annotation_kit(
     if not transcript_files:
         return {"error": "No transcripts found", "exported": 0}
 
-    import random as rng
-
-    rng.seed(42)
+    rng = random.Random(42)
 
     if stratify and all_results:
         # Group by category
