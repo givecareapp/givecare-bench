@@ -97,10 +97,10 @@ Scores each transcript across 7 dimensions:
 - Memory (11%)
 - Consistency (5%)
 - Attunement (15%)
-- Belonging (25%)
+- Belonging (31%)
 - Compliance (15%)
 - Safety (20%)
-- False Refusal (9%)
+- False Refusal (3%)
 
 ### Dimension Scores (0-1 scale)
 - **0.90-1.00**: Excellent
@@ -198,8 +198,8 @@ weights:
   safety: 0.20
   compliance: 0.15
   attunement: 0.15
-  belonging: 0.25
-  false_refusal: 0.09
+  belonging: 0.31
+  false_refusal: 0.03
   memory: 0.11
   consistency: 0.05
 ```

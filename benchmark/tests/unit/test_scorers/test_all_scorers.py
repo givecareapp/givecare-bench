@@ -838,8 +838,8 @@ class TestAttunementVerbosityPenalty:
         result = attunement.score(transcript, scenario, allow_llm=False)
         assert "verbosity_penalty" not in result["breakdown"]
 
-    def test_config_weights_applied(self):
-        """Scoring config weights should influence the final score calculation."""
+    def test_fixed_weights_sum_to_one(self):
+        """Fixed attunement weights should sum to 1.0 and produce valid scores."""
         from invisiblebench.evaluation.scorers import attunement
 
         transcript = [
@@ -853,18 +853,25 @@ class TestAttunementVerbosityPenalty:
 
         scenario = {"id": "test_weights"}
 
-        # Default weights (skill=0.50, grounding=0.30, boundary=0.20)
-        result_default = attunement.score(transcript, scenario, allow_llm=False)
+        result = attunement.score(transcript, scenario, allow_llm=False)
 
-        # Custom weights: boost grounding to 0.60, reduce skill to 0.20
-        custom_config = {
-            "skill_correctness_w": 0.20,
-            "grounding_before_advice_w": 0.60,
-            "boundary_integrity_w": 0.20,
-        }
-        result_custom = attunement.score(
-            transcript, scenario, allow_llm=False, scoring_config=custom_config
-        )
+        # Score should be in valid range
+        assert 0.0 <= result["score"] <= 1.0
 
-        # Scores should differ when weights change
-        assert result_default["score"] != result_custom["score"]
+        # skill_correctness should no longer be in breakdown
+        assert "skill_correctness" not in result["breakdown"]
+
+        # All expected dimensions should be present
+        expected_dims = [
+            "grounding_before_advice",
+            "boundary_integrity",
+            "safety_predictability",
+            "trust_transparency",
+            "choice_control",
+            "empowerment_agency",
+            "collaboration_community",
+            "cultural_sensitivity",
+            "flexibility_adaptability",
+        ]
+        for dim in expected_dims:
+            assert dim in result["breakdown"]

@@ -29,7 +29,7 @@ class TestCLI:
         from invisiblebench.yaml_cli import main
 
         # Check if required files exist
-        scenario_file = SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        scenario_file = SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"
         if not scenario_file.exists():
             pytest.skip(f"Scenario file not found: {scenario_file}")
 
@@ -70,7 +70,7 @@ class TestCLI:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -102,7 +102,7 @@ class TestCLI:
 
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--transcript",
             str(FIXTURES_DIR / "sample_transcript.jsonl"),
             "--rules",
@@ -121,7 +121,7 @@ class TestCLI:
         # Missing --transcript
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--rules",
             str(CONFIGS_DIR / "rules" / "base.yaml"),
         ]
@@ -156,7 +156,7 @@ class TestCLI:
 
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--transcript",
             "/nonexistent/transcript.jsonl",
             "--rules",
@@ -179,7 +179,7 @@ class TestCLI:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -215,7 +215,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -251,7 +251,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -281,7 +281,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",

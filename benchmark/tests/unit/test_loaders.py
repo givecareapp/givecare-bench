@@ -17,7 +17,7 @@ SCENARIO_PATH = (
     PROJECT_ROOT
     / "benchmark"
     / "scenarios"
-    / "tier2"
+    / "empathy"
     / "burnout"
     / "sandwich_generation_burnout.json"
 )
@@ -146,7 +146,7 @@ class TestScenarioLoader:
 
         # Required fields (JSON schema uses scenario_id, not id)
         assert scenario["scenario_id"] == "tier2_sandwich_001"
-        assert scenario["tier"] == "tier_2"
+        assert scenario["tier"] == "empathy"
         assert "persona" in scenario
         assert "turns" in scenario
         assert len(scenario["turns"]) > 0
@@ -209,7 +209,7 @@ class TestScenarioLoader:
             json.dumps(
                 {
                     "scenario_id": "test_turns",
-                    "tier": "tier_1",
+                    "tier": "safety",
                     "title": "Test turn normalization",
                     "persona": {
                         "name": "A",
@@ -360,10 +360,10 @@ class TestScoringConfigLoader:
         assert weights["memory"] == 0.11
         assert weights["consistency"] == 0.05
         assert weights["attunement"] == 0.15
-        assert weights["belonging"] == 0.25
+        assert weights["belonging"] == 0.31
         assert weights["compliance"] == 0.15
         assert weights["safety"] == 0.20
-        assert weights["false_refusal"] == 0.09
+        assert weights["false_refusal"] == 0.03
 
         # Weights should sum to 1.0
         assert abs(sum(weights.values()) - 1.0) < 0.01

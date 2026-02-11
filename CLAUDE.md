@@ -10,7 +10,7 @@ uv run bench --full -y                 # All 12 models (~$5-10)
 uv run bench -m deepseek -y            # Single model by name
 uv run bench -m gpt-5.2,claude -y      # Multiple models by name
 uv run bench -m 1-4 -y                 # Models 1-4 (backward compat)
-uv run bench -m 4 -t 3 -y             # Model 4, tier 3
+uv run bench -m 4 -c safety -y        # Model 4, safety category only
 uv run bench -m 1-4 -p 4 -y           # 4 parallel
 uv run bench --dry-run                 # Cost estimate + model catalog
 uv run bench -m deepseek -y --detailed # Per-scenario JSON/HTML
@@ -24,9 +24,9 @@ uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 # -m accepts names (partial, case-insensitive) or numbers
 
 # GiveCare Provider - tests Mira product (not raw LLM)
-uv run bench --provider givecare -y                    # Standard (29 scenarios)
-uv run bench --provider givecare -y --confidential     # Full (32 scenarios)
-uv run bench --provider givecare -t 1 -y               # Tier 1 only
+uv run bench --provider givecare -y                    # Standard (35 scenarios)
+uv run bench --provider givecare -y --confidential     # Full (38 scenarios)
+uv run bench --provider givecare -c safety -y          # Safety category only
 uv run bench --provider givecare -y --diagnose         # With diagnostic report
 
 # Diagnostic Reports (actionable fix suggestions)
@@ -44,7 +44,7 @@ uv run bench archive --dry-run         # Preview what would be archived
 
 # Single scenario scoring
 python -m benchmark.invisiblebench.yaml_cli \
-  --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
+  --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json \
   --transcript path/to/transcript.jsonl --rules benchmark/configs/rules/base.yaml --out report.html
 
 # Tests & Quality
@@ -52,12 +52,22 @@ pytest benchmark/tests/ -v
 mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 ```
 
+## Scenario Categories (MECE)
+
+| Category | Count | What it tests |
+|----------|-------|---------------|
+| **safety** | 12 | Crisis detection, boundary violations, gray zones, false refusals |
+| **empathy** | 10 | Burnout, belonging, grief, relational attunement |
+| **context** | 9 | Cultural awareness, regulatory compliance |
+| **continuity** | 4 | Longitudinal trust, memory, consistency |
+| **confidential** | 3 | Holdout set (not in standard runs) |
+
 ## Benchmark vs Product Eval
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Model Eval | `uv run bench --full -y` | Raw LLM capability | 29 |
-| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 29 (or 32 with --confidential) |
+| Model Eval | `uv run bench --full -y` | Raw LLM capability | 35 |
+| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 35 (or 38 with --confidential) |
 
 **Scores are NOT directly comparable** - model eval tests raw models with simple prompt, system eval tests full product stack (tools, memory, SMS constraints).
 
@@ -96,7 +106,12 @@ benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
 benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
 benchmark/scripts/              # Provider implementations
   givecare_provider.py          # GiveCare/Mira system provider
-benchmark/scenarios/            # tier1-3/ (29) + confidential/ (3)
+benchmark/scenarios/            # MECE categories + confidential/
+  safety/                       # 12 scenarios (crisis, boundaries, gray_zone, false_refusal)
+  empathy/                      # 10 scenarios (burnout, belonging, grief, relational)
+  context/                      # 9 scenarios (cultural, regulatory)
+  continuity/                   # 4 scenarios (longitudinal trust/memory)
+  confidential/                 # 3 holdout scenarios
 benchmark/configs/rules/        # Jurisdiction rules (base, ca, ny, il, etc.)
 benchmark/tests/                # pytest suite
 papers/                         # LaTeX (givecare/, invisiblebench/)
@@ -126,11 +141,11 @@ Output: `diagnostic_report.md` in results directory
 Scenarios can include conditional branches where the user's next message depends on the model's response. This is automatic — no CLI flags needed.
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
-- **5 branched scenarios**: medical_boundary_violation (T3), venting_vs_crisis (T2), crisis_recovery_test (T2), attachment_formation (T7), longitudinal_trust (T9)
+- **4 branched scenarios**: medical_boundary_violation, venting_vs_crisis, attachment_formation, longitudinal_trust
 - **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
 - **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
-- **Rerun required**: Branching changes transcript content for these 5 scenarios
+- **Rerun required**: Branching changes transcript content for branched scenarios
 
 ## Scorer Cache
 
