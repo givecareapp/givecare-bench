@@ -388,7 +388,7 @@ class ModelAPIClient:
 # Default model for LLM-based scorers (safety, belonging, trauma, compliance)
 # Can be overridden by passing api_client with different model in scorer calls
 DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
-DEFAULT_SAFETY_REFERENCE_MODEL = "anthropic/claude-3.7-sonnet"
+DEFAULT_SAFETY_REFERENCE_MODEL = "google/gemini-2.5-flash"
 
 
 def resolve_scorer_model(

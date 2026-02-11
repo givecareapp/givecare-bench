@@ -9,14 +9,14 @@ Usage:
     # Standard run (29 scenarios, matches leaderboard)
     python benchmark/scripts/givecare_provider.py --all --score -v
 
-    # Include confidential scenarios (32 total)
+    # Include confidential scenarios (35 total)
     python benchmark/scripts/givecare_provider.py --all --score --confidential
 
     # Single scenario
-    python benchmark/scripts/givecare_provider.py --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json
+    python benchmark/scripts/givecare_provider.py --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json
 
-    # Filter by tier
-    python benchmark/scripts/givecare_provider.py --all --tier 1 --score
+    # Filter by category
+    python benchmark/scripts/givecare_provider.py --all --category safety --score
 """
 
 import argparse
@@ -147,20 +147,19 @@ def load_scenario(scenario_path: str) -> Dict:
         return json.load(f)
 
 
-def get_tier_from_path(scenario_path: Path) -> int:
-    """Extract tier number from scenario path."""
+def get_category_from_path(scenario_path: Path) -> str:
+    """Extract category from scenario path."""
     path_str = str(scenario_path)
-    if "/tier0/" in path_str:
-        return 0
-    elif "/tier1/" in path_str:
-        return 1
-    elif "/tier2/" in path_str:
-        return 2
-    elif "/tier3/" in path_str:
-        return 3
-    elif "/confidential/" in path_str:
-        return -1  # Confidential scenarios
-    return -1
+    for cat in ["safety", "empathy", "context", "continuity"]:
+        if f"/{cat}/" in path_str:
+            return cat
+    if "/confidential/" in path_str:
+        return "confidential"
+    return "unknown"
+
+
+# Backward compatibility alias
+get_tier_from_path = get_category_from_path
 
 
 def get_scenario_title(scenario: Dict, scenario_path: Path) -> str:
@@ -267,27 +266,26 @@ def run_scenario(
 
 def get_scenarios(
     scenarios_dir: Path,
-    tier_filter: Optional[List[int]] = None,
+    category_filter: Optional[List[str]] = None,
     include_confidential: bool = False,
+    tier_filter: Optional[List[int]] = None,  # backward compat, ignored
 ) -> List[Path]:
-    """Get all scenario files, optionally filtered by tier.
+    """Get all scenario files, optionally filtered by category.
 
-    By default, excludes confidential scenarios to match leaderboard (29 scenarios).
-    Use include_confidential=True for full set (32 scenarios).
+    By default, excludes confidential scenarios to match leaderboard (32 scenarios).
+    Use include_confidential=True for full set (35 scenarios).
     """
     scenarios = []
 
-    for tier_dir in ["tier0", "tier1", "tier2", "tier3"]:
-        tier_num = int(tier_dir[-1])
-        if tier_filter and tier_num not in tier_filter:
+    for cat_dir in ["safety", "empathy", "context", "continuity"]:
+        if category_filter and cat_dir not in category_filter:
             continue
 
-        tier_path = scenarios_dir / tier_dir
-        if not tier_path.exists():
+        cat_path = scenarios_dir / cat_dir
+        if not cat_path.exists():
             continue
 
-        # Handle nested directories (tier1/crisis/, etc.)
-        for item in tier_path.rglob("*.json"):
+        for item in cat_path.rglob("*.json"):
             scenarios.append(item)
 
     # Include confidential scenarios only if explicitly requested
@@ -307,7 +305,7 @@ def format_result(
 ) -> Dict:
     """Format a single result to match InvisibleBench standard format."""
     scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-    tier = get_tier_from_path(scenario_path)
+    category = get_category_from_path(scenario_path)
     title = get_scenario_title(scenario_data, scenario_path)
 
     overall_score = score_result.get("overall_score", 0.0)
@@ -347,7 +345,7 @@ def format_result(
         "provider": PROVIDER_NAME,
         "scenario": title,
         "scenario_id": scenario_id,
-        "tier": tier,
+        "category": category,
         "overall_score": overall_score,
         "hard_fail": hard_fail,
         "hard_fail_reasons": hard_fail_reasons,
@@ -370,17 +368,17 @@ Examples:
   # Include confidential scenarios (32 total)
   python givecare_provider.py --all --score --confidential
 
-  # Single tier
-  python givecare_provider.py --all --tier 1 --score
+  # Single category
+  python givecare_provider.py --all --category safety --score
         """,
     )
     parser.add_argument("--scenario", "-s", help="Single scenario JSON file")
     parser.add_argument("--all", "-a", action="store_true", help="Run all scenarios")
     parser.add_argument(
-        "--tier", "-t", type=int, action="append", help="Filter by tier (can repeat)"
+        "--category", "-c", type=str, action="append", help="Filter by category (can repeat)"
     )
     parser.add_argument(
-        "--confidential", action="store_true", help="Include confidential scenarios (32 vs 29)"
+        "--confidential", action="store_true", help="Include confidential scenarios (35 vs 32)"
     )
     parser.add_argument("--deployment", "-d", default=DEFAULT_DEPLOYMENT, choices=["dev", "prod"])
     parser.add_argument("--output", "-o", default="results/givecare", help="Output directory")
@@ -409,7 +407,7 @@ Examples:
     else:
         scenario_paths = get_scenarios(
             scenarios_dir,
-            args.tier,
+            category_filter=args.category,
             include_confidential=args.confidential,
         )
 
@@ -484,7 +482,7 @@ Examples:
                         "provider": PROVIDER_NAME,
                         "scenario": get_scenario_title(scenario_data, scenario_path),
                         "scenario_id": scenario_id,
-                        "tier": get_tier_from_path(scenario_path),
+                        "category": get_category_from_path(scenario_path),
                         "overall_score": 0.0,
                         "hard_fail": True,
                         "hard_fail_reasons": [str(e)],

@@ -6,25 +6,27 @@ Research benchmark project. Say "done" when finished (no verbose summaries).
 
 ```bash
 # Benchmark (primary: uv run bench) - tests raw LLMs
-uv run bench --minimal -y              # 1 model (~$0.05)
-uv run bench --full -y                 # 11 models (~$5-10)
-uv run bench --full -m 1-4 -y          # Models 1-4 only
-uv run bench --full -m 4 -t 3 -y       # Model 4, tier 3
-uv run bench --full -m 1-4 -p 4 -y     # 4 parallel
-uv run bench --dry-run                 # Cost estimate
-uv run bench --minimal -y --detailed   # Per-scenario JSON/HTML
+uv run bench --full -y                 # All 12 models (~$5-10)
+uv run bench -m deepseek -y            # Single model by name
+uv run bench -m gpt-5.2,claude -y      # Multiple models by name
+uv run bench -m 1-4 -y                 # Models 1-4 (backward compat)
+uv run bench -m 4 -c safety -y        # Model 4, safety category only
+uv run bench -m 1-4 -p 4 -y           # 4 parallel
+uv run bench --dry-run                 # Cost estimate + model catalog
+uv run bench -m deepseek -y --detailed # Per-scenario JSON/HTML
 
 # Rerun specific model (use after errors)
-uv run bench --full -m 2 -y --update-leaderboard   # Rerun GPT-5.2
+uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 
 # Models: 1=Opus4.5 2=GPT-5.2 3=Gemini3Pro 4=Sonnet4.5 5=Grok4
 #         6=GPT-5Mini 7=DeepSeekV3.2 8=Gemini2.5Flash 9=MiniMaxM2.1 10=Qwen3-235B
-#         11=KimiK2.5
+#         11=KimiK2.5 12=Opus4.6
+# -m accepts names (partial, case-insensitive) or numbers
 
 # GiveCare Provider - tests Mira product (not raw LLM)
-uv run bench --provider givecare -y                    # Standard (29 scenarios)
-uv run bench --provider givecare -y --confidential     # Full (32 scenarios)
-uv run bench --provider givecare -t 1 -y               # Tier 1 only
+uv run bench --provider givecare -y                    # Standard (35 scenarios)
+uv run bench --provider givecare -y --confidential     # Full (38 scenarios)
+uv run bench --provider givecare -c safety -y          # Safety category only
 uv run bench --provider givecare -y --diagnose         # With diagnostic report
 
 # Diagnostic Reports (actionable fix suggestions)
@@ -40,9 +42,21 @@ uv run bench archive                   # Archive runs before today
 uv run bench archive --keep 5          # Keep only 5 most recent runs
 uv run bench archive --dry-run         # Preview what would be archived
 
+# Statistical Analysis
+uv run bench stats results/leaderboard_ready/          # Score distributions + CIs
+uv run bench stats results/run_*/all_results.json      # From a run
+uv run bench stats results/leaderboard_ready/ -o stats.md  # Save markdown
+
+# Scorer Reliability (inter-rater agreement)
+uv run bench reliability results/run_20260211/ --runs 5 --sample 10
+
+# Human Annotation Kit
+uv run bench annotate export results/run_20260211/     # Export scoring forms
+uv run bench annotate import annotations/scores.csv    # Import + compute agreement
+
 # Single scenario scoring
 python -m benchmark.invisiblebench.yaml_cli \
-  --scenario benchmark/scenarios/tier1/crisis/crisis_detection.json \
+  --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json \
   --transcript path/to/transcript.jsonl --rules benchmark/configs/rules/base.yaml --out report.html
 
 # Tests & Quality
@@ -50,28 +64,45 @@ pytest benchmark/tests/ -v
 mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 ```
 
+## Scenario Categories (MECE)
+
+| Category | Count | What it tests |
+|----------|-------|---------------|
+| **safety** | 12 | Crisis detection, boundary violations, gray zones, false refusals |
+| **empathy** | 10 | Burnout, belonging, grief, relational attunement |
+| **context** | 9 | Cultural awareness, regulatory compliance |
+| **continuity** | 4 | Longitudinal trust, memory, consistency |
+| **confidential** | 3 | Holdout set (not in standard runs) |
+
 ## Benchmark vs Product Eval
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Model Eval | `uv run bench --full -y` | Raw LLM capability | 29 |
-| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 29 (or 32 with --confidential) |
+| Model Eval | `uv run bench --full -y` | Raw LLM capability | 35 |
+| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 35 (or 38 with --confidential) |
 
 **Scores are NOT directly comparable** - model eval tests raw models with simple prompt, system eval tests full product stack (tools, memory, SMS constraints).
 
-## Leaderboard Update Flow
+## Leaderboard Management
 
-1. Run benchmark with auto-update: `uv run bench --full -y --update-leaderboard`
-   - Auto-runs health check after updating leaderboard
-2. Or manually:
-   ```bash
-   python benchmark/scripts/validation/prepare_for_leaderboard.py \
-     --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
-   python benchmark/scripts/leaderboard/generate_leaderboard.py \
-     --input /tmp/lb_ready/ --output benchmark/website/data/
-   ```
-3. Commit & push → Website auto-fetches from GitHub raw URL
-4. Data: `benchmark/website/data/leaderboard.json`
+```bash
+# Add model results to leaderboard (merges, doesn't overwrite)
+uv run bench leaderboard add results/run_YYYYMMDD_*/all_results.json
+
+# Rebuild from canonical files (results/leaderboard_ready/)
+uv run bench leaderboard rebuild
+
+# Health check
+uv run bench leaderboard status       # or: uv run bench health
+
+# Auto-update after benchmark run
+uv run bench -m opus-4.6 -y --update-leaderboard
+```
+
+- Canonical per-model files: `results/leaderboard_ready/`
+- Generated data: `benchmark/website/data/leaderboard.json`
+- Commit & push → Website auto-fetches from GitHub raw URL
+- Health check uses most-common scenario count as baseline (mixed counts OK)
 
 ## Results Management
 
@@ -85,9 +116,15 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 ```
 benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
 benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
+benchmark/invisiblebench/stats/ # Statistical analysis (CIs, reliability, annotation)
 benchmark/scripts/              # Provider implementations
   givecare_provider.py          # GiveCare/Mira system provider
-benchmark/scenarios/            # tier0-3/ (29) + confidential/ (3)
+benchmark/scenarios/            # MECE categories + confidential/
+  safety/                       # 12 scenarios (crisis, boundaries, gray_zone, false_refusal)
+  empathy/                      # 10 scenarios (burnout, belonging, grief, relational)
+  context/                      # 9 scenarios (cultural, regulatory)
+  continuity/                   # 4 scenarios (longitudinal trust/memory)
+  confidential/                 # 3 holdout scenarios
 benchmark/configs/rules/        # Jurisdiction rules (base, ca, ny, il, etc.)
 benchmark/tests/                # pytest suite
 papers/                         # LaTeX (givecare/, invisiblebench/)
@@ -117,15 +154,23 @@ Output: `diagnostic_report.md` in results directory
 Scenarios can include conditional branches where the user's next message depends on the model's response. This is automatic — no CLI flags needed.
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
-- **5 branched scenarios**: medical_boundary_violation (T3), venting_vs_crisis (T2), crisis_recovery_test (T2), attachment_formation (T7), longitudinal_trust (T9)
+- **4 branched scenarios**: medical_boundary_violation, venting_vs_crisis, attachment_formation, longitudinal_trust
 - **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
 - **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
-- **Rerun required**: Branching changes transcript content for these 5 scenarios
+- **Rerun required**: Branching changes transcript content for branched scenarios
+
+## Statistical Analysis
+
+Three tools for research rigor (no numpy dependency — stdlib only):
+
+- **`bench stats`**: Score distributions, bootstrap 95% CIs, hard-fail rates, pairwise model comparisons with significance testing. Works on `all_results.json` or `leaderboard_ready/` directory.
+- **`bench reliability`**: Scorer inter-rater reliability. Runs LLM scorers N times with cache disabled, computes Cohen's kappa per dimension. Measures whether the LLM-as-judge is consistent.
+- **`bench annotate`**: Human annotation kit. Exports transcript scoring forms + CSV template for human raters. Imports completed annotations and computes human-human and human-LLM agreement (kappa).
 
 ## Scorer Cache
 
-LRU cache for temperature=0 scorer LLM calls (belonging, safety, trauma):
+LRU cache for temperature=0 scorer LLM calls (belonging, safety, attunement, false_refusal):
 - **Default**: 256 entries, enabled automatically for temp=0 calls with `use_cache=True`
 - **Configure**: `INVISIBLEBENCH_SCORER_CACHE_SIZE=512` (set to 0 to disable)
 - **How it works**: SHA256 hash of normalized payload → cached response (deepcopy on read)

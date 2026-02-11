@@ -74,10 +74,11 @@ When crisis does occur, it has caregiver-specific dimensions:
 
 | Category | v1.0 | v2.0 | Rationale |
 |----------|------|------|-----------|
-| **Crisis** | 14 | 5 | Essential patterns only; let CARE own comprehensive crisis |
-| **Gray Zone** | 4 | 8 | Core differentiator - venting, frustration, fatigue, humor |
-| **Boundaries** | 2 | 5 | AI-specific failure modes from research |
-| **Cultural** | 1 | 1 | Unchanged (covered in tier2) |
+| **Safety** | 20 | 12 | Crisis (4), gray zone (2), boundaries (4), false refusal (2) |
+| **Empathy** | 4 | 10 | Burnout (3), belonging (1), grief (3), relational (3) |
+| **Context** | 2 | 9 | Cultural (5), regulatory (4) — NV AB 406, IL WOPR, UT HB 452, CA SB 243 |
+| **Continuity** | 3 | 4 | Longitudinal trust, memory, crisis return, cultural rituals |
+| **Total** | 29 | 35 | MECE capability categories replace numbered tiers |
 
 ### Archived Scenarios
 
@@ -220,43 +221,52 @@ Scores from v2.0 are **not directly comparable** to v1.0:
 
 | Aspect | v1.0 | v2.0 |
 |--------|------|------|
-| **Focus** | Crisis detection | Gray zone + boundaries |
+| **Focus** | Crisis detection | MECE capability categories |
 | **Differentiator** | Safety gates | Caregiving-specific nuance |
-| **Crisis scenarios** | 14 | 5 (essential) |
-| **Gray zone scenarios** | 4 | 8 |
-| **Boundary scenarios** | 2 | 5 |
-| **Scoring modules** | 5 | 6 (+ authenticity, consistency, degradation) |
+| **Categories** | Numbered tiers (1-3) | MECE (safety, empathy, context, continuity) |
+| **Scenarios** | 29 | 35 (+3 regulatory, +3 relational) |
+| **Regulatory** | 1 (minor disclosure) | 4 (NV AB 406, IL WOPR, UT HB 452, CA SB 243) |
+| **Scoring modules** | 5 | 7 (+ authenticity, consistency, false_refusal) |
 | **External framework alignment** | Regulatory only | CARE, C-SSRS, MHealth-EVAL |
 
 **Core insight**: Crisis detection is table stakes. What makes a caregiving AI good is navigating the gray zones where most conversations actually live.
 
 ---
 
-## v2.1 Direction: Conditional Branching
+## Conditional Branching (Implemented in v2.0)
 
-### The Limitation of Fixed Turns
+4 scenarios include **branch points** where the user's next message depends on the model's response:
 
-v2.0 uses scripted user messages: every model sees the exact same conversation regardless of how it responds. This ensures reproducibility but misses a critical class of failures — **escalation after initial error**.
+| Scenario | Category | What It Tests |
+|----------|----------|---------------|
+| Medical boundary | safety | Does a model that provides dosing info get pushed further into unsafe territory? |
+| Venting vs crisis | safety | Does a model that over-escalates face user pushback and need to repair trust? |
+| Attachment formation | continuity | Does a model that over-bonds face deepening dependency? |
+| Longitudinal trust | continuity | Does a model without memory face a user calling out the gap? |
 
-When a model provides dosing advice in a medical boundary scenario, the scripted user says "You're right, I'll call 911" — as if the model had refused. The model never faces the consequence of its failure.
-
-### Conditional Branching (Implemented)
-
-5 key scenarios now include **branch points** where the user's next message depends on the model's response:
-
-| Scenario | What It Tests |
-|----------|---------------|
-| Medical boundary | Does a model that provides dosing info get pushed further into unsafe territory? |
-| Venting vs crisis | Does a model that over-escalates face user pushback and need to repair trust? |
-| Crisis recovery | Does a model that missed a subtle cue face an escalating follow-up? |
-| Attachment formation | Does a model that over-bonds face deepening dependency? |
-| Longitudinal trust | Does a model without memory face a user calling out the gap? |
-
-### Why Not Full Agent Simulation?
-
-Research ("Lost in Simulation", 2025) showed that using LLMs to simulate users introduces 9+ point variance across user models. Conditional branching is the middle path: adaptive at critical moments, deterministic everywhere else.
+**Why not full agent simulation?** Research ("Lost in Simulation", 2025) showed that using LLMs to simulate users introduces 9+ point variance across user models. Conditional branching is the middle path: adaptive at critical moments, deterministic everywhere else.
 
 **Branching conditions are keyword/regex-based** — no LLM calls, fully deterministic, zero additional cost.
+
+## MECE Category Rename (v2.0)
+
+Scenarios reorganized from numbered tiers (`tier1/`, `tier2/`, `tier3/`) into capability-based MECE categories:
+
+| Old | New | Rationale |
+|-----|-----|-----------|
+| `tier1/crisis/` | `safety/crisis/` | Crisis is a safety concern |
+| `tier1/gray_zone/` | `safety/gray_zone/` + `empathy/burnout/` | Gray zones split by what they test |
+| `tier1/boundaries/` | `safety/boundaries/` | Boundaries are safety-critical |
+| `tier1/false_refusal/` | `safety/false_refusal/` + `empathy/grief/` | False refusal on caregiving topics vs grief support |
+| `tier2/burnout/` | `empathy/burnout/` | Burnout recognition is empathy |
+| `tier2/belonging/` | `empathy/belonging/` | Identity is empathy |
+| `tier2/grief/` | `empathy/grief/` | Grief support is empathy |
+| `tier2/cultural/` | `context/cultural/` | Cultural sensitivity is context |
+| `tier2/regulatory/` | `context/regulatory/` | Regulatory compliance is context |
+| `tier2/longitudinal/` | `continuity/` | Longitudinal = continuity |
+| `tier3/` | `continuity/` | Multi-session = continuity |
+
+CLI flag changed: `--tier/-t` → `--category/-c`
 
 ---
 

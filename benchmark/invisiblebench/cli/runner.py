@@ -3,9 +3,10 @@
 InvisibleBench CLI Runner with rich terminal output.
 
 Usage:
-    bench --minimal -y        # Quick validation
-    bench --full -y           # Full benchmark
-    bench --dry-run           # Cost estimate only
+    bench --full -y              # All models
+    bench -m deepseek -y         # By name
+    bench -m 1-4 -y              # By number
+    bench --dry-run              # Cost estimate only
 """
 from __future__ import annotations
 
@@ -24,7 +25,6 @@ from dotenv import load_dotenv
 from invisiblebench.api.client import InsufficientCreditsError
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
-from invisiblebench.models.config import MODELS_MINIMAL as CONFIG_MODELS_MINIMAL
 
 # Rich imports for pretty terminal output
 try:
@@ -38,6 +38,7 @@ try:
         SpinnerColumn,
         TextColumn,
     )
+    from rich.table import Table
     from rich.text import Text
 
     RICH_AVAILABLE = True
@@ -47,11 +48,10 @@ except ImportError:
 
 load_dotenv()
 
-# Token estimates per tier for cost calculation
+# Token estimates per category for cost calculation
 # Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
 # conversation history growth, and scorer LLM calls
 TOKEN_ESTIMATES = {
-    0: {"input": 2200, "output": 600},  # 2 turns
     1: {"input": 5500, "output": 1400},  # 3-5 turns
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
@@ -68,12 +68,11 @@ SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your
 Remember: You're here to support, not diagnose or treat."""
 
 # Model configurations
-MODELS_MINIMAL = [model.model_dump() for model in CONFIG_MODELS_MINIMAL]
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
 def run_givecare_eval(
-    tier_filter: Optional[List[int]] = None,
+    category_filter: Optional[List[str]] = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
@@ -116,7 +115,7 @@ def run_givecare_eval(
     # Get scenarios
     scenario_paths = get_givecare_scenarios(
         scenarios_dir,
-        tier_filter=tier_filter,
+        category_filter=category_filter,
         include_confidential=include_confidential,
     )
 
@@ -189,7 +188,7 @@ def run_givecare_eval(
             print(f"  {formatted['scenario']}: {status} ({int(score * 100)}%)")
         except Exception as e:
             print(f"  {scenario_path.stem}: ERROR ({e})")
-            from givecare_provider import get_scenario_title, get_tier_from_path
+            from givecare_provider import get_category_from_path, get_scenario_title
 
             results.append(
                 {
@@ -198,7 +197,7 @@ def run_givecare_eval(
                     "provider": PROVIDER_NAME,
                     "scenario": get_scenario_title(scenario_data, scenario_path),
                     "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
-                    "tier": get_tier_from_path(scenario_path),
+                    "category": get_category_from_path(scenario_path),
                     "overall_score": 0.0,
                     "hard_fail": True,
                     "hard_fail_reasons": [str(e)],
@@ -282,82 +281,97 @@ def get_project_root() -> Path:
     return Path.cwd()
 
 
-def get_scenarios(minimal: bool = False) -> List[Dict]:
+CATEGORIES = ["safety", "empathy", "context", "continuity"]
+
+# Map categories to token estimate keys (for cost calculation)
+CATEGORY_TOKEN_MAP = {
+    "safety": 1,      # 3-5 turns
+    "empathy": 2,     # 8-12 turns
+    "context": 1,     # 3-5 turns
+    "continuity": 3,  # 20+ turns, multi-session
+}
+
+
+def get_scenarios() -> List[Dict]:
     """Get scenario configurations."""
     root = get_project_root()
     scenarios_dir = root / "benchmark" / "scenarios"
 
     scenarios = []
 
-    # Tier 0 - Smoke tests
-    tier0_dir = scenarios_dir / "tier0"
-    if tier0_dir.exists():
-        for f in sorted(tier0_dir.glob("*.json")):
-            scenarios.append({"tier": 0, "path": str(f), "name": f.stem.replace("_", " ").title()})
+    for category in CATEGORIES:
+        cat_dir = scenarios_dir / category
+        if not cat_dir.exists():
+            continue
 
-    # Tier 1
-    tier1_dir = scenarios_dir / "tier1"
-    if tier1_dir.exists():
-        for subdir in sorted(tier1_dir.iterdir()):
-            if subdir.is_dir():
-                for f in sorted(subdir.glob("*.json")):
-                    scenarios.append(
-                        {"tier": 1, "path": str(f), "name": f.stem.replace("_", " ").title()}
-                    )
-
-    # Tier 2
-    tier2_dir = scenarios_dir / "tier2"
-    if tier2_dir.exists():
-        for subdir in sorted(tier2_dir.iterdir()):
-            if subdir.is_dir():
-                for f in sorted(subdir.glob("*.json")):
-                    scenarios.append(
-                        {"tier": 2, "path": str(f), "name": f.stem.replace("_", " ").title()}
-                    )
-
-    # Tier 3
-    tier3_dir = scenarios_dir / "tier3"
-    if tier3_dir.exists():
-        for f in sorted(tier3_dir.glob("*.json")):
-            scenarios.append({"tier": 3, "path": str(f), "name": f.stem.replace("_", " ").title()})
+        # Collect all JSON files (may be in subdirs or flat)
+        for f in sorted(cat_dir.rglob("*.json")):
+            scenarios.append(
+                {"category": category, "path": str(f), "name": f.stem.replace("_", " ").title()}
+            )
 
     return scenarios
 
 
-def estimate_cost(tier: int, model: Dict) -> float:
+def estimate_cost(category: str, model: Dict) -> float:
     """Estimate cost for a single evaluation."""
-    tokens = TOKEN_ESTIMATES.get(tier, TOKEN_ESTIMATES[1])
+    token_key = CATEGORY_TOKEN_MAP.get(category, 1)
+    tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
     return (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
         tokens["output"] / 1_000_000
     ) * model["cost_per_m_output"]
 
 
-def parse_model_range(range_str: str, total_models: int) -> List[int]:
-    """Parse model range string into list of 0-indexed model indices.
+def resolve_models(spec: str, all_models: List[Dict]) -> List[int]:
+    """Resolve model spec string into list of 0-indexed model indices.
 
-    Formats:
-        '4'     -> [3]           (4th model only, 1-indexed input)
-        '1-4'   -> [0,1,2,3]     (models 1 through 4)
-        '4-'    -> [3,4,5,...]   (4th onwards)
-        '1,3,5' -> [0,2,4]       (specific models)
+    Accepts numbers, names, or mixed:
+        '4'           -> [3]           (4th model, 1-indexed)
+        '1-4'         -> [0,1,2,3]     (models 1 through 4)
+        '4-'          -> [3,4,5,...]   (4th onwards)
+        '1,3,5'       -> [0,2,4]       (specific models)
+        'deepseek'    -> [6]           (case-insensitive partial match)
+        'claude'      -> [0,3,11]      (matches all Claude models)
+        '1,deepseek'  -> [0,6]         (mixed numbers and names)
+
+    Raises:
+        ValueError: If a name token matches no models.
     """
-    indices = set()
+    total = len(all_models)
+    indices: set[int] = set()
 
-    for part in range_str.split(","):
+    for part in spec.split(","):
         part = part.strip()
-        if "-" in part:
-            # Range: '1-4' or '4-'
-            left, right = part.split("-", 1)
-            start = int(left) if left else 1
-            end = int(right) if right else total_models
-            for i in range(start, end + 1):
-                if 1 <= i <= total_models:
-                    indices.add(i - 1)  # Convert to 0-indexed
+        if not part:
+            continue
+
+        # Try numeric range first (e.g. '1-4', '4-', '4')
+        if part[0].isdigit() or (part.startswith("-") and len(part) > 1 and part[1:].isdigit()):
+            if "-" in part:
+                left, right = part.split("-", 1)
+                start = int(left) if left else 1
+                end = int(right) if right else total
+                for i in range(start, end + 1):
+                    if 1 <= i <= total:
+                        indices.add(i - 1)
+            else:
+                i = int(part)
+                if 1 <= i <= total:
+                    indices.add(i - 1)
         else:
-            # Single number
-            i = int(part)
-            if 1 <= i <= total_models:
-                indices.add(i - 1)
+            # Name-based lookup (case-insensitive partial match)
+            needle = part.lower()
+            matched = [
+                idx
+                for idx, m in enumerate(all_models)
+                if needle in m["name"].lower() or needle in m["id"].lower()
+            ]
+            if not matched:
+                names = [f"  {i+1}. {m['name']}" for i, m in enumerate(all_models)]
+                raise ValueError(
+                    f"No model matching '{part}'. Available models:\n" + "\n".join(names)
+                )
+            indices.update(matched)
 
     return sorted(indices)
 
@@ -374,20 +388,20 @@ class ScenarioDisplay:
         self._lock = threading.Lock()
         self._spin_idx = 0
 
-        # Group by tier
-        self.tiers = sorted({s["tier"] for s in scenarios})
-        self.by_tier = {t: [s for s in scenarios if s["tier"] == t] for t in self.tiers}
+        # Group by category
+        self.categories = sorted({s["category"] for s in scenarios})
+        self.by_category = {c: [s for s in scenarios if s["category"] == c] for c in self.categories}
 
         # State tracking: scenario path -> {"status": pending|running|pass|fail, "score": int|None}
         self.states: Dict[str, Dict] = {}
         for s in scenarios:
             self.states[s["path"]] = {"status": "pending", "score": None}
 
-        # Tier summaries
-        self.tier_scores: Dict[int, List[float]] = {t: [] for t in self.tiers}
-        self.tier_done: Dict[int, bool] = dict.fromkeys(self.tiers, False)
-        self.tier_start_time: Dict[int, float] = {}
-        self.tier_elapsed: Dict[int, float] = dict.fromkeys(self.tiers, 0.0)
+        # Category summaries
+        self.cat_scores: Dict[str, List[float]] = {c: [] for c in self.categories}
+        self.cat_done: Dict[str, bool] = dict.fromkeys(self.categories, False)
+        self.cat_start_time: Dict[str, float] = {}
+        self.cat_elapsed: Dict[str, float] = dict.fromkeys(self.categories, 0.0)
 
         # Counters
         self.completed = 0
@@ -397,27 +411,26 @@ class ScenarioDisplay:
         self.current_scenario_start: float = 0.0
         self.current_scenario_path: str = ""
 
-    def set_running(self, path: str, tier: int):
+    def set_running(self, path: str, category: str):
         with self._lock:
             self.states[path]["status"] = "running"
             self.current_scenario_start = time.time()
             self.current_scenario_path = path
-            # Start tier timer if not started
-            if tier not in self.tier_start_time:
-                self.tier_start_time[tier] = time.time()
+            if category not in self.cat_start_time:
+                self.cat_start_time[category] = time.time()
 
-    def set_complete(self, path: str, score: float, passed: bool, tier: int):
+    def set_complete(self, path: str, score: float, passed: bool, category: str):
         with self._lock:
             self.states[path]["status"] = "pass" if passed else "fail"
             self.states[path]["score"] = int(score * 100)
-            self.tier_scores[tier].append(score)
+            self.cat_scores[category].append(score)
             self.completed += 1
 
-    def set_tier_done(self, tier: int):
+    def set_category_done(self, category: str):
         with self._lock:
-            self.tier_done[tier] = True
-            if tier in self.tier_start_time:
-                self.tier_elapsed[tier] = time.time() - self.tier_start_time[tier]
+            self.cat_done[category] = True
+            if category in self.cat_start_time:
+                self.cat_elapsed[category] = time.time() - self.cat_start_time[category]
 
     def _fmt_time(self, seconds: float) -> str:
         """Format seconds as M:SS."""
@@ -437,7 +450,7 @@ class ScenarioDisplay:
         with self._lock:
             completed = self.completed
             all_scores = []
-            for scores in self.tier_scores.values():
+            for scores in self.cat_scores.values():
                 all_scores.extend(scores)
             avg_score = int(sum(all_scores) / len(all_scores) * 100) if all_scores else 0
 
@@ -446,17 +459,17 @@ class ScenarioDisplay:
             if self.current_scenario_start > 0:
                 scenario_elapsed = now - self.current_scenario_start
 
-            # Find current tier
-            current_tier = None
-            for t in self.tiers:
-                if t in self.tier_start_time and not self.tier_done[t]:
-                    current_tier = t
+            # Find current category
+            current_cat = None
+            for c in self.categories:
+                if c in self.cat_start_time and not self.cat_done[c]:
+                    current_cat = c
                     break
 
-            # Tier time (current or last active tier)
-            tier_elapsed = 0.0
-            if current_tier is not None and current_tier in self.tier_start_time:
-                tier_elapsed = now - self.tier_start_time[current_tier]
+            # Category time
+            cat_elapsed = 0.0
+            if current_cat is not None and current_cat in self.cat_start_time:
+                cat_elapsed = now - self.cat_start_time[current_cat]
 
             # Header line: spinner, model, progress, score
             lines.append(f"{spinner} ", style="cyan")
@@ -466,54 +479,55 @@ class ScenarioDisplay:
                 lines.append(f"  {avg_score}%", style="bold")
             lines.append("\n")
 
-            # Time line: scenario / tier / total
+            # Time line: scenario / category / total
             lines.append("  ", style="none")
             if scenario_elapsed > 0:
                 lines.append(f"scenario:{self._fmt_time(scenario_elapsed)}", style="dim")
                 lines.append("  ", style="none")
-            if tier_elapsed > 0 and current_tier is not None:
-                lines.append(f"T{current_tier}:{self._fmt_time(tier_elapsed)}", style="dim")
+            if cat_elapsed > 0 and current_cat is not None:
+                lines.append(f"{current_cat}:{self._fmt_time(cat_elapsed)}", style="dim")
                 lines.append("  ", style="none")
             lines.append(f"total:{self._fmt_time(total_elapsed)}\n", style="dim")
 
-            # Tier status line
-            for tier in self.tiers:
-                tier_done = self.tier_done[tier]
-                tier_scores = self.tier_scores[tier]
+            # Category status line
+            for cat in self.categories:
+                done = self.cat_done[cat]
+                scores = self.cat_scores[cat]
                 has_running = any(
-                    self.states[s["path"]]["status"] == "running" for s in self.by_tier[tier]
+                    self.states[s["path"]]["status"] == "running" for s in self.by_category[cat]
                 )
+                label = cat[:3].upper()
 
-                if tier_done and tier_scores:
-                    avg = int(sum(tier_scores) / len(tier_scores) * 100)
-                    lines.append(f"T{tier}:", style="dim")
+                if done and scores:
+                    avg = int(sum(scores) / len(scores) * 100)
+                    lines.append(f"{label}:", style="dim")
                     lines.append(f"{avg}%", style="green")
                     lines.append("  ", style="none")
                 elif has_running:
-                    lines.append(f"T{tier}:", style="dim")
+                    lines.append(f"{label}:", style="dim")
                     lines.append("►", style="cyan bold")
                     lines.append("  ", style="none")
                 else:
-                    lines.append(f"T{tier}:○  ", style="dim")
+                    lines.append(f"{label}:○  ", style="dim")
             lines.append("\n")
 
-            for tier in self.tiers:
-                tier_scenarios = self.by_tier[tier]
-                tier_scores_list = list(self.tier_scores[tier])
-                tier_done = self.tier_done[tier]
+            for cat in self.categories:
+                cat_scenarios = self.by_category[cat]
+                cat_scores_list = list(self.cat_scores[cat])
+                done = self.cat_done[cat]
 
-                # Tier header
-                if tier_done and tier_scores_list:
-                    avg = int(sum(tier_scores_list) / len(tier_scores_list) * 100)
-                    lines.append(f"\nTier {tier}", style="yellow")
-                    lines.append(f" ({len(tier_scenarios)})  ", style="dim")
+                # Category header
+                if done and cat_scores_list:
+                    avg = int(sum(cat_scores_list) / len(cat_scores_list) * 100)
+                    lines.append(f"\n{cat.capitalize()}", style="yellow")
+                    lines.append(f" ({len(cat_scenarios)})  ", style="dim")
                     lines.append(f"{avg}%\n", style="bold")
                 else:
-                    lines.append(f"\nTier {tier}", style="yellow")
-                    lines.append(f" ({len(tier_scenarios)})\n", style="dim")
+                    lines.append(f"\n{cat.capitalize()}", style="yellow")
+                    lines.append(f" ({len(cat_scenarios)})\n", style="dim")
 
                 # Scenarios
-                for s in tier_scenarios:
+                for s in cat_scenarios:
                     state = self.states[s["path"]].copy()
                     name = s["name"][:28]
 
@@ -536,17 +550,17 @@ class ScenarioDisplay:
 
 def print_banner(console: Console, mode: str, models: list, scenarios: list, total_cost: float):
     """Print startup banner."""
-    tier_counts = []
-    for tier in sorted({s["tier"] for s in scenarios}):
-        count = len([s for s in scenarios if s["tier"] == tier])
-        tier_counts.append(f"T{tier}:{count}")
-    tiers_str = " ".join(tier_counts)
+    cat_counts = []
+    for cat in sorted({s["category"] for s in scenarios}):
+        count = len([s for s in scenarios if s["category"] == cat])
+        cat_counts.append(f"{cat}:{count}")
+    cats_str = " ".join(cat_counts)
 
     console.print()
     console.print(
-        f"[bold cyan]InvisibleBench[/bold cyan] [dim]v1.1.0[/dim]  "
+        f"[bold cyan]InvisibleBench[/bold cyan] [dim]v2.0[/dim]  "
         f"{len(models)} model{'s' if len(models) > 1 else ''} × {len(scenarios)} scenarios  "
-        f"[dim]({tiers_str})[/dim]  "
+        f"[dim]({cats_str})[/dim]  "
         f"[magenta]~${total_cost:.2f}[/magenta]"
     )
     console.print()
@@ -679,13 +693,13 @@ async def evaluate_scenario_async(
                 "model_id": model["id"],
                 "scenario": scenario["name"],
                 "scenario_id": scenario_id,
-                "tier": scenario["tier"],
+                "category": scenario["category"],
                 "overall_score": 0.0,
                 "hard_fail": True,
                 "hard_fail_reasons": ["Scenario file not found"],
                 "failure_categories": {},
                 "dimensions": {},
-                "cost": estimate_cost(scenario["tier"], model),
+                "cost": estimate_cost(scenario["category"], model),
                 "status": "error",
             }
 
@@ -783,7 +797,7 @@ async def evaluate_scenario_async(
                 model,
                 scenario["name"],
                 scenario_id,
-                scenario["tier"],
+                scenario["category"],
                 f"Transcript generation failed: {e}",
             )
 
@@ -816,7 +830,7 @@ async def evaluate_scenario_async(
                 "model_id": model["id"],
                 "scenario": scenario["name"],
                 "scenario_id": scenario_id,
-                "tier": scenario["tier"],
+                "category": scenario["category"],
                 "overall_score": score,
                 "hard_fail": hard_fail,
                 "hard_fail_reasons": result.get("hard_fail_reasons", []),
@@ -825,7 +839,7 @@ async def evaluate_scenario_async(
                     k: v.get("score") if isinstance(v, dict) else v
                     for k, v in result.get("dimension_scores", {}).items()
                 },
-                "cost": estimate_cost(scenario["tier"], model),
+                "cost": estimate_cost(scenario["category"], model),
                 "status": "pass" if not hard_fail else "fail",
             }
             summary.update(detail_paths)
@@ -836,7 +850,7 @@ async def evaluate_scenario_async(
                 model,
                 scenario["name"],
                 scenario_id,
-                scenario["tier"],
+                scenario["category"],
                 f"Scoring failed: {e}",
             )
 
@@ -845,7 +859,7 @@ def _make_error_result(
     model: Dict,
     scenario_name: str,
     scenario_id: str,
-    tier: int,
+    category: str,
     reason: str,
 ) -> Dict:
     """Build a standardized error result dict for failed scenarios."""
@@ -854,117 +868,57 @@ def _make_error_result(
         "model_id": model["id"],
         "scenario": scenario_name,
         "scenario_id": scenario_id,
-        "tier": tier,
+        "category": category,
         "overall_score": 0.0,
         "hard_fail": True,
         "hard_fail_reasons": [reason],
         "failure_categories": {},
         "dimensions": {},
-        "cost": estimate_cost(tier, model),
+        "cost": estimate_cost(category, model),
         "status": "error",
     }
 
 
 def _update_leaderboard(results_path: Path) -> None:
-    """Run prepare_for_leaderboard then generate_leaderboard after a benchmark run."""
-    import subprocess
-    import sys
-    import tempfile
+    """Add results to leaderboard (merges with existing canonical files)."""
+    from invisiblebench.cli.leaderboard import add_results
 
-    root = get_project_root()
-    leaderboard_output = root / "benchmark" / "website" / "data"
-
-    # Step 1: Prepare per-model files from all_results.json
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        subprocess.run(
-            [
-                sys.executable,
-                str(root / "benchmark" / "scripts" / "validation" / "prepare_for_leaderboard.py"),
-                "--input",
-                str(results_path),
-                "--output",
-                tmp_dir,
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        # Step 2: Generate leaderboard.json from per-model files
-        subprocess.run(
-            [
-                sys.executable,
-                str(root / "benchmark" / "scripts" / "leaderboard" / "generate_leaderboard.py"),
-                "--input",
-                tmp_dir,
-                "--output",
-                str(leaderboard_output),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+    add_results(results_path)
 
 
 def run_benchmark(
-    mode: str,
+    models: List[Dict],
     output_dir: Path,
     dry_run: bool = False,
     auto_confirm: bool = False,
-    tier_filter: Optional[List[int]] = None,
+    category_filter: Optional[List[str]] = None,
     scenario_filter: Optional[List[str]] = None,
     parallel: Optional[int] = None,
     detailed_output: bool = False,
-    model_filter: Optional[str] = None,
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
 
-    all_models = MODELS_MINIMAL if mode == "minimal" else MODELS_FULL
+    scenarios = get_scenarios()
 
-    # Filter models if --models specified
-    if model_filter:
-        try:
-            indices = parse_model_range(model_filter, len(all_models))
-            if not indices:
-                msg = f"No models match filter '{model_filter}' (have {len(all_models)} models)"
-                if RICH_AVAILABLE:
-                    Console().print(f"[red]{msg}[/red]")
-                else:
-                    print(msg)
-                return 1
-            models = [all_models[i] for i in indices]
-            selected = [m["name"] for m in models]
-            if RICH_AVAILABLE:
-                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
-            else:
-                print(f"Models: {', '.join(selected)}")
-        except ValueError as e:
-            msg = f"Invalid model filter '{model_filter}': {e}"
-            if RICH_AVAILABLE:
-                Console().print(f"[red]{msg}[/red]")
-            else:
-                print(msg)
-            return 1
-    else:
-        models = all_models
+    # Apply category filter
+    if category_filter:
+        scenarios = [s for s in scenarios if s["category"] in category_filter]
 
-    scenarios = get_scenarios(minimal=(mode == "minimal"))
-
-    # Apply tier filter
-    if tier_filter:
-        scenarios = [s for s in scenarios if s["tier"] in tier_filter]
-
-    # Apply scenario filter (match by name or path)
+    # Apply scenario filter (exact match on scenario_id/path stem, substring on name)
     if scenario_filter:
         filtered = []
         for s in scenarios:
+            sid_lower = s.get("scenario_id", "").lower()
             name_lower = s["name"].lower()
             path_lower = Path(s["path"]).stem.lower()
             for pattern in scenario_filter:
-                if pattern in name_lower or pattern in path_lower:
+                if pattern == sid_lower or pattern == path_lower:
+                    filtered.append(s)
+                    break
+                elif pattern in name_lower:
                     filtered.append(s)
                     break
         scenarios = filtered
@@ -977,22 +931,43 @@ def run_benchmark(
         return 1
 
     total = len(models) * len(scenarios)
-    total_cost = sum(estimate_cost(s["tier"], m) for m in models for s in scenarios)
+    total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if RICH_AVAILABLE and console:
-        print_banner(console, mode, models, scenarios, total_cost)
+        print_banner(console, "full", models, scenarios, total_cost)
     else:
-        print(f"\nInvisibleBench - {mode.upper()} MODE")
+        print(f"\nInvisibleBench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
 
     if dry_run:
         if RICH_AVAILABLE and console:
-            console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run")
+            console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
+            console.print("[bold]Selected models:[/bold]")
+            all_catalog = MODELS_FULL
+            for m in models:
+                idx = next(
+                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
+                    None,
+                )
+                num = f"#{idx + 1}" if idx is not None else "#?"
+                cost = sum(estimate_cost(s["category"], m) for s in scenarios)
+                console.print(
+                    f"  [dim]{num:<4}[/dim] {m['name']:<24} [magenta]~${cost:.2f}[/magenta]"
+                )
         else:
             print("DRY RUN - No evaluations will be run")
+            print("\nSelected models:")
+            all_catalog = MODELS_FULL
+            for m in models:
+                idx = next(
+                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
+                    None,
+                )
+                num = f"#{idx + 1}" if idx is not None else "#?"
+                print(f"  {num:<4} {m['name']}")
         return 0
 
     if not os.getenv("OPENROUTER_API_KEY"):
@@ -1199,9 +1174,9 @@ def run_benchmark(
                 return 1
 
     elif RICH_AVAILABLE and console:
-        # Group scenarios by tier
-        tiers = sorted({s["tier"] for s in scenarios})
-        scenarios_by_tier = {t: [s for s in scenarios if s["tier"] == t] for t in tiers}
+        # Group scenarios by category
+        cats = sorted({s["category"] for s in scenarios})
+        scenarios_by_cat = {c: [s for s in scenarios if s["category"] == c] for c in cats}
 
         for model in models:
             display = ScenarioDisplay(model["name"], scenarios, start_time)
@@ -1214,15 +1189,15 @@ def run_benchmark(
                 transient=True,
                 vertical_overflow="visible",
             ) as _live:
-                for tier in tiers:
-                    tier_scenarios = scenarios_by_tier[tier]
+                for cat in cats:
+                    cat_scenarios = scenarios_by_cat[cat]
 
-                    for scenario in tier_scenarios:
-                        display.set_running(scenario["path"], tier)
+                    for scenario in cat_scenarios:
+                        display.set_running(scenario["path"], cat)
 
                         scenario_path = Path(scenario["path"])
                         if not scenario_path.exists():
-                            display.set_complete(scenario["path"], 0.0, False, tier)
+                            display.set_complete(scenario["path"], 0.0, False, cat)
                             failed += 1
                             continue
 
@@ -1251,11 +1226,11 @@ def run_benchmark(
                                     model,
                                     scenario["name"],
                                     scenario_id,
-                                    scenario["tier"],
+                                    scenario["category"],
                                     f"Transcript generation failed: {e}",
                                 )
                             )
-                            display.set_complete(scenario["path"], 0.0, False, tier)
+                            display.set_complete(scenario["path"], 0.0, False, cat)
                             failed += 1
                             continue
 
@@ -1290,7 +1265,7 @@ def run_benchmark(
                                 "model_id": model["id"],
                                 "scenario": scenario["name"],
                                 "scenario_id": scenario_id,
-                                "tier": scenario["tier"],
+                                "category": scenario["category"],
                                 "overall_score": score,
                                 "hard_fail": hard_fail,
                                 "hard_fail_reasons": hard_fail_reasons,
@@ -1299,14 +1274,14 @@ def run_benchmark(
                                     k: v.get("score") if isinstance(v, dict) else v
                                     for k, v in dimension_scores.items()
                                 },
-                                "cost": estimate_cost(scenario["tier"], model),
+                                "cost": estimate_cost(scenario["category"], model),
                                 "status": "pass" if not hard_fail else "fail",
                             }
                             summary.update(detail_paths)
                             results.append(summary)
 
                             is_pass = not hard_fail
-                            display.set_complete(scenario["path"], score, is_pass, tier)
+                            display.set_complete(scenario["path"], score, is_pass, cat)
 
                             if is_pass:
                                 passed += 1
@@ -1319,15 +1294,15 @@ def run_benchmark(
                                     model,
                                     scenario["name"],
                                     scenario_id,
-                                    scenario["tier"],
+                                    scenario["category"],
                                     f"Scoring failed: {e}",
                                 )
                             )
-                            display.set_complete(scenario["path"], 0.0, False, tier)
+                            display.set_complete(scenario["path"], 0.0, False, cat)
                             failed += 1
 
-                    # Mark tier as done
-                    display.set_tier_done(tier)
+                    # Mark category as done
+                    display.set_category_done(cat)
 
             # Print final state after Live exits (since transient=True clears it)
             console.print(display)
@@ -1372,7 +1347,7 @@ def run_benchmark(
                             model,
                             scenario["name"],
                             scenario_id,
-                            scenario["tier"],
+                            scenario["category"],
                             f"Transcript generation failed: {e}",
                         )
                     )
@@ -1407,7 +1382,7 @@ def run_benchmark(
                         "model_id": model["id"],
                         "scenario": scenario["name"],
                         "scenario_id": scenario_id,
-                        "tier": scenario["tier"],
+                        "category": scenario["category"],
                         "overall_score": score,
                         "hard_fail": hard_fail,
                         "hard_fail_reasons": result.get("hard_fail_reasons", []),
@@ -1416,7 +1391,7 @@ def run_benchmark(
                             k: v.get("score") if isinstance(v, dict) else v
                             for k, v in result.get("dimension_scores", {}).items()
                         },
-                        "cost": estimate_cost(scenario["tier"], model),
+                        "cost": estimate_cost(scenario["category"], model),
                         "status": "pass" if not hard_fail else "fail",
                     }
                     summary.update(detail_paths)
@@ -1436,7 +1411,7 @@ def run_benchmark(
                             model,
                             scenario["name"],
                             scenario_id,
-                            scenario["tier"],
+                            scenario["category"],
                             f"Scoring failed: {e}",
                         )
                     )
@@ -1459,7 +1434,7 @@ def run_benchmark(
         reporter.generate_batch_report(
             results,
             str(report_path),
-            metadata={"model": model_names, "mode": mode},
+            metadata={"model": model_names, "mode": "full"},
         )
     except Exception as e:
         print(f"Warning: Could not generate HTML report: {e}")
@@ -1507,7 +1482,7 @@ def run_benchmark(
             for f in failures:
                 score_pct = int(f["overall_score"] * 100)
                 console.print(
-                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]T{f['tier']}[/dim]  {score_pct}%"
+                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]{f.get('category', '')}[/dim]  {score_pct}%"
                 )
 
                 # Show hard fail reasons
@@ -1693,6 +1668,299 @@ def diagnose_command(args) -> int:
         return 1
 
 
+def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> Path:
+    """Resolve a run reference to an all_results.json path.
+
+    Accepted formats:
+    - Path to all_results.json
+    - Path to a run directory containing all_results.json
+    - Run ID or unique prefix matching a run directory in results/ or results/archive/
+    """
+    root = project_root or get_project_root()
+    ref_path = Path(run_ref).expanduser()
+    candidates_to_try = [ref_path]
+    if not ref_path.is_absolute():
+        candidates_to_try.append(root / ref_path)
+
+    # Explicit path reference (file or directory)
+    for candidate in candidates_to_try:
+        if candidate.is_file():
+            if candidate.name != "all_results.json":
+                raise ValueError(
+                    f"Expected an all_results.json file, got: {run_ref} ({candidate.name})"
+                )
+            return candidate.resolve()
+
+        if candidate.is_dir():
+            results_file = candidate / "all_results.json"
+            if results_file.exists():
+                return results_file.resolve()
+            raise ValueError(f"Run directory missing all_results.json: {candidate}")
+
+    # Run ID / prefix reference
+    results_dir = root / "results"
+    search_dirs = [results_dir, results_dir / "archive"]
+
+    names_to_match = {run_ref}
+    if not run_ref.startswith("run_"):
+        names_to_match.add(f"run_{run_ref}")
+
+    matched_runs: List[Path] = []
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+        for child in search_dir.iterdir():
+            if not child.is_dir() or not child.name.startswith("run_"):
+                continue
+            if any(child.name.startswith(name) for name in names_to_match):
+                matched_runs.append(child)
+
+    if not matched_runs:
+        raise ValueError(
+            f"Could not resolve run reference '{run_ref}'. "
+            "Provide an all_results.json path, run directory, or unique run ID prefix."
+        )
+
+    if len(matched_runs) > 1:
+        matches = ", ".join(str(p.relative_to(root)) for p in sorted(matched_runs))
+        raise ValueError(f"Ambiguous run reference '{run_ref}' matched multiple runs: {matches}")
+
+    resolved_results = matched_runs[0] / "all_results.json"
+    if not resolved_results.exists():
+        raise ValueError(f"Resolved run is missing all_results.json: {matched_runs[0]}")
+
+    return resolved_results.resolve()
+
+
+def load_run_results(results_path: Path) -> List[Dict[str, Any]]:
+    """Load a run's all_results.json as a list of scenario result rows."""
+    try:
+        with open(results_path) as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in {results_path}: {e}") from e
+
+    if not isinstance(data, list):
+        raise ValueError(
+            f"Expected list in {results_path}, got {type(data).__name__}. "
+            "Expected all_results.json format."
+        )
+
+    return [row for row in data if isinstance(row, dict)]
+
+
+def aggregate_results_by_model(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Aggregate per-model average overall score and status counts."""
+    by_model: Dict[str, Dict[str, Any]] = {}
+
+    for row in results:
+        model = str(row.get("model") or row.get("model_id") or "unknown_model")
+        if model not in by_model:
+            by_model[model] = {
+                "score_sum": 0.0,
+                "score_count": 0,
+                "status_counts": {"pass": 0, "fail": 0, "error": 0},
+            }
+
+        model_stats = by_model[model]
+
+        score = row.get("overall_score")
+        if isinstance(score, (int, float)):
+            model_stats["score_sum"] += float(score)
+            model_stats["score_count"] += 1
+
+        status = str(row.get("status", "")).lower()
+        if status in ("pass", "fail", "error"):
+            model_stats["status_counts"][status] += 1
+        elif row.get("hard_fail"):
+            model_stats["status_counts"]["fail"] += 1
+        else:
+            model_stats["status_counts"]["pass"] += 1
+
+    for model_stats in by_model.values():
+        score_count = model_stats["score_count"]
+        model_stats["avg_overall_score"] = (
+            model_stats["score_sum"] / score_count if score_count else None
+        )
+        model_stats["hard_failure_count"] = (
+            model_stats["status_counts"]["fail"] + model_stats["status_counts"]["error"]
+        )
+        del model_stats["score_sum"]
+        del model_stats["score_count"]
+
+    return by_model
+
+
+def compute_run_diff(
+    base_by_model: Dict[str, Dict[str, Any]], new_by_model: Dict[str, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Compute per-model deltas and regression flags."""
+    model_names = sorted(set(base_by_model) | set(new_by_model))
+    comparisons: List[Dict[str, Any]] = []
+
+    for model in model_names:
+        base_stats = base_by_model.get(model)
+        new_stats = new_by_model.get(model)
+
+        base_avg = base_stats["avg_overall_score"] if base_stats else None
+        new_avg = new_stats["avg_overall_score"] if new_stats else None
+        delta = (new_avg - base_avg) if (base_avg is not None and new_avg is not None) else None
+
+        base_hard_failures = base_stats["hard_failure_count"] if base_stats else None
+        new_hard_failures = new_stats["hard_failure_count"] if new_stats else None
+
+        regressed = False
+        if delta is not None and delta < 0:
+            regressed = True
+        if (
+            base_hard_failures is not None
+            and new_hard_failures is not None
+            and new_hard_failures > base_hard_failures
+        ):
+            regressed = True
+
+        comparisons.append(
+            {
+                "model": model,
+                "base_avg_overall_score": base_avg,
+                "new_avg_overall_score": new_avg,
+                "delta_avg_overall_score": delta,
+                "base_status_counts": base_stats["status_counts"] if base_stats else None,
+                "new_status_counts": new_stats["status_counts"] if new_stats else None,
+                "regressed": regressed,
+            }
+        )
+
+    return comparisons
+
+
+def _format_score(value: Optional[float]) -> str:
+    """Format a score value for terminal output."""
+    if value is None:
+        return "N/A"
+    return f"{value:.3f}"
+
+
+def _format_delta(value: Optional[float]) -> str:
+    """Format a score delta value for terminal output."""
+    if value is None:
+        return "N/A"
+    return f"{value:+.3f}"
+
+
+def _format_status_counts(counts: Optional[Dict[str, int]]) -> str:
+    """Format pass/fail/error status counts for terminal output."""
+    if not counts:
+        return "N/A"
+    return f"{counts.get('pass', 0)}/{counts.get('fail', 0)}/{counts.get('error', 0)}"
+
+
+def _print_diff_table(comparisons: List[Dict[str, Any]]) -> None:
+    """Print per-model diff table with regression indicators."""
+    headers = [
+        "Model",
+        "Base Avg",
+        "New Avg",
+        "Delta",
+        "Base P/F/E",
+        "New P/F/E",
+        "Reg",
+    ]
+
+    if RICH_AVAILABLE:
+        console = Console()
+        table = Table(title="Benchmark Diff (per model)")
+        table.add_column("Model", no_wrap=True)
+        table.add_column("Base Avg", justify="right")
+        table.add_column("New Avg", justify="right")
+        table.add_column("Delta", justify="right")
+        table.add_column("Base P/F/E", justify="right")
+        table.add_column("New P/F/E", justify="right")
+        table.add_column("Reg", justify="center")
+
+        for comp in comparisons:
+            delta = comp["delta_avg_overall_score"]
+            regressed = comp["regressed"]
+
+            if delta is None:
+                delta_str = "[dim]N/A[/dim]"
+            elif delta < 0:
+                delta_str = f"[red]{_format_delta(delta)}[/red]"
+            elif delta > 0:
+                delta_str = f"[green]{_format_delta(delta)}[/green]"
+            else:
+                delta_str = _format_delta(delta)
+
+            regression_str = "[red]YES[/red]" if regressed else "NO"
+
+            table.add_row(
+                str(comp["model"]),
+                _format_score(comp["base_avg_overall_score"]),
+                _format_score(comp["new_avg_overall_score"]),
+                delta_str,
+                _format_status_counts(comp["base_status_counts"]),
+                _format_status_counts(comp["new_status_counts"]),
+                regression_str,
+            )
+
+        console.print(table)
+        return
+
+    rows: List[List[str]] = []
+    for comp in comparisons:
+        rows.append(
+            [
+                str(comp["model"]),
+                _format_score(comp["base_avg_overall_score"]),
+                _format_score(comp["new_avg_overall_score"]),
+                _format_delta(comp["delta_avg_overall_score"]),
+                _format_status_counts(comp["base_status_counts"]),
+                _format_status_counts(comp["new_status_counts"]),
+                "YES" if comp["regressed"] else "NO",
+            ]
+        )
+
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    def _fmt_row(row: List[str]) -> str:
+        return " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
+
+    print(_fmt_row(headers))
+    print("-+-".join("-" * width for width in widths))
+    for row in rows:
+        print(_fmt_row(row))
+
+
+def diff_command(args) -> int:
+    """Compare two benchmark runs."""
+    try:
+        base_results = resolve_run_reference(args.base_run)
+        new_results = resolve_run_reference(args.new_run)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return 1
+
+    try:
+        base_rows = load_run_results(base_results)
+        new_rows = load_run_results(new_results)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return 1
+
+    base_by_model = aggregate_results_by_model(base_rows)
+    new_by_model = aggregate_results_by_model(new_rows)
+    comparisons = compute_run_diff(base_by_model, new_by_model)
+
+    print(f"Base run: {base_results}")
+    print(f"New run:  {new_results}")
+    _print_diff_table(comparisons)
+    print(f"Compared {len(comparisons)} model(s).")
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1701,10 +1969,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         epilog="""
 Examples:
   # Model Evaluation (raw LLM capability)
-  uv run bench --minimal -y           Quick validation (~$0.05)
-  uv run bench --full -y              Full benchmark (~$5-10)
-  uv run bench --full -m 1-4 -y       Run first 4 models only
-  uv run bench -t 0,1 -y              Run tier 0 and 1 only
+  uv run bench --full -y              All 12 models (~$5-10)
+  uv run bench -m deepseek -y         Single model by name
+  uv run bench -m gpt-5.2,claude -y   Multiple models by name
+  uv run bench -m 1-4 -y              Models 1-4 (backward compat)
+  uv run bench -m 7 -y                Model 7 = DeepSeek V3.2
+  uv run bench -t 1,2 -y              Tier 1 and 2 only
 
   # System Evaluation (GiveCare/Mira product)
   uv run bench --provider givecare -y           Standard (29 scenarios)
@@ -1715,10 +1985,23 @@ Examples:
   uv run bench --provider givecare -y --diagnose  Run with diagnostic report
   uv run bench diagnose results.json              Generate diagnostic from results
 
+  # Leaderboard
+  uv run bench leaderboard add results/run_*/all_results.json  Add model to leaderboard
+  uv run bench leaderboard rebuild    Rebuild from canonical files
+  uv run bench leaderboard status     Health check (alias for 'bench health')
+
+  # Statistics & Reliability
+  uv run bench stats results/run_*/all_results.json       Score distributions + bootstrap CIs
+  uv run bench stats results/leaderboard_ready/ -o s.md   With markdown output
+  uv run bench reliability results/run_20260211/           Scorer inter-rater reliability
+  uv run bench annotate export results/run_20260211/       Export annotation kit
+  uv run bench annotate import results/annotations/scores.csv  Compute agreement
+
   # Utilities
   uv run bench report results.json    Regenerate HTML report
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
+  uv run bench diff <base> <new>      Compare two benchmark runs
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -1757,6 +2040,11 @@ Examples:
     # Runs subcommand (list runs)
     subparsers.add_parser("runs", help="List all benchmark runs")
 
+    # Diff subcommand
+    diff_parser = subparsers.add_parser("diff", help="Compare two benchmark runs")
+    diff_parser.add_argument("base_run", type=str, help="Base run reference")
+    diff_parser.add_argument("new_run", type=str, help="New run reference")
+
     # Diagnose subcommand
     diagnose_parser = subparsers.add_parser(
         "diagnose", help="Generate diagnostic report from results"
@@ -1768,10 +2056,75 @@ Examples:
     )
     diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
 
+    # Leaderboard subcommand
+    lb_parser = subparsers.add_parser(
+        "leaderboard", help="Manage leaderboard (add, rebuild, status)"
+    )
+    lb_parser.add_argument(
+        "action",
+        choices=["add", "rebuild", "status"],
+        help="add: add results to leaderboard, rebuild: regenerate from canonical files, status: health check",
+    )
+    lb_parser.add_argument(
+        "results", nargs="?", default=None, help="Path to all_results.json (for 'add')"
+    )
+    lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+
+    # Stats subcommand
+    stats_parser = subparsers.add_parser(
+        "stats", help="Statistical analysis: distributions, bootstrap CIs, pairwise comparisons"
+    )
+    stats_parser.add_argument(
+        "results", type=str, help="Path to all_results.json or leaderboard_ready/ directory"
+    )
+    stats_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output markdown path"
+    )
+    stats_parser.add_argument(
+        "--bootstrap", type=int, default=10000, help="Number of bootstrap samples (default: 10000)"
+    )
+
+    # Reliability subcommand
+    rel_parser = subparsers.add_parser(
+        "reliability", help="Scorer inter-rater reliability (runs LLM scorers N times)"
+    )
+    rel_parser.add_argument(
+        "results", type=str, help="Path to results directory with transcripts"
+    )
+    rel_parser.add_argument(
+        "--runs", "-n", type=int, default=5, help="Number of scoring runs (default: 5)"
+    )
+    rel_parser.add_argument(
+        "--sample", type=int, default=10, help="Number of transcripts to sample (default: 10)"
+    )
+    rel_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output directory for raw data"
+    )
+
+    # Annotate subcommand
+    annotate_parser = subparsers.add_parser(
+        "annotate", help="Human annotation kit for human-LLM agreement"
+    )
+    annotate_parser.add_argument(
+        "action",
+        choices=["export", "import"],
+        help="export: create scoring forms, import: compute agreement",
+    )
+    annotate_parser.add_argument(
+        "path", type=str, help="Results path (export) or annotations CSV path (import)"
+    )
+    annotate_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output directory (export) or unused (import)"
+    )
+    annotate_parser.add_argument(
+        "--sample", type=int, default=20, help="Number of transcripts to sample (default: 20)"
+    )
+    annotate_parser.add_argument(
+        "--llm-scores", type=str, default=None, help="Path to _llm_scores.json (for import)"
+    )
+
     # Main run arguments (default command)
-    mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("--minimal", action="store_true", help="1 model × all scenarios")
-    mode_group.add_argument("--full", action="store_true", help="All models × all scenarios")
+    parser.add_argument("--full", action="store_true", help="All 12 models × all scenarios")
 
     parser.add_argument("--output", type=Path, default=None, help="Output directory")
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
@@ -1782,11 +2135,11 @@ Examples:
         help="Write per-scenario JSON/HTML reports with turn flags",
     )
     parser.add_argument(
-        "--tier",
-        "-t",
+        "--category",
+        "-c",
         type=str,
         default=None,
-        help="Filter to specific tiers (e.g., '0' or '0,1,2')",
+        help="Filter to specific categories (e.g., 'safety' or 'safety,empathy')",
     )
     parser.add_argument(
         "--scenario",
@@ -1808,8 +2161,8 @@ Examples:
         "-m",
         type=str,
         default=None,
-        metavar="RANGE",
-        help="Filter models by range: '1-4' (first 4), '4' (4th only), '1,3,5' (specific), '4-' (4th onwards)",
+        metavar="SPEC",
+        help="Select models by name or number: 'deepseek', 'gpt-5.2,claude', '1-4', '7', '1,deepseek'",
     )
     parser.add_argument(
         "--update-leaderboard",
@@ -1826,7 +2179,7 @@ Examples:
     parser.add_argument(
         "--confidential",
         action="store_true",
-        help="Include confidential scenarios (32 vs 29) - only for givecare provider",
+        help="Include confidential scenarios (38 vs 35) - only for givecare provider",
     )
     parser.add_argument(
         "--diagnose",
@@ -1857,18 +2210,98 @@ Examples:
 
         return run_list()
 
+    if args.command == "diff":
+        return diff_command(args)
+
     if args.command == "diagnose":
         return diagnose_command(args)
 
-    # Parse tier filter
-    tier_filter = None
-    if args.tier:
-        tier_filter = [int(t.strip()) for t in args.tier.split(",")]
+    if args.command == "leaderboard":
+        from invisiblebench.cli.leaderboard import run_leaderboard
+
+        return run_leaderboard(
+            action=args.action,
+            results_path=args.results,
+            verbose=args.verbose,
+        )
+
+    if args.command == "stats":
+        from invisiblebench.stats.analysis import (
+            compute_stats,
+            format_stats_markdown,
+            format_stats_report,
+        )
+
+        stats = compute_stats(args.results, n_bootstrap=args.bootstrap)
+        if "error" in stats:
+            print(f"Error: {stats['error']}")
+            return 1
+        print(format_stats_report(stats))
+        if args.output:
+            Path(args.output).write_text(format_stats_markdown(stats))
+            print(f"\nMarkdown report written to {args.output}")
+        return 0
+
+    if args.command == "reliability":
+        from invisiblebench.stats.reliability import (
+            format_reliability_report,
+            run_reliability,
+        )
+
+        print(f"Running reliability analysis ({args.runs} runs x {args.sample} transcripts)...")
+        print("This will make multiple LLM API calls. Cache is disabled for this test.\n")
+        results = run_reliability(
+            args.results,
+            n_runs=args.runs,
+            sample_size=args.sample,
+            output_dir=args.output,
+        )
+        if "error" in results:
+            print(f"Error: {results['error']}")
+            return 1
+        print(format_reliability_report(results))
+        if args.output:
+            print(f"\nRaw data saved to {args.output}/reliability_raw.json")
+        return 0
+
+    if args.command == "annotate":
+        if args.action == "export":
+            from invisiblebench.stats.annotation import export_annotation_kit
+
+            out_dir = args.output or "results/annotations"
+            result = export_annotation_kit(
+                args.path, out_dir, sample_size=args.sample
+            )
+            if "error" in result:
+                print(f"Error: {result['error']}")
+                return 1
+            print(f"Exported {result['exported']} transcripts to {result['output_dir']}/")
+            print(f"  Forms: {len(result['files']['forms'])} markdown files")
+            print(f"  CSV template: {result['files']['csv_template']}")
+            print(f"  Instructions: {result['files']['instructions']}")
+            return 0
+        else:  # import
+            from invisiblebench.stats.annotation import (
+                format_agreement_report,
+                import_annotations,
+            )
+
+            result = import_annotations(args.path, llm_scores_path=args.llm_scores)
+            if "error" in result:
+                print(f"Error: {result['error']}")
+                return 1
+            print(format_agreement_report(result))
+            return 0
+
+    # Parse category filter
+    category_filter = None
+    if args.category:
+        category_filter = [c.strip().lower() for c in args.category.split(",")]
 
     # Handle GiveCare provider (system eval)
     if args.provider == "givecare":
         return run_givecare_eval(
-            tier_filter=tier_filter,
+            category_filter=category_filter,
             include_confidential=args.confidential,
             verbose=True,
             dry_run=args.dry_run,
@@ -1877,7 +2310,46 @@ Examples:
         )
 
     # Default: run benchmark with OpenRouter (model eval)
-    mode = "full" if args.full else "minimal"
+    all_models = MODELS_FULL
+
+    # Resolve which models to run
+    if args.full:
+        models = all_models
+    elif args.models:
+        try:
+            indices = resolve_models(args.models, all_models)
+            if not indices:
+                msg = f"No models match '{args.models}' (have {len(all_models)} models)"
+                print(msg)
+                return 1
+            models = [all_models[i] for i in indices]
+            selected = [m["name"] for m in models]
+            if RICH_AVAILABLE:
+                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
+            else:
+                print(f"Models: {', '.join(selected)}")
+        except ValueError as e:
+            if RICH_AVAILABLE:
+                Console().print(f"[red]{e}[/red]")
+            else:
+                print(str(e))
+            return 1
+    else:
+        # No --full and no -m: show catalog and exit
+        if RICH_AVAILABLE:
+            c = Console()
+            c.print("[bold]No model selected.[/bold] Use [cyan]--full[/cyan] or [cyan]-m SPEC[/cyan].\n")
+            c.print("[bold]Available models:[/bold]")
+            for i, m in enumerate(all_models):
+                c.print(f"  [dim]{i+1:>2}.[/dim] {m['name']:<24} [dim]{m['id']}[/dim]")
+            c.print("\n[dim]Examples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y[/dim]")
+        else:
+            print("No model selected. Use --full or -m SPEC.\n")
+            print("Available models:")
+            for i, m in enumerate(all_models):
+                print(f"  {i+1:>2}. {m['name']:<24} {m['id']}")
+            print("\nExamples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y")
+        return 1
 
     # Parse scenario filter
     scenario_filter = None
@@ -1891,15 +2363,14 @@ Examples:
         output_dir = Path(f"results/run_{timestamp}")
 
     return run_benchmark(
-        mode=mode,
+        models=models,
         output_dir=output_dir,
         dry_run=args.dry_run,
         auto_confirm=args.yes,
-        tier_filter=tier_filter,
+        category_filter=category_filter,
         scenario_filter=scenario_filter,
         parallel=args.parallel,
         detailed_output=args.detailed,
-        model_filter=args.models,
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
     )

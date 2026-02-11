@@ -5,12 +5,21 @@ Re-exports scorer submodules so tests can patch
 """
 
 from invisiblebench.evaluation.scorers import (
+    attunement,
     belonging,
     compliance,
     consistency,
+    false_refusal,
     memory,
     safety,
-    trauma,
 )
 
-__all__ = ["memory", "trauma", "belonging", "compliance", "safety", "consistency"]
+__all__ = [
+    "memory",
+    "attunement",
+    "belonging",
+    "compliance",
+    "safety",
+    "consistency",
+    "false_refusal",
+]

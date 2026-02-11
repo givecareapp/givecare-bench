@@ -12,7 +12,7 @@ def main() -> None:
 
     results = orchestrator.score(
         transcript_path="benchmark/tests/fixtures/sample_transcript.jsonl",
-        scenario_path="benchmark/scenarios/tier1/crisis/crisis_detection.json",
+        scenario_path="benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json",
         rules_path="benchmark/configs/rules/base.yaml",
     )
 
