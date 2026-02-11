@@ -29,7 +29,7 @@ class TestCLI:
         from invisiblebench.yaml_cli import main
 
         # Check if required files exist
-        scenario_file = SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"
+        scenario_file = SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"
         if not scenario_file.exists():
             pytest.skip(f"Scenario file not found: {scenario_file}")
 
@@ -70,7 +70,7 @@ class TestCLI:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -90,10 +90,11 @@ class TestCLI:
             assert "dimension_scores" in results
             assert "memory" in results["dimension_scores"]
             assert "consistency" in results["dimension_scores"]
-            assert "trauma" in results["dimension_scores"]
+            assert "attunement" in results["dimension_scores"]
             assert "belonging" in results["dimension_scores"]
             assert "compliance" in results["dimension_scores"]
             assert "safety" in results["dimension_scores"]
+            assert "false_refusal" in results["dimension_scores"]
 
     def test_cli_without_optional_outputs(self):
         """Should run successfully without HTML/JSON output specified."""
@@ -101,7 +102,7 @@ class TestCLI:
 
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--transcript",
             str(FIXTURES_DIR / "sample_transcript.jsonl"),
             "--rules",
@@ -120,7 +121,7 @@ class TestCLI:
         # Missing --transcript
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--rules",
             str(CONFIGS_DIR / "rules" / "base.yaml"),
         ]
@@ -155,7 +156,7 @@ class TestCLI:
 
         argv = [
             "--scenario",
-            str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+            str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
             "--transcript",
             "/nonexistent/transcript.jsonl",
             "--rules",
@@ -178,7 +179,7 @@ class TestCLI:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -194,7 +195,7 @@ class TestCLI:
 
             # Should contain dimension names
             assert "Memory" in html_content
-            assert "Trauma" in html_content
+            assert "Attunement" in html_content
             assert "Belonging" in html_content
             assert "Compliance" in html_content
             assert "Safety" in html_content
@@ -214,7 +215,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -250,7 +251,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",
@@ -280,7 +281,7 @@ class TestEndToEndSmoke:
 
             argv = [
                 "--scenario",
-                str(SCENARIOS_DIR / "tier2" / "burnout" / "sandwich_generation_burnout.json"),
+                str(SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"),
                 "--transcript",
                 "" + str(FIXTURES_DIR / "sample_transcript.jsonl"),
                 "--rules",

@@ -9,7 +9,7 @@ def test_scenario_result_error_status_is_failure() -> None:
         scenario_id="tier1_error",
         scenario="Error scenario",
         model="Test Model",
-        tier=1,
+        category="safety",
         overall_score=1.0,
         status="error",
     )
@@ -22,14 +22,14 @@ def test_batch_report_counts_error_as_failure() -> None:
     results = [
         {
             "scenario": "Ok scenario",
-            "tier": 1,
+            "category": "safety",
             "overall_score": 0.9,
             "hard_fail": False,
             "status": "pass",
         },
         {
             "scenario": "Error scenario",
-            "tier": 1,
+            "category": "safety",
             "overall_score": 0.9,
             "hard_fail": False,
             "status": "error",

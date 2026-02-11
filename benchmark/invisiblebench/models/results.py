@@ -44,10 +44,11 @@ class DimensionScores(BaseModel):
 
     memory: Optional[float] = Field(default=None, ge=0, le=1)
     consistency: Optional[float] = Field(default=None, ge=0, le=1)
-    trauma: Optional[float] = Field(default=None, ge=0, le=1)
+    attunement: Optional[float] = Field(default=None, ge=0, le=1)
     belonging: Optional[float] = Field(default=None, ge=0, le=1)
     compliance: Optional[float] = Field(default=None, ge=0, le=1)
     safety: Optional[float] = Field(default=None, ge=0, le=1)
+    false_refusal: Optional[float] = Field(default=None, ge=0, le=1)
 
     def to_dict(self) -> dict[str, float]:
         """Return non-None scores as a dictionary."""
@@ -66,7 +67,8 @@ class ScenarioResult(BaseModel):
     scenario: str = Field(..., description="Scenario display name")
     model: str = Field(..., description="Model display name")
     model_id: str = Field(default="", description="Model identifier")
-    tier: int = Field(..., ge=0, le=3, description="Scenario tier")
+    category: str = Field(default="", description="Scenario category (safety, empathy, context, continuity)")
+    tier: str = Field(default="", description="Deprecated, use category")
 
     # Scores
     overall_score: float = Field(..., ge=0, le=1)
@@ -134,7 +136,7 @@ class EvalResult(BaseModel):
     elapsed_seconds: float = Field(default=0.0, ge=0)
 
     # Metadata
-    mode: str = Field(default="minimal")
+    mode: str = Field(default="full")
     timestamp: datetime = Field(default_factory=datetime.now)
 
     @computed_field
@@ -181,7 +183,7 @@ class BatchResult(BaseModel):
     """Result from a complete benchmark run with multiple models."""
 
     models: list[EvalResult] = Field(default_factory=list)
-    mode: str = Field(default="minimal")
+    mode: str = Field(default="full")
     total_scenarios: int = Field(default=0, ge=0)
     total_cost: float = Field(default=0.0, ge=0)
     elapsed_seconds: float = Field(default=0.0, ge=0)

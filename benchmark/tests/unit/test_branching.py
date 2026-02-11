@@ -250,11 +250,10 @@ class TestBranchOrdering:
 
 
 BRANCHED_SCENARIOS = [
-    "benchmark/scenarios/tier1/boundaries/medical_boundary_violation.json",
-    "benchmark/scenarios/tier1/gray_zone/venting_vs_crisis.json",
-    "benchmark/scenarios/tier1/crisis/crisis_recovery_test.json",
-    "benchmark/scenarios/tier2/longitudinal/attachment_formation.json",
-    "benchmark/scenarios/tier3/longitudinal_trust.json",
+    "benchmark/scenarios/safety/boundaries/medical_boundary_violation.json",
+    "benchmark/scenarios/safety/gray_zone/venting_vs_crisis.json",
+    "benchmark/scenarios/continuity/attachment_formation.json",
+    "benchmark/scenarios/continuity/longitudinal_trust.json",
 ]
 
 

@@ -9,9 +9,8 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCORING_CONFIG = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
-PACKAGE_SCORING_CONFIG = PROJECT_ROOT / "benchmark" / "invisiblebench" / "scoring.yaml"
 
-EXPECTED_KEYS = {"memory", "consistency", "trauma", "belonging", "compliance", "safety"}
+EXPECTED_KEYS = {"memory", "consistency", "attunement", "belonging", "compliance", "safety", "false_refusal"}
 
 
 def _load_weights(path: Path) -> dict[str, float]:
@@ -30,21 +29,23 @@ def _label_to_key(label: str) -> str:
         return "memory"
     if "consistency" in normalized:
         return "consistency"
-    if "trauma" in normalized:
-        return "trauma"
+    if "attunement" in normalized:
+        return "attunement"
     if "belonging" in normalized:
         return "belonging"
     if "compliance" in normalized:
         return "compliance"
     if "safety" in normalized:
         return "safety"
+    if "false" in normalized and "refusal" in normalized:
+        return "false_refusal"
     raise AssertionError(f"Unrecognized dimension label: {label}")
 
 
 def _parse_root_readme_weights(text: str) -> dict[str, int]:
-    header = "### 6 Evaluation Dimensions"
+    header = "### 7 Evaluation Dimensions"
     start = text.find(header)
-    assert start != -1, "README.md missing '5 Evaluation Dimensions' section"
+    assert start != -1, "README.md missing '7 Evaluation Dimensions' section"
 
     lines = text[start:].splitlines()
     table_lines = []
@@ -74,7 +75,7 @@ def _parse_dimensions_line(text: str) -> dict[str, int]:
 
 
 def _parse_yaml_orchestrator_list(text: str) -> dict[str, int]:
-    header = "### YAML Orchestrator (6 dimensions)"
+    header = "### YAML Orchestrator (7 dimensions)"
     start = text.find(header)
     assert start != -1, "benchmark/README.md missing YAML Orchestrator section"
 
@@ -94,7 +95,7 @@ def _parse_yaml_orchestrator_list(text: str) -> dict[str, int]:
 
 
 def _parse_scripts_dimensions_list(text: str) -> dict[str, int]:
-    marker = "Scores each transcript across 6 dimensions:"
+    marker = "Scores each transcript across 7 dimensions:"
     lines = text.splitlines()
     for idx, line in enumerate(lines):
         if marker in line:
@@ -110,7 +111,7 @@ def _parse_scripts_dimensions_list(text: str) -> dict[str, int]:
                     label, percent = match.group(1), match.group(2)
                     weights[_label_to_key(label)] = int(percent)
             return weights
-    raise AssertionError("benchmark/scripts/README.md missing 5-dimension bullet list")
+    raise AssertionError("benchmark/scripts/README.md missing 7-dimension bullet list")
 
 
 def _parse_scripts_weights_snippet(text: str) -> dict[str, float]:
@@ -153,9 +154,3 @@ def test_scoring_weights_match_docs() -> None:
 
     snippet_weights = _parse_scripts_weights_snippet(scripts_readme)
     assert snippet_weights == config_weights
-
-
-def test_scoring_config_copy_matches_canonical() -> None:
-    config_weights = _load_weights(SCORING_CONFIG)
-    package_weights = _load_weights(PACKAGE_SCORING_CONFIG)
-    assert package_weights == config_weights

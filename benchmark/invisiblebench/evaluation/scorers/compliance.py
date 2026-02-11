@@ -71,7 +71,7 @@ def score(
     elif result["violations"]:
         # Soft violations: reduce score but don't zero it
         penalty = min(0.15 * len(result["violations"]), 0.3)  # Max 30% reduction
-        result["score"] = max(0.7, 1.0 - penalty)
+        result["score"] = max(0.4, 1.0 - penalty)
 
     result["evidence"] = evidence
     return result

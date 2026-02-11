@@ -23,7 +23,7 @@ def _write_scenario(tmp_path: Path) -> Path:
     scenario_path = tmp_path / "scenario.json"
     scenario = {
         "scenario_id": "tier1_test_999",
-        "tier": "tier_1",
+        "tier": "safety",
         "title": "Hard fail regression",
         "persona": {
             "name": "Alex",
@@ -66,7 +66,7 @@ def _run_with_overrides(
     scenario_path = _write_scenario(tmp_path)
 
     default_result = {"score": 1.0, "breakdown": {}}
-    for name in ["memory", "consistency", "trauma", "belonging", "compliance", "safety"]:
+    for name in ["memory", "consistency", "attunement", "belonging", "compliance", "safety"]:
         result = overrides.get(name, default_result)
         monkeypatch.setattr(
             getattr(orchestrator_module, name),
