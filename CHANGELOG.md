@@ -24,28 +24,38 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 ## [Unreleased]
 
 ### Added
+- **MECE category rename**: Scenarios reorganized from `tier1/tier2/tier3/` into capability categories (`safety/`, `empathy/`, `context/`, `continuity/`)
+  - CLI flag `--tier/-t` replaced by `--category/-c`
+  - `CategoryLevel` enum replaces `TierLevel` (backward-compat alias retained)
+  - All loaders, exporters, and result models updated
+- **3 new regulatory scenarios** (context category):
+  - `misrepresentation_correction.json` — NV AB 406 (correcting "AI counselor" framing)
+  - `therapeutic_function_boundary.json` — IL WOPR Act (declining CBT, diagnosis, treatment plans)
+  - `data_privacy_inquiry.json` — UT HB 452 / WA MHMD (data handling, deletion requests)
+- **3 new relational scenarios** (empathy category):
+  - `pushback_loop.json`, `impossible_constraint.json`, `no_right_answer.json`
 - **Conditional branching**: Adaptive multi-turn conversations where user messages depend on model behavior
-  - 5 scenarios annotated with branch points (medical boundary, venting calibration, crisis recovery, attachment formation, longitudinal memory)
+  - 4 scenarios annotated with branch points (medical boundary, venting calibration, attachment formation, longitudinal memory)
   - 4 deterministic condition types: `contains_any`, `contains_all`, `not_contains`, `regex`
   - Branch resolution in both model eval and system eval (GiveCare provider)
   - Branch IDs recorded in transcript JSONL for audit
-  - Zero changes to scoring pipeline — branching is transparent to scorers
   - New module: `evaluation/branching.py` with 20 unit tests
-- **Scorer LRU cache**: Thread-safe LRU cache for temperature=0 scorer LLM calls targeting ~40% API cost reduction
+- **Scorer LRU cache**: Thread-safe LRU cache for temperature=0 scorer LLM calls (~40% API cost reduction)
   - SHA256 hash of normalized payload as cache key
   - Returns deepcopy to prevent mutation of cached results
   - Configurable via `INVISIBLEBENCH_SCORER_CACHE_SIZE` env var (default: 256, set to 0 to disable)
-  - Integrated in belonging, safety, and trauma scorers
 
 ### Changed
-- **Prior results invalidated**: Conditional branching changes transcript content for 5 scenarios — rerun required
+- **35 standard scenarios** (was 29): safety (12), empathy (10), context (9), continuity (4)
+- **38 with confidential** (was 32)
+- **Prior results invalidated**: Category rename + new scenarios require rerun
 
 ### Fixed
-- California rules (`ca.yaml`): Added missing `mental_health_specifics` section (AB 3030 requirement)
-- California and New York rules: Added missing `notes` sections for compliance documentation
+- 11 scoring bugs across attunement, belonging, compliance, false_refusal, and safety scorers
+- California rules (`ca.yaml`): Added missing `mental_health_specifics` section
+- California and New York rules: Added missing `notes` sections
 - Base rules (`base.yaml`): Reordered disclosure phrases for consistency
-- Test assertion for NY `cadence_turns` corrected to 5 (NY overrides base value of 6)
-- All 120 tests now passing (3 pre-existing failures resolved, 20 new branching tests added)
+- All 172 tests now passing
 
 ---
 
