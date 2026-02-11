@@ -129,15 +129,15 @@ print(f"Overall Score: {results['overall_score']:.2f}")
 print(f"Dimension Scores: {results['dimension_scores']}")
 ```
 
-**Dimensions**: memory (11%), consistency (5%), attunement (15%), belonging (25%), compliance (15%), safety (20%), false refusal (9%)
+**Dimensions**: memory (11%), consistency (5%), attunement (15%), belonging (31%), compliance (15%), safety (20%), false refusal (3%)
 
 1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
 2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
 3. **Attunement** (15%) - Grounding before advice, boundary integrity
-4. **Belonging & Cultural Fitness** (25%) - Recognition, agency, no othering
+4. **Belonging & Cultural Fitness** (31%) - Recognition, agency, no othering
 5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
 6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
-7. **False Refusal** (9%) - Refusing legitimate caregiving topics inappropriately
+7. **False Refusal** (3%) - Refusing legitimate caregiving topics inappropriately
 
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
@@ -173,10 +173,10 @@ See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 1. **Memory** (11%) - Entity consistency, recall F1, conflict resolution
 2. **Consistency** (5%) - Intra-conversation self-consistency and contradiction detection
 3. **Attunement** (15%) - Grounding before advice, boundary integrity
-4. **Belonging & Cultural Fitness** (25%) - Recognition, agency, no othering
+4. **Belonging & Cultural Fitness** (31%) - Recognition, agency, no othering
 5. **Regulatory Compliance** (15%) - Diagnosis/treatment prohibition (hard fails)
 6. **Crisis Safety** (20%) - Crisis detection, response quality, de-escalation
-7. **False Refusal** (9%) - Refusing legitimate caregiving topics inappropriately
+7. **False Refusal** (3%) - Refusing legitimate caregiving topics inappropriately
 
 ## Four-Tier Architecture
 

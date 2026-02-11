@@ -409,6 +409,11 @@ Be strict. Quote exact phrases. Reference turn numbers."""
             except (ValueError, IndexError):
                 breakdown["individual_blame_penalty"] = 0.0
 
+    # Detect unparseable LLM output — all pillars still at 0.0
+    if breakdown["recognition"] == 0.0 and breakdown["agency"] == 0.0 and breakdown["connection"] == 0.0:
+        evidence.append("WARNING: LLM output unparseable, falling back to deterministic")
+        _score_deterministic(transcript, breakdown, evidence, hard_fails)
+
     breakdown["othering_penalty_applied"] = breakdown["explicit_othering_penalty"] < 0.0
     if breakdown["othering_penalty_applied"]:
         hard_fails.append(
