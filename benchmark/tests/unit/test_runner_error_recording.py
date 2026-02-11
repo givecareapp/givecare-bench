@@ -14,7 +14,7 @@ from invisiblebench.cli.runner import _make_error_result, estimate_cost
 
 def test_make_error_result_schema():
     model = {"name": "Test", "id": "test/model", "cost_per_m_input": 1.0, "cost_per_m_output": 2.0}
-    result = _make_error_result(model, "Crisis", "tier1_crisis", 1, "boom")
+    result = _make_error_result(model, "Crisis", "tier1_crisis", "safety", "boom")
 
     assert result["status"] == "error"
     assert result["overall_score"] == 0.0
@@ -26,8 +26,8 @@ def test_make_error_result_schema():
     assert result["model_id"] == "test/model"
     assert result["scenario"] == "Crisis"
     assert result["scenario_id"] == "tier1_crisis"
-    assert result["tier"] == 1
-    assert result["cost"] == estimate_cost(1, model)
+    assert result["category"] == "safety"
+    assert result["cost"] == estimate_cost("safety", model)
 
 
 def test_make_error_result_transcript_reason():
@@ -36,11 +36,11 @@ def test_make_error_result_transcript_reason():
         model,
         "Scenario",
         "tier3_longitudinal_001",
-        3,
+        "continuity",
         "Transcript generation failed: 400 Bad Request",
     )
     assert "Transcript generation failed" in result["hard_fail_reasons"][0]
-    assert result["tier"] == 3
+    assert result["category"] == "continuity"
 
 
 def test_make_error_result_scoring_reason():
@@ -49,7 +49,7 @@ def test_make_error_result_scoring_reason():
         model,
         "Scenario",
         "tier2_boundary",
-        2,
+        "empathy",
         "Scoring failed: memory dimension missing",
     )
     assert "Scoring failed" in result["hard_fail_reasons"][0]
@@ -68,7 +68,7 @@ def test_error_results_appear_in_saved_json(tmp_path: Path):
             "model_id": "test/model",
             "scenario": "Pass",
             "scenario_id": "tier0_pass",
-            "tier": 0,
+            "category": "safety",
             "overall_score": 0.85,
             "hard_fail": False,
             "hard_fail_reasons": [],
@@ -86,7 +86,7 @@ def test_error_results_appear_in_saved_json(tmp_path: Path):
             },
             "Error Scenario",
             "tier3_longitudinal_001",
-            3,
+            "continuity",
             "Transcript generation failed: 400 Bad Request",
         ),
     ]
@@ -115,7 +115,7 @@ def test_sequential_runner_records_transcript_error(tmp_path: Path):
         json.dumps(
             {
                 "scenario_id": "tier1_test_error",
-                "tier": 1,
+                "category": "safety",
                 "title": "Test Error",
                 "turns": [{"turn_number": 1, "user_message": "hello"}],
             }
@@ -128,7 +128,7 @@ def test_sequential_runner_records_transcript_error(tmp_path: Path):
         "cost_per_m_input": 1.0,
         "cost_per_m_output": 2.0,
     }
-    scenario = {"name": "Test Error", "tier": 1, "path": str(scenario_file)}
+    scenario = {"name": "Test Error", "category": "safety", "path": str(scenario_file)}
 
     # Simulate what the sequential runner does
     results = []
@@ -146,7 +146,7 @@ def test_sequential_runner_records_transcript_error(tmp_path: Path):
             model,
             scenario["name"],
             scenario_id,
-            scenario["tier"],
+            scenario["category"],
             f"Transcript generation failed: {transcript_error}",
         )
     )

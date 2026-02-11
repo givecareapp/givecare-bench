@@ -1,33 +1,32 @@
 # InvisibleBench Scenarios
 
-This directory contains test scenarios organized by tier and category.
-
-> **Note**: InvisibleBench v2.0 significantly rebalanced scenarios from crisis-heavy to gray zone and boundary focused. See [EVOLUTION.md](../EVOLUTION.md) for the rationale.
+This directory contains test scenarios organized by capability category (MECE).
 
 ## Structure
 
 ```
 scenarios/
-├── tier1/              # 3-5 turn scenarios (core competency)
-│   ├── gray_zone/          # Venting vs crisis, humor vs ideation (4)
-│   ├── crisis/             # Essential crisis patterns only (4)
-│   ├── boundaries/         # AI dependency, medical, therapy limits (3)
-│   ├── false_refusal/      # Inappropriate refusal of caregiving topics (4)
-│   └── cultural/           # Cultural sensitivity (1)
+├── safety/             # 12 scenarios — crisis, boundaries, gray zones, false refusal
+│   ├── crisis/             # Crisis detection patterns (4)
+│   ├── gray_zone/          # Venting vs crisis, humor vs ideation (2)
+│   ├── boundaries/         # Medical, therapy, attachment, abuse (4)
+│   └── false_refusal/      # Inappropriate refusal of caregiving topics (2)
 │
-├── tier2/              # 8-12 turn scenarios (boundary durability)
-│   ├── cultural/           # Cultural and identity scenarios
-│   ├── burnout/            # Caregiver burnout scenarios
-│   ├── belonging/          # Identity and belonging
-│   ├── grief/              # Grief and loss
-│   ├── regulatory/         # Compliance scenarios (CA SB 243, etc.)
-│   └── longitudinal/       # Attachment patterns
+├── empathy/            # 10 scenarios — emotional attunement, belonging, relational
+│   ├── burnout/            # Caregiver burnout and compassion fatigue (3)
+│   ├── belonging/          # Identity and belonging (1)
+│   ├── grief/              # Grief, loss, end-of-life (3)
+│   └── relational/         # Pushback, impossible constraints, ambiguity (3)
 │
-├── tier3/              # 20+ turn scenarios (multi-session)
-│   └── *.json              # Long-term relationship scenarios
+├── context/            # 9 scenarios — cultural awareness, regulatory compliance
+│   ├── cultural/           # Cultural sensitivity and identity (5)
+│   └── regulatory/         # Compliance scenarios (4)
 │
-├── confidential/       # Security testing (not for public leaderboard)
-│   └── *.json              # Adversarial and edge case scenarios (3)
+├── continuity/         # 4 scenarios — longitudinal trust, memory, consistency
+│   └── *.json              # Multi-session relationship scenarios
+│
+├── confidential/       # 3 holdout scenarios (not in standard runs)
+│   └── *.json              # Adversarial and edge case scenarios
 │
 └── archive/            # Archived scenarios (available but not in default runs)
     ├── tier0/              # Archived smoke tests (5)
@@ -37,94 +36,77 @@ scenarios/
     └── crisis/             # Archived crisis scenarios (9)
 ```
 
-## Scenario Counts (v2.0)
+## Scenario Counts
 
-| Tier | Count | Description |
-|------|-------|-------------|
-| Tier 1 | 16 | Gray zones (4), crisis (4), boundaries (3), false refusal (4), cultural (1) |
-| Tier 2 | 10 | Boundary durability, relationships, regulatory |
-| Tier 3 | 3 | Longitudinal memory |
-| **Active Total** | **29** | |
-| Confidential | 3 | Security testing |
-| Archive | 25 | Archived scenarios from v1 |
-| **Full Total** | **57** | |
+| Category | Count | Subcategories |
+|----------|-------|---------------|
+| Safety | 12 | Crisis (4), gray zone (2), boundaries (4), false refusal (2) |
+| Empathy | 10 | Burnout (3), belonging (1), grief (3), relational (3) |
+| Context | 9 | Cultural (5), regulatory (4) |
+| Continuity | 4 | Longitudinal scenarios |
+| **Active Total** | **35** | |
+| Confidential | 3 | Holdout set |
+| Archive | 25 | From v1 |
+| **Full Total** | **63** | |
 
-## v2.0 Rebalancing
+## Categories
 
-The benchmark was rebalanced to focus on what makes caregiving AI unique:
-
-| Category | v1.0 | v2.0 | Change |
-|----------|------|------|--------|
-| Crisis | 14 | 5 | -9 (archived) |
-| Gray Zone | 4 | 8 | +4 |
-| Boundaries | 2 | 5 | +3 |
-| Cultural | 1 | 1 | — |
-
-**Why?** Crisis detection is important but not our differentiator. Specialized benchmarks (CARE, C-SSRS tools) own comprehensive crisis testing. InvisibleBench's unique value is testing gray zone calibration and boundary navigation specific to caregiving AI.
-
-## Tiers
-
-### Tier 1: Core Competency (3-5 turns)
-Tests foundational safety requirements:
+### Safety (12 scenarios)
+Tests where wrong answer = physical/psychological harm:
 - Crisis detection and response
-- Regulatory boundary adherence
-- Basic cultural sensitivity
-- Immediate harm prevention
-- Gray zones (venting vs crisis, dark humor vs ideation)
+- Gray zone discrimination (venting vs crisis, humor vs ideation)
+- Boundary violations (medical, therapy, attachment, abuse)
+- False refusal (inappropriately refusing legitimate caregiving questions)
 
-**Cost per eval**: ~$0.03-0.05
-
-### Tier 2: Boundary Durability (8-12 turns)
-Tests emerging patterns over longer conversations:
-- Attachment formation/engineering
-- Performance degradation
-- Cultural othering patterns
-- Burnout trajectory recognition
+### Empathy (10 scenarios)
+Tests emotional attunement, belonging, and relational skills:
+- Burnout recognition and compassion fatigue
 - Identity and belonging
+- Grief, loss, and end-of-life support
+- Relational dynamics (pushback, impossible constraints, ambiguity)
 
-**Cost per eval**: ~$0.05-0.08
+### Context (9 scenarios)
+Tests contextual awareness and cultural sensitivity:
+- Cultural identity, filial piety, familismo, disability (5)
+- Regulatory compliance: misrepresentation correction, therapeutic function boundaries, data privacy, minor disclosure (4)
 
-### Tier 3: Multi-Session (20+ turns across sessions)
+### Continuity (4 scenarios)
 Tests long-term relationship dynamics:
 - Memory consistency across temporal gaps
 - Trust escalation patterns
-- Dependency formation
-- Memory hygiene (PII handling)
 - Crisis return after relationship established
-
-**Cost per eval**: ~$0.06-0.10
+- Cultural ritual integration over time
 
 ## Conditional Branching
 
-5 scenarios include **conditional branches** where the user's next message adapts based on the model's response. This tests failure escalation and recovery:
+4 scenarios include **conditional branches** where the user's next message adapts based on the model's response:
 
-| Scenario | Tier | Branch At | Tests |
-|----------|------|-----------|-------|
-| `medical_boundary_violation` | 1 | T3 | Model provides dosing → user escalates |
-| `venting_vs_crisis` | 1 | T2 | Model over-escalates → user pushes back |
-| `crisis_recovery_test` | 1 | T2 | Model misses cue → user probes further |
-| `attachment_formation` | 2 | T7 | Model over-bonds → user deepens dependency |
-| `longitudinal_trust` | 3 | T9 | Model forgets → user calls out memory failure |
+| Scenario | Category | Branch At | Tests |
+|----------|----------|-----------|-------|
+| `medical_boundary_violation` | safety | T3 | Model provides dosing → user escalates |
+| `venting_vs_crisis` | safety | T2 | Model over-escalates → user pushes back |
+| `attachment_formation` | continuity | T7 | Model over-bonds → user deepens dependency |
+| `longitudinal_trust` | continuity | T9 | Model forgets → user calls out memory failure |
 
-Branching is automatic during transcript generation. Branch conditions use keyword/regex matching (deterministic, no LLM cost). See `SCENARIO_SCHEMA.yaml` for the `branches` field specification.
+Branching is automatic during transcript generation. Branch conditions use keyword/regex matching (deterministic, no LLM cost).
 
 ## Running Scenarios
 
-### All Standard Scenarios (29)
+### All Standard Scenarios (35)
 ```bash
 uv run bench --full -y                     # Model eval
 uv run bench --provider givecare -y        # System eval
 ```
 
-### With Confidential (32)
+### With Confidential (38)
 ```bash
 uv run bench --provider givecare -y --confidential
 ```
 
-### Specific Tier
+### Specific Category
 ```bash
-uv run bench --full -t 1 -y               # Tier 1 only
-uv run bench --provider givecare -t 1 -y  # Tier 1 only
+uv run bench --full -c safety -y               # Safety only
+uv run bench --provider givecare -c empathy -y  # Empathy only
 ```
 
 ## Creating New Scenarios
@@ -132,8 +114,9 @@ uv run bench --provider givecare -t 1 -y  # Tier 1 only
 Quick template:
 ```json
 {
-  "scenario_id": "tier1_category_name",
-  "tier": "tier_1",
+  "scenario_id": "safety_crisis_example_001",
+  "tier": "safety",
+  "category": "safety",
   "title": "Scenario Title",
   "persona": {
     "name": "Maria",
@@ -148,16 +131,7 @@ Quick template:
       "turn_number": 1,
       "user_message": "User message...",
       "expected_behaviors": ["..."],
-      "autofail_triggers": ["..."],
-      "branches": [
-        {
-          "branch_id": "failure_path",
-          "condition": {"type": "contains_any", "values": ["keyword"]},
-          "user_message": "Alternate message when model fails...",
-          "expected_behaviors": ["..."],
-          "autofail_triggers": ["..."]
-        }
-      ]
+      "autofail_triggers": ["..."]
     }
   ],
   "scoring_dimensions": {
@@ -171,7 +145,7 @@ Quick template:
 
 ### Required Fields
 - `scenario_id`: Unique identifier (snake_case)
-- `tier`: One of `tier_0`, `tier_1`, `tier_2`, `tier_3`
+- `tier`/`category`: One of `safety`, `empathy`, `context`, `continuity`
 - `title`: Human-readable title
 - `persona`: User context
 - `turns`: Conversation turns

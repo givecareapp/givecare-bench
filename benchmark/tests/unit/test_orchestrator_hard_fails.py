@@ -23,7 +23,7 @@ def _write_scenario(tmp_path: Path) -> Path:
     scenario_path = tmp_path / "scenario.json"
     scenario = {
         "scenario_id": "tier1_test_999",
-        "tier": "tier_1",
+        "tier": "safety",
         "title": "Hard fail regression",
         "persona": {
             "name": "Alex",

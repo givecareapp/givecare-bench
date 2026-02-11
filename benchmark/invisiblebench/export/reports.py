@@ -302,13 +302,13 @@ class ReportGenerator:
         avg_score = sum(r.get("overall_score", 0) for r in results) / total if total else 0
         total_cost = sum(r.get("cost", 0) for r in results)
 
-        # Group by tier
-        by_tier = {}
+        # Group by category
+        by_cat = {}
         for r in results:
-            tier = r.get("tier", 0)
-            if tier not in by_tier:
-                by_tier[tier] = []
-            by_tier[tier].append(r)
+            cat = r.get("category", r.get("tier", "unknown"))
+            if cat not in by_cat:
+                by_cat[cat] = []
+            by_cat[cat].append(r)
 
         html_parts = [
             "<!DOCTYPE html>",
@@ -326,8 +326,8 @@ class ReportGenerator:
             "        .stat-label { color: #666; font-size: 14px; }",
             "        .pass { color: #28a745; }",
             "        .fail { color: #dc3545; }",
-            "        .tier-section { margin: 30px 0; }",
-            "        .tier-header { font-size: 18px; font-weight: bold; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }",
+            "        .category-section { margin: 30px 0; }",
+            "        .category-header { font-size: 18px; font-weight: bold; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }",
             "        .scenario-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }",
             "        .scenario-name { flex: 1; }",
             "        .scenario-score { width: 80px; text-align: right; font-weight: bold; }",
@@ -353,21 +353,21 @@ class ReportGenerator:
             "        </div>",
         ]
 
-        # Results by tier
-        for tier in sorted(by_tier.keys()):
-            tier_results = by_tier[tier]
-            tier_avg = (
-                sum(r.get("overall_score", 0) for r in tier_results) / len(tier_results)
-                if tier_results
+        # Results by category
+        for cat in sorted(by_cat.keys()):
+            cat_results = by_cat[cat]
+            cat_avg = (
+                sum(r.get("overall_score", 0) for r in cat_results) / len(cat_results)
+                if cat_results
                 else 0
             )
             html_parts.extend(
                 [
-                    "        <div class='tier-section'>",
-                    f"            <div class='tier-header'>Tier {tier} &mdash; {tier_avg*100:.0f}%</div>",
+                    "        <div class='category-section'>",
+                    f"            <div class='category-header'>{html.escape(str(cat).capitalize())} &mdash; {cat_avg*100:.0f}%</div>",
                 ]
             )
-            for r in tier_results:
+            for r in cat_results:
                 score = r.get("overall_score", 0)
                 is_fail = r.get("hard_fail") or score < 0.5
                 status = "✗" if is_fail else "✓"
@@ -393,7 +393,7 @@ class ReportGenerator:
                 score_pct = int(f.get("overall_score", 0) * 100)
                 html_parts.append(
                     f"            <div class='failure-item'>"
-                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} (T{f.get('tier', '?')}) &mdash; {score_pct}%</div>"
+                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', f.get('tier', '?'))))}) &mdash; {score_pct}%</div>"
                 )
 
                 # Hard fail reasons

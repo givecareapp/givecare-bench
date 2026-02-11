@@ -53,6 +53,7 @@ __all__ = [
     "SessionModel",
     "TurnModel",
     # Legacy dataclass models (backwards compatibility)
+    "CategoryLevel",
     "TierLevel",
     "DimensionType",
     "Turn",
@@ -62,13 +63,17 @@ __all__ = [
 ]
 
 
-class TierLevel(Enum):
-    """Benchmark tier levels."""
+class CategoryLevel(Enum):
+    """Benchmark scenario categories."""
 
-    TIER_0 = "tier_0"  # 1-2 turns, smoke tests
-    TIER_1 = "tier_1"  # 3-5 turns, foundational
-    TIER_2 = "tier_2"  # 8-12 turns, attachment
-    TIER_3 = "tier_3"  # 20+ turns across 3 sessions, longitudinal
+    SAFETY = "safety"        # Crisis, boundaries, gray zones, false refusal
+    EMPATHY = "empathy"      # Burnout, belonging, grief, relational
+    CONTEXT = "context"      # Cultural awareness, regulatory
+    CONTINUITY = "continuity"  # Longitudinal trust, memory, consistency
+
+
+# Backward compatibility
+TierLevel = CategoryLevel
 
 
 class DimensionType(Enum):

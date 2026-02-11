@@ -117,24 +117,25 @@ class ScenarioValidator:
         """
         errors = []
 
-        # Required fields
-        required_fields = ["scenario_id", "tier", "title", "persona", "scoring_dimensions"]
+        # Required fields (tier is accepted as legacy, category is preferred)
+        required_fields = ["scenario_id", "title", "persona", "scoring_dimensions"]
         for field in required_fields:
             if field not in data:
                 errors.append(f"Missing required field: {field}")
 
-        # Validate tier
-        if "tier" in data:
-            try:
-                TierLevel(data["tier"])
-            except ValueError:
-                errors.append(f"Invalid tier: {data['tier']}")
+        # Must have either tier or category
+        if "tier" not in data and "category" not in data:
+            errors.append("Missing required field: tier or category")
 
-        if "category" in data:
-            try:
-                DimensionType(data["category"])
-            except ValueError:
-                errors.append(f"Invalid category: {data['category']}")
+        # Validate category values (accept both old tier_N and new category names)
+        VALID_VALUES = {"safety", "empathy", "context", "continuity", "confidential",
+                       "tier_0", "tier_1", "tier_2", "tier_3"}
+        tier_val = data.get("tier", "")
+        cat_val = data.get("category", "")
+        if tier_val and tier_val not in VALID_VALUES:
+            errors.append(f"Invalid tier: {tier_val}")
+        if cat_val and cat_val not in VALID_VALUES:
+            errors.append(f"Invalid category: {cat_val}")
 
         # Validate persona structure
         if "persona" in data:
@@ -144,14 +145,16 @@ class ScenarioValidator:
                     errors.append(f"Missing persona field: {field}")
 
         # Validate turns or sessions
-        if "tier" in data:
-            tier = TierLevel(data["tier"])
-            if tier == TierLevel.TIER_3:
-                if "sessions" not in data or len(data["sessions"]) == 0:
-                    errors.append("Tier 3 scenarios must have sessions")
-            else:
+        tier_or_cat = data.get("tier", data.get("category", ""))
+        if tier_or_cat == "continuity" or tier_or_cat == "tier_3":
+            if "sessions" not in data or len(data["sessions"]) == 0:
+                # Multi-session scenarios may also use turns
                 if "turns" not in data or len(data["turns"]) == 0:
-                    errors.append("Tier 1/2 scenarios must have turns")
+                    errors.append("Continuity scenarios must have sessions or turns")
+        elif tier_or_cat:
+            if "turns" not in data or len(data["turns"]) == 0:
+                if "sessions" not in data or len(data["sessions"]) == 0:
+                    errors.append("Scenarios must have turns or sessions")
 
         if "turns" in data:
             ScenarioValidator._validate_turn_list(data.get("turns"), errors, "turns")
@@ -256,17 +259,18 @@ class ScenarioLoader:
         return scenario
 
 
-def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any]:
+def create_example_scenario(tier: TierLevel = TierLevel.SAFETY) -> Dict[str, Any]:
     """
-    Generate example scenario template for given tier.
+    Generate example scenario template for given category.
 
     Useful for creating new scenarios.
     """
-    if tier == TierLevel.TIER_1:
+    if tier == TierLevel.SAFETY:
         return {
-            "scenario_id": "tier1_example_001",
-            "tier": "tier_1",
-            "title": "Example Tier 1 Scenario",
+            "scenario_id": "safety_example_001",
+            "tier": "safety",
+            "category": "safety",
+            "title": "Example Safety Scenario",
             "persona": {
                 "name": "Example User",
                 "age": 45,
@@ -297,11 +301,12 @@ def create_example_scenario(tier: TierLevel = TierLevel.TIER_1) -> Dict[str, Any
             },
             "dif_variables": ["income", "race"],
         }
-    elif tier == TierLevel.TIER_3:
+    elif tier == TierLevel.CONTINUITY:
         return {
-            "scenario_id": "tier3_example_001",
-            "tier": "tier_3",
-            "title": "Example Tier 3 Multi-Session Scenario",
+            "scenario_id": "continuity_example_001",
+            "tier": "continuity",
+            "category": "continuity",
+            "title": "Example Continuity Multi-Session Scenario",
             "persona": {
                 "name": "Example User",
                 "age": 45,

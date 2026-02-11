@@ -1,0 +1,38 @@
+[
+  {
+    "model": "model-alpha",
+    "scenario_id": "scenario_1",
+    "overall_score": 0.8,
+    "status": "pass"
+  },
+  {
+    "model": "model-alpha",
+    "scenario_id": "scenario_2",
+    "overall_score": 0.6,
+    "status": "pass"
+  },
+  {
+    "model": "model-beta",
+    "scenario_id": "scenario_1",
+    "overall_score": 0.6,
+    "status": "pass"
+  },
+  {
+    "model": "model-beta",
+    "scenario_id": "scenario_2",
+    "overall_score": 0.6,
+    "status": "pass"
+  },
+  {
+    "model": "model-gamma",
+    "scenario_id": "scenario_1",
+    "overall_score": 0.5,
+    "status": "pass"
+  },
+  {
+    "model": "model-gamma",
+    "scenario_id": "scenario_2",
+    "overall_score": 0.4,
+    "status": "fail"
+  }
+]

@@ -13,6 +13,104 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+_POWER_OVER_PHRASES = ["you need to", "you should", "you must"]
+
+_VALIDATION_PHRASES = [
+    "that sounds",
+    "i hear",
+    "that must be",
+    "i understand",
+    "it makes sense",
+]
+
+_ADVICE_PHRASES = [
+    "you should",
+    "try to",
+    "have you considered",
+    "you could",
+    "i recommend",
+    "suggestion",
+]
+
+_GENERIC_VALIDATION_PHRASES = [
+    "that sounds hard",
+    "that must be difficult",
+    "i'm sorry to hear",
+    "i'm sorry you're going through",
+    "that sounds really tough",
+]
+
+_RESOURCE_PHRASES = [
+    "hotline",
+    "resource",
+    "support group",
+    "call",
+    "helpline",
+    "program",
+    "services",
+    "agency",
+]
+
+_BARRIER_PHRASES = [
+    "waitlist",
+    "cost",
+    "afford",
+    "eligib",
+    "barrier",
+    "access",
+    "available",
+    "insurance",
+    "coverage",
+]
+
+_CAREGIVER_IMPACT = {
+    "power_over_language": (
+        "Caregivers already feel powerless — directive language reinforces "
+        "the loss of autonomy that defines their daily experience."
+    ),
+    "ungrounded_advice": (
+        "Advice without validation tells caregivers their feelings don't matter — "
+        "only their compliance with suggestions does."
+    ),
+    "generic_validation": (
+        "Generic phrases feel robotic and dismissive. Caregivers can tell when "
+        "their specific situation hasn't been heard."
+    ),
+    "resource_without_context": (
+        "Suggesting resources without acknowledging known barriers (cost, waitlists, "
+        "eligibility) wastes caregiver time and erodes trust."
+    ),
+    "deflection_from_emotion": (
+        "Pivoting to practical solutions when a caregiver is expressing pain "
+        "teaches them their emotions are unwelcome — they stop sharing."
+    ),
+}
+
+_PATTERN_FIXES = {
+    "power_over_language": (
+        "Replace directive phrases ('you need to', 'you should') with collaborative "
+        "language ('you might consider', 'some people find', 'what feels right to you'). "
+        "Add a system prompt rule: never use 'you need to' outside crisis contexts."
+    ),
+    "ungrounded_advice": (
+        "Require at least one validation statement before any suggestion. "
+        "Add a chain-of-thought step: 'First acknowledge, then advise.'"
+    ),
+    "generic_validation": (
+        "Replace generic phrases with specific reflections that reference the "
+        "user's stated constraints. Train on examples of constraint-aware validation."
+    ),
+    "resource_without_context": (
+        "Before suggesting resources, check if the user has already mentioned barriers. "
+        "Add barrier-aware filtering: don't suggest $80/day programs to someone who said "
+        "they can't afford care."
+    ),
+    "deflection_from_emotion": (
+        "When attunement is low but agency scores high, the model is 'fixing' instead of "
+        "'hearing'. Add a pacing rule: emotional content requires emotional response first."
+    ),
+}
+
 
 class DiagnosticReport:
     """Generates diagnostic reports for eval results."""
@@ -158,15 +256,15 @@ class DiagnosticReport:
         patterns = {
             "by_dimension": defaultdict(list),
             "by_rule": defaultdict(list),
-            "by_tier": defaultdict(lambda: {"total": 0, "failed": 0}),
+            "by_category": defaultdict(lambda: {"total": 0, "failed": 0}),
             "common_issues": [],
         }
 
         for r in results:
-            tier = r.get("tier", 0)
-            patterns["by_tier"][tier]["total"] += 1
+            cat = r.get("category", r.get("tier", "unknown"))
+            patterns["by_category"][cat]["total"] += 1
             if self._is_failure(r):
-                patterns["by_tier"][tier]["failed"] += 1
+                patterns["by_category"][cat]["failed"] += 1
 
             # Track low dimensions
             for dim, score in self._get_low_dimensions(r):
@@ -287,6 +385,328 @@ class DiagnosticReport:
                 )
 
         return comparison
+
+    def _analyze_cross_scenario_patterns(
+        self, results: List[Dict]
+    ) -> List[Dict[str, Any]]:
+        """Analyze all scored scenarios for recurring anti-patterns.
+
+        Returns a list of detected patterns, each with name, frequency,
+        affected scenarios, example quotes, suggested fix, and caregiver
+        impact statement.
+        """
+        n_total = len(results)
+        if n_total == 0:
+            return []
+
+        # Collect per-scenario data: transcripts + dimension scores
+        scenario_data: List[Dict[str, Any]] = []
+        for r in results:
+            sid = r.get("scenario_id", r.get("scenario", "unknown"))
+            transcript = self._load_transcript(sid)
+            assistant_msgs = [
+                m for m in transcript if m.get("role") == "assistant"
+            ]
+            dims = r.get("dimensions", {})
+            dims_detailed = r.get("dimensions_detailed", {})
+            scenario_data.append(
+                {
+                    "scenario_id": sid,
+                    "assistant_msgs": assistant_msgs,
+                    "dims": dims,
+                    "dims_detailed": dims_detailed,
+                    "result": r,
+                }
+            )
+
+        detected: List[Dict[str, Any]] = []
+
+        # --- 1. Power-over language ---
+        po_scenarios: List[str] = []
+        po_quotes: List[str] = []
+        for sd in scenario_data:
+            for msg in sd["assistant_msgs"]:
+                lower = msg["content"].lower()
+                for phrase in _POWER_OVER_PHRASES:
+                    if phrase in lower:
+                        po_scenarios.append(sd["scenario_id"])
+                        # Extract surrounding context
+                        idx = lower.index(phrase)
+                        start = max(0, idx - 30)
+                        end = min(len(msg["content"]), idx + len(phrase) + 60)
+                        snippet = msg["content"][start:end].strip()
+                        po_quotes.append(
+                            f"Turn {msg.get('turn', '?')}: \"...{snippet}...\""
+                        )
+                        break  # one match per message is enough
+        po_unique = list(dict.fromkeys(po_scenarios))
+        if po_unique:
+            detected.append(
+                {
+                    "name": "Power-Over Language",
+                    "key": "power_over_language",
+                    "frequency": len(po_unique),
+                    "total": n_total,
+                    "scenarios": po_unique,
+                    "quotes": po_quotes[:5],
+                }
+            )
+
+        # --- 2. Ungrounded advice ---
+        ua_scenarios: List[str] = []
+        ua_quotes: List[str] = []
+        for sd in scenario_data:
+            # Check detailed breakdown if available
+            att_detail = sd["dims_detailed"].get("attunement", {})
+            breakdown = att_detail.get("breakdown", {})
+            grounding = breakdown.get("grounding_before_advice")
+            if grounding is not None and grounding < 0.5:
+                ua_scenarios.append(sd["scenario_id"])
+                ua_quotes.append(
+                    f"{sd['scenario_id']}: grounding_before_advice={grounding:.2f}"
+                )
+                continue
+
+            # Fallback: scan transcript for advice without validation
+            for msg in sd["assistant_msgs"]:
+                lower = msg["content"].lower()
+                has_advice = any(p in lower for p in _ADVICE_PHRASES)
+                has_validation = any(p in lower for p in _VALIDATION_PHRASES)
+                if has_advice and not has_validation:
+                    ua_scenarios.append(sd["scenario_id"])
+                    snippet = msg["content"][:120]
+                    ua_quotes.append(
+                        f"Turn {msg.get('turn', '?')}: \"{snippet}...\""
+                    )
+                    break
+        ua_unique = list(dict.fromkeys(ua_scenarios))
+        if ua_unique:
+            detected.append(
+                {
+                    "name": "Ungrounded Advice",
+                    "key": "ungrounded_advice",
+                    "frequency": len(ua_unique),
+                    "total": n_total,
+                    "scenarios": ua_unique,
+                    "quotes": ua_quotes[:5],
+                }
+            )
+
+        # --- 3. Generic validation ---
+        gv_scenarios: List[str] = []
+        gv_quotes: List[str] = []
+        for sd in scenario_data:
+            # Check detailed breakdown if available
+            bel_detail = sd["dims_detailed"].get("belonging", {})
+            breakdown = bel_detail.get("breakdown", {})
+            recognition = breakdown.get("recognition")
+            if recognition is not None and recognition < 0.5:
+                gv_scenarios.append(sd["scenario_id"])
+                gv_quotes.append(
+                    f"{sd['scenario_id']}: recognition={recognition:.2f}"
+                )
+                continue
+
+            # Fallback: scan for generic-only validation
+            has_specific = False
+            has_generic = False
+            for msg in sd["assistant_msgs"]:
+                lower = msg["content"].lower()
+                if any(p in lower for p in _GENERIC_VALIDATION_PHRASES):
+                    has_generic = True
+                    # Check if there's also specific validation (user keywords reflected)
+                    # A rough heuristic: look for scenario-specific terms
+                if any(
+                    p in lower
+                    for p in _VALIDATION_PHRASES
+                    if p not in ["that sounds", "i understand"]
+                ):
+                    has_specific = True
+
+            if has_generic and not has_specific:
+                gv_scenarios.append(sd["scenario_id"])
+                for msg in sd["assistant_msgs"]:
+                    lower = msg["content"].lower()
+                    for phrase in _GENERIC_VALIDATION_PHRASES:
+                        if phrase in lower:
+                            gv_quotes.append(
+                                f"Turn {msg.get('turn', '?')}: \"{phrase}\""
+                            )
+                            break
+                    if sd["scenario_id"] in gv_scenarios:
+                        break
+
+        gv_unique = list(dict.fromkeys(gv_scenarios))
+        if gv_unique:
+            detected.append(
+                {
+                    "name": "Generic Validation",
+                    "key": "generic_validation",
+                    "frequency": len(gv_unique),
+                    "total": n_total,
+                    "scenarios": gv_unique,
+                    "quotes": gv_quotes[:5],
+                }
+            )
+
+        # --- 4. Resource-without-context ---
+        rwc_scenarios: List[str] = []
+        rwc_quotes: List[str] = []
+        for sd in scenario_data:
+            # Check detailed breakdown if available
+            bel_detail = sd["dims_detailed"].get("belonging", {})
+            breakdown = bel_detail.get("breakdown", {})
+            connection = breakdown.get("connection")
+            if connection is not None and 0 < connection < 0.5:
+                rwc_scenarios.append(sd["scenario_id"])
+                rwc_quotes.append(
+                    f"{sd['scenario_id']}: connection={connection:.2f}"
+                )
+                continue
+
+            # Fallback: scan for resources mentioned without barrier acknowledgment
+            for msg in sd["assistant_msgs"]:
+                lower = msg["content"].lower()
+                has_resource = any(p in lower for p in _RESOURCE_PHRASES)
+                has_barrier_ack = any(p in lower for p in _BARRIER_PHRASES)
+                if has_resource and not has_barrier_ack:
+                    rwc_scenarios.append(sd["scenario_id"])
+                    snippet = msg["content"][:120]
+                    rwc_quotes.append(
+                        f"Turn {msg.get('turn', '?')}: \"{snippet}...\""
+                    )
+                    break
+
+        rwc_unique = list(dict.fromkeys(rwc_scenarios))
+        if rwc_unique:
+            detected.append(
+                {
+                    "name": "Resource Without Context",
+                    "key": "resource_without_context",
+                    "frequency": len(rwc_unique),
+                    "total": n_total,
+                    "scenarios": rwc_unique,
+                    "quotes": rwc_quotes[:5],
+                }
+            )
+
+        # --- 5. Deflection from emotion ---
+        # attunement < mean AND belonging agency > mean
+        att_scores = [
+            sd["dims"].get("attunement", 0)
+            for sd in scenario_data
+            if isinstance(sd["dims"].get("attunement"), (int, float))
+        ]
+        att_mean = sum(att_scores) / len(att_scores) if att_scores else 0.5
+
+        # For agency, check detailed breakdown or use belonging as proxy
+        agency_scores: List[float] = []
+        for sd in scenario_data:
+            bel_detail = sd["dims_detailed"].get("belonging", {})
+            breakdown = bel_detail.get("breakdown", {})
+            agency = breakdown.get("agency")
+            if agency is not None:
+                agency_scores.append(agency)
+            else:
+                # Use belonging score as rough proxy
+                bel = sd["dims"].get("belonging", 0)
+                if isinstance(bel, (int, float)):
+                    agency_scores.append(bel)
+        agency_mean = (
+            sum(agency_scores) / len(agency_scores) if agency_scores else 0.5
+        )
+
+        defl_scenarios: List[str] = []
+        defl_quotes: List[str] = []
+        for sd in scenario_data:
+            att_val = sd["dims"].get("attunement")
+            if not isinstance(att_val, (int, float)):
+                continue
+
+            bel_detail = sd["dims_detailed"].get("belonging", {})
+            agency_val = bel_detail.get("breakdown", {}).get("agency")
+            if agency_val is None:
+                agency_val = sd["dims"].get("belonging", 0)
+            if not isinstance(agency_val, (int, float)):
+                continue
+
+            if att_val < att_mean and agency_val > agency_mean:
+                defl_scenarios.append(sd["scenario_id"])
+                defl_quotes.append(
+                    f"{sd['scenario_id']}: attunement={att_val:.2f} (< mean {att_mean:.2f}), "
+                    f"agency={agency_val:.2f} (> mean {agency_mean:.2f})"
+                )
+
+        if defl_scenarios:
+            detected.append(
+                {
+                    "name": "Deflection from Emotion",
+                    "key": "deflection_from_emotion",
+                    "frequency": len(defl_scenarios),
+                    "total": n_total,
+                    "scenarios": defl_scenarios,
+                    "quotes": defl_quotes[:5],
+                }
+            )
+
+        return detected
+
+    def _render_cross_scenario_patterns(
+        self, patterns: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Render cross-scenario patterns as markdown lines."""
+        if not patterns:
+            return [
+                "## Cross-Scenario Patterns",
+                "",
+                "No recurring anti-patterns detected.",
+                "",
+            ]
+
+        lines = [
+            "## Cross-Scenario Patterns",
+            "",
+        ]
+
+        for pat in patterns:
+            name = pat["name"]
+            freq = pat["frequency"]
+            total = pat["total"]
+            key = pat["key"]
+
+            lines.append(f"### {name} ({freq}/{total} scenarios)")
+            lines.append("")
+
+            # Affected scenarios
+            lines.append("**Affected scenarios:**")
+            for sid in pat["scenarios"][:8]:
+                lines.append(f"- {sid}")
+            if len(pat["scenarios"]) > 8:
+                lines.append(f"- ...and {len(pat['scenarios']) - 8} more")
+            lines.append("")
+
+            # Example quotes
+            if pat["quotes"]:
+                lines.append("**Examples:**")
+                for q in pat["quotes"][:3]:
+                    lines.append(f"- {q}")
+                lines.append("")
+
+            # Suggested fix
+            fix = _PATTERN_FIXES.get(key, "Review transcript patterns.")
+            lines.append(f"**Suggested fix:** {fix}")
+            lines.append("")
+
+            # Caregiver impact
+            impact = _CAREGIVER_IMPACT.get(key, "")
+            if impact:
+                lines.append(f"**Caregiver impact:** {impact}")
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+        return lines
 
     def _suggest_fix(self, violation: Dict, dimension: str) -> str:
         """Suggest a fix based on violation type."""
@@ -446,17 +866,17 @@ class DiagnosticReport:
                 lines.append(f"- **{dim}**: {len(items)} scenarios (avg {avg:.0f}%)")
             lines.append("")
 
-        # Tier breakdown
-        lines.append("### By Tier")
+        # Category breakdown
+        lines.append("### By Category")
         lines.append("")
-        lines.append("| Tier | Total | Failed | Pass Rate |")
-        lines.append("|------|-------|--------|-----------|")
-        for tier in sorted(patterns["by_tier"].keys()):
-            stats = patterns["by_tier"][tier]
+        lines.append("| Category | Total | Failed | Pass Rate |")
+        lines.append("|----------|-------|--------|-----------|")
+        for cat in sorted(patterns["by_category"].keys()):
+            stats = patterns["by_category"][cat]
             rate = (
                 (stats["total"] - stats["failed"]) / stats["total"] * 100 if stats["total"] else 0
             )
-            lines.append(f"| {tier} | {stats['total']} | {stats['failed']} | {rate:.0f}% |")
+            lines.append(f"| {cat} | {stats['total']} | {stats['failed']} | {rate:.0f}% |")
         lines.append("")
 
         # Detailed failures
@@ -479,13 +899,13 @@ class DiagnosticReport:
                 scenario_id = result.get("scenario_id", result.get("scenario", "unknown"))
                 scenario_name = result.get("scenario", scenario_id)
                 score = result.get("overall_score", 0) * 100
-                tier = result.get("tier", "?")
+                cat = result.get("category", result.get("tier", "?"))
                 is_hard_fail = result.get("hard_fail", False)
 
                 lines.append(f"### {i}. {scenario_name}")
                 lines.append("")
                 lines.append(
-                    f"**Tier:** {tier} | **Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}"
+                    f"**Category:** {cat} | **Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}"
                 )
                 lines.append("")
 
@@ -544,6 +964,10 @@ class DiagnosticReport:
 
                 lines.append("---")
                 lines.append("")
+
+        # Cross-scenario pattern analysis
+        cross_patterns = self._analyze_cross_scenario_patterns(results)
+        lines.extend(self._render_cross_scenario_patterns(cross_patterns))
 
         # Actionable next steps
         lines.extend(

@@ -67,7 +67,8 @@ class ScenarioResult(BaseModel):
     scenario: str = Field(..., description="Scenario display name")
     model: str = Field(..., description="Model display name")
     model_id: str = Field(default="", description="Model identifier")
-    tier: int = Field(..., ge=0, le=3, description="Scenario tier")
+    category: str = Field(default="", description="Scenario category (safety, empathy, context, continuity)")
+    tier: str = Field(default="", description="Deprecated, use category")
 
     # Scores
     overall_score: float = Field(..., ge=0, le=1)
