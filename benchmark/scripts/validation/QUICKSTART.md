@@ -15,11 +15,11 @@ This guide walks through running InvisibleBench evaluations.
 
 ```bash
 # Model Evaluation (raw LLM)
-uv run bench --minimal -y              # 1 model, ~$0.05
-uv run bench --full -y                 # 11 models, ~$5-10
+uv run bench -m deepseek -y           # 1 model
+uv run bench --full -y                 # 12 models, ~$5-10
 
 # System Evaluation (GiveCare/Mira)
-uv run bench --provider givecare -y    # 29 scenarios
+uv run bench --provider givecare -y    # 35 scenarios
 uv run bench --provider givecare -y --diagnose  # With diagnostic report
 
 # Diagnostic Reports
@@ -49,15 +49,15 @@ uv run bench --provider givecare --dry-run
 
 **Model Evaluation** (compare raw LLMs):
 ```bash
-uv run bench --minimal -y              # Quick validation
+uv run bench -m deepseek -y           # Quick validation
 uv run bench --full -y                 # Full benchmark
-uv run bench --full -m 1-4 -y          # Models 1-4 only
+uv run bench -m 1-4 -y                # Models 1-4 only
 ```
 
 **System Evaluation** (test Mira product):
 ```bash
 uv run bench --provider givecare -y
-uv run bench --provider givecare -t 0,1 -y  # Tier 0 and 1 only
+uv run bench --provider givecare -c safety -y  # Safety category only
 ```
 
 ### 4. Review Results
@@ -151,28 +151,28 @@ uv pip install -e . --force-reinstall
 Run from repository root:
 ```bash
 cd /path/to/givecare-bench
-uv run bench --minimal -y
+uv run bench -m deepseek -y
 ```
 
 ## Advanced Usage
 
 ### Filter by Model
 ```bash
-uv run bench --full -m 1-4 -y    # First 4 models
-uv run bench --full -m 4 -y      # Model 4 only
-uv run bench --full -m 1,3,5 -y  # Specific models
-uv run bench --full -m 4- -y     # Models 4 onwards
+uv run bench -m 1-4 -y               # First 4 models
+uv run bench -m deepseek -y          # By name
+uv run bench -m 1,3,5 -y            # Specific models
+uv run bench -m 4- -y               # Models 4 onwards
 ```
 
-### Filter by Tier
+### Filter by Category
 ```bash
-uv run bench --full -t 0 -y      # Tier 0 only
-uv run bench --full -t 0,1 -y    # Tier 0 and 1
+uv run bench -m deepseek -c safety -y          # Safety only
+uv run bench -m deepseek -c safety,empathy -y  # Safety and empathy
 ```
 
 ### Parallel Execution
 ```bash
-uv run bench --full -m 1-4 -p 4 -y  # 4 models in parallel
+uv run bench -m 1-4 -p 4 -y  # 4 models in parallel
 ```
 
 ### Update Leaderboard
@@ -182,16 +182,16 @@ uv run bench --full -y --update-leaderboard
 
 ### Include Confidential Scenarios
 ```bash
-uv run bench --provider givecare -y --confidential  # 32 scenarios
+uv run bench --provider givecare -y --confidential  # 38 scenarios
 ```
 
 ## Model vs System Evaluation
 
 | Aspect | Model Eval | System Eval |
 |--------|------------|-------------|
-| Command | `--full` or `--minimal` | `--provider givecare` |
+| Command | `--full` or `-m NAME` | `--provider givecare` |
 | Tests | Raw LLM capability | Mira product |
-| Scenarios | 29 | 29 (or 32) |
+| Scenarios | 35 | 35 (or 38) |
 | Comparable | Across models | Across product versions |
 
 **Scores are NOT comparable across modes.**
@@ -200,8 +200,8 @@ uv run bench --provider givecare -y --confidential  # 32 scenarios
 
 | Mode | Cost |
 |------|------|
-| Minimal (1 model) | ~$0.05 |
-| Full (11 models) | ~$5-10 |
+| Single model | ~$1-2 |
+| Full (12 models) | ~$5-10 |
 | System eval | Free (uses gc CLI) |
 
 ## Support

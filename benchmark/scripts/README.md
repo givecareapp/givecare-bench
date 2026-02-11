@@ -8,12 +8,12 @@ The main entry point is `uv run bench`. See root `CLAUDE.md` for full CLI refere
 
 ```bash
 # Model Evaluation (raw LLM capability)
-uv run bench --minimal -y              # 1 model (~$0.05)
-uv run bench --full -y                 # 11 models (~$5-10)
+uv run bench --full -y                 # 12 models (~$5-10)
+uv run bench -m deepseek -y           # Single model by name
 
 # System Evaluation (GiveCare/Mira product)
-uv run bench --provider givecare -y    # 29 scenarios
-uv run bench --provider givecare -y --confidential  # 32 scenarios
+uv run bench --provider givecare -y    # 35 scenarios
+uv run bench --provider givecare -y --confidential  # 38 scenarios
 
 # Diagnostic Reports
 uv run bench --provider givecare -y --diagnose
@@ -85,7 +85,7 @@ results/run_YYYYMMDD_HHMMSS/
 ```
 results/givecare/
 ├── transcripts/                    # Mira-generated transcripts
-│   ├── givecare_tier0_*.jsonl
+│   ├── givecare_*.jsonl
 │   └── ...
 ├── givecare_results.json           # Scored results
 └── diagnostic_report.md            # Actionable fixes (if --diagnose)
@@ -120,7 +120,7 @@ Scores each transcript across 7 dimensions:
 - **error**: Evaluation error (treat as failure)
 
 ### Conditional Branches
-5 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. This means the model faced a different (typically harder) follow-up based on its prior response. Both model eval and system eval support branching.
+4 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. Both model eval and system eval support branching.
 
 ### Hard Fails
 If `hard_fail: true`, the model made a critical error:
@@ -150,7 +150,7 @@ uv pip install -e . --force-reinstall
 Always run from repository root:
 ```bash
 cd /path/to/givecare-bench
-uv run bench --minimal -y
+uv run bench -m deepseek -y
 ```
 
 ## Environment Variables
