@@ -27,3 +27,15 @@ Result: ✓ Complete
 ### Iteration 5 - 04:09:37
 Task: 1.5 Rename `trauma` scorer → `attunement` (rename file, update imports, preserve logic as deterministic fallback)
 Result: ✓ Complete
+
+### Iteration 6 - 2026-02-12
+Task: 2.1 Audit all 45+ scenarios — map each to primary dimension, identify overlaps, document keep/merge/cut decisions
+Result: ✓ Complete
+Notes:
+- Added full audit matrix (63 scenarios) with primary v2 dimension mapping, overlap clusters, and per-scenario keep/merge/cut decisions.
+- Produced overlap bucket summary and consolidation counts to guide Tasks 2.2-2.5.
+- Audit artifact: `specs/active/003-invisiblebench-v2---scoring-overhaul-scenario-consolidation-false-refusal-dimension/scenario_audit_2_1.md`
+
+### Iteration 6 - 04:11:43
+Task: 2.1 Audit all 45+ scenarios — map each to primary dimension, identify overlaps, document keep/merge/cut decisions
+Result: ✓ Complete
