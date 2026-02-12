@@ -77,3 +77,19 @@ Notes:
 ### Iteration 9 - 04:16:50
 Task: 2.4 Cut/merge overlapping T2 scenarios per proposal (target: ~9 T2 scenarios)
 Result: ✓ Complete
+
+### Iteration 10 - 2026-02-12
+Task: 2.5 Cut overlapping T3 scenarios (target: 3 T3 scenarios)
+Result: ✓ Complete
+Notes:
+- Added explicit T3 core manifest (3 scenarios): `benchmark/scenarios/manifests/t3_core.txt`
+- Added Task 2.5 consolidation artifact: `specs/active/003-invisiblebench-v2---scoring-overhaul-scenario-consolidation-false-refusal-dimension/t3_consolidation_2_5.md`
+- Recorded T3 cut outcome for overlapping archive tier3 scenario.
+
+### Iteration 10 - 04:17:35
+Task: 2.5 Cut overlapping T3 scenarios (target: 3 T3 scenarios)
+Result: ✓ Complete
+
+### Iteration 10 - 04:17:27
+Task: 2.5 Cut overlapping T3 scenarios (target: 3 T3 scenarios)
+Result: ✓ Complete
