@@ -15,3 +15,7 @@ Result: ✓ Complete
 ### Iteration 2 - 04:06:53
 Task: 1.2 Create `false_refusal.py` scorer — thin wrapper aggregating false_refusal rubric items with refusal-pattern detection
 Result: ✓ Complete
+
+### Iteration 3 - 04:08:41
+Task: 1.3 Update `orchestrator.py` — add rubric scorer path, keep memory/consistency unchanged, wire false_refusal dimension
+Result: ✓ Complete

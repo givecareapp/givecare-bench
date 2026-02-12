@@ -26,6 +26,7 @@ from invisiblebench.evaluation.scorers import (
     consistency,
     false_refusal,
     memory,
+    rubric_scorer,
     safety,
 )
 from invisiblebench.evaluation.variance import aggregate_iteration_results
@@ -294,6 +295,66 @@ def _collect_turns(transcript: list[Dict[str, Any]]) -> list[int]:
         if isinstance(msg, dict) and isinstance(msg.get("turn"), int)
     }
     return sorted(turn for turn in turns if turn >= 0)
+
+
+def _all_scenario_turns(scenario: Dict[str, Any]) -> list[Dict[str, Any]]:
+    turns: list[Dict[str, Any]] = []
+    turns.extend(scenario.get("turns", []) or [])
+    for session in scenario.get("sessions", []) or []:
+        if isinstance(session, dict):
+            turns.extend(session.get("turns", []) or [])
+    return turns
+
+
+def _scenario_has_rubric_items(scenario: Dict[str, Any]) -> bool:
+    for turn in _all_scenario_turns(scenario):
+        if not isinstance(turn, dict):
+            continue
+        if turn.get("rubric") or turn.get("rubric_criteria") or turn.get("autofail_rubric"):
+            return True
+    return False
+
+
+def _dimension_from_rubric_result(
+    rubric_result: Dict[str, Any], dimension: str
+) -> Optional[Dict[str, Any]]:
+    per_dimension = rubric_result.get("dimension_results", {})
+    if not isinstance(per_dimension, dict):
+        return None
+
+    raw = per_dimension.get(dimension)
+    if not isinstance(raw, dict):
+        return None
+
+    result = dict(raw)
+    rubric_results = result.get("rubric_results", []) or []
+    hard_fails = [
+        hf
+        for hf in (rubric_result.get("hard_fails", []) or [])
+        if isinstance(hf, dict) and hf.get("dimension") == dimension
+    ]
+
+    total_weight = 0.0
+    passed_weight = 0.0
+    for item in rubric_results:
+        if not isinstance(item, dict):
+            continue
+        try:
+            weight = float(item.get("weight", 1.0))
+        except (TypeError, ValueError):
+            weight = 1.0
+        total_weight += weight
+        if bool(item.get("answer", False)):
+            passed_weight += weight
+
+    result.setdefault("method", "rubric")
+    result["hard_fails"] = hard_fails
+    result["breakdown"] = {
+        "items_evaluated": len(rubric_results),
+        "passed_weight": passed_weight,
+        "total_weight": total_weight,
+    }
+    return result
 
 
 def _extract_turn_values(items: list[Dict[str, Any]]) -> list[int]:
@@ -675,17 +736,39 @@ class ScoringOrchestrator:
             }
         dimension_scores.setdefault("consistency", {"status": "not_started"})
         dimension_scores.setdefault("false_refusal", {"status": "not_started"})
+
+        rubric_dimension_results: Dict[str, Dict[str, Any]] = {}
+        if _scenario_has_rubric_items(scenario):
+            rubric_result = self._run_scorer_safely(
+                lambda: rubric_scorer.score(
+                    transcript,
+                    scenario,
+                    api_client=self._api_client,
+                    allow_llm=self.llm_enabled,
+                ),
+                "rubric",
+            )
+            if rubric_result.get("status") == "completed":
+                for dimension in ("attunement", "belonging"):
+                    dim_result = _dimension_from_rubric_result(rubric_result, dimension)
+                    if dim_result is not None:
+                        rubric_dimension_results[dimension] = dim_result
+            else:
+                logger.warning(
+                    "Rubric scorer failed; falling back to legacy dimension scorers."
+                )
+
         # Scorer dispatch table — order matters (deterministic first, LLM-heavy last)
         attunement_config = self.scoring_config.get("attunement", {})
         scorer_calls = {
             "memory": lambda: memory.score(transcript, scenario),
             "consistency": lambda: consistency.score(transcript),
-            "attunement": lambda: attunement.score(
+            "attunement": lambda: rubric_dimension_results.get("attunement") or attunement.score(
                 transcript, scenario,
                 api_client=self._api_client, allow_llm=self.llm_enabled,
                 scoring_config=attunement_config,
             ),
-            "belonging": lambda: belonging.score(
+            "belonging": lambda: rubric_dimension_results.get("belonging") or belonging.score(
                 transcript, scenario,
                 api_client=self._api_client, allow_llm=self.llm_enabled,
             ),
