@@ -8,13 +8,17 @@ scorer consistency.
 from __future__ import annotations
 
 import json
-import os
 import random
 import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.stats import cohen_kappa_continuous as _cohen_kappa_continuous
+from invisiblebench.utils.dimension_aliases import (
+    V2_DIMENSIONS,
+    extract_numeric_dimension_value,
+    normalize_dimension_scores,
+)
 
 
 def _pairwise_kappas(
@@ -57,8 +61,8 @@ def _interpret_kappa(k: float) -> str:
     return "Poor"
 
 
-LLM_SCORERS = ["belonging", "safety", "attunement", "false_refusal", "compliance"]
-DETERMINISTIC_SCORERS = ["memory", "consistency"]
+LLM_SCORERS = V2_DIMENSIONS
+DETERMINISTIC_SCORERS: List[str] = []
 
 
 def find_transcripts(
@@ -118,7 +122,6 @@ def run_reliability(
     """
     from invisiblebench.api.client import (
         _SCORER_RESPONSE_CACHE,
-        ModelAPIClient,
     )
     from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
@@ -150,7 +153,7 @@ def run_reliability(
     # Run scoring multiple times
     dimension_runs: Dict[str, List[List[float]]] = {d: [] for d in LLM_SCORERS}
 
-    for run_idx in range(n_runs):
+    for _run_idx in range(n_runs):
         # Clear cache before each run to force fresh LLM calls
         _SCORER_RESPONSE_CACHE._data.clear()
 
@@ -184,9 +187,10 @@ def run_reliability(
                     scenario_path=scenario_path,
                     rules_path=rules_path,
                 )
-                dim_scores = result.get("dimension_scores", {})
+                dim_scores = normalize_dimension_scores(result.get("dimension_scores", {}))
                 for dim in LLM_SCORERS:
-                    run_scores[dim].append(dim_scores.get(dim, 0.0))
+                    value = extract_numeric_dimension_value(dim_scores.get(dim, 0.0))
+                    run_scores[dim].append(float(value) if isinstance(value, (int, float)) else 0.0)
             except Exception:
                 for dim in LLM_SCORERS:
                     run_scores[dim].append(0.0)

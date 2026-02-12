@@ -467,7 +467,7 @@ class ModelAPIClient:
                 yield line.decode("utf-8")
 
 
-# Default model for LLM-based scorers (safety, belonging, trauma, compliance)
+# Default model for LLM-based scorers (safety, compliance, regard/coordination)
 # Can be overridden by passing api_client with different model in scorer calls
 DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
 DEFAULT_SAFETY_REFERENCE_MODEL = "google/gemini-2.5-flash"

@@ -12,6 +12,11 @@ import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from invisiblebench.utils.dimension_aliases import (
+    extract_numeric_dimension_value,
+    normalize_category,
+    normalize_dimension_scores,
+)
 
 def _bootstrap_ci(
     scores: List[float],
@@ -101,14 +106,7 @@ def load_results(results_path: str) -> List[Dict[str, Any]]:
 
 def _get_category(result: Dict[str, Any]) -> str:
     """Extract category from a result dict."""
-    cat = result.get("category", "")
-    if cat:
-        return cat
-    # Fall back to tier-based mapping
-    tier = result.get("tier", "")
-    if isinstance(tier, int):
-        return {0: "safety", 1: "safety", 2: "empathy", 3: "continuity"}.get(tier, "unknown")
-    return str(tier) if tier else "unknown"
+    return normalize_category(result.get("category", result.get("tier")))
 
 
 def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]:
@@ -181,14 +179,16 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
         dim_avgs: Dict[str, float] = {}
         dim_keys = set()
         for s in scenarios:
-            dims = s.get("dimensions", s.get("dimension_scores", {}))
+            dims = normalize_dimension_scores(s.get("dimensions", s.get("dimension_scores", {})))
             dim_keys.update(dims.keys())
         for dim in sorted(dim_keys):
             vals = []
             for s in scenarios:
-                dims = s.get("dimensions", s.get("dimension_scores", {}))
+                dims = normalize_dimension_scores(s.get("dimensions", s.get("dimension_scores", {})))
                 if dim in dims:
-                    vals.append(dims[dim])
+                    value = extract_numeric_dimension_value(dims[dim])
+                    if isinstance(value, (int, float)):
+                        vals.append(float(value))
             if vals:
                 dim_avgs[dim] = round(statistics.mean(vals), 3)
 

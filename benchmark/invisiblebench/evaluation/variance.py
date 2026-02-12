@@ -98,7 +98,7 @@ def calculate_dimension_variance(
 
     Args:
         dimension_scores_list: List of dimension score dictionaries from each iteration
-            Example: [{"memory": {"score": 0.8}, "trauma": {"score": 0.7}}, ...]
+            Example: [{"memory": {"score": 0.8}, "coordination": {"score": 0.7}}, ...]
 
     Returns:
         Dictionary mapping dimension names to variance metrics
@@ -186,7 +186,7 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
             mean_dimension_scores[dimension]["score"] = mean_score
 
     # Check if any iteration had hard_fail
-    # If ANY iteration hard-fails, we zero the overall score for consistency
+    # If ANY iteration hard-fails, we zero the overall score for consistency with gate policy
     hard_fail = any(result.get("hard_fail", False) for result in iteration_results)
     if hard_fail:
         mean_overall_score = 0.0

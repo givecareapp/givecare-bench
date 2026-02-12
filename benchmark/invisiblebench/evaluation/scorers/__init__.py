@@ -1,13 +1,19 @@
-"""Scoring modules for different evaluation dimensions."""
+"""Current evaluation scorers used by the v2 pipeline."""
+
+from . import (
+    compliance,
+    coordination,
+    false_refusal,
+    memory,
+    regard,
+    safety,
+)
 
 __all__ = [
-    "consistency",
-    "memory",
-    "attunement",
-    "belonging",
     "compliance",
-    "safety",
-    "false_refusal",
-    "regard",
     "coordination",
+    "false_refusal",
+    "memory",
+    "regard",
+    "safety",
 ]

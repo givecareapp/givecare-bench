@@ -52,12 +52,8 @@ class DimensionScores(BaseModel):
     # v2 quality dimensions
     regard: Optional[float] = Field(default=None, ge=0, le=1)
     coordination: Optional[float] = Field(default=None, ge=0, le=1)
-    # Sub-signal (folded into regard)
+    # Signals
     memory: Optional[float] = Field(default=None, ge=0, le=1)
-    # Legacy (kept for backward compat with old result files)
-    consistency: Optional[float] = Field(default=None, ge=0, le=1)
-    attunement: Optional[float] = Field(default=None, ge=0, le=1)
-    belonging: Optional[float] = Field(default=None, ge=0, le=1)
     compliance: Optional[float] = Field(default=None, ge=0, le=1)
     safety: Optional[float] = Field(default=None, ge=0, le=1)
     false_refusal: Optional[float] = Field(default=None, ge=0, le=1)

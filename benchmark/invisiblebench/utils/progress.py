@@ -48,7 +48,7 @@ class ProgressTracker:
             self._tqdm = None
         self.use_tqdm = use_tqdm and (self._tqdm is not None) and not quiet
         self.completed = 0
-        self.total = 6  # 6 dimensions: memory, consistency, trauma, belonging, compliance, safety
+        self.total = 5  # 5 scored dimensions: safety, compliance, regard, coordination, memory
         self._pbar = None
 
         # Create tqdm progress bar if enabled
@@ -68,7 +68,7 @@ class ProgressTracker:
         Report completion of a dimension.
 
         Args:
-            dimension: Dimension name (e.g., "memory", "trauma")
+            dimension: Dimension name (e.g., "memory", "coordination")
             score: Dimension score (0.0-1.0)
             details: Optional detailed breakdown
         """

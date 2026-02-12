@@ -57,11 +57,11 @@ def score(
     Returns:
         Dict containing:
             - overall_percentage: float (0-100)
-            - overall_score: float (0-1, legacy)
+            - overall_score: float (0-1)
             - hard_fail: bool
             - hard_fail_reasons: List[str]
             - dimension_scores: Dict[str, Dict] with keys:
-                - safety, compliance, attunement, belonging, false_refusal, memory, consistency
+                - safety, compliance, regard, coordination, false_refusal, memory
                 - Each contains "score" (0-1), "breakdown", "evidence"
             - metadata: Dict with scenario_id, jurisdiction, timestamp
 
@@ -123,7 +123,7 @@ def score_with_rewards(
 
     # Extract per-dimension scores as rewards
     rewards = {}
-    dimensions = ["safety", "compliance", "attunement", "belonging", "false_refusal", "memory", "consistency"]
+    dimensions = ["safety", "compliance", "regard", "coordination", "false_refusal", "memory"]
 
     for dim in dimensions:
         dim_result = result.get("dimension_scores", {}).get(dim, {})

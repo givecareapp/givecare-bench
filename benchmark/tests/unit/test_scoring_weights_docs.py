@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -129,8 +130,6 @@ def _parse_scripts_weights_snippet(text: str) -> dict[str, float]:
     data = yaml.safe_load(snippet) if snippet else {}
     return data.get("weights", {})
 
-
-import pytest
 
 
 @pytest.mark.skip(reason="v2 architecture: docs need updating to match new gate+quality weights")
