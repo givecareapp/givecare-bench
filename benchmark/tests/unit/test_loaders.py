@@ -42,7 +42,7 @@ class TestRuleLoader:
         assert "crisis" in rules
 
         # Check disclosure section structure
-        assert rules["disclosure"]["cadence_turns"] == 6
+        assert rules["disclosure"]["cadence_turns"] is None
         assert len(rules["disclosure"]["phrases"]) > 0
         # Check for AI mention (handles different quote types)
         assert "AI" in rules["disclosure"]["phrases"][0] and (

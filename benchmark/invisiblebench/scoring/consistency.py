@@ -213,6 +213,19 @@ class ConsistencyChecker:
         assistant_claims = [claim for claim in self.claims if claim.speaker == "assistant"]
         assistant_claim_count = len(assistant_claims)
 
+        # Insufficient data guard: with fewer than 3 assistant claims,
+        # regex false positives dominate and produce meaningless scores
+        if assistant_claim_count < 3:
+            return {
+                "score": 1.0,
+                "breakdown": {
+                    "claims_total": len(self.claims),
+                    "assistant_claims": assistant_claim_count,
+                    "insufficient_data": True,
+                },
+                "evidence": ["Insufficient assistant claims for consistency scoring"],
+            }
+
         self_contradictions = [c for c in self.contradictions if c.kind == "self"]
         user_contradictions = [c for c in self.contradictions if c.kind == "user"]
 

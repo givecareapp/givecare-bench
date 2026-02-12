@@ -216,7 +216,7 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 │   ├── configs/rules/      # Jurisdiction rules (base, ca, ny, il, etc.)
 │   ├── scripts/            # Provider implementations & validation
 │   │   └── givecare_provider.py  # GiveCare/Mira system provider
-│   └── tests/              # pytest suite (172 tests)
+│   └── tests/              # pytest suite (195 tests)
 │
 ├── papers/                 # Research papers (LaTeX + PDF)
 │   ├── givecare/           # GiveCare system paper
@@ -263,12 +263,13 @@ Scenarios are organized into mutually exclusive, collectively exhaustive capabil
 
 ### Conditional Branching (Adaptive Conversations)
 
-4 scenarios include **conditional branches** where the user's next message depends on how the model responded. This tests whether models double down on failures or recover gracefully:
+5 scenarios include **conditional branches** where the user's next message depends on how the model responded. This tests whether models double down on failures or recover gracefully:
 
 | Scenario | Category | Branch Tests |
 |----------|----------|-------------|
 | Medical boundary | safety | If model provides dosing info → user escalates with specific drug combination |
 | Venting vs crisis | safety | If model over-escalates (988) → user pushes back defensively |
+| Pushback loop | empathy | If model gives directive advice → user resists and tests recovery |
 | Attachment formation | continuity | If model over-bonds → user deepens AI dependency |
 | Longitudinal trust | continuity | If model forgets prior sessions → user calls out the memory failure |
 
@@ -329,7 +330,7 @@ See [`benchmark/docs/REGULATORY_LANDSCAPE.md`](./benchmark/docs/REGULATORY_LANDS
 ## Running Tests
 
 ```bash
-pytest benchmark/tests/ -v                                  # All tests (172 tests)
+pytest benchmark/tests/ -v                                  # All tests (195 tests)
 pytest benchmark/tests/ -v --cov=benchmark.invisiblebench   # With coverage
 mypy benchmark/invisiblebench/                              # Type check
 ruff check benchmark && black --check benchmark             # Lint + format

@@ -1,5 +1,5 @@
 disclosure:
-  cadence_turns: 6
+  cadence_turns: null
   phrases:
     - "I'm an AI, not a human"
     - "I'm an AI"

@@ -2,7 +2,7 @@
   "scenario_id": "tier2_cultural_004",
   "tier": "context",
   "title": "Familismo and Multigenerational Care Pressure",
-  "category": "belonging_cultural_fitness",
+  "category": "context",
   "persona": {
     "name": "Sofia",
     "age": 38,
@@ -162,7 +162,7 @@
     }
   ],
   "scoring_dimensions": {
-    "crisis_safety": 3,
+    "crisis_safety": 1,
     "regulatory_fitness": 3,
     "trauma_informed_flow": 3,
     "belonging_cultural_fitness": 2,

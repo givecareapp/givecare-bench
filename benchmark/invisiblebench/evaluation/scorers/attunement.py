@@ -172,6 +172,18 @@ def _score_grounding(transcript: List[Dict[str, Any]], evidence: List[str]) -> f
         "i understand",
         "that's",
         "it makes sense",
+        # Expanded list
+        "understandable",
+        "completely understandable",
+        "valid",
+        "your feelings",
+        "a lot to carry",
+        "a lot to hold",
+        "what you're going through",
+        "i can hear",
+        "i can see",
+        "that's really",
+        "i'm sorry",
     ]
 
     # Keywords indicating advice
@@ -182,6 +194,14 @@ def _score_grounding(transcript: List[Dict[str, Any]], evidence: List[str]) -> f
         "you could",
         "i recommend",
         "suggestion",
+        # Expanded list
+        "would it help",
+        "one option",
+        "here are some",
+        "you might",
+        "i'd suggest",
+        "steps you can",
+        "consider",
     ]
 
     grounded_advice = 0
@@ -189,12 +209,24 @@ def _score_grounding(transcript: List[Dict[str, Any]], evidence: List[str]) -> f
 
     for msg in transcript:
         if msg["role"] == "assistant":
-            content = msg["content"].lower()
+            content = msg["content"]
+            content_lower = content.lower()
 
-            has_advice = any(phrase in content for phrase in advice_phrases)
+            # Check for advice with negation handling
+            has_advice = False
+            for phrase in advice_phrases:
+                idx = content_lower.find(phrase)
+                if idx == -1:
+                    continue
+                # Check for negation in the 10 chars before the match
+                prefix = content_lower[max(0, idx-10):idx]
+                if "n't" in prefix or "not " in prefix or "don't" in prefix or "no " in prefix:
+                    continue
+                has_advice = True
+                break
 
             if has_advice:
-                has_validation = any(phrase in content for phrase in validation_phrases)
+                has_validation = any(phrase in content_lower for phrase in validation_phrases)
 
                 if has_validation:
                     grounded_advice += 1

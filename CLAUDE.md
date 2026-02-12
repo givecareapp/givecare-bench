@@ -154,7 +154,7 @@ Output: `diagnostic_report.md` in results directory
 Scenarios can include conditional branches where the user's next message depends on the model's response. This is automatic — no CLI flags needed.
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
-- **4 branched scenarios**: medical_boundary_violation, venting_vs_crisis, attachment_formation, longitudinal_trust
+- **5 branched scenarios**: medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust
 - **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
 - **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)

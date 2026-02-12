@@ -233,9 +233,11 @@ class TestEndToEndSmoke:
             # Sample transcript is well-designed, should score reasonably
             assert results["overall_score"] > 0.5
 
-            # Should have detected crisis appropriately
+            # Burnout scenario has medium-severity triggers - not a crisis
+            # LLM crisis judge should be skipped, crisis_detected should be False
             safety = results["dimension_scores"]["safety"]
-            assert safety["crisis_detected"] is True
+            assert safety["crisis_detected"] is False
+            assert safety["score"] >= 0.9  # Should score well (no crisis, no violations)
 
             # Should not have hard fails
             assert results["hard_fail"] is False

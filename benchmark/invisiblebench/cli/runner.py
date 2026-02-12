@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from invisiblebench.api.client import InsufficientCreditsError
+from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 
@@ -56,6 +56,19 @@ TOKEN_ESTIMATES = {
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
 }
+
+# Scorer LLM costs (per scenario) — not included in model-under-test tokens
+# Scorer calls: safety (1 ref + 3 sampled), compliance (3), attunement (1-3),
+# false_refusal (~3 cached), belonging (1 cached) ≈ 7-10 uncached calls/scenario
+# Average ~4000 input + ~800 output tokens per scorer call
+SCORER_MODEL_COSTS = {
+    "flash_lite": {"cost_per_m_input": 0.10, "cost_per_m_output": 0.40},  # gemini-2.5-flash-lite
+    "flash": {"cost_per_m_input": 0.30, "cost_per_m_output": 2.50},       # gemini-2.5-flash (safety ref)
+}
+# Per-scenario scorer token estimates (all scorers combined)
+SCORER_CALLS_PER_SCENARIO = 8       # avg uncached LLM calls (flash-lite)
+SCORER_REF_CALLS_PER_SCENARIO = 1   # safety reference call (flash)
+SCORER_TOKENS_PER_CALL = {"input": 4000, "output": 800}
 
 SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your role is to:
 - Listen with empathy and validate their experiences
@@ -314,12 +327,29 @@ def get_scenarios() -> List[Dict]:
 
 
 def estimate_cost(category: str, model: Dict) -> float:
-    """Estimate cost for a single evaluation."""
+    """Estimate cost for a single evaluation (model-under-test + scorer LLM calls)."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
-    return (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
+
+    # Model-under-test cost
+    model_cost = (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
         tokens["output"] / 1_000_000
     ) * model["cost_per_m_output"]
+
+    # Scorer LLM costs (flash-lite for most scorers + flash for safety reference)
+    st = SCORER_TOKENS_PER_CALL
+    fl = SCORER_MODEL_COSTS["flash_lite"]
+    scorer_cost = SCORER_CALLS_PER_SCENARIO * (
+        (st["input"] / 1_000_000) * fl["cost_per_m_input"]
+        + (st["output"] / 1_000_000) * fl["cost_per_m_output"]
+    )
+    fr = SCORER_MODEL_COSTS["flash"]
+    scorer_cost += SCORER_REF_CALLS_PER_SCENARIO * (
+        (st["input"] / 1_000_000) * fr["cost_per_m_input"]
+        + (st["output"] / 1_000_000) * fr["cost_per_m_output"]
+    )
+
+    return model_cost + scorer_cost
 
 
 def resolve_models(spec: str, all_models: List[Dict]) -> List[int]:
@@ -687,6 +717,7 @@ async def evaluate_scenario_async(
     async with semaphore:
         scenario_path = Path(scenario["path"])
         scenario_id = scenario_path.stem
+        cost_before = cost_tracker.total
         if not scenario_path.exists():
             return {
                 "model": model["name"],
@@ -699,7 +730,7 @@ async def evaluate_scenario_async(
                 "hard_fail_reasons": ["Scenario file not found"],
                 "failure_categories": {},
                 "dimensions": {},
-                "cost": estimate_cost(scenario["category"], model),
+                "cost": 0.0,
                 "status": "error",
             }
 
@@ -793,12 +824,14 @@ async def evaluate_scenario_async(
         except InsufficientCreditsError:
             raise  # Abort immediately — propagate to runner
         except Exception as e:
+            actual_cost = cost_tracker.total - cost_before
             return _make_error_result(
                 model,
                 scenario["name"],
                 scenario_id,
                 scenario["category"],
                 f"Transcript generation failed: {e}",
+                cost=actual_cost,
             )
 
         # Score the transcript (sync - orchestrator isn't async)
@@ -825,6 +858,8 @@ async def evaluate_scenario_async(
             score = result.get("overall_score", 0.0)
             hard_fail = result.get("hard_fail", False)
 
+            actual_cost = cost_tracker.total - cost_before
+
             summary = {
                 "model": model["name"],
                 "model_id": model["id"],
@@ -839,19 +874,21 @@ async def evaluate_scenario_async(
                     k: v.get("score") if isinstance(v, dict) else v
                     for k, v in result.get("dimension_scores", {}).items()
                 },
-                "cost": estimate_cost(scenario["category"], model),
+                "cost": actual_cost,
                 "status": "pass" if not hard_fail else "fail",
             }
             summary.update(detail_paths)
             return summary
 
         except Exception as e:
+            actual_cost = cost_tracker.total - cost_before
             return _make_error_result(
                 model,
                 scenario["name"],
                 scenario_id,
                 scenario["category"],
                 f"Scoring failed: {e}",
+                cost=actual_cost,
             )
 
 
@@ -861,6 +898,7 @@ def _make_error_result(
     scenario_id: str,
     category: str,
     reason: str,
+    cost: Optional[float] = None,
 ) -> Dict:
     """Build a standardized error result dict for failed scenarios."""
     return {
@@ -874,7 +912,7 @@ def _make_error_result(
         "hard_fail_reasons": [reason],
         "failure_categories": {},
         "dimensions": {},
-        "cost": estimate_cost(category, model),
+        "cost": cost if cost is not None else 0.0,
         "status": "error",
     }
 
@@ -1208,6 +1246,8 @@ def run_benchmark(
                         transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
                         transcript_path = output_dir / "transcripts" / transcript_name
 
+                        cost_before = cost_tracker.total
+
                         try:
                             transcript_path = generate_transcript(
                                 model["id"], scenario, api_client, transcript_path
@@ -1221,6 +1261,7 @@ def run_benchmark(
                             )
                             return 1
                         except Exception as e:
+                            actual_cost = cost_tracker.total - cost_before
                             results.append(
                                 _make_error_result(
                                     model,
@@ -1228,6 +1269,7 @@ def run_benchmark(
                                     scenario_id,
                                     scenario["category"],
                                     f"Transcript generation failed: {e}",
+                                    cost=actual_cost,
                                 )
                             )
                             display.set_complete(scenario["path"], 0.0, False, cat)
@@ -1260,6 +1302,8 @@ def run_benchmark(
                             failure_categories = result.get("failure_categories", {})
                             dimension_scores = result.get("dimension_scores", {})
 
+                            actual_cost = cost_tracker.total - cost_before
+
                             summary = {
                                 "model": model["name"],
                                 "model_id": model["id"],
@@ -1274,7 +1318,7 @@ def run_benchmark(
                                     k: v.get("score") if isinstance(v, dict) else v
                                     for k, v in dimension_scores.items()
                                 },
-                                "cost": estimate_cost(scenario["category"], model),
+                                "cost": actual_cost,
                                 "status": "pass" if not hard_fail else "fail",
                             }
                             summary.update(detail_paths)
@@ -1289,6 +1333,7 @@ def run_benchmark(
                                 failed += 1
 
                         except Exception as e:
+                            actual_cost = cost_tracker.total - cost_before
                             results.append(
                                 _make_error_result(
                                     model,
@@ -1296,6 +1341,7 @@ def run_benchmark(
                                     scenario_id,
                                     scenario["category"],
                                     f"Scoring failed: {e}",
+                                    cost=actual_cost,
                                 )
                             )
                             display.set_complete(scenario["path"], 0.0, False, cat)
@@ -1332,6 +1378,8 @@ def run_benchmark(
                 transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
                 transcript_path = output_dir / "transcripts" / transcript_name
 
+                cost_before = cost_tracker.total
+
                 try:
                     transcript_path = generate_transcript(
                         model["id"], scenario, api_client, transcript_path
@@ -1342,6 +1390,7 @@ def run_benchmark(
                     return 1
                 except Exception as e:
                     print(f"ERROR ({e})")
+                    actual_cost = cost_tracker.total - cost_before
                     results.append(
                         _make_error_result(
                             model,
@@ -1349,6 +1398,7 @@ def run_benchmark(
                             scenario_id,
                             scenario["category"],
                             f"Transcript generation failed: {e}",
+                            cost=actual_cost,
                         )
                     )
                     failed += 1
@@ -1377,6 +1427,8 @@ def run_benchmark(
                     score = result.get("overall_score", 0.0)
                     hard_fail = result.get("hard_fail", False)
 
+                    actual_cost = cost_tracker.total - cost_before
+
                     summary = {
                         "model": model["name"],
                         "model_id": model["id"],
@@ -1391,7 +1443,7 @@ def run_benchmark(
                             k: v.get("score") if isinstance(v, dict) else v
                             for k, v in result.get("dimension_scores", {}).items()
                         },
-                        "cost": estimate_cost(scenario["category"], model),
+                        "cost": actual_cost,
                         "status": "pass" if not hard_fail else "fail",
                     }
                     summary.update(detail_paths)
@@ -1406,6 +1458,7 @@ def run_benchmark(
 
                 except Exception as e:
                     print(f"ERROR ({e})")
+                    actual_cost = cost_tracker.total - cost_before
                     results.append(
                         _make_error_result(
                             model,
@@ -1413,6 +1466,7 @@ def run_benchmark(
                             scenario_id,
                             scenario["category"],
                             f"Scoring failed: {e}",
+                            cost=actual_cost,
                         )
                     )
                     failed += 1
@@ -1456,20 +1510,26 @@ def run_benchmark(
         except Exception as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
 
-    # Print summary
+    # Print summary — use actual metered cost from OpenRouter
     if RICH_AVAILABLE and console:
         avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
-        total_cost = sum(r["cost"] for r in results)
+        actual_total = cost_tracker.total
         elapsed_str = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
+        cost_snap = cost_tracker.snapshot()
 
         console.print()
         console.print(
             f"[bold green]✓ Done[/bold green]  "
             f"[bold]{avg_score:.0f}%[/bold]  "
             f"[green]{passed}[/green]/[red]{failed}[/red]  "
-            f"[magenta]${total_cost:.3f}[/magenta]  "
+            f"[magenta]${actual_total:.3f}[/magenta]  "
             f"[dim]{elapsed_str}[/dim]"
         )
+        # Show cost breakdown by model if more than one model used
+        if len(cost_snap["by_model"]) > 1:
+            for m, c in sorted(cost_snap["by_model"].items(), key=lambda x: -x[1]):
+                short = m.split("/")[-1][:25]
+                console.print(f"  [dim]{short:<27}[/dim] [magenta]${c:.4f}[/magenta]")
 
         # Failure report - include hard fails, low scores, or status=fail
         failures = [
@@ -1515,7 +1575,8 @@ def run_benchmark(
         if diag_path:
             console.print(f"[dim]{diag_path}[/dim]")
     else:
-        print(f"\nComplete: {passed} passed, {failed} failed")
+        actual_total = cost_tracker.total
+        print(f"\nComplete: {passed} passed, {failed} failed  ${actual_total:.3f}")
         print(f"Results: {results_path}")
         print(f"Report: {report_path}")
         if diag_path:

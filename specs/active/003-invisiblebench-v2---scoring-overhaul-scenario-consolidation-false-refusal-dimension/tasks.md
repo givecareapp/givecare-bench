@@ -2,7 +2,7 @@
 
 ## 1. Scoring Infrastructure
 
-- [ ] 1.1 Create `rubric_scorer.py` — evaluates yes/no rubric items per turn via LLM judge with deterministic fallback
+- [x] 1.1 Create `rubric_scorer.py` — evaluates yes/no rubric items per turn via LLM judge with deterministic fallback
 - [ ] 1.2 Create `false_refusal.py` scorer — thin wrapper aggregating false_refusal rubric items with refusal-pattern detection
 - [ ] 1.3 Update `orchestrator.py` — add rubric scorer path, keep memory/consistency unchanged, wire false_refusal dimension
 - [ ] 1.4 Update `scoring.yaml` — v2 weights (safety 0.20, compliance 0.15, attunement 0.15, belonging 0.25, false_refusal 0.09, memory 0.11, consistency 0.05), contract_version 2.0.0
