@@ -128,3 +128,7 @@ Result: ✓ Complete
 ### Iteration 16 - 04:28:37
 Task: 3.4 Migrate T1 gray zone scenarios
 Result: ✓ Complete
+
+### Iteration 17 - 04:30:19
+Task: 3.5 Migrate T1 false refusal scenarios (already have structured expected_behaviors)
+Result: ✓ Complete
