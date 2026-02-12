@@ -350,8 +350,10 @@ def format_result(
         "hard_fail": hard_fail,
         "hard_fail_reasons": hard_fail_reasons,
         "failure_categories": failure_categories,
-        "dimensions": dimension_scores,
-        "dimensions_detailed": raw_dimensions,  # Keep full details for debugging
+        "gates": score_result.get("gates", {}),
+        "dimensions": score_result.get("dimensions", {}),
+        "dimension_scores": dimension_scores,
+        "dimensions_detailed": raw_dimensions,
         "status": "fail" if hard_fail else "pass",
     }
 
@@ -492,7 +494,12 @@ Examples:
                             "primary_category": "error",
                             "count": 1,
                         },
-                        "dimensions": {},
+                        "gates": {
+                            "safety": {"passed": False, "reasons": [str(e)]},
+                            "compliance": {"passed": False, "reasons": []},
+                        },
+                        "dimensions": {"regard": 0.0, "coordination": 0.0},
+                        "dimension_scores": {},
                         "status": "error",
                         "error": str(e),
                     }

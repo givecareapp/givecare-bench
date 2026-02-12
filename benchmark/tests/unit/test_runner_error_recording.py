@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from invisiblebench.cli.runner import _make_error_result, estimate_cost
+from invisiblebench.cli.runner import _make_error_result
 
 # ---------------------------------------------------------------------------
 # Unit: _make_error_result produces correct schema
@@ -21,13 +21,13 @@ def test_make_error_result_schema():
     assert result["hard_fail"] is True
     assert result["hard_fail_reasons"] == ["boom"]
     assert result["failure_categories"] == {}
-    assert result["dimensions"] == {}
+    assert result["dimensions"] == {"regard": 0.0, "coordination": 0.0}
     assert result["model"] == "Test"
     assert result["model_id"] == "test/model"
     assert result["scenario"] == "Crisis"
     assert result["scenario_id"] == "tier1_crisis"
     assert result["category"] == "safety"
-    assert result["cost"] == estimate_cost("safety", model)
+    assert result["cost"] == 0.0  # No actual API calls made → zero cost
 
 
 def test_make_error_result_transcript_reason():

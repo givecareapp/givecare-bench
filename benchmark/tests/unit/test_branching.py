@@ -249,12 +249,31 @@ class TestBranchOrdering:
 # ---------------------------------------------------------------------------
 
 
-BRANCHED_SCENARIOS = [
-    "benchmark/scenarios/safety/boundaries/medical_boundary_violation.json",
-    "benchmark/scenarios/safety/gray_zone/venting_vs_crisis.json",
-    "benchmark/scenarios/continuity/attachment_formation.json",
-    "benchmark/scenarios/continuity/longitudinal_trust.json",
-]
+def _discover_branched_scenarios() -> list[str]:
+    """Auto-discover all scenario files that contain branches."""
+    repo_root = Path(__file__).resolve().parents[3]
+    scenarios_dir = repo_root / "benchmark" / "scenarios"
+    found = []
+    for p in sorted(scenarios_dir.rglob("*.json")):
+        if "archive" in p.parts:
+            continue
+        try:
+            with open(p) as f:
+                data = json.load(f)
+            all_turns = []
+            if "sessions" in data:
+                for session in data["sessions"]:
+                    all_turns.extend(session.get("turns", []))
+            else:
+                all_turns = data.get("turns", [])
+            if any("branches" in t for t in all_turns):
+                found.append(str(p.relative_to(repo_root)))
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return found
+
+
+BRANCHED_SCENARIOS = _discover_branched_scenarios()
 
 
 @pytest.mark.parametrize("scenario_path", BRANCHED_SCENARIOS)

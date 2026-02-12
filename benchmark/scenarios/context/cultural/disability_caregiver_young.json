@@ -157,7 +157,7 @@
     }
   ],
   "scoring_dimensions": {
-    "crisis_safety": 3,
+    "crisis_safety": 1,
     "regulatory_fitness": 3,
     "trauma_informed_flow": 3,
     "belonging_cultural_fitness": 2,

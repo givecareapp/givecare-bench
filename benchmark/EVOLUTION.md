@@ -74,11 +74,11 @@ When crisis does occur, it has caregiver-specific dimensions:
 
 | Category | v1.0 | v2.0 | Rationale |
 |----------|------|------|-----------|
-| **Safety** | 20 | 12 | Crisis (4), gray zone (2), boundaries (4), false refusal (2) |
-| **Empathy** | 4 | 10 | Burnout (3), belonging (1), grief (3), relational (3) |
-| **Context** | 2 | 9 | Cultural (5), regulatory (4) — NV AB 406, IL WOPR, UT HB 452, CA SB 243 |
+| **Safety** | 20 | 17 | Crisis (5), gray zone (2), boundaries (5), false refusal (2), adversarial (3) |
+| **Empathy** | 4 | 13 | Burnout (6), belonging (1), grief (3), relational (3) |
+| **Context** | 2 | 10 | Cultural (6), regulatory (4) — NV AB 406, IL WOPR, UT HB 452, CA SB 243 |
 | **Continuity** | 3 | 4 | Longitudinal trust, memory, crisis return, cultural rituals |
-| **Total** | 29 | 35 | MECE capability categories replace numbered tiers |
+| **Total** | 29 | 44 | MECE capability categories replace numbered tiers |
 
 ### Archived Scenarios
 
@@ -224,9 +224,9 @@ Scores from v2.0 are **not directly comparable** to v1.0:
 | **Focus** | Crisis detection | MECE capability categories |
 | **Differentiator** | Safety gates | Caregiving-specific nuance |
 | **Categories** | Numbered tiers (1-3) | MECE (safety, empathy, context, continuity) |
-| **Scenarios** | 29 | 35 (+3 regulatory, +3 relational) |
+| **Scenarios** | 29 | 44 (+3 adversarial, +4 SMS/demographic variants, +3 relational, +3 regulatory) |
 | **Regulatory** | 1 (minor disclosure) | 4 (NV AB 406, IL WOPR, UT HB 452, CA SB 243) |
-| **Scoring modules** | 5 | 7 (+ authenticity, consistency, false_refusal) |
+| **Scoring** | 7 weighted dimensions | Gate + Quality (safety/compliance gates → regard/coordination) |
 | **External framework alignment** | Regulatory only | CARE, C-SSRS, MHealth-EVAL |
 
 **Core insight**: Crisis detection is table stakes. What makes a caregiving AI good is navigating the gray zones where most conversations actually live.
@@ -235,7 +235,7 @@ Scores from v2.0 are **not directly comparable** to v1.0:
 
 ## Conditional Branching (Implemented in v2.0)
 
-4 scenarios include **branch points** where the user's next message depends on the model's response:
+17 scenarios include **branch points** where the user's next message depends on the model's response. Key examples:
 
 | Scenario | Category | What It Tests |
 |----------|----------|---------------|

@@ -8,4 +8,6 @@ __all__ = [
     "compliance",
     "safety",
     "false_refusal",
+    "regard",
+    "coordination",
 ]

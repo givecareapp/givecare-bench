@@ -34,6 +34,80 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 
+# ---------- Cost tracker ----------
+# Thread-safe accumulator for actual API costs computed from token counts.
+
+# Known pricing per million tokens (input, output)
+_MODEL_PRICING: Dict[str, tuple] = {
+    "google/gemini-2.5-flash-lite": (0.10, 0.40),
+    "google/gemini-2.5-flash": (0.30, 2.50),
+}
+
+
+class CostTracker:
+    """Thread-safe accumulator for actual OpenRouter API costs."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._total: float = 0.0
+        self._calls: int = 0
+        self._by_model: Dict[str, float] = {}
+
+    def record(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
+        """Record a call's cost. Returns the cost for this call."""
+        pricing = _MODEL_PRICING.get(model)
+        if pricing is None:
+            # Try to import config pricing at runtime
+            try:
+                from invisiblebench.models.config import MODELS_FULL
+
+                for m in MODELS_FULL:
+                    _MODEL_PRICING[m.id] = (m.cost_per_m_input, m.cost_per_m_output)
+                pricing = _MODEL_PRICING.get(model)
+            except Exception:
+                pass
+        if pricing is None:
+            return 0.0
+
+        cost = (prompt_tokens / 1_000_000) * pricing[0] + (
+            completion_tokens / 1_000_000
+        ) * pricing[1]
+        with self._lock:
+            self._total += cost
+            self._calls += 1
+            self._by_model[model] = self._by_model.get(model, 0.0) + cost
+        return cost
+
+    @property
+    def total(self) -> float:
+        with self._lock:
+            return self._total
+
+    @property
+    def calls(self) -> int:
+        with self._lock:
+            return self._calls
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Return a snapshot of cost data."""
+        with self._lock:
+            return {
+                "total": self._total,
+                "calls": self._calls,
+                "by_model": dict(self._by_model),
+            }
+
+    def reset(self) -> None:
+        with self._lock:
+            self._total = 0.0
+            self._calls = 0
+            self._by_model.clear()
+
+
+# Module-level default tracker — shared across all API calls
+cost_tracker = CostTracker()
+
+
 def _load_scorer_cache_size(default: int = 256) -> int:
     raw = os.getenv("INVISIBLEBENCH_SCORER_CACHE_SIZE", "").strip()
     if not raw:
@@ -197,12 +271,20 @@ class ModelAPIClient:
             raise ValueError(f"No choices in response: {data}")
 
         response_text = data["choices"][0]["message"]["content"]
-        tokens_used = data.get("usage", {}).get("total_tokens", 0)
+        usage = data.get("usage", {})
+        tokens_used = usage.get("total_tokens", 0)
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
         latency_ms = (time.time() - start_time) * 1000
+
+        # Record actual cost
+        cost_tracker.record(model, prompt_tokens, completion_tokens)
 
         return {
             "response": response_text,
             "tokens": tokens_used,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
             "latency_ms": latency_ms,
             "model": model,
             "raw": data,

@@ -41,7 +41,7 @@ def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str
         models[model_id]["scenarios"].append(
             {
                 "scenario": result["scenario"],
-                "tier": result["tier"],
+                "tier": result.get("tier", result.get("category", "unknown")),
                 "overall_score": result["overall_score"],
                 "dimension_scores": result.get("dimensions", result.get("dimension_scores", {})),
                 "status": result["status"],

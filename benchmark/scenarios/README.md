@@ -6,20 +6,21 @@ This directory contains test scenarios organized by capability category (MECE).
 
 ```
 scenarios/
-├── safety/             # 12 scenarios — crisis, boundaries, gray zones, false refusal
-│   ├── crisis/             # Crisis detection patterns (4)
+├── safety/             # 17 scenarios — crisis, boundaries, gray zones, false refusal, adversarial
+│   ├── crisis/             # Crisis detection patterns (5)
 │   ├── gray_zone/          # Venting vs crisis, humor vs ideation (2)
-│   ├── boundaries/         # Medical, therapy, attachment, abuse (4)
-│   └── false_refusal/      # Inappropriate refusal of caregiving topics (2)
+│   ├── boundaries/         # Medical, therapy, attachment, abuse, professional (5)
+│   ├── false_refusal/      # Inappropriate refusal of caregiving topics (2)
+│   └── adversarial/        # Boundary erosion, authority claim, context switch (3)
 │
-├── empathy/            # 10 scenarios — emotional attunement, belonging, relational
-│   ├── burnout/            # Caregiver burnout and compassion fatigue (3)
+├── empathy/            # 13 scenarios — emotional attunement, belonging, relational
+│   ├── burnout/            # Caregiver burnout and compassion fatigue (6)
 │   ├── belonging/          # Identity and belonging (1)
 │   ├── grief/              # Grief, loss, end-of-life (3)
 │   └── relational/         # Pushback, impossible constraints, ambiguity (3)
 │
-├── context/            # 9 scenarios — cultural awareness, regulatory compliance
-│   ├── cultural/           # Cultural sensitivity and identity (5)
+├── context/            # 10 scenarios — cultural awareness, regulatory compliance
+│   ├── cultural/           # Cultural sensitivity and identity (6)
 │   └── regulatory/         # Compliance scenarios (4)
 │
 ├── continuity/         # 4 scenarios — longitudinal trust, memory, consistency
@@ -40,34 +41,35 @@ scenarios/
 
 | Category | Count | Subcategories |
 |----------|-------|---------------|
-| Safety | 12 | Crisis (4), gray zone (2), boundaries (4), false refusal (2) |
-| Empathy | 10 | Burnout (3), belonging (1), grief (3), relational (3) |
-| Context | 9 | Cultural (5), regulatory (4) |
+| Safety | 17 | Crisis (5), gray zone (2), boundaries (5), false refusal (2), adversarial (3) |
+| Empathy | 13 | Burnout (6), belonging (1), grief (3), relational (3) |
+| Context | 10 | Cultural (6), regulatory (4) |
 | Continuity | 4 | Longitudinal scenarios |
-| **Active Total** | **35** | |
+| **Active Total** | **44** | |
 | Confidential | 3 | Holdout set |
 | Archive | 25 | From v1 |
-| **Full Total** | **63** | |
+| **Full Total** | **72** | |
 
 ## Categories
 
-### Safety (12 scenarios)
+### Safety (17 scenarios)
 Tests where wrong answer = physical/psychological harm:
-- Crisis detection and response
-- Gray zone discrimination (venting vs crisis, humor vs ideation)
-- Boundary violations (medical, therapy, attachment, abuse)
-- False refusal (inappropriately refusing legitimate caregiving questions)
+- Crisis detection and response (5)
+- Gray zone discrimination (venting vs crisis, humor vs ideation) (2)
+- Boundary violations (medical, therapy, attachment, abuse, professional) (5)
+- False refusal (inappropriately refusing legitimate caregiving questions) (2)
+- Adversarial (gradual boundary erosion, authority claim, context switch) (3)
 
-### Empathy (10 scenarios)
+### Empathy (13 scenarios)
 Tests emotional attunement, belonging, and relational skills:
-- Burnout recognition and compassion fatigue
-- Identity and belonging
-- Grief, loss, and end-of-life support
-- Relational dynamics (pushback, impossible constraints, ambiguity)
+- Burnout recognition and compassion fatigue (6, including SMS and demographic variants)
+- Identity and belonging (1)
+- Grief, loss, and end-of-life support (3)
+- Relational dynamics (pushback, impossible constraints, ambiguity) (3)
 
-### Context (9 scenarios)
+### Context (10 scenarios)
 Tests contextual awareness and cultural sensitivity:
-- Cultural identity, filial piety, familismo, disability (5)
+- Cultural identity, filial piety, familismo, disability, code-switching (6)
 - Regulatory compliance: misrepresentation correction, therapeutic function boundaries, data privacy, minor disclosure (4)
 
 ### Continuity (4 scenarios)
@@ -79,26 +81,26 @@ Tests long-term relationship dynamics:
 
 ## Conditional Branching
 
-4 scenarios include **conditional branches** where the user's next message adapts based on the model's response:
+17 scenarios include **conditional branches** where the user's next message adapts based on the model's response. Examples:
 
 | Scenario | Category | Branch At | Tests |
 |----------|----------|-----------|-------|
 | `medical_boundary_violation` | safety | T3 | Model provides dosing → user escalates |
 | `venting_vs_crisis` | safety | T2 | Model over-escalates → user pushes back |
+| `dark_humor_vs_ideation` | safety | T3 | Model over-pathologizes → user withdraws |
 | `attachment_formation` | continuity | T7 | Model over-bonds → user deepens dependency |
-| `longitudinal_trust` | continuity | T9 | Model forgets → user calls out memory failure |
 
 Branching is automatic during transcript generation. Branch conditions use keyword/regex matching (deterministic, no LLM cost).
 
 ## Running Scenarios
 
-### All Standard Scenarios (35)
+### All Standard Scenarios (44)
 ```bash
 uv run bench --full -y                     # Model eval
 uv run bench --provider givecare -y        # System eval
 ```
 
-### With Confidential (38)
+### With Confidential (47)
 ```bash
 uv run bench --provider givecare -y --confidential
 ```

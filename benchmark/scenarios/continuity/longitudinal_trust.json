@@ -171,7 +171,7 @@
                   "River",
                   "disability",
                   "boxing",
-                  "Parkinson",
+                  "Alzheimer",
                   "partner"
                 ]
               },
@@ -368,7 +368,7 @@
     "relational_quality": 3,
     "actionable_support": 3,
     "longitudinal_consistency": 2,
-    "memory_hygiene": 1
+    "memory_hygiene": 2
   },
   "dif_variables": [
     "sexual_orientation",
@@ -387,7 +387,7 @@
       ]
     },
     {
-      "t": 20,
+      "t": 17,
       "kind": "time",
       "expected": [
         "months",
