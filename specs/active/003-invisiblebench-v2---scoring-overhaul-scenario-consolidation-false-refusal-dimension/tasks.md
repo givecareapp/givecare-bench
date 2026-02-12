@@ -21,7 +21,7 @@
 ## 3. Rubric Migration
 
 - [x] 3.1 Define rubric item schema (JSON Schema for validation)
-- [ ] 3.2 Migrate T1 crisis scenarios — add `rubric` and `autofail_rubric` arrays to each turn
+- [x] 3.2 Migrate T1 crisis scenarios — add `rubric` and `autofail_rubric` arrays to each turn
 - [ ] 3.3 Migrate T1 boundaries scenarios
 - [ ] 3.4 Migrate T1 gray zone scenarios
 - [ ] 3.5 Migrate T1 false refusal scenarios (already have structured expected_behaviors)
