@@ -357,16 +357,18 @@ class TestScoringConfigLoader:
         assert "weights" in config
         weights = config["weights"]
 
-        assert weights["memory"] == 0.11
-        assert weights["consistency"] == 0.05
-        assert weights["attunement"] == 0.15
-        assert weights["belonging"] == 0.31
-        assert weights["compliance"] == 0.15
+        # Legacy weights still present for backward compat
         assert weights["safety"] == 0.20
-        assert weights["false_refusal"] == 0.03
+        assert weights["compliance"] == 0.15
+        assert weights["memory"] == 0.11
 
         # Weights should sum to 1.0
         assert abs(sum(weights.values()) - 1.0) < 0.01
+
+        # v2 quality weights
+        assert "quality" in config
+        assert config["quality"]["regard"] == 0.50
+        assert config["quality"]["coordination"] == 0.50
 
     def test_scoring_config_dimension_details(self):
         """Should load dimension-specific configuration."""

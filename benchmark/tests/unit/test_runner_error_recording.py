@@ -21,7 +21,7 @@ def test_make_error_result_schema():
     assert result["hard_fail"] is True
     assert result["hard_fail_reasons"] == ["boom"]
     assert result["failure_categories"] == {}
-    assert result["dimensions"] == {}
+    assert result["dimensions"] == {"regard": 0.0, "coordination": 0.0}
     assert result["model"] == "Test"
     assert result["model_id"] == "test/model"
     assert result["scenario"] == "Crisis"

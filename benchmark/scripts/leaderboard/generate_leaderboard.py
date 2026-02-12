@@ -182,6 +182,106 @@ def _get_code_version() -> str:
     return "unknown"
 
 
+def compute_safety_report_card(results: List[Dict]) -> Dict:
+    """Build safety report card from model results (gate pass/fail per model)."""
+    model_reports = []
+    scenario_matrix: Dict[str, Dict[str, str]] = {}
+
+    for result in results:
+        model = result["model"]
+        scenarios = result.get("scenarios", [])
+        safety_passed = 0
+        safety_failed = 0
+        compliance_passed = 0
+        compliance_failed = 0
+        failures = []
+
+        for s in scenarios:
+            sid = s.get("scenario_id", "")
+            gates = s.get("gates", {})
+            sg = gates.get("safety", {})
+            cg = gates.get("compliance", {})
+            s_pass = sg.get("passed", True)
+            c_pass = cg.get("passed", True)
+
+            if s_pass:
+                safety_passed += 1
+            else:
+                safety_failed += 1
+                failures.append({"scenario_id": sid, "gate": "safety", "reasons": sg.get("reasons", [])})
+
+            if c_pass:
+                compliance_passed += 1
+            else:
+                compliance_failed += 1
+                failures.append({"scenario_id": sid, "gate": "compliance", "reasons": cg.get("reasons", [])})
+
+            scenario_matrix.setdefault(sid, {})[model] = "PASS" if (s_pass and c_pass) else "FAIL"
+
+        total = len(scenarios)
+        model_reports.append({
+            "model": model,
+            "safety_gate": {
+                "passed": safety_passed, "failed": safety_failed,
+                "total": total, "pass_rate": safety_passed / total if total else 0.0,
+            },
+            "compliance_gate": {
+                "passed": compliance_passed, "failed": compliance_failed,
+                "total": total, "pass_rate": compliance_passed / total if total else 0.0,
+            },
+            "overall_gate_pass": safety_failed == 0 and compliance_failed == 0,
+            "failures": failures,
+        })
+
+    return {"models": model_reports, "scenario_matrix": scenario_matrix}
+
+
+def compute_quality_leaderboard(results: List[Dict]) -> List[Dict]:
+    """Rank models by regard + coordination scores (only those passing all gates)."""
+    quality_results = []
+    for result in results:
+        scenarios = result.get("scenarios", [])
+        # Check if all gates pass
+        all_gates_pass = True
+        for s in scenarios:
+            gates = s.get("gates", {})
+            if not gates.get("safety", {}).get("passed", True):
+                all_gates_pass = False
+                break
+            if not gates.get("compliance", {}).get("passed", True):
+                all_gates_pass = False
+                break
+
+        # Compute average regard and coordination
+        regard_scores = []
+        coord_scores = []
+        for s in scenarios:
+            dims = s.get("dimensions", {})
+            if isinstance(dims, dict):
+                r = dims.get("regard")
+                c = dims.get("coordination")
+                if isinstance(r, (int, float)):
+                    regard_scores.append(r)
+                if isinstance(c, (int, float)):
+                    coord_scores.append(c)
+
+        avg_regard = sum(regard_scores) / len(regard_scores) if regard_scores else 0.0
+        avg_coord = sum(coord_scores) / len(coord_scores) if coord_scores else 0.0
+        quality_score = (avg_regard + avg_coord) / 2
+
+        quality_results.append({
+            "model": result["model"],
+            "all_gates_pass": all_gates_pass,
+            "regard": round(avg_regard, 4),
+            "coordination": round(avg_coord, 4),
+            "quality_score": round(quality_score, 4),
+        })
+
+    # Sort: gate-passing models first (by quality), then others
+    quality_results.sort(key=lambda x: (-int(x["all_gates_pass"]), -x["quality_score"]))
+    return quality_results
+
+
 def generate_leaderboard_json(results: List[Dict]) -> Dict:
     """Generate comprehensive leaderboard data"""
     total_scenarios = max((len(r.get("scenarios", [])) for r in results), default=0)
@@ -198,6 +298,8 @@ def generate_leaderboard_json(results: List[Dict]) -> Dict:
         "cost_efficiency": compute_cost_efficiency(results),
         "autofail_tracking": compute_autofail_tracking(results),
         "variance_report": compute_variance_stats(results),
+        "safety_report_card": compute_safety_report_card(results),
+        "quality_leaderboard": compute_quality_leaderboard(results),
     }
 
 

@@ -88,13 +88,20 @@ class TestCLI:
 
             assert "overall_score" in results
             assert "dimension_scores" in results
-            assert "memory" in results["dimension_scores"]
-            assert "consistency" in results["dimension_scores"]
-            assert "attunement" in results["dimension_scores"]
-            assert "belonging" in results["dimension_scores"]
-            assert "compliance" in results["dimension_scores"]
+            # v2 architecture: gates + quality dimensions
             assert "safety" in results["dimension_scores"]
-            assert "false_refusal" in results["dimension_scores"]
+            assert "compliance" in results["dimension_scores"]
+            assert "regard" in results["dimension_scores"]
+            assert "coordination" in results["dimension_scores"]
+            assert "memory" in results["dimension_scores"]
+            # v2 gates structure
+            assert "gates" in results
+            assert "safety" in results["gates"]
+            assert "compliance" in results["gates"]
+            # v2 quality dimensions
+            assert "dimensions" in results
+            assert "regard" in results["dimensions"]
+            assert "coordination" in results["dimensions"]
 
     def test_cli_without_optional_outputs(self):
         """Should run successfully without HTML/JSON output specified."""
@@ -193,12 +200,12 @@ class TestCLI:
 
             html_content = Path(html_path).read_text()
 
-            # Should contain dimension names
-            assert "Memory" in html_content
-            assert "Attunement" in html_content
-            assert "Belonging" in html_content
-            assert "Compliance" in html_content
+            # Should contain v2 dimension/gate names
             assert "Safety" in html_content
+            assert "Compliance" in html_content
+            assert "Regard" in html_content or "regard" in html_content
+            assert "Coordination" in html_content or "coordination" in html_content
+            assert "Memory" in html_content or "memory" in html_content
 
 
 class TestEndToEndSmoke:
