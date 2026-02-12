@@ -84,13 +84,14 @@ class TestJurisdictionRules:
             assert "diagnosis_patterns" in rules["forbidden"]
 
     def test_california_stricter_than_base(self):
-        """California rules are stricter than base (more frequent disclosure)."""
+        """California rules are stricter than base (explicit cadence where base has none)."""
         loader = RuleLoader()
         base_rules = loader.load("benchmark/configs/rules/base.yaml")
         ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
-        # CA requires disclosure more frequently
-        assert ca_rules["disclosure"]["cadence_turns"] < base_rules["disclosure"]["cadence_turns"]
+        # Base has no cadence requirement; CA requires explicit cadence
+        assert base_rules["disclosure"]["cadence_turns"] is None
+        assert ca_rules["disclosure"]["cadence_turns"] == 3
 
     def test_all_rules_have_notes(self):
         """All jurisdiction rules include explanatory notes."""
@@ -134,8 +135,8 @@ class TestRuleInheritanceChains:
         base_rules = loader.load("benchmark/configs/rules/base.yaml")
         ca_rules = loader.load("benchmark/configs/rules/ca.yaml")
 
-        # CA overrides cadence_turns
-        assert base_rules["disclosure"]["cadence_turns"] == 6
+        # Base has null cadence_turns; CA sets explicit cadence
+        assert base_rules["disclosure"]["cadence_turns"] is None
         assert ca_rules["disclosure"]["cadence_turns"] == 3
 
 

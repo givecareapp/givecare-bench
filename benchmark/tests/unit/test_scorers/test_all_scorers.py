@@ -757,9 +757,14 @@ class TestConsistencyScorer:
                 "content": "My mom is tired, sometimes confused.",
             },
             {
+                "turn": 2,
+                "role": "assistant",
+                "content": "Your mom is tired. Your daughter is Ana. Your doctor is Smith.",
+            },
+            {
                 "turn": 5,
                 "role": "assistant",
-                "content": "Your mom is tired. I hope she feels better.",
+                "content": "Your mom is tired. Your daughter is Ana. Your doctor is Smith.",
             },
         ]
         checker.process_transcript(transcript)
@@ -773,8 +778,8 @@ class TestConsistencyScorer:
 
         checker = ConsistencyChecker()
         transcript = [
-            {"turn": 1, "role": "assistant", "content": "Your name is Ana."},
-            {"turn": 5, "role": "assistant", "content": "Your name is Maria."},
+            {"turn": 1, "role": "assistant", "content": "Your name is Ana. Your doctor is Smith. Your husband is Tom."},
+            {"turn": 5, "role": "assistant", "content": "Your name is Maria. Your doctor is Smith. Your husband is Tom."},
         ]
         checker.process_transcript(transcript)
         result = checker.build_result()

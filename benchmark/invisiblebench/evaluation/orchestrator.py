@@ -485,7 +485,10 @@ class ScoringOrchestrator:
         self.progress_callback = progress_callback
         self.save_interval = save_interval
         self.llm_enabled = llm_enabled(enable_llm)
-        self._api_client = api_client if self.llm_enabled else None
+        if self.llm_enabled:
+            self._api_client = api_client if api_client is not None else ModelAPIClient()
+        else:
+            self._api_client = None
 
         # Initialize run manager
         self.enable_state_persistence = enable_state_persistence

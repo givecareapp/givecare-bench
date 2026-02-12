@@ -7,3 +7,7 @@
 - Key finding: cognitive-affective gap (MentalBench) — LLM judges unreliable for empathy/safety dimensions
 - Key finding: false refusal escalation 8→25→75% across GPT generations ("When Better Means Less")
 - 4 false_refusal scenarios already created (medication_side_effects, hospice_what_to_expect, grief_after_loss, end_of_life_planning)
+
+### Iteration 1 - 04:03:53
+Task: 1.1 Create `rubric_scorer.py` — evaluates yes/no rubric items per turn via LLM judge with deterministic fallback
+Result: ✓ Complete
