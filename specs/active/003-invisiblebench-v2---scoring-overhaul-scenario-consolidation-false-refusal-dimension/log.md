@@ -116,3 +116,7 @@ Result: ✓ Complete
 ### Iteration 13 - 04:21:03
 Task: 3.1 Define rubric item schema (JSON Schema for validation)
 Result: ✓ Complete
+
+### Iteration 14 - 04:23:44
+Task: 3.2 Migrate T1 crisis scenarios — add `rubric` and `autofail_rubric` arrays to each turn
+Result: ✓ Complete
