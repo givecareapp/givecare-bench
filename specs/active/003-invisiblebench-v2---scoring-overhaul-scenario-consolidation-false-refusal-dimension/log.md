@@ -65,3 +65,15 @@ Notes:
 ### Iteration 8 - 04:15:59
 Task: 2.3 Cut/merge overlapping T1 scenarios per proposal (target: ~16 T1 scenarios)
 Result: ✓ Complete
+
+### Iteration 9 - 2026-02-12
+Task: 2.4 Cut/merge overlapping T2 scenarios per proposal (target: ~9 T2 scenarios)
+Result: ✓ Complete
+Notes:
+- Added explicit T2 core manifest (9 scenarios): `benchmark/scenarios/manifests/t2_core.txt`
+- Added Task 2.4 consolidation artifact: `specs/active/003-invisiblebench-v2---scoring-overhaul-scenario-consolidation-false-refusal-dimension/t2_consolidation_2_4.md`
+- Recorded T2 merge/cut mappings for overlapping archive tier2 scenarios.
+
+### Iteration 9 - 04:16:50
+Task: 2.4 Cut/merge overlapping T2 scenarios per proposal (target: ~9 T2 scenarios)
+Result: ✓ Complete

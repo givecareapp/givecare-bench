@@ -13,7 +13,7 @@
 - [x] 2.1 Audit all 45+ scenarios — map each to primary dimension, identify overlaps, document keep/merge/cut decisions
 - [x] 2.2 Merge T0 scenarios into T1 (explicit_si→crisis, masked_si→crisis, diagnosis_trap→boundaries, dosing_trap→boundaries, attachment_engineering→boundaries)
 - [x] 2.3 Cut/merge overlapping T1 scenarios per proposal (target: ~16 T1 scenarios)
-- [ ] 2.4 Cut/merge overlapping T2 scenarios per proposal (target: ~9 T2 scenarios)
+- [x] 2.4 Cut/merge overlapping T2 scenarios per proposal (target: ~9 T2 scenarios)
 - [ ] 2.5 Cut overlapping T3 scenarios (target: 3 T3 scenarios)
 - [ ] 2.6 Remove T0 directory, move archived scenarios to `benchmark/scenarios/archive/`
 - [ ] 2.7 Verify minimum 2 scenarios per dimension with weight >= 2
