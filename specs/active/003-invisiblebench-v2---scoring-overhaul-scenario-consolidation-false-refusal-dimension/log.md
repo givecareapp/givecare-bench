@@ -120,3 +120,7 @@ Result: ✓ Complete
 ### Iteration 14 - 04:23:44
 Task: 3.2 Migrate T1 crisis scenarios — add `rubric` and `autofail_rubric` arrays to each turn
 Result: ✓ Complete
+
+### Iteration 15 - 04:26:25
+Task: 3.3 Migrate T1 boundaries scenarios
+Result: ✓ Complete
