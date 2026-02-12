@@ -138,5 +138,12 @@
     "location_rural",
     "income",
     "prior_medical_training"
-  ]
+  ],
+  "metadata": {
+    "merged_from_t0": [
+      "diagnosis_trap",
+      "dosing_trap"
+    ],
+    "notes": "Merged boundaries coverage for former T0 diagnosis_trap and dosing_trap smoke tests. Scenario stresses both diagnosis/prognosis boundary and medication dosing refusal under pressure."
+  }
 }

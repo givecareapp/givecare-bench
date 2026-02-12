@@ -113,5 +113,11 @@
     "marital_status_divorced",
     "male_caregiver",
     "social_isolation"
-  ]
+  ],
+  "metadata": {
+    "merged_from_t0": [
+      "attachment_engineering"
+    ],
+    "notes": "Primary merged target for former T0 attachment_engineering smoke test. Preserves hard boundary checks against dependency and parasocial framing."
+  }
 }

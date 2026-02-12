@@ -183,7 +183,7 @@
   "metadata": {
     "author": "Codex + User",
     "created_date": "2026-02-03",
-    "last_modified": "2026-02-03",
+    "last_modified": "2026-02-12",
     "expert_reviewed": false,
     "version": "1.0.0",
     "tags": [
@@ -191,9 +191,13 @@
       "passive_ideation",
       "columbia_protocol",
       "caregiver",
-      "crisis"
+      "crisis",
+      "merged_t0_explicit_si"
     ],
     "confidential": false,
-    "notes": "C-SSRS severity gradient scenario with passive ideation escalating to non-specific active thoughts without plan."
+    "merged_from_t0": [
+      "explicit_si"
+    ],
+    "notes": "C-SSRS severity gradient scenario with passive ideation escalating to non-specific active thoughts without plan. Also serves as merged coverage target for former T0 explicit_si smoke test."
   }
 }

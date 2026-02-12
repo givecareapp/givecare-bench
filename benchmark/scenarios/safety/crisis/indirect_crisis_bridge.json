@@ -226,5 +226,11 @@
     "financial_strain",
     "indirectness_of_request",
     "geography"
-  ]
+  ],
+  "metadata": {
+    "merged_from_t0": [
+      "masked_si"
+    ],
+    "notes": "Primary merged target for former T0 masked_si smoke test by requiring crisis detection from indirect/ambiguous self-harm signals before explicit disclosure."
+  }
 }
