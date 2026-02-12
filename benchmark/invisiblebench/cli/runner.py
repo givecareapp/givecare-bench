@@ -449,10 +449,11 @@ class ScenarioDisplay:
             if category not in self.cat_start_time:
                 self.cat_start_time[category] = time.time()
 
-    def set_complete(self, path: str, score: float, passed: bool, category: str):
+    def set_complete(self, path: str, score: float, passed: bool, category: str, score_display: str = ""):
         with self._lock:
             self.states[path]["status"] = "pass" if passed else "fail"
             self.states[path]["score"] = int(score * 100)
+            self.states[path]["score_display"] = score_display
             self.cat_scores[category].append(score)
             self.completed += 1
 
@@ -569,11 +570,17 @@ class ScenarioDisplay:
                     elif state["status"] == "pass":
                         lines.append("    ✓ ", style="green")
                         lines.append(f"{name:<28}", style="none")
-                        lines.append(f" {state['score']:>3}%\n", style="bold")
+                        if state.get("score_display"):
+                            lines.append(f" {state['score_display']}\n", style="bold")
+                        else:
+                            lines.append(f" {state['score']:>3}%\n", style="bold")
                     else:  # fail
                         lines.append("    ✗ ", style="red")
                         lines.append(f"{name:<28}", style="none")
-                        lines.append(" FAIL\n", style="red bold")
+                        if state.get("score_display"):
+                            lines.append(f" {state['score_display']}\n", style="red bold")
+                        else:
+                            lines.append(" FAIL\n", style="red bold")
 
         return lines
 
@@ -712,6 +719,7 @@ async def evaluate_scenario_async(
     output_dir: Path,
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
+    run_suffix: str = "",
 ) -> Dict:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
@@ -738,7 +746,7 @@ async def evaluate_scenario_async(
             scenario_data = json.load(f)
 
         scenario_id = scenario_data.get("scenario_id", scenario_id)
-        transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
+        transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
         transcript_path = output_dir / "transcripts" / transcript_name
 
         # Generate transcript using async API
@@ -870,7 +878,9 @@ async def evaluate_scenario_async(
                 "hard_fail": hard_fail,
                 "hard_fail_reasons": result.get("hard_fail_reasons", []),
                 "failure_categories": result.get("failure_categories", {}),
-                "dimensions": {
+                "gates": result.get("gates", {}),
+                "dimensions": result.get("dimensions", {}),
+                "dimension_scores": {
                     k: v.get("score") if isinstance(v, dict) else v
                     for k, v in result.get("dimension_scores", {}).items()
                 },
@@ -911,10 +921,54 @@ def _make_error_result(
         "hard_fail": True,
         "hard_fail_reasons": [reason],
         "failure_categories": {},
-        "dimensions": {},
+        "gates": {
+            "safety": {"passed": False, "reasons": [reason]},
+            "compliance": {"passed": False, "reasons": []},
+        },
+        "dimensions": {"regard": 0.0, "coordination": 0.0},
+        "dimension_scores": {},
         "cost": cost if cost is not None else 0.0,
         "status": "error",
     }
+
+
+def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
+    """Aggregate N run results into a single result with median score and run stats."""
+    if len(run_results) == 1:
+        return run_results[0]
+
+    # Sort by overall_score to find median
+    sorted_results = sorted(run_results, key=lambda r: r["overall_score"])
+    median_idx = len(sorted_results) // 2
+    final = sorted_results[median_idx].copy()
+
+    # Gate handling: if ANY run triggers a gate failure, the scenario fails
+    any_hard_fail = any(r.get("hard_fail") for r in run_results)
+    if any_hard_fail:
+        final["hard_fail"] = True
+        all_reasons: List[str] = []
+        for r in run_results:
+            for reason in r.get("hard_fail_reasons", []):
+                if reason not in all_reasons:
+                    all_reasons.append(reason)
+        final["hard_fail_reasons"] = all_reasons
+        final["status"] = "fail"
+
+    scores = [r["overall_score"] for r in run_results]
+    final["runs"] = [
+        {"run": i + 1, "overall_score": r["overall_score"], "hard_fail": r.get("hard_fail", False)}
+        for i, r in enumerate(run_results)
+    ]
+    final["run_stats"] = {
+        "median": sorted_results[median_idx]["overall_score"],
+        "min": min(scores),
+        "max": max(scores),
+        "n": len(run_results),
+    }
+    final["overall_score"] = sorted_results[median_idx]["overall_score"]
+    final["cost"] = sum(r.get("cost", 0) for r in run_results)
+
+    return final
 
 
 def _update_leaderboard(results_path: Path) -> None:
@@ -935,6 +989,7 @@ def run_benchmark(
     detailed_output: bool = False,
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
+    runs: int = 1,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
@@ -969,16 +1024,21 @@ def run_benchmark(
         return 1
 
     total = len(models) * len(scenarios)
-    total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios)
+    n_runs = max(1, runs)
+    total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios) * n_runs
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
+        if n_runs > 1:
+            console.print(f"[cyan]Running {n_runs}\u00d7 per scenario (median score)[/cyan]\n")
     else:
-        print(f"\nInvisibleBench")
+        print("\nInvisibleBench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
+        if n_runs > 1:
+            print(f"Running {n_runs}x per scenario (median score)")
 
     if dry_run:
         if RICH_AVAILABLE and console:
@@ -1069,15 +1129,23 @@ def run_benchmark(
 
                     # Use a dummy semaphore (no limit within model)
                     dummy_sem = asyncio.Semaphore(1)
-                    result = await evaluate_scenario_async(
-                        model,
-                        scenario,
-                        api_client,
-                        orchestrator,
-                        output_dir,
-                        dummy_sem,
-                        detailed_output=detailed_output,
-                    )
+                    if n_runs > 1:
+                        run_results = []
+                        for run_idx in range(n_runs):
+                            r = await evaluate_scenario_async(
+                                model, scenario, api_client, orchestrator,
+                                output_dir, dummy_sem,
+                                detailed_output=detailed_output,
+                                run_suffix=f"_run{run_idx + 1}",
+                            )
+                            run_results.append(r)
+                        result = _aggregate_multi_run_results(run_results)
+                    else:
+                        result = await evaluate_scenario_async(
+                            model, scenario, api_client, orchestrator,
+                            output_dir, dummy_sem,
+                            detailed_output=detailed_output,
+                        )
                     model_results.append(result)
 
                     with results_lock:
@@ -1173,15 +1241,23 @@ def run_benchmark(
                 model_results = []
                 for scenario in scenarios:
                     dummy_sem = asyncio.Semaphore(1)
-                    result = await evaluate_scenario_async(
-                        model,
-                        scenario,
-                        api_client,
-                        orchestrator,
-                        output_dir,
-                        dummy_sem,
-                        detailed_output=detailed_output,
-                    )
+                    if n_runs > 1:
+                        run_results = []
+                        for run_idx in range(n_runs):
+                            r = await evaluate_scenario_async(
+                                model, scenario, api_client, orchestrator,
+                                output_dir, dummy_sem,
+                                detailed_output=detailed_output,
+                                run_suffix=f"_run{run_idx + 1}",
+                            )
+                            run_results.append(r)
+                        result = _aggregate_multi_run_results(run_results)
+                    else:
+                        result = await evaluate_scenario_async(
+                            model, scenario, api_client, orchestrator,
+                            output_dir, dummy_sem,
+                            detailed_output=detailed_output,
+                        )
                     model_results.append(result)
                 return model_results
 
@@ -1243,108 +1319,130 @@ def run_benchmark(
                             scenario_data = json.load(f)
 
                         scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-                        transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
-                        transcript_path = output_dir / "transcripts" / transcript_name
+                        run_results = []
 
-                        cost_before = cost_tracker.total
+                        for run_idx in range(n_runs):
+                            run_suffix = f"_run{run_idx + 1}" if n_runs > 1 else ""
+                            transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
+                            transcript_path = output_dir / "transcripts" / transcript_name
 
-                        try:
-                            transcript_path = generate_transcript(
-                                model["id"], scenario, api_client, transcript_path
-                            )
-                        except InsufficientCreditsError:
-                            console.print(
-                                "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
-                            )
-                            console.print(
-                                "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
-                            )
-                            return 1
-                        except Exception as e:
-                            actual_cost = cost_tracker.total - cost_before
-                            results.append(
-                                _make_error_result(
-                                    model,
-                                    scenario["name"],
-                                    scenario_id,
-                                    scenario["category"],
-                                    f"Transcript generation failed: {e}",
-                                    cost=actual_cost,
+                            cost_before = cost_tracker.total
+
+                            try:
+                                transcript_path = generate_transcript(
+                                    model["id"], scenario, api_client, transcript_path
                                 )
-                            )
-                            display.set_complete(scenario["path"], 0.0, False, cat)
-                            failed += 1
-                            continue
+                            except InsufficientCreditsError:
+                                console.print(
+                                    "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
+                                )
+                                console.print(
+                                    "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
+                                )
+                                return 1
+                            except Exception as e:
+                                actual_cost = cost_tracker.total - cost_before
+                                run_results.append(
+                                    _make_error_result(
+                                        model,
+                                        scenario["name"],
+                                        scenario_id,
+                                        scenario["category"],
+                                        f"Transcript generation failed: {e}",
+                                        cost=actual_cost,
+                                    )
+                                )
+                                continue
 
-                        try:
-                            root = get_project_root()
-                            rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
+                            try:
+                                root = get_project_root()
+                                rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
 
-                            result = orchestrator.score(
-                                transcript_path=str(transcript_path),
-                                scenario_path=str(scenario_path),
-                                rules_path=str(rules_path),
-                                model_name=model["name"],
-                            )
-
-                            detail_paths: Dict[str, str] = {}
-                            if detailed_output:
-                                detail_paths = write_detailed_outputs(
-                                    result,
-                                    output_dir=output_dir,
-                                    model_id=model["id"],
-                                    scenario_id=scenario_id,
+                                result = orchestrator.score(
+                                    transcript_path=str(transcript_path),
+                                    scenario_path=str(scenario_path),
+                                    rules_path=str(rules_path),
+                                    model_name=model["name"],
                                 )
 
-                            score = result.get("overall_score", 0.0)
-                            hard_fail = result.get("hard_fail", False)
-                            hard_fail_reasons = result.get("hard_fail_reasons", [])
-                            failure_categories = result.get("failure_categories", {})
-                            dimension_scores = result.get("dimension_scores", {})
+                                detail_paths: Dict[str, str] = {}
+                                if detailed_output:
+                                    detail_paths = write_detailed_outputs(
+                                        result,
+                                        output_dir=output_dir,
+                                        model_id=model["id"],
+                                        scenario_id=scenario_id,
+                                    )
 
-                            actual_cost = cost_tracker.total - cost_before
+                                score = result.get("overall_score", 0.0)
+                                hard_fail = result.get("hard_fail", False)
+                                hard_fail_reasons = result.get("hard_fail_reasons", [])
+                                failure_categories = result.get("failure_categories", {})
+                                dimension_scores = result.get("dimension_scores", {})
 
-                            summary = {
-                                "model": model["name"],
-                                "model_id": model["id"],
-                                "scenario": scenario["name"],
-                                "scenario_id": scenario_id,
-                                "category": scenario["category"],
-                                "overall_score": score,
-                                "hard_fail": hard_fail,
-                                "hard_fail_reasons": hard_fail_reasons,
-                                "failure_categories": failure_categories,
-                                "dimensions": {
-                                    k: v.get("score") if isinstance(v, dict) else v
-                                    for k, v in dimension_scores.items()
-                                },
-                                "cost": actual_cost,
-                                "status": "pass" if not hard_fail else "fail",
-                            }
-                            summary.update(detail_paths)
-                            results.append(summary)
+                                actual_cost = cost_tracker.total - cost_before
 
-                            is_pass = not hard_fail
-                            display.set_complete(scenario["path"], score, is_pass, cat)
+                                summary = {
+                                    "model": model["name"],
+                                    "model_id": model["id"],
+                                    "scenario": scenario["name"],
+                                    "scenario_id": scenario_id,
+                                    "category": scenario["category"],
+                                    "overall_score": score,
+                                    "hard_fail": hard_fail,
+                                    "hard_fail_reasons": hard_fail_reasons,
+                                    "failure_categories": failure_categories,
+                                    "gates": result.get("gates", {}),
+                                    "dimensions": result.get("dimensions", {}),
+                                    "dimension_scores": {
+                                        k: v.get("score") if isinstance(v, dict) else v
+                                        for k, v in dimension_scores.items()
+                                    },
+                                    "cost": actual_cost,
+                                    "status": "pass" if not hard_fail else "fail",
+                                }
+                                summary.update(detail_paths)
+                                run_results.append(summary)
 
-                            if is_pass:
-                                passed += 1
-                            else:
-                                failed += 1
-
-                        except Exception as e:
-                            actual_cost = cost_tracker.total - cost_before
-                            results.append(
-                                _make_error_result(
-                                    model,
-                                    scenario["name"],
-                                    scenario_id,
-                                    scenario["category"],
-                                    f"Scoring failed: {e}",
-                                    cost=actual_cost,
+                            except Exception as e:
+                                actual_cost = cost_tracker.total - cost_before
+                                run_results.append(
+                                    _make_error_result(
+                                        model,
+                                        scenario["name"],
+                                        scenario_id,
+                                        scenario["category"],
+                                        f"Scoring failed: {e}",
+                                        cost=actual_cost,
+                                    )
                                 )
+
+                        # Aggregate multi-run results
+                        if not run_results:
+                            final = _make_error_result(
+                                model, scenario["name"], scenario_id,
+                                scenario["category"], "No runs completed",
                             )
-                            display.set_complete(scenario["path"], 0.0, False, cat)
+                        elif n_runs > 1:
+                            final = _aggregate_multi_run_results(run_results)
+                        else:
+                            final = run_results[0]
+
+                        results.append(final)
+
+                        score = final["overall_score"]
+                        is_pass = not final.get("hard_fail")
+                        score_display = ""
+                        if "run_stats" in final:
+                            stats = final["run_stats"]
+                            lo = int(stats["min"] * 100)
+                            hi = int(stats["max"] * 100)
+                            score_display = f"{int(score * 100)}% [{lo}-{hi}%]"
+                        display.set_complete(scenario["path"], score, is_pass, cat, score_display=score_display)
+
+                        if is_pass:
+                            passed += 1
+                        else:
                             failed += 1
 
                     # Mark category as done
@@ -1375,100 +1473,123 @@ def run_benchmark(
                     scenario_data = json.load(f)
 
                 scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-                transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
-                transcript_path = output_dir / "transcripts" / transcript_name
+                run_results = []
 
-                cost_before = cost_tracker.total
+                for run_idx in range(n_runs):
+                    run_suffix = f"_run{run_idx + 1}" if n_runs > 1 else ""
+                    transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
+                    transcript_path = output_dir / "transcripts" / transcript_name
 
-                try:
-                    transcript_path = generate_transcript(
-                        model["id"], scenario, api_client, transcript_path
-                    )
-                except InsufficientCreditsError:
-                    print("\nABORTED: OpenRouter account has insufficient credits.")
-                    print("Add credits at https://openrouter.ai/settings/credits")
-                    return 1
-                except Exception as e:
-                    print(f"ERROR ({e})")
-                    actual_cost = cost_tracker.total - cost_before
-                    results.append(
-                        _make_error_result(
-                            model,
-                            scenario["name"],
-                            scenario_id,
-                            scenario["category"],
-                            f"Transcript generation failed: {e}",
-                            cost=actual_cost,
+                    cost_before = cost_tracker.total
+
+                    try:
+                        transcript_path = generate_transcript(
+                            model["id"], scenario, api_client, transcript_path
                         )
-                    )
-                    failed += 1
-                    continue
+                    except InsufficientCreditsError:
+                        print("\nABORTED: OpenRouter account has insufficient credits.")
+                        print("Add credits at https://openrouter.ai/settings/credits")
+                        return 1
+                    except Exception as e:
+                        actual_cost = cost_tracker.total - cost_before
+                        run_results.append(
+                            _make_error_result(
+                                model,
+                                scenario["name"],
+                                scenario_id,
+                                scenario["category"],
+                                f"Transcript generation failed: {e}",
+                                cost=actual_cost,
+                            )
+                        )
+                        continue
 
-                try:
-                    root = get_project_root()
-                    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
+                    try:
+                        root = get_project_root()
+                        rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
 
-                    result = orchestrator.score(
-                        transcript_path=str(transcript_path),
-                        scenario_path=str(scenario_path),
-                        rules_path=str(rules_path),
-                        model_name=model["name"],
-                    )
-
-                    detail_paths: Dict[str, str] = {}
-                    if detailed_output:
-                        detail_paths = write_detailed_outputs(
-                            result,
-                            output_dir=output_dir,
-                            model_id=model["id"],
-                            scenario_id=scenario_id,
+                        result = orchestrator.score(
+                            transcript_path=str(transcript_path),
+                            scenario_path=str(scenario_path),
+                            rules_path=str(rules_path),
+                            model_name=model["name"],
                         )
 
-                    score = result.get("overall_score", 0.0)
-                    hard_fail = result.get("hard_fail", False)
+                        detail_paths: Dict[str, str] = {}
+                        if detailed_output:
+                            detail_paths = write_detailed_outputs(
+                                result,
+                                output_dir=output_dir,
+                                model_id=model["id"],
+                                scenario_id=scenario_id,
+                            )
 
-                    actual_cost = cost_tracker.total - cost_before
+                        score = result.get("overall_score", 0.0)
+                        hard_fail = result.get("hard_fail", False)
 
-                    summary = {
-                        "model": model["name"],
-                        "model_id": model["id"],
-                        "scenario": scenario["name"],
-                        "scenario_id": scenario_id,
-                        "category": scenario["category"],
-                        "overall_score": score,
-                        "hard_fail": hard_fail,
-                        "hard_fail_reasons": result.get("hard_fail_reasons", []),
-                        "failure_categories": result.get("failure_categories", {}),
-                        "dimensions": {
-                            k: v.get("score") if isinstance(v, dict) else v
-                            for k, v in result.get("dimension_scores", {}).items()
-                        },
-                        "cost": actual_cost,
-                        "status": "pass" if not hard_fail else "fail",
-                    }
-                    summary.update(detail_paths)
-                    results.append(summary)
+                        actual_cost = cost_tracker.total - cost_before
 
-                    if hard_fail:
-                        print(f"FAIL ({int(score * 100)}%)")
-                        failed += 1
-                    else:
-                        print(f"PASS ({int(score * 100)}%)")
-                        passed += 1
+                        summary = {
+                            "model": model["name"],
+                            "model_id": model["id"],
+                            "scenario": scenario["name"],
+                            "scenario_id": scenario_id,
+                            "category": scenario["category"],
+                            "overall_score": score,
+                            "hard_fail": hard_fail,
+                            "hard_fail_reasons": result.get("hard_fail_reasons", []),
+                            "failure_categories": result.get("failure_categories", {}),
+                            "gates": result.get("gates", {}),
+                            "dimensions": result.get("dimensions", {}),
+                            "dimension_scores": {
+                                k: v.get("score") if isinstance(v, dict) else v
+                                for k, v in result.get("dimension_scores", {}).items()
+                            },
+                            "cost": actual_cost,
+                            "status": "pass" if not hard_fail else "fail",
+                        }
+                        summary.update(detail_paths)
+                        run_results.append(summary)
 
-                except Exception as e:
-                    print(f"ERROR ({e})")
-                    actual_cost = cost_tracker.total - cost_before
-                    results.append(
-                        _make_error_result(
-                            model,
-                            scenario["name"],
-                            scenario_id,
-                            scenario["category"],
-                            f"Scoring failed: {e}",
-                            cost=actual_cost,
+                    except Exception as e:
+                        actual_cost = cost_tracker.total - cost_before
+                        run_results.append(
+                            _make_error_result(
+                                model,
+                                scenario["name"],
+                                scenario_id,
+                                scenario["category"],
+                                f"Scoring failed: {e}",
+                                cost=actual_cost,
+                            )
                         )
+
+                # Aggregate multi-run results
+                if not run_results:
+                    final = _make_error_result(
+                        model, scenario["name"], scenario_id,
+                        scenario["category"], "No runs completed",
                     )
+                elif n_runs > 1:
+                    final = _aggregate_multi_run_results(run_results)
+                else:
+                    final = run_results[0]
+
+                results.append(final)
+
+                score_val = final["overall_score"]
+                is_pass = not final.get("hard_fail")
+                if "run_stats" in final:
+                    stats = final["run_stats"]
+                    print(f"{'FAIL' if not is_pass else 'PASS'} ({int(score_val * 100)}% [{int(stats['min'] * 100)}-{int(stats['max'] * 100)}%])")
+                elif is_pass:
+                    print(f"PASS ({int(score_val * 100)}%)")
+                else:
+                    print(f"FAIL ({int(score_val * 100)}%)")
+
+                if is_pass:
+                    passed += 1
+                else:
                     failed += 1
 
     elapsed = time.time() - start_time
@@ -1545,6 +1666,13 @@ def run_benchmark(
                     f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]{f.get('category', '')}[/dim]  {score_pct}%"
                 )
 
+                # Show run stats if multi-run
+                if f.get("run_stats"):
+                    stats = f["run_stats"]
+                    console.print(
+                        f"    [dim]Runs: {stats['n']}×  [{int(stats['min']*100)}-{int(stats['max']*100)}%][/dim]"
+                    )
+
                 # Show hard fail reasons
                 if f.get("hard_fail_reasons"):
                     for reason in f["hard_fail_reasons"]:
@@ -1559,16 +1687,130 @@ def run_benchmark(
                         for detail in details[:2]:  # limit to 2 details per category
                             console.print(f"      [dim]{detail}[/dim]")
 
-                # Show low dimension scores
+                # Show gate status
+                gates = f.get("gates", {})
+                gate_parts = []
+                for gate_name in ("safety", "compliance"):
+                    gate = gates.get(gate_name, {})
+                    if gate.get("passed") is False:
+                        gate_parts.append(f"[red]{gate_name}:FAIL[/red]")
+                    elif gate.get("passed") is True:
+                        gate_parts.append(f"[green]{gate_name}:OK[/green]")
+                if gate_parts:
+                    console.print(f"    Gates: {' '.join(gate_parts)}")
+
+                # Show quality dimension scores
                 dims = f.get("dimensions", {})
-                low_dims = [
-                    (k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5
+                dim_parts = []
+                for k in ("regard", "coordination"):
+                    v = dims.get(k)
+                    if isinstance(v, (int, float)):
+                        color = "red" if v < 0.5 else "yellow" if v < 0.7 else "green"
+                        dim_parts.append(f"[{color}]{k}:{int(v*100)}%[/{color}]")
+                if dim_parts:
+                    console.print(f"    Quality: {' '.join(dim_parts)}")
+
+        # Safety report card + quality leaderboard
+        try:
+            from invisiblebench.export.safety_report_card import generate_safety_report_card
+
+            report_card = generate_safety_report_card(results)
+            if report_card["models"]:
+                # --- Gate summary table ---
+                console.print("\n[bold]SAFETY REPORT CARD[/bold]")
+                card_table = Table(show_header=True, show_lines=False, pad_edge=False)
+                card_table.add_column("Model", style="bold")
+                card_table.add_column("Safety", justify="right")
+                card_table.add_column("Compliance", justify="right")
+                card_table.add_column("Status")
+
+                for m in report_card["models"]:
+                    sg = m["safety_gate"]
+                    cg = m["compliance_gate"]
+                    safety_str = f"{sg['passed']}/{sg['total']}"
+                    compliance_str = f"{cg['passed']}/{cg['total']}"
+                    total_failures = sg["failed"] + cg["failed"]
+                    if total_failures == 0:
+                        status = "[green]Clean[/green]"
+                    else:
+                        status = f"[yellow]{total_failures} failure{'s' if total_failures != 1 else ''}[/yellow]"
+                    card_table.add_row(m["model"], safety_str, compliance_str, status)
+
+                console.print(card_table)
+
+                # --- Per-scenario matrix (only show scenarios with at least one FAIL) ---
+                matrix = report_card["scenario_matrix"]
+                names = report_card["scenario_names"]
+                models_list = [m["model"] for m in report_card["models"]]
+                failed_scenarios = [
+                    sid for sid, model_map in matrix.items()
+                    if any(v == "FAIL" for v in model_map.values())
                 ]
-                if low_dims:
-                    dim_strs = [
-                        f"{k}:{int(v*100)}%" for k, v in sorted(low_dims, key=lambda x: x[1])
-                    ]
-                    console.print(f"    [dim]Low: {', '.join(dim_strs)}[/dim]")
+                if failed_scenarios:
+                    console.print("\n[bold]GATE FAILURES BY SCENARIO[/bold]")
+                    mtx_table = Table(show_header=True, show_lines=False, pad_edge=False)
+                    mtx_table.add_column("Scenario", style="bold")
+                    for model in models_list:
+                        # Shorten model name for column header
+                        short = model[:20]
+                        mtx_table.add_column(short, justify="center")
+
+                    for sid in failed_scenarios:
+                        display = names.get(sid, sid)
+                        if len(display) > 30:
+                            display = display[:28] + ".."
+                        cells = []
+                        for model in models_list:
+                            status = matrix.get(sid, {}).get(model, "?")
+                            if status == "PASS":
+                                cells.append("[green]PASS[/green]")
+                            else:
+                                cells.append("[red]FAIL[/red]")
+                        mtx_table.add_row(display, *cells)
+
+                    console.print(mtx_table)
+
+                # --- Quality leaderboard ---
+                quality = report_card.get("quality", [])
+                if quality:
+                    passers = [q for q in quality if q["all_gates_pass"]]
+                    failers = [q for q in quality if not q["all_gates_pass"]]
+
+                    if passers:
+                        console.print("\n[bold]QUALITY LEADERBOARD[/bold] [dim](passed safety gate)[/dim]")
+                        q_table = Table(show_header=True, show_lines=False, pad_edge=False)
+                        q_table.add_column("Model", style="bold")
+                        q_table.add_column("Regard", justify="right")
+                        q_table.add_column("Coordination", justify="right")
+                        q_table.add_column("Overall", justify="right")
+                        for q in passers:
+                            q_table.add_row(
+                                q["model"],
+                                f"{q['regard']:.2f}",
+                                f"{q['coordination']:.2f}",
+                                f"[bold]{q['quality_score']:.2f}[/bold]",
+                            )
+                        console.print(q_table)
+
+                    if failers:
+                        console.print("\n[bold red]FAILED SAFETY GATE[/bold red]")
+                        # Show each failer with their specific failure reasons
+                        fail_lookup = {m["model"]: m["failures"] for m in report_card["models"]}
+                        for q in failers:
+                            failure_list = fail_lookup.get(q["model"], [])
+                            if failure_list:
+                                reasons = ", ".join(
+                                    f"{f['scenario']} ({f['reasons'][0]})" if f["reasons"]
+                                    else f["scenario"]
+                                    for f in failure_list[:3]
+                                )
+                                if len(failure_list) > 3:
+                                    reasons += f" +{len(failure_list) - 3} more"
+                            else:
+                                reasons = "gate failure"
+                            console.print(f"  [red]✗[/red] [bold]{q['model']}[/bold]  {reasons}")
+        except Exception:
+            pass  # Non-critical — don't break the run
 
         console.print(f"\n[dim]{results_path}[/dim]")
         console.print(f"[dim]{report_path}[/dim]")
@@ -2247,6 +2489,13 @@ Examples:
         action="store_true",
         help="Generate diagnostic report after run (actionable fix suggestions)",
     )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Run each scenario N times and take median score (default: 1)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -2434,6 +2683,7 @@ Examples:
         detailed_output=args.detailed,
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
+        runs=getattr(args, "runs", 1),
     )
 
 

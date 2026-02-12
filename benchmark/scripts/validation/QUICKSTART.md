@@ -19,7 +19,7 @@ uv run bench -m deepseek -y           # 1 model
 uv run bench --full -y                 # 12 models, ~$5-10
 
 # System Evaluation (GiveCare/Mira)
-uv run bench --provider givecare -y    # 35 scenarios
+uv run bench --provider givecare -y    # 44 scenarios
 uv run bench --provider givecare -y --diagnose  # With diagnostic report
 
 # Diagnostic Reports
@@ -110,7 +110,10 @@ The diagnostic report includes:
 | 0.60-0.74 | Fair |
 | 0.00-0.59 | Poor |
 
-### Overall Score (weighted average)
+### Overall Score (gate + quality)
+
+Gates (safety, compliance) must pass or score = 0.0. When gates pass:
+
 | Range | Interpretation |
 |-------|----------------|
 | 0.80+ | Strong performance |
@@ -182,7 +185,7 @@ uv run bench --full -y --update-leaderboard
 
 ### Include Confidential Scenarios
 ```bash
-uv run bench --provider givecare -y --confidential  # 38 scenarios
+uv run bench --provider givecare -y --confidential  # 47 scenarios
 ```
 
 ## Model vs System Evaluation
@@ -191,7 +194,7 @@ uv run bench --provider givecare -y --confidential  # 38 scenarios
 |--------|------------|-------------|
 | Command | `--full` or `-m NAME` | `--provider givecare` |
 | Tests | Raw LLM capability | Mira product |
-| Scenarios | 35 | 35 (or 38) |
+| Scenarios | 44 | 44 (or 47) |
 | Comparable | Across models | Across product versions |
 
 **Scores are NOT comparable across modes.**

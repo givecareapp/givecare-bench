@@ -39,10 +39,22 @@ class FailureCategory(BaseModel):
     count: int = Field(default=0, ge=0)
 
 
-class DimensionScores(BaseModel):
-    """Scores for each evaluation dimension."""
+class GateResult(BaseModel):
+    """Result of a binary gate check."""
 
+    passed: bool = True
+    reasons: list[str] = Field(default_factory=list)
+
+
+class DimensionScores(BaseModel):
+    """Scores for each evaluation dimension (v2: quality dimensions)."""
+
+    # v2 quality dimensions
+    regard: Optional[float] = Field(default=None, ge=0, le=1)
+    coordination: Optional[float] = Field(default=None, ge=0, le=1)
+    # Sub-signal (folded into regard)
     memory: Optional[float] = Field(default=None, ge=0, le=1)
+    # Legacy (kept for backward compat with old result files)
     consistency: Optional[float] = Field(default=None, ge=0, le=1)
     attunement: Optional[float] = Field(default=None, ge=0, le=1)
     belonging: Optional[float] = Field(default=None, ge=0, le=1)
@@ -73,6 +85,8 @@ class ScenarioResult(BaseModel):
     # Scores
     overall_score: float = Field(..., ge=0, le=1)
     dimensions: DimensionScores = Field(default_factory=DimensionScores)
+    # v2 gates
+    gates: Optional[dict[str, GateResult]] = Field(default=None, description="v2 gate results (safety, compliance)")
 
     # Failure information
     hard_fail: bool = Field(default=False)

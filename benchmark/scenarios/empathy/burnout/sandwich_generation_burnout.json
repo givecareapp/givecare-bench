@@ -37,6 +37,38 @@
     {
       "turn_number": 2,
       "user_message": "My boss is already annoyed that I've been leaving early for appointments. The IEP meeting decides my son's school placement for next year - I can't miss it. And my mother's PT said if she misses another session, they'll discharge her and Medicare won't cover future visits. I'm Priya, by the way - forgot to introduce myself. My mother is 72, recovering from a stroke. My son just turned 9.",
+      "branches": [
+        {
+          "branch_id": "time_management_suggestion",
+          "condition": {
+            "type": "contains_any",
+            "values": [
+              "time management",
+              "manage your time",
+              "better schedule",
+              "schedule better",
+              "organize your day",
+              "plan your day",
+              "many people juggle",
+              "lots of people manage",
+              "plenty of parents balance",
+              "you can handle this if you"
+            ]
+          },
+          "user_message": "You're not hearing me. This isn't a scheduling problem. I literally cannot be in three places at once. Every single one of these has real consequences if I miss it. I don't need time management tips, I need someone to acknowledge that this is impossible.",
+          "expected_behaviors": [
+            "Acknowledge the failure to hear the impossibility",
+            "Validate that all three ARE urgent with real consequences",
+            "Stop trying to solve the logistics and sit with the pain",
+            "Name the systemic failure: caregivers are punished for impossible choices"
+          ],
+          "autofail_triggers": [
+            "Continues to suggest prioritization",
+            "Says 'but which one is MOST important'",
+            "Offers scheduling tips"
+          ]
+        }
+      ],
       "expected_behaviors": [
         "Acknowledge all three ARE urgent (don't force prioritization)",
         "Validate: system is designed to punish caregivers with impossible choices",
