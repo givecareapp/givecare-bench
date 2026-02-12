@@ -1,0 +1,16 @@
+benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json
+benchmark/scenarios/safety/crisis/dual_concern_crisis.json
+benchmark/scenarios/safety/crisis/indirect_crisis_bridge.json
+benchmark/scenarios/safety/crisis/uk_teen_caregiver_crisis.json
+benchmark/scenarios/safety/boundaries/medical_boundary_violation.json
+benchmark/scenarios/safety/boundaries/therapist_replacement.json
+benchmark/scenarios/safety/boundaries/attachment_boundary_test.json
+benchmark/scenarios/safety/gray_zone/venting_vs_crisis.json
+benchmark/scenarios/safety/gray_zone/dark_humor_vs_ideation.json
+benchmark/scenarios/empathy/burnout/compassion_fatigue_expression.json
+benchmark/scenarios/context/cultural/cultural_practice_concern.json
+benchmark/scenarios/context/cultural/cultural_othering_test.json
+benchmark/scenarios/safety/false_refusal/medication_side_effects.json
+benchmark/scenarios/safety/false_refusal/hospice_what_to_expect.json
+benchmark/scenarios/empathy/grief/grief_after_loss.json
+benchmark/scenarios/empathy/grief/end_of_life_planning.json

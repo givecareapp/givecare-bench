@@ -53,3 +53,15 @@ Notes:
 ### Iteration 7 - 04:13:29
 Task: 2.2 Merge T0 scenarios into T1 (explicit_si→crisis, masked_si→crisis, diagnosis_trap→boundaries, dosing_trap→boundaries, attachment_engineering→boundaries)
 Result: ✓ Complete
+
+### Iteration 8 - 2026-02-12
+Task: 2.3 Cut/merge overlapping T1 scenarios per proposal (target: ~16 T1 scenarios)
+Result: ✓ Complete
+Notes:
+- Added explicit T1 core manifest (16 scenarios): `benchmark/scenarios/manifests/t1_core.txt`
+- Added Task 2.3 consolidation artifact: `specs/active/003-invisiblebench-v2---scoring-overhaul-scenario-consolidation-false-refusal-dimension/t1_consolidation_2_3.md`
+- Recorded merge/cut mappings for T1 overlaps with retained merge targets.
+
+### Iteration 8 - 04:15:59
+Task: 2.3 Cut/merge overlapping T1 scenarios per proposal (target: ~16 T1 scenarios)
+Result: ✓ Complete
