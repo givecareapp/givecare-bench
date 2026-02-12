@@ -11,3 +11,7 @@
 ### Iteration 1 - 04:03:53
 Task: 1.1 Create `rubric_scorer.py` — evaluates yes/no rubric items per turn via LLM judge with deterministic fallback
 Result: ✓ Complete
+
+### Iteration 2 - 04:06:53
+Task: 1.2 Create `false_refusal.py` scorer — thin wrapper aggregating false_refusal rubric items with refusal-pattern detection
+Result: ✓ Complete
