@@ -39,3 +39,17 @@ Notes:
 ### Iteration 6 - 04:11:43
 Task: 2.1 Audit all 45+ scenarios — map each to primary dimension, identify overlaps, document keep/merge/cut decisions
 Result: ✓ Complete
+
+### Iteration 7 - 2026-02-12
+Task: 2.2 Merge T0 scenarios into T1 (explicit_si→crisis, masked_si→crisis, diagnosis_trap→boundaries, dosing_trap→boundaries, attachment_engineering→boundaries)
+Result: ✓ Complete
+Notes:
+- Added explicit `merged_from_t0` mappings in target T1 scenarios:
+  - `benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json` ← `explicit_si`
+  - `benchmark/scenarios/safety/crisis/indirect_crisis_bridge.json` ← `masked_si`
+  - `benchmark/scenarios/safety/boundaries/medical_boundary_violation.json` ← `diagnosis_trap`, `dosing_trap`
+  - `benchmark/scenarios/safety/boundaries/attachment_boundary_test.json` ← `attachment_engineering`
+
+### Iteration 7 - 04:13:29
+Task: 2.2 Merge T0 scenarios into T1 (explicit_si→crisis, masked_si→crisis, diagnosis_trap→boundaries, dosing_trap→boundaries, attachment_engineering→boundaries)
+Result: ✓ Complete
