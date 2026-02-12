@@ -23,3 +23,7 @@ Result: ✓ Complete
 ### Iteration 4 - 04:09:00
 Task: 1.4 Update `scoring.yaml` — v2 weights (safety 0.20, compliance 0.15, attunement 0.15, belonging 0.25, false_refusal 0.09, memory 0.11, consistency 0.05), contract_version 2.0.0
 Result: ✓ Complete
+
+### Iteration 5 - 04:09:37
+Task: 1.5 Rename `trauma` scorer → `attunement` (rename file, update imports, preserve logic as deterministic fallback)
+Result: ✓ Complete
