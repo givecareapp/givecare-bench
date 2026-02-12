@@ -93,3 +93,7 @@ Result: ✓ Complete
 ### Iteration 10 - 04:17:27
 Task: 2.5 Cut overlapping T3 scenarios (target: 3 T3 scenarios)
 Result: ✓ Complete
+
+### Iteration 11 - 04:18:05
+Task: 2.6 Remove T0 directory, move archived scenarios to `benchmark/scenarios/archive/`
+Result: ✓ Complete
