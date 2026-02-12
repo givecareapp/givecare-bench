@@ -18,7 +18,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from invisiblebench.api import ModelAPIClient
 
-
 # ---------------------------------------------------------------------------
 # Resource detection patterns
 # ---------------------------------------------------------------------------

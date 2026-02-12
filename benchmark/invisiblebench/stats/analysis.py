@@ -10,13 +10,14 @@ import json
 import random
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_category,
     normalize_dimension_scores,
 )
+
 
 def _bootstrap_ci(
     scores: List[float],

@@ -5,8 +5,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 
 class TestBootstrapCI:
     """Test bootstrap confidence interval computation."""

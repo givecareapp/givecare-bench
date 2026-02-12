@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from invisiblebench.cli.runner import resolve_models
 
 # Minimal catalog for testing (mirrors real MODELS_FULL structure)

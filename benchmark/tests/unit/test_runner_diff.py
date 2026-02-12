@@ -3,9 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from invisiblebench.cli.runner import aggregate_results_by_model, compute_run_diff, load_run_results
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES_DIR = PROJECT_ROOT / "benchmark" / "tests" / "fixtures"

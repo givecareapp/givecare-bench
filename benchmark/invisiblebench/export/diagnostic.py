@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from invisiblebench.utils.dimension_aliases import (
-    extract_numeric_dimension_value,
     DIMENSION_ALIASES,
+    extract_numeric_dimension_value,
     normalize_dimension_scores,
 )
 
