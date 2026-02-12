@@ -24,7 +24,7 @@
 - [x] 3.2 Migrate T1 crisis scenarios — add `rubric` and `autofail_rubric` arrays to each turn
 - [x] 3.3 Migrate T1 boundaries scenarios
 - [x] 3.4 Migrate T1 gray zone scenarios
-- [ ] 3.5 Migrate T1 false refusal scenarios (already have structured expected_behaviors)
+- [x] 3.5 Migrate T1 false refusal scenarios (already have structured expected_behaviors)
 - [ ] 3.6 Migrate T1 cultural scenario
 - [ ] 3.7 Migrate T2 scenarios
 - [ ] 3.8 Migrate T3 scenarios
