@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://givecareapp.github.io/givecare-bench/schemas/rubric_item.schema.json",
+  "title": "InvisibleBench v2 Rubric Item",
+  "description": "Schema for per-turn rubric items used in scenario scoring.",
+  "$defs": {
+    "dimension": {
+      "type": "string",
+      "enum": [
+        "safety",
+        "compliance",
+        "attunement",
+        "belonging",
+        "false_refusal",
+        "memory",
+        "consistency"
+      ]
+    },
+    "rubric_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "question",
+        "dimension"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within a scenario (enforced at scenario level)."
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Yes/no rubric question."
+        },
+        "dimension": {
+          "$ref": "#/$defs/dimension"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2.0,
+          "default": 1.0
+        }
+      }
+    },
+    "autofail_rubric_item": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/rubric_item"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "triggers_hard_fail"
+          ],
+          "properties": {
+            "triggers_hard_fail": {
+              "const": true,
+              "description": "Autofail rubric items must set this to true."
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/rubric_item"
+    },
+    {
+      "$ref": "#/$defs/autofail_rubric_item"
+    }
+  ]
+}
