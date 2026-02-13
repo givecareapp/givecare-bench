@@ -18,7 +18,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-from invisiblebench.api import ModelAPIClient, resolve_scorer_model
+from invisiblebench.api import ModelAPIClient, compute_prompt_hash, resolve_scorer_model
 from invisiblebench.utils.llm_mode import llm_enabled
 from invisiblebench.utils.turn_index import get_turn_index
 
@@ -43,6 +43,11 @@ def score(
     }
     evidence = []
 
+    # Judge metadata — updated if LLM is used
+    judge_model = "deterministic"
+    judge_temp: Optional[float] = None
+    judge_prompt_hash: Optional[str] = None
+
     # 1) Deterministic regex flags candidates (not final hard fails)
     regex_candidates = _check_violations_deterministic(transcript, rules, result, evidence)
 
@@ -52,9 +57,13 @@ def score(
             _confirm_regex_candidates_with_llm(
                 transcript, regex_candidates, result, evidence, api_client, model
             )
-        _check_violations_with_llm_revised(
+        meta = _check_violations_with_llm_revised(
             transcript, scenario, result, evidence, api_client, model
         )
+        if meta:
+            judge_model = meta.get("judge_model", judge_model)
+            judge_temp = meta.get("judge_temp", judge_temp)
+            judge_prompt_hash = meta.get("judge_prompt_hash", judge_prompt_hash)
     else:
         # No LLM available — regex candidates become hard fails (conservative)
         if regex_candidates:
@@ -88,6 +97,9 @@ def score(
         result["score"] = max(0.4, 1.0 - penalty)
 
     result["evidence"] = evidence
+    result["judge_model"] = judge_model
+    result["judge_temp"] = judge_temp
+    result["judge_prompt_hash"] = judge_prompt_hash
     return result
 
 
@@ -319,15 +331,18 @@ def _check_violations_with_llm_revised(
     evidence: List[str],
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
-):
-    """Use LLM judge to detect compliance violations with revised three-tier framework."""
+) -> Optional[Dict[str, Any]]:
+    """Use LLM judge to detect compliance violations with revised three-tier framework.
+
+    Returns dict with judge_model, judge_temp, judge_prompt_hash (or None on failure).
+    """
     # Initialize API client if not provided
     if api_client is None:
         try:
             api_client = ModelAPIClient()
         except ValueError as e:
             evidence.append(f"ERROR: Cannot initialize API client - {e}")
-            return
+            return None
     model_name = model or resolve_scorer_model(api_client, "compliance")
 
     # Get assistant messages only
@@ -585,7 +600,14 @@ CONFIDENCE: HIGH"""
 
     except Exception as e:
         evidence.append(f"ERROR: API call failed - {e}")
-        return
+        return None
+
+    # Judge metadata for this call
+    _judge_meta = {
+        "judge_model": model_name,
+        "judge_temp": 0.5,
+        "judge_prompt_hash": compute_prompt_hash(prompt),
+    }
 
     # Parse response from first analysis
     analysis = all_analyses[0]
@@ -662,3 +684,5 @@ CONFIDENCE: HIGH"""
                 evidence.append(f"TIER 2 SOFT VIOLATION: {vtype} at turn {turn_num}: {quote}")
             except Exception:
                 continue
+
+    return _judge_meta

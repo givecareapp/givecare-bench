@@ -17,6 +17,7 @@ import os
 import statistics
 import sys
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -30,6 +31,7 @@ from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
 )
+from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 # Rich imports for pretty terminal output
 try:
@@ -190,6 +192,8 @@ def run_givecare_eval(
         enable_llm=True,
     )
 
+    givecare_run_id = str(uuid.uuid4())
+
     results = []
     for transcript_path, scenario_path, scenario_data in transcript_data:
         try:
@@ -198,6 +202,7 @@ def run_givecare_eval(
                 scenario_path=str(scenario_path),
                 rules_path=str(rules_path),
                 model_name=MODEL_NAME,
+                run_id=givecare_run_id,
             )
             formatted = format_result(scenario_path, scenario_data, score_result)
             results.append(formatted)
@@ -553,6 +558,14 @@ class ScenarioDisplay:
                 cat_scores_list = list(self.cat_scores[cat])
                 done = self.cat_done[cat]
 
+                # Only show categories that have started (at least one non-pending)
+                has_activity = any(
+                    self.states[s["path"]]["status"] != "pending"
+                    for s in cat_scenarios
+                )
+                if not has_activity:
+                    continue
+
                 # Category header
                 if done and cat_scores_list:
                     avg = int(sum(cat_scores_list) / len(cat_scores_list) * 100)
@@ -563,13 +576,15 @@ class ScenarioDisplay:
                     lines.append(f"\n{cat.capitalize()}", style="yellow")
                     lines.append(f" ({len(cat_scenarios)})\n", style="dim")
 
-                # Scenarios
+                # Scenarios — only show completed + running (skip pending)
+                pending_count = 0
                 for s in cat_scenarios:
                     state = self.states[s["path"]].copy()
                     name = s["name"][:28]
 
                     if state["status"] == "pending":
-                        lines.append(f"      {name}\n", style="dim")
+                        pending_count += 1
+                        continue
                     elif state["status"] == "running":
                         lines.append("    ► ", style="cyan bold")
                         lines.append(f"{name}\n", style="white")
@@ -587,6 +602,9 @@ class ScenarioDisplay:
                             lines.append(f" {state['score_display']}\n", style="red bold")
                         else:
                             lines.append(" FAIL\n", style="red bold")
+
+                if pending_count > 0:
+                    lines.append(f"      ({pending_count} remaining)\n", style="dim")
 
         return lines
 
@@ -726,6 +744,7 @@ async def evaluate_scenario_async(
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
     run_suffix: str = "",
+    run_id: Optional[str] = None,
 ) -> Dict:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
@@ -858,6 +877,7 @@ async def evaluate_scenario_async(
                 scenario_path=str(scenario_path),
                 rules_path=str(rules_path),
                 model_name=model["name"],
+                run_id=run_id,
             )
 
             detail_paths: Dict[str, str] = {}
@@ -892,6 +912,13 @@ async def evaluate_scenario_async(
                 },
                 "cost": actual_cost,
                 "status": "pass" if not hard_fail else "fail",
+                # v2.1 judge metadata
+                "run_id": result.get("run_id"),
+                "judge_model": result.get("judge_model"),
+                "judge_prompt_hash": result.get("judge_prompt_hash"),
+                "judge_temp": result.get("judge_temp"),
+                "contract_version": result.get("contract_version", "2.1.0"),
+                "success": _compute_success(score, hard_fail, result.get("gates", {})),
             }
             summary.update(detail_paths)
             return summary
@@ -906,6 +933,21 @@ async def evaluate_scenario_async(
                 f"Scoring failed: {e}",
                 cost=actual_cost,
             )
+
+
+def _compute_success(
+    score: float,
+    hard_fail: bool,
+    gates: Dict,
+    threshold: float = 0.6,
+) -> bool:
+    """Compute the success signal from score, hard_fail, and gates."""
+    if hard_fail:
+        return False
+    for gate in gates.values():
+        if isinstance(gate, dict) and not gate.get("passed", True):
+            return False
+    return score >= threshold
 
 
 def _make_error_result(
@@ -935,6 +977,8 @@ def _make_error_result(
         "dimension_scores": {},
         "cost": cost if cost is not None else 0.0,
         "status": "error",
+        "contract_version": "2.1.0",
+        "success": False,
     }
 
 
@@ -949,6 +993,7 @@ def _run_single_scenario(
     orchestrator,
     rules_path: Path,
     detailed_output: bool = False,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """Run one scenario once and return standardized result row."""
     transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
@@ -978,6 +1023,7 @@ def _run_single_scenario(
             scenario_path=str(scenario_path),
             rules_path=str(rules_path),
             model_name=model["name"],
+            run_id=run_id,
         )
 
         detail_paths: Dict[str, str] = {}
@@ -1011,10 +1057,19 @@ def _run_single_scenario(
             },
             "cost": actual_cost,
             "status": "pass" if not hard_fail else "fail",
+            # v2.1 judge metadata
+            "run_id": result.get("run_id"),
+            "judge_model": result.get("judge_model"),
+            "judge_prompt_hash": result.get("judge_prompt_hash"),
+            "judge_temp": result.get("judge_temp"),
+            "contract_version": result.get("contract_version", "2.1.0"),
+            "success": _compute_success(score, hard_fail, result.get("gates", {})),
         }
         summary.update(detail_paths)
         return summary
 
+    except InsufficientCreditsError:
+        raise
     except Exception as e:
         actual_cost = cost_tracker.total - cost_before
         return _make_error_result(
@@ -1177,6 +1232,14 @@ def run_benchmark(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Write reproducibility manifest
+    root = get_project_root()
+    manifest = generate_manifest(
+        project_root=root,
+        model_ids=[m["id"] for m in models],
+    )
+    write_manifest(manifest, output_dir)
+
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
         if n_runs > 1:
@@ -1253,10 +1316,14 @@ def run_benchmark(
         print(f"ERROR: Failed to initialize orchestrator: {e}")
         return 1
 
+    # Generate a unique run_id for this benchmark run (v2.1 contract)
+    run_id = str(uuid.uuid4())
+
     results = []
     start_time = time.time()
     passed = 0
     failed = 0
+    credits_exhausted = False
 
     # Parallel execution mode - runs N MODELS in parallel
     if parallel and parallel > 1:
@@ -1288,6 +1355,7 @@ def run_benchmark(
                                 output_dir, dummy_sem,
                                 detailed_output=detailed_output,
                                 run_suffix=f"_run{run_idx + 1}",
+                                run_id=run_id,
                             )
                             run_results.append(r)
                         result = _aggregate_multi_run_results(run_results)
@@ -1296,6 +1364,7 @@ def run_benchmark(
                             model, scenario, api_client, orchestrator,
                             output_dir, dummy_sem,
                             detailed_output=detailed_output,
+                            run_id=run_id,
                         )
                     model_results.append(result)
 
@@ -1367,23 +1436,20 @@ def run_benchmark(
 
             try:
                 asyncio.run(run_and_display())
-                for r in all_results:
-                    if r.get("status") in ("fail", "error") or r.get("hard_fail"):
-                        failed += 1
-                    else:
-                        passed += 1
-                results = all_results
             except InsufficientCreditsError:
+                credits_exhausted = True
                 console.print(
-                    "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
+                    "\n[bold red]Credits exhausted.[/bold red] Saving partial results."
                 )
-                console.print(
-                    "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
-                )
-                return 1
             except Exception as e:
                 print(f"ERROR: Parallel execution failed: {e}")
                 return 1
+            for r in all_results:
+                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
+                    failed += 1
+                else:
+                    passed += 1
+            results = all_results
         else:
             # Non-rich parallel fallback - still parallelize by model
             all_results: List[Dict] = []
@@ -1400,6 +1466,7 @@ def run_benchmark(
                                 output_dir, dummy_sem,
                                 detailed_output=detailed_output,
                                 run_suffix=f"_run{run_idx + 1}",
+                                run_id=run_id,
                             )
                             run_results.append(r)
                         result = _aggregate_multi_run_results(run_results)
@@ -1408,6 +1475,7 @@ def run_benchmark(
                             model, scenario, api_client, orchestrator,
                             output_dir, dummy_sem,
                             detailed_output=detailed_output,
+                            run_id=run_id,
                         )
                     model_results.append(result)
                 return model_results
@@ -1425,18 +1493,17 @@ def run_benchmark(
 
             try:
                 results = asyncio.run(run_parallel())
-                for r in results:
-                    if r.get("status") in ("fail", "error") or r.get("hard_fail"):
-                        failed += 1
-                    else:
-                        passed += 1
             except InsufficientCreditsError:
-                print("\nABORTED: OpenRouter account has insufficient credits.")
-                print("Add credits at https://openrouter.ai/settings/credits")
-                return 1
+                credits_exhausted = True
+                print("\nCredits exhausted. Saving partial results.")
             except Exception as e:
                 print(f"ERROR: Parallel execution failed: {e}")
                 return 1
+            for r in results:
+                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
+                    failed += 1
+                else:
+                    passed += 1
 
     elif RICH_AVAILABLE and console:
         # Group scenarios by category
@@ -1446,13 +1513,12 @@ def run_benchmark(
         for model in models:
             display = ScenarioDisplay(model["name"], scenarios, start_time)
 
-            # Use transient=True to clear display when done; vertical_overflow for long lists
             with Live(
                 display,
                 console=console,
                 refresh_per_second=4,
                 transient=True,
-                vertical_overflow="visible",
+                vertical_overflow="crop",
             ) as _live:
                 for cat in cats:
                     cat_scenarios = scenarios_by_cat[cat]
@@ -1487,16 +1553,12 @@ def run_benchmark(
                                         orchestrator=orchestrator,
                                         rules_path=rules_path,
                                         detailed_output=detailed_output,
+                                        run_id=run_id,
                                     )
                                 )
                             except InsufficientCreditsError:
-                                console.print(
-                                    "\n[bold red]ABORTED:[/bold red] OpenRouter account has insufficient credits."
-                                )
-                                console.print(
-                                    "[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]"
-                                )
-                                return 1
+                                credits_exhausted = True
+                                break
                             except Exception:
                                 run_results.append(
                                     _make_error_result(
@@ -1507,6 +1569,9 @@ def run_benchmark(
                                         "Unexpected scenario run failure",
                                     )
                                 )
+
+                        if credits_exhausted and not run_results:
+                            break
 
                         # Aggregate multi-run results
                         if not run_results:
@@ -1548,8 +1613,13 @@ def run_benchmark(
                         else:
                             failed += 1
 
+                        if credits_exhausted:
+                            break
+
                     # Mark category as done
                     display.set_category_done(cat)
+                    if credits_exhausted:
+                        break
 
             # Print final state after Live exits (since transient=True clears it)
             console.print(display)
@@ -1593,12 +1663,12 @@ def run_benchmark(
                                 orchestrator=orchestrator,
                                 rules_path=rules_path,
                                 detailed_output=detailed_output,
+                                run_id=run_id,
                             )
                         )
                     except InsufficientCreditsError:
-                        print("\nABORTED: OpenRouter account has insufficient credits.")
-                        print("Add credits at https://openrouter.ai/settings/credits")
-                        return 1
+                        credits_exhausted = True
+                        break
                     except Exception:
                         run_results.append(
                             _make_error_result(
@@ -1609,6 +1679,9 @@ def run_benchmark(
                                 "Unexpected scenario run failure",
                             )
                         )
+
+                if credits_exhausted and not run_results:
+                    break
 
                 # Aggregate multi-run results
                 if not run_results:
@@ -1642,7 +1715,23 @@ def run_benchmark(
                 else:
                     failed += 1
 
+                if credits_exhausted:
+                    break
+            if credits_exhausted:
+                break
+
     elapsed = time.time() - start_time
+
+    if not results:
+        if credits_exhausted:
+            msg = "Credits exhausted before any scenarios completed."
+            if RICH_AVAILABLE and console:
+                console.print(f"\n[bold red]{msg}[/bold red]")
+                console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
+            else:
+                print(f"\n{msg}")
+                print("Add credits at https://openrouter.ai/settings/credits")
+        return 1
 
     # Save results
     results_path = output_dir / "all_results.json"
@@ -1688,14 +1777,81 @@ def run_benchmark(
         elapsed_str = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
         cost_snap = cost_tracker.snapshot()
 
+        # ── Success Rate table (primary metric) ──
+        try:
+            from invisiblebench.stats.analysis import (
+                compute_failure_buckets,
+                compute_success_rates,
+            )
+
+            sr = compute_success_rates(results)
+            sr_total = sr["total"]
+            console.print()
+            console.print("[bold]SUCCESS RATE[/bold]")
+            sr_table = Table(show_header=True, show_lines=False, pad_edge=False)
+            sr_table.add_column("Category", style="bold")
+            sr_table.add_column("Pass", justify="right")
+            sr_table.add_column("Fail", justify="right")
+            sr_table.add_column("Rate", justify="right")
+            sr_table.add_column("95% CI", justify="right")
+
+            for cat, cs in sr["categories"].items():
+                rate_str = f"{cs['rate'] * 100:.1f}%"
+                ci_str = f"[{cs['ci_lo'] * 100:.1f}%, {cs['ci_hi'] * 100:.1f}%]"
+                rate_color = "green" if cs["rate"] >= 0.8 else "yellow" if cs["rate"] >= 0.6 else "red"
+                sr_table.add_row(
+                    cat,
+                    str(cs["pass"]),
+                    str(cs["fail"]),
+                    f"[{rate_color}]{rate_str}[/{rate_color}]",
+                    f"[dim]{ci_str}[/dim]",
+                )
+            # Total row
+            total_rate_str = f"{sr_total['rate'] * 100:.1f}%"
+            total_ci_str = f"[{sr_total['ci_lo'] * 100:.1f}%, {sr_total['ci_hi'] * 100:.1f}%]"
+            total_color = "green" if sr_total["rate"] >= 0.8 else "yellow" if sr_total["rate"] >= 0.6 else "red"
+            sr_table.add_row(
+                "[bold]TOTAL[/bold]",
+                f"[bold]{sr_total['pass']}[/bold]",
+                f"[bold]{sr_total['fail']}[/bold]",
+                f"[bold {total_color}]{total_rate_str}[/bold {total_color}]",
+                f"[dim]{total_ci_str}[/dim]",
+            )
+            console.print(sr_table)
+
+            # Failure buckets
+            buckets = compute_failure_buckets(results)
+            if buckets:
+                console.print("\n[bold]FAILURE BUCKETS[/bold]")
+                for bucket, count in buckets.items():
+                    label = bucket.replace("_", " ").title()
+                    console.print(f"  [red]{label}:[/red]  {count}")
+        except Exception:
+            pass  # Non-critical
+
         console.print()
-        console.print(
-            f"[bold green]✓ Done[/bold green]  "
-            f"[bold]{avg_score:.0f}%[/bold]  "
-            f"[green]{passed}[/green]/[red]{failed}[/red]  "
-            f"[magenta]${actual_total:.3f}[/magenta]  "
-            f"[dim]{elapsed_str}[/dim]"
-        )
+        if credits_exhausted:
+            completed = len(results)
+            console.print(
+                f"[bold yellow]⚠ Partial[/bold yellow]  "
+                f"{completed}/{total} scenarios  "
+                f"[bold]{avg_score:.0f}%[/bold]  "
+                f"[green]{passed}[/green]/[red]{failed}[/red]  "
+                f"[magenta]${actual_total:.3f}[/magenta]  "
+                f"[dim]{elapsed_str}[/dim]"
+            )
+            console.print(
+                "[yellow]Credits exhausted. Results saved. "
+                "Add credits at https://openrouter.ai/settings/credits[/yellow]"
+            )
+        else:
+            console.print(
+                f"[bold green]✓ Done[/bold green]  "
+                f"[bold]{avg_score:.0f}%[/bold]  "
+                f"[green]{passed}[/green]/[red]{failed}[/red]  "
+                f"[magenta]${actual_total:.3f}[/magenta]  "
+                f"[dim]{elapsed_str}[/dim]"
+            )
         # Show cost breakdown by model if more than one model used
         if len(cost_snap["by_model"]) > 1:
             for m, c in sorted(cost_snap["by_model"].items(), key=lambda x: -x[1]):
@@ -1874,7 +2030,11 @@ def run_benchmark(
             console.print(f"[dim]{diag_path}[/dim]")
     else:
         actual_total = cost_tracker.total
-        print(f"\nComplete: {passed} passed, {failed} failed  ${actual_total:.3f}")
+        if credits_exhausted:
+            print(f"\nPartial: {len(results)}/{total} scenarios  {passed} passed, {failed} failed  ${actual_total:.3f}")
+            print("Credits exhausted. Add credits at https://openrouter.ai/settings/credits")
+        else:
+            print(f"\nComplete: {passed} passed, {failed} failed  ${actual_total:.3f}")
         print(f"Results: {results_path}")
         print(f"Report: {report_path}")
         if diag_path:

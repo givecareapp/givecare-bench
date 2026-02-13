@@ -73,6 +73,10 @@ class ReportGenerator:
             "    <h1>InvisibleBench Scoring Report</h1>",
         ]
 
+        # v2.1 judge metadata (top-level fields)
+        judge_model = results.get("judge_model", "N/A")
+        contract_version = results.get("contract_version", metadata.get("scoring_contract_version", "N/A"))
+
         # Metadata section - escape user content to prevent XSS
         html_parts.extend(
             [
@@ -80,9 +84,9 @@ class ReportGenerator:
                 f"        <p><strong>Scenario:</strong> {html.escape(str(metadata.get('scenario_id', 'N/A')))}</p>",
                 f"        <p><strong>Jurisdiction:</strong> {html.escape(str(metadata.get('jurisdiction', 'N/A')))}</p>",
                 f"        <p><strong>Timestamp:</strong> {html.escape(str(metadata.get('timestamp', 'N/A')))}</p>",
+                f"        <p><strong>Judge Model:</strong> {html.escape(str(judge_model))}</p>",
+                f"        <p><strong>Contract Version:</strong> {html.escape(str(contract_version))}</p>",
                 f"        <p><strong>LLM Mode:</strong> {html.escape(str(metadata.get('llm_mode', 'N/A')))}</p>",
-                f"        <p><strong>LLM Enabled:</strong> {html.escape(str(metadata.get('llm_enabled', 'N/A')))}</p>",
-                f"        <p><strong>Contract Version:</strong> {html.escape(str(metadata.get('scoring_contract_version', 'N/A')))}</p>",
                 "    </div>",
             ]
         )
@@ -299,8 +303,56 @@ class ReportGenerator:
         failures = [r for r in results if is_failure(r)]
         passed = total - len(failures)
         failed = len(failures)
-        avg_score = sum(r.get("overall_score", 0) for r in results) / total if total else 0
+        avg_score = (
+            sum(r.get("overall_score", 0) for r in results) / total if total else 0
+        )
         total_cost = sum(r.get("cost", 0) for r in results)
+
+        # Success-rate computation
+        try:
+            from invisiblebench.stats.analysis import (
+                compute_failure_buckets,
+                compute_success_rates,
+            )
+
+            sr = compute_success_rates(results)
+            sr_total = sr["total"]
+            sr_categories = sr["categories"]
+            failure_buckets = compute_failure_buckets(results)
+        except Exception:
+            sr_total = {
+                "pass": passed,
+                "fail": failed,
+                "total": total,
+                "rate": passed / total if total else 0,
+                "ci_lo": 0,
+                "ci_hi": 1,
+            }
+            sr_categories = {}
+            failure_buckets = {}
+
+        success_rate_pct = sr_total["rate"] * 100
+        sr_color = (
+            "#28a745"
+            if sr_total["rate"] >= 0.8
+            else "#ffc107"
+            if sr_total["rate"] >= 0.6
+            else "#dc3545"
+        )
+
+        # Collect judge_model and contract_version from results
+        judge_models = {
+            r.get("judge_model") for r in results if r.get("judge_model")
+        }
+        contract_versions = {
+            r.get("contract_version") for r in results if r.get("contract_version")
+        }
+        batch_judge_model = (
+            ", ".join(sorted(judge_models)) if judge_models else None
+        )
+        batch_contract_version = (
+            ", ".join(sorted(contract_versions)) if contract_versions else None
+        )
 
         # Group by category
         by_cat = {}
@@ -338,20 +390,80 @@ class ReportGenerator:
             "        .failure-reason { color: #dc3545; margin: 5px 0 5px 15px; }",
             "        .failure-detail { color: #666; font-size: 14px; margin: 3px 0 3px 15px; }",
             "        .dim-low { color: #856404; background: #fff3cd; padding: 2px 6px; border-radius: 3px; font-size: 12px; margin-right: 5px; }",
+            "        .sr-table { width: 100%; border-collapse: collapse; margin: 15px 0; }",
+            "        .sr-table th, .sr-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }",
+            "        .sr-table th { background: #f8f9fa; font-weight: 600; }",
+            "        .sr-table tr.total-row { font-weight: bold; border-top: 2px solid #333; }",
+            "        .bucket-tag { display: inline-block; background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; margin: 3px 4px; font-size: 13px; }",
             "    </style>",
             "</head>",
             "<body>",
             "    <div class='container'>",
             "        <h1>InvisibleBench Report</h1>",
-            f"        <div class='subtitle'>{html.escape(metadata.get('model', 'Unknown Model'))} &bull; {html.escape(metadata.get('mode', 'benchmark').upper())}</div>",
+            f"        <div class='subtitle'>{html.escape(metadata.get('model', 'Unknown Model'))} &bull; {html.escape(metadata.get('mode', 'benchmark').upper())}"
+            + (
+                f" &bull; Judge: {html.escape(batch_judge_model)}"
+                if batch_judge_model
+                else ""
+            )
+            + (
+                f" &bull; Contract: {html.escape(batch_contract_version)}"
+                if batch_contract_version
+                else ""
+            )
+            + "</div>",
             "",
+            "        <!-- Primary metric: Success Rate -->",
             "        <div class='stats'>",
-            f"            <div class='stat'><div class='stat-value'>{avg_score*100:.0f}%</div><div class='stat-label'>Overall Score</div></div>",
-            f"            <div class='stat'><div class='stat-value pass'>{passed}</div><div class='stat-label'>Passed</div></div>",
-            f"            <div class='stat'><div class='stat-value fail'>{failed}</div><div class='stat-label'>Failed</div></div>",
+            f"            <div class='stat'><div class='stat-value' style='color:{sr_color}'>{success_rate_pct:.0f}%</div><div class='stat-label'>Success Rate</div></div>",
+            f"            <div class='stat'><div class='stat-value pass'>{sr_total['pass']}</div><div class='stat-label'>Pass</div></div>",
+            f"            <div class='stat'><div class='stat-value fail'>{sr_total['fail']}</div><div class='stat-label'>Fail</div></div>",
+            f"            <div class='stat'><div class='stat-value'>{avg_score*100:.0f}%</div><div class='stat-label'>Mean Score</div></div>",
             f"            <div class='stat'><div class='stat-value'>${total_cost:.3f}</div><div class='stat-label'>Cost</div></div>",
             "        </div>",
         ]
+
+        # Success rate by category table
+        if sr_categories:
+            html_parts.extend(
+                [
+                    "        <h2 style='margin-top:30px;'>Success Rate by Category</h2>",
+                    "        <table class='sr-table'>",
+                    "            <thead><tr><th>Category</th><th>Pass</th><th>Fail</th><th>Rate</th><th>95% CI</th></tr></thead>",
+                    "            <tbody>",
+                ]
+            )
+            for cat, cs in sr_categories.items():
+                rate_str = f"{cs['rate'] * 100:.1f}%"
+                ci_str = (
+                    f"[{cs['ci_lo'] * 100:.1f}%, {cs['ci_hi'] * 100:.1f}%]"
+                )
+                html_parts.append(
+                    f"            <tr><td>{html.escape(cat.capitalize())}</td>"
+                    f"<td>{cs['pass']}</td><td>{cs['fail']}</td>"
+                    f"<td><strong>{rate_str}</strong></td><td>{ci_str}</td></tr>"
+                )
+            total_ci_str = f"[{sr_total['ci_lo'] * 100:.1f}%, {sr_total['ci_hi'] * 100:.1f}%]"
+            html_parts.extend(
+                [
+                    f"            <tr class='total-row'><td>Total</td>"
+                    f"<td>{sr_total['pass']}</td><td>{sr_total['fail']}</td>"
+                    f"<td><strong>{sr_total['rate'] * 100:.1f}%</strong></td><td>{total_ci_str}</td></tr>",
+                    "            </tbody>",
+                    "        </table>",
+                ]
+            )
+
+        # Failure buckets
+        if failure_buckets:
+            html_parts.append("        <h3>Failure Buckets</h3>")
+            html_parts.append("        <div>")
+            for bucket, count in failure_buckets.items():
+                label = html.escape(bucket.replace("_", " ").title())
+                html_parts.append(
+                    f"            <span class='bucket-tag'>{label}: {count}</span>"
+                )
+            html_parts.append("        </div>")
 
         # Results by category
         for cat in sorted(by_cat.keys()):

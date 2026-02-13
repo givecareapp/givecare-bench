@@ -740,6 +740,29 @@ class ScoringOrchestrator:
 
         results["confidence"] = _extract_confidence(dimension_scores)
 
+        # ── Judge metadata (v2.1) ──
+        # Pick primary judge model from the first LLM-based scorer that completed
+        primary_judge_model: Optional[str] = None
+        primary_judge_temp: Optional[float] = None
+        primary_judge_prompt_hash: Optional[str] = None
+        for dim_name in ("regard", "safety", "compliance"):
+            dim_result = dimension_scores.get(dim_name, {})
+            jm = dim_result.get("judge_model")
+            if jm and jm != "deterministic":
+                primary_judge_model = jm
+                primary_judge_temp = dim_result.get("judge_temp")
+                primary_judge_prompt_hash = dim_result.get("judge_prompt_hash")
+                break
+        # If all LLM scorers failed, fall back to deterministic
+        if primary_judge_model is None:
+            primary_judge_model = "deterministic"
+
+        results["judge_model"] = primary_judge_model
+        results["judge_temp"] = primary_judge_temp
+        results["judge_prompt_hash"] = primary_judge_prompt_hash
+        results["run_id"] = run_id
+        results["contract_version"] = "2.1.0"
+
         if overall_status in ["completed_with_errors", "error"]:
             results["error_summary"] = format_error_summary(dimension_scores)
             logger.warning(f"Run completed with errors:\n{results['error_summary']}")

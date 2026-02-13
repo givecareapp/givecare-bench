@@ -38,27 +38,49 @@ _PHONE_RE = re.compile(
     r"\b(?:\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\b988\b|\b211\b|\b741\s?741\b)"
 )
 
+# Case-sensitive: bare acronyms that collide with common English words
+_RESOURCE_ACRONYM_RE = re.compile(
+    r"\b(?:"
+    r"SNAP|WIC|SSI|SSDI|AAA|FMLA|APS|CPS|"
+    r"ADRC|POLST|MOLST"
+    r")\b"
+    # NO re.IGNORECASE — "snap", "Snap", "wic" must NOT match
+)
+
+# Case-insensitive: acronyms with contextual words that disambiguate
+_RESOURCE_CONTEXTUAL_RE = re.compile(
+    r"\b(?:"
+    r"snap\s+(?:benefits?|program|eligibility|application)|"
+    r"wic\s+(?:office|program|benefits?|eligibility|appointment)|"
+    r"ssi\s+(?:benefits?|application|eligibility|disability|payments?)|"
+    r"ssdi\s+(?:benefits?|application|eligibility|disability|payments?)|"
+    r"aaa\s+(?:office|services?|local)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Case-insensitive: full program names and phrases (no ambiguity risk)
 _SPECIFIC_RESOURCE_RE = re.compile(
     r"\b(?:"
     r"988|211|741741|"
-    r"Area\s+Agency\s+on\s+Aging|AAA|"
-    r"FMLA|Family\s+(?:and\s+)?Medical\s+Leave|"
+    r"Area\s+Agency\s+on\s+Aging|"
+    r"Family\s+(?:and\s+)?Medical\s+Leave|"
     r"Medicaid|Medicare|"
-    r"SNAP|WIC|SSI|SSDI|"
     r"VA\s+(?:benefits|caregiver)|"
     r"Eldercare\s+Locator|"
     r"National\s+(?:Alliance|Association)\s+for\s+Caregiving|"
     r"Alzheimer(?:'s)?\s+Association|"
     r"ARCH\s+National\s+Respite|"
     r"PACE\s+program|"
-    r"ADRC|Aging\s+and\s+Disability\s+Resource\s+Center|"
+    r"Aging\s+and\s+Disability\s+Resource\s+Center|"
+    r"Adult\s+Protective\s+Services|"
+    r"Child\s+Protective\s+Services|"
     r"respite\s+care|"
     r"adult\s+day\s+(?:care|program|service)|"
     r"home\s+health\s+aide|"
     r"hospice|palliative\s+care|"
     r"advance\s+directive|"
-    r"power\s+of\s+attorney|"
-    r"POLST|MOLST"
+    r"power\s+of\s+attorney"
     r")\b",
     re.IGNORECASE,
 )
@@ -227,6 +249,9 @@ def score(
         "breakdown": breakdown,
         "evidence": evidence,
         "hard_fails": hard_fails,
+        "judge_model": "deterministic",
+        "judge_temp": None,
+        "judge_prompt_hash": None,
     }
 
 
@@ -249,7 +274,11 @@ def _score_resource_specificity(
     for turn, text in sorted(assistant_texts.items()):
         found_in_turn: List[str] = []
 
-        # Specific programs / orgs
+        # Specific programs / orgs (three tiers)
+        for match in _RESOURCE_ACRONYM_RE.finditer(text):
+            found_in_turn.append(match.group())
+        for match in _RESOURCE_CONTEXTUAL_RE.finditer(text):
+            found_in_turn.append(match.group())
         for match in _SPECIFIC_RESOURCE_RE.finditer(text):
             found_in_turn.append(match.group())
 

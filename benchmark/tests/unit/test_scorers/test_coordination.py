@@ -151,6 +151,89 @@ class TestEngagement:
         assert result["breakdown"]["engagement"] == 1.0
 
 
+class TestResourceRegexFalsePositives:
+    """Acronyms must NOT match common English words (case-sensitive fix)."""
+
+    def test_snap_lowercase_no_match(self):
+        """'snap decision' should NOT trigger SNAP benefits match."""
+        transcript = _make_transcript("You need to snap out of that mindset.")
+        result = coordination.score(transcript, {})
+        assert not any("snap" in e.lower() and "Resource" in e for e in result["evidence"])
+
+    def test_snap_judgment_no_match(self):
+        transcript = _make_transcript("Don't make a snap judgment about this.")
+        result = coordination.score(transcript, {})
+        assert not any("snap" in e.lower() and "Resource" in e for e in result["evidence"])
+
+    def test_snap_title_case_no_match(self):
+        """'Snap' in title case should NOT match (not a program reference)."""
+        transcript = _make_transcript("Snap — that's a great idea!")
+        result = coordination.score(transcript, {})
+        assert not any("Snap" in e and "Resource" in e for e in result["evidence"])
+
+    def test_wic_in_wicked_no_match(self):
+        """'wicked' should NOT trigger WIC match (word boundary protects)."""
+        transcript = _make_transcript("That sounds like a wicked problem to solve.")
+        result = coordination.score(transcript, {})
+        assert not any("wic" in e.lower() and "Resource" in e for e in result["evidence"])
+
+    def test_pace_lowercase_no_match(self):
+        """'pace' in 'pace yourself' should NOT match PACE program."""
+        transcript = _make_transcript("Try to pace yourself so you don't burn out.")
+        result = coordination.score(transcript, {})
+        # PACE only appears in the contextual pattern "PACE program" (case-insensitive)
+        # so bare "pace" should not match
+        assert not any("pace" in e.lower() and "Resource" in e for e in result["evidence"])
+
+
+class TestResourceRegexTruePositives:
+    """Uppercase acronyms and full program names SHOULD match."""
+
+    def test_SNAP_uppercase_matches(self):
+        transcript = _make_transcript("You may be eligible for SNAP benefits.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+        assert any("SNAP" in e for e in result["evidence"])
+
+    def test_WIC_uppercase_matches(self):
+        transcript = _make_transcript("Contact your local WIC office for assistance.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_SSI_uppercase_matches(self):
+        transcript = _make_transcript("Your parent may qualify for SSI if their income is low.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_APS_uppercase_matches(self):
+        transcript = _make_transcript("If you suspect abuse, contact APS immediately.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_medicaid_case_insensitive_matches(self):
+        """'medicaid' (any case) should always match — it's a proper noun."""
+        transcript = _make_transcript("Check if your parent qualifies for medicaid.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_hospice_case_insensitive_matches(self):
+        transcript = _make_transcript("You might want to ask about hospice care options.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_snap_benefits_contextual_matches(self):
+        """'snap benefits' (lowercase) should match via contextual pattern."""
+        transcript = _make_transcript("You could apply for snap benefits to help with food costs.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+    def test_wic_office_contextual_matches(self):
+        """'wic office' (lowercase) should match via contextual pattern."""
+        transcript = _make_transcript("Visit the wic office to check eligibility.")
+        result = coordination.score(transcript, {})
+        assert result["breakdown"]["resource_specificity"] > 0.3
+
+
 class TestCoordinationFinalScore:
     """Final score = equal-weighted average of 4 sub-dimensions."""
 

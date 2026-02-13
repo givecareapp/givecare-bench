@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
+
+# Default threshold for the `success` signal.
+SUCCESS_THRESHOLD = 0.6
 
 
 class ResultTiming(BaseModel):
@@ -96,6 +99,19 @@ class ScenarioResult(BaseModel):
     transcript_path: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
+    # v2.1 — Judge metadata
+    run_id: Optional[str] = Field(default=None, description="Unique per benchmark run (UUID)")
+    judge_model: Optional[str] = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
+    judge_prompt_hash: Optional[str] = Field(default=None, description="SHA256 of scorer prompt template")
+    judge_temp: Optional[float] = Field(default=None, description="Temperature for LLM judge")
+    contract_version: str = Field(default="2.1.0", description="Schema version")
+
+    # v2.1 — Success signal
+    success: Optional[bool] = Field(default=None, description="True if gates passed AND overall_score >= threshold")
+
+    # v2.1 — Uncertainty
+    uncertainty: Optional[Dict[str, Any]] = Field(default=None, description="Flags when judge confidence is low")
+
     @computed_field
     @property
     def score_percent(self) -> int:
@@ -107,6 +123,69 @@ class ScenarioResult(BaseModel):
     def is_failure(self) -> bool:
         """Return True if this result counts as a failure."""
         return self.hard_fail or self.overall_score < 0.5 or self.status in {"fail", "error"}
+
+    def compute_success(self, threshold: float = SUCCESS_THRESHOLD) -> bool:
+        """Compute and set the success signal based on gates and score."""
+        gates_passed = True
+        if self.gates:
+            for gate in self.gates.values():
+                if isinstance(gate, GateResult):
+                    if not gate.passed:
+                        gates_passed = False
+                        break
+                elif isinstance(gate, dict):
+                    if not gate.get("passed", True):
+                        gates_passed = False
+                        break
+        elif self.hard_fail:
+            gates_passed = False
+
+        self.success = gates_passed and self.overall_score >= threshold
+        return self.success
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> ScenarioResult:
+        """Create a ScenarioResult from a dict, normalizing legacy fields."""
+        from invisiblebench.utils.dimension_aliases import (
+            DIMENSION_ALIASES,
+            extract_numeric_dimension_value,
+            normalize_category,
+        )
+
+        d = dict(data)
+
+        # Normalize legacy 'tier' → 'category'
+        if not d.get("category") and d.get("tier"):
+            d["category"] = normalize_category(d["tier"])
+
+        # Normalize legacy dimension_scores keys
+        raw_dims = d.get("dimension_scores")
+        if isinstance(raw_dims, dict):
+            normalized: Dict[str, Any] = {}
+            for key, value in raw_dims.items():
+                canonical = DIMENSION_ALIASES.get(key, key)
+                if canonical not in normalized:
+                    normalized[canonical] = value
+            d["dimension_scores"] = normalized
+
+            # Build DimensionScores from flat numeric dimension_scores
+            dim_obj: Dict[str, float] = {}
+            for key, value in normalized.items():
+                numeric = extract_numeric_dimension_value(value)
+                if numeric is not None and key in DimensionScores.model_fields:
+                    dim_obj[key] = numeric
+            if dim_obj and "dimensions" not in d:
+                d["dimensions"] = dim_obj
+
+        # Ensure contract_version default for legacy data
+        d.setdefault("contract_version", "2.1.0")
+
+        # Compute success if not already set
+        result = cls.model_validate(d)
+        if result.success is None:
+            result.compute_success()
+
+        return result
 
 
 class TierSummary(BaseModel):

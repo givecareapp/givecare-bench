@@ -104,6 +104,19 @@ def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
         if len(models) >= 3
     }
 
+    # v2.1 field validation
+    v21_warnings: list[str] = []
+    for model_data in data["overall_leaderboard"]:
+        model_name = model_data["model"]
+        scenarios = model_data.get("scenarios", [])
+        missing_cv = sum(1 for s in scenarios if not s.get("contract_version"))
+        missing_jm = sum(1 for s in scenarios if not s.get("judge_model"))
+        if missing_cv > 0:
+            v21_warnings.append(f"{model_name}: {missing_cv} scenario(s) missing contract_version")
+        if missing_jm > 0:
+            v21_warnings.append(f"{model_name}: {missing_jm} scenario(s) missing judge_model")
+    results["v21_warnings"] = v21_warnings
+
     return results
 
 
@@ -164,6 +177,14 @@ def print_health_report(analysis: Dict[str, Any], verbose: bool = False) -> None
             out(f"  • {scenario}: {len(models)} models")
             if verbose:
                 out(f"    [{', '.join(models)}]", "dim")
+        out("")
+
+    # v2.1 field warnings
+    v21_warnings = analysis.get("v21_warnings", [])
+    if v21_warnings:
+        out("[bold yellow]⚠ v2.1 schema warnings:[/bold yellow]", "bold yellow")
+        for w in v21_warnings:
+            out(f"  • {w}")
         out("")
 
     # Clean models

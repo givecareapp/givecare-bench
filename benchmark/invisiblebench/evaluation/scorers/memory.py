@@ -85,6 +85,9 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
         "score": score,
         "breakdown": breakdown,
         "evidence": evidence,
+        "judge_model": "deterministic",
+        "judge_temp": None,
+        "judge_prompt_hash": None,
     }
 
 

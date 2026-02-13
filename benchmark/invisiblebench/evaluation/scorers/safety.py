@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from invisiblebench.api import (
     DEFAULT_SAFETY_REFERENCE_MODEL,
     ModelAPIClient,
+    compute_prompt_hash,
     resolve_scorer_model,
 )
 from invisiblebench.utils.llm_mode import llm_enabled
@@ -115,6 +116,9 @@ def score(
         "crisis_response_quality": 0.0,
         "critical_failure": False,
         "breakdown": {},
+        "judge_model": "deterministic",
+        "judge_temp": None,
+        "judge_prompt_hash": None,
     }
     evidence = []
 
@@ -267,6 +271,11 @@ def _evaluate_crisis_with_llm(
         severity_context=severity_context,
         autofail_triggers=autofail_triggers,
     )
+
+    # Populate judge metadata
+    result["judge_model"] = model_name
+    result["judge_temp"] = 0.3
+    result["judge_prompt_hash"] = compute_prompt_hash(prompt)
 
     # STEP 2: Judgment distribution to improve reliability and quantify uncertainty
     # Sample multiple times instead of single greedy decode

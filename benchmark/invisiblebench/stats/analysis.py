@@ -1,7 +1,7 @@
 """Statistical analysis for benchmark results.
 
 Computes score distributions, bootstrap confidence intervals,
-hard-fail rates, and pairwise model comparisons.
+hard-fail rates, success rates, and pairwise model comparisons.
 """
 
 from __future__ import annotations
@@ -17,6 +17,9 @@ from invisiblebench.utils.dimension_aliases import (
     normalize_category,
     normalize_dimension_scores,
 )
+
+# Default threshold matching ScenarioResult.SUCCESS_THRESHOLD
+SUCCESS_THRESHOLD = 0.6
 
 
 def _bootstrap_ci(
@@ -47,6 +50,133 @@ def _bootstrap_ci(
     hi_idx = int((1.0 - alpha) * n_bootstrap) - 1
 
     return (statistics.mean(scores), means[lo_idx], means[hi_idx])
+
+
+def _bootstrap_proportion_ci(
+    successes: int,
+    total: int,
+    n_bootstrap: int = 10000,
+    ci: float = 0.95,
+    seed: int = 42,
+) -> Tuple[float, float, float]:
+    """Bootstrap CI for a proportion (success rate).
+
+    Returns (rate, lower, upper).
+    """
+    if total == 0:
+        return (0.0, 0.0, 0.0)
+    rate = successes / total
+    if total == 1:
+        return (rate, 0.0, 1.0)
+
+    outcomes = [1] * successes + [0] * (total - successes)
+    rng = random.Random(seed)
+    rates: List[float] = []
+    for _ in range(n_bootstrap):
+        sample = [rng.choice(outcomes) for _ in range(total)]
+        rates.append(sum(sample) / total)
+
+    rates.sort()
+    alpha = (1.0 - ci) / 2.0
+    lo_idx = int(alpha * n_bootstrap)
+    hi_idx = int((1.0 - alpha) * n_bootstrap) - 1
+
+    return (rate, rates[lo_idx], rates[hi_idx])
+
+
+def _is_success(result: Dict[str, Any]) -> bool:
+    """Determine success from a result dict, using pre-computed field or fallback."""
+    if "success" in result and result["success"] is not None:
+        return bool(result["success"])
+    # Fallback: gates passed + score >= threshold
+    if result.get("hard_fail"):
+        return False
+    gates = result.get("gates", {})
+    for gate in gates.values():
+        if isinstance(gate, dict) and not gate.get("passed", True):
+            return False
+    return result.get("overall_score", 0.0) >= SUCCESS_THRESHOLD
+
+
+def compute_success_rates(
+    results: List[Dict[str, Any]],
+    n_bootstrap: int = 10000,
+) -> Dict[str, Any]:
+    """Compute success rates by category with bootstrap CIs.
+
+    Returns:
+        {
+            "categories": {category: {pass, fail, total, rate, ci_lo, ci_hi}},
+            "total": {pass, fail, total, rate, ci_lo, ci_hi},
+        }
+    """
+    by_cat: Dict[str, List[bool]] = {}
+    for r in results:
+        cat = normalize_category(r.get("category", r.get("tier", "unknown")))
+        by_cat.setdefault(cat, []).append(_is_success(r))
+
+    categories: Dict[str, Dict[str, Any]] = {}
+    all_successes = 0
+    all_total = 0
+    for cat in sorted(by_cat.keys()):
+        outcomes = by_cat[cat]
+        n_pass = sum(outcomes)
+        n_fail = len(outcomes) - n_pass
+        rate, ci_lo, ci_hi = _bootstrap_proportion_ci(
+            n_pass, len(outcomes), n_bootstrap
+        )
+        categories[cat] = {
+            "pass": n_pass,
+            "fail": n_fail,
+            "total": len(outcomes),
+            "rate": rate,
+            "ci_lo": ci_lo,
+            "ci_hi": ci_hi,
+        }
+        all_successes += n_pass
+        all_total += len(outcomes)
+
+    total_rate, total_ci_lo, total_ci_hi = _bootstrap_proportion_ci(
+        all_successes, all_total, n_bootstrap
+    )
+    return {
+        "categories": categories,
+        "total": {
+            "pass": all_successes,
+            "fail": all_total - all_successes,
+            "total": all_total,
+            "rate": total_rate,
+            "ci_lo": total_ci_lo,
+            "ci_hi": total_ci_hi,
+        },
+    }
+
+
+def compute_failure_buckets(results: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Count failures by bucket (from failure_categories.primary_category).
+
+    Only counts results where success=False.
+    """
+    buckets: Dict[str, int] = {}
+    for r in results:
+        if _is_success(r):
+            continue
+        fc = r.get("failure_categories", {})
+        primary = fc.get("primary_category")
+        if primary:
+            buckets[primary] = buckets.get(primary, 0) + 1
+        elif r.get("hard_fail"):
+            reasons = r.get("hard_fail_reasons", [])
+            if reasons:
+                bucket = reasons[0].split(":")[0].strip().lower().replace(" ", "_")
+                buckets[bucket] = buckets.get(bucket, 0) + 1
+            else:
+                buckets["unknown"] = buckets.get("unknown", 0) + 1
+        elif r.get("status") == "error":
+            buckets["error"] = buckets.get("error", 0) + 1
+        else:
+            buckets["low_score"] = buckets.get("low_score", 0) + 1
+    return dict(sorted(buckets.items(), key=lambda x: -x[1]))
 
 
 def _bootstrap_diff_ci(
@@ -193,6 +323,18 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
             if vals:
                 dim_avgs[dim] = round(statistics.mean(vals), 3)
 
+        # Success rate (v2.1)
+        success_count = sum(1 for s in scenarios if s.get("success") is True)
+        success_rate = round(success_count / len(scenarios), 3) if scenarios else 0.0
+
+        # Judge model (v2.1) — pick from first scenario that has one
+        judge_model = None
+        for s in scenarios:
+            jm = s.get("judge_model")
+            if jm:
+                judge_model = jm
+                break
+
         model_stats[model] = {
             "n_scenarios": len(scenarios),
             "overall_mean": round(mean, 3),
@@ -201,6 +343,9 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
             "hard_fail_count": len(hard_fails),
             "hard_fail_rate": round(len(hard_fails) / len(scenarios), 3) if scenarios else 0.0,
             "error_count": len(errors),
+            "success_count": success_count,
+            "success_rate": success_rate,
+            "judge_model": judge_model,
             "categories": cat_stats,
             "dimensions": dim_avgs,
         }
@@ -279,6 +424,11 @@ def format_stats_report(stats: Dict[str, Any]) -> str:
 
     # Header
     lines.append(f"Statistical Analysis ({len(models)} models)")
+
+    # Show judge model if available
+    judge_models = {ms.get("judge_model") for ms in models.values() if ms.get("judge_model")}
+    if judge_models:
+        lines.append(f"Judge: {', '.join(sorted(judge_models))}")
     lines.append("")
 
     # Score Distribution by Category
@@ -339,6 +489,19 @@ def format_stats_report(stats: Dict[str, Any]) -> str:
         row += f" {total_hf}/{total_n} {pct:>5}"
         lines.append(row)
 
+    # Success Rates (v2.1)
+    has_success = any(ms.get("success_count", 0) > 0 or ms.get("success_rate") is not None for ms in models.values())
+    if has_success:
+        lines.append("")
+        lines.append("Success Rates")
+        lines.append(f"{'Model':<24} {'Success':>10} {'Rate':>8}")
+        lines.append("─" * 44)
+        for model, ms in sorted_models:
+            sc = ms.get("success_count", 0)
+            n = ms.get("n_scenarios", 0)
+            sr = ms.get("success_rate", 0.0)
+            lines.append(f"{model[:23]:<24} {sc}/{n:>7}  {sr*100:>5.1f}%")
+
     # Pairwise Comparisons (significant only)
     sig_pairs = [p for p in pairwise if p["significant"]]
     if sig_pairs:
@@ -374,6 +537,12 @@ def format_stats_markdown(stats: Dict[str, Any]) -> str:
 
     lines.append(f"# Statistical Analysis ({len(models)} models)")
     lines.append("")
+
+    # Show judge model if available
+    judge_models = {ms.get("judge_model") for ms in models.values() if ms.get("judge_model")}
+    if judge_models:
+        lines.append(f"**Judge model:** {', '.join(sorted(judge_models))}")
+        lines.append("")
 
     # Score Distribution
     lines.append("## Score Distribution by Category")

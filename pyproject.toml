@@ -80,6 +80,11 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "v2: v2 gate+quality contract tests (run by default)",
+    "legacy: legacy compatibility tests (skip with -m 'not legacy')",
+    "slow: tests requiring network or long computation",
+]
 
 [tool.black]
 line-length = 100

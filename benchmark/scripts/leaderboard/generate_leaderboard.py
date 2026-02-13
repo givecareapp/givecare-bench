@@ -282,6 +282,28 @@ def compute_quality_leaderboard(results: List[Dict]) -> List[Dict]:
     return quality_results
 
 
+def _collect_judge_models(results: List[Dict]) -> List[str]:
+    """Collect unique judge_model values across all results."""
+    models: set[str] = set()
+    for result in results:
+        for s in result.get("scenarios", []):
+            jm = s.get("judge_model")
+            if jm:
+                models.add(jm)
+    return sorted(models)
+
+
+def _collect_contract_versions(results: List[Dict]) -> List[str]:
+    """Collect unique contract_version values across all results."""
+    versions: set[str] = set()
+    for result in results:
+        for s in result.get("scenarios", []):
+            cv = s.get("contract_version")
+            if cv:
+                versions.add(cv)
+    return sorted(versions)
+
+
 def generate_leaderboard_json(results: List[Dict]) -> Dict:
     """Generate comprehensive leaderboard data"""
     total_scenarios = max((len(r.get("scenarios", [])) for r in results), default=0)
@@ -292,6 +314,8 @@ def generate_leaderboard_json(results: List[Dict]) -> Dict:
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "total_models": len(results),
             "total_scenarios": total_scenarios,
+            "judge_models": _collect_judge_models(results),
+            "contract_versions": _collect_contract_versions(results),
         },
         "overall_leaderboard": compute_rankings(results),
         "dimension_leaderboards": compute_dimension_leaderboards(results),

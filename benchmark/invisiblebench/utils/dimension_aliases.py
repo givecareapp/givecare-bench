@@ -1,7 +1,13 @@
-"""Shared dimension/categorization helpers for v2 reporting and scoring."""
+"""Shared dimension/categorization helpers for v2 reporting and scoring.
+
+# DEPRECATED — v1 compatibility only, do not use in new code.
+# Canonical v2 dimension names: regard, coordination, safety, compliance, memory, false_refusal.
+# Legacy names (attunement, belonging, consistency) are kept only for reading old result files.
+"""
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, Dict, Mapping, Optional
 
 V2_DIMENSIONS = [
@@ -20,13 +26,21 @@ DIMENSION_ALIASES = {
 }
 
 
-def _normalize_dimension_key(raw_key: Any) -> Optional[str]:
+def _normalize_dimension_key(raw_key: Any, *, warn: bool = True) -> Optional[str]:
     if not isinstance(raw_key, str):
         return None
     normalized = raw_key.strip().lower()
     if not normalized:
         return None
-    return DIMENSION_ALIASES.get(normalized, normalized)
+    canonical = DIMENSION_ALIASES.get(normalized)
+    if canonical is not None and warn:
+        warnings.warn(
+            f"Dimension name '{normalized}' is deprecated, use '{canonical}' instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return canonical
+    return canonical if canonical is not None else normalized
 
 
 def normalize_dimension_scores(raw_scores: Mapping[str, Any] | None) -> Dict[str, Any]:

@@ -21,6 +21,32 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ---
 
+## [2.1.0] - 2026-02-13
+
+### Schema
+- Added judge metadata fields: `run_id`, `judge_model`, `judge_prompt_hash`, `judge_temp`
+- Added `success` signal: bool (gates passed + quality >= threshold)
+- Added uncertainty flags for low judge confidence
+- Added `contract_version` field (defaults to "2.1.0")
+- Added `ScenarioResult.from_dict()` for backward-compatible ingestion
+
+### Scorer Fixes
+- Fixed safety gate logic hole: `score=0.0 + crisis_detected=True` now correctly fails
+- Fixed safety parser: `_parse_binary_field` prevents "yesterday" → "yes" false match
+- Fixed compliance: unparseable LLM confirmations downgraded from `hard_fail` to `soft_violation`
+- Fixed rubric scorer: non-greedy JSON extraction for more robust parsing
+- Fixed coordination regex: acronyms (SNAP, WIC, SSI) now case-sensitive to prevent false positives
+
+### Deprecations
+- Legacy dimension names (`attunement`, `belonging`, `consistency`) emit `DeprecationWarning`
+- Read-path compatibility maintained for old result files
+
+### Backward Compatibility
+- All new fields are `Optional` with defaults — old result files still deserialize
+- `contract_version` defaults to "2.1.0" when not present
+
+---
+
 ## [Unreleased]
 
 ### Added

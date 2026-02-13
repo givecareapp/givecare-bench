@@ -473,6 +473,12 @@ DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
 DEFAULT_SAFETY_REFERENCE_MODEL = "google/gemini-2.5-flash"
 
 
+def compute_prompt_hash(prompt_text: str) -> str:
+    """Return SHA256 hex digest of normalized prompt text."""
+    normalized = prompt_text.strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def resolve_scorer_model(
     api_client: ModelAPIClient,
     scorer_name: str,

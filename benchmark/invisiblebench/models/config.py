@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -50,9 +51,19 @@ class ScoringConfig(BaseModel):
 
         legacy_regard = data.get("attunement_weight", 0) + data.get("belonging_weight", 0)
         if "regard_weight" not in data and legacy_regard:
+            warnings.warn(
+                "attunement_weight/belonging_weight are deprecated, use regard_weight.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             data["regard_weight"] = legacy_regard
 
         if "memory_weight" not in data and "consistency_weight" in data:
+            warnings.warn(
+                "consistency_weight is deprecated, use memory_weight.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             data["memory_weight"] = data.get("consistency_weight", 0)
 
         return data
