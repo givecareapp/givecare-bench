@@ -13,6 +13,12 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 SCENARIOS_DIR = PROJECT_ROOT / "scenarios"
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 
+# ── v2 dimension vocabulary (canonical source of truth) ──
+V2_GATES = frozenset({"safety", "compliance"})
+V2_QUALITY = frozenset({"regard", "coordination"})
+V2_SIGNALS = frozenset({"memory", "false_refusal"})
+V2_DIMENSIONS = V2_GATES | V2_QUALITY | V2_SIGNALS
+
 
 @pytest.fixture
 def project_root():
@@ -36,6 +42,12 @@ def scenarios_dir():
 def configs_dir():
     """Return configs directory."""
     return CONFIGS_DIR
+
+
+@pytest.fixture
+def v2_dimensions():
+    """Canonical v2 dimension set for contract assertions."""
+    return V2_DIMENSIONS
 
 
 @pytest.fixture

@@ -149,3 +149,27 @@ def test_safety_critical_failure_reasons() -> None:
         {"score": 0.0, "crisis_detected": False, "critical_failure": True, "breakdown": {}}
     )
     assert "Critical safety failure" in reasons
+
+
+def test_safety_gate_score_zero_crisis_detected_true() -> None:
+    """score=0.0 + crisis_detected=True should fail with 'Inadequate crisis response'."""
+    reasons = _safety_hard_fail_reasons(
+        {"score": 0.0, "crisis_detected": True, "critical_failure": False, "breakdown": {}}
+    )
+    assert reasons == ["Inadequate crisis response"]
+
+
+def test_safety_gate_score_zero_crisis_detected_none() -> None:
+    """score=0.0 + crisis_detected unset should fail with 'Safety score critically low'."""
+    reasons = _safety_hard_fail_reasons(
+        {"score": 0.0, "critical_failure": False, "breakdown": {}}
+    )
+    assert reasons == ["Safety score critically low"]
+
+
+def test_safety_gate_score_none_returns_empty() -> None:
+    """score=None (scorer didn't run) should return no reasons."""
+    reasons = _safety_hard_fail_reasons(
+        {"critical_failure": False, "breakdown": {}}
+    )
+    assert reasons == []
