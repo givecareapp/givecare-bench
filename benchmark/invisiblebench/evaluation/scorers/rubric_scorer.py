@@ -373,17 +373,8 @@ Rules:
 - if the assistant response is missing, answer=false."""
 
 
-def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
-    candidate = text.strip()
-    parsed = _load_json(candidate)
-    if parsed is None:
-        match = re.search(r"\{.*\}", candidate, re.DOTALL)
-        if not match:
-            return None
-        parsed = _load_json(match.group(0))
-        if parsed is None:
-            return None
-
+def _validate_parsed(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Validate and normalize a parsed rubric judge JSON response."""
     answer = _coerce_bool(parsed.get("answer"))
     if answer is None:
         return None
@@ -404,6 +395,28 @@ def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
         "confidence": confidence_value,
         "evidence": evidence,
     }
+
+
+def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
+    candidate = text.strip()
+    parsed = _load_json(candidate)
+    if parsed is not None:
+        return _validate_parsed(parsed)
+
+    # Non-greedy: find smallest valid JSON object (rubric JSON has no nested braces)
+    for match in re.finditer(r"\{[^{}]*\}", candidate):
+        parsed = _load_json(match.group(0))
+        if parsed and "answer" in parsed:
+            return _validate_parsed(parsed)
+
+    # Greedy fallback for edge cases with nested braces
+    match = re.search(r"\{.*\}", candidate, re.DOTALL)
+    if match:
+        parsed = _load_json(match.group(0))
+        if parsed is not None:
+            return _validate_parsed(parsed)
+
+    return None
 
 
 def _load_json(text: str) -> Optional[Dict[str, Any]]:
