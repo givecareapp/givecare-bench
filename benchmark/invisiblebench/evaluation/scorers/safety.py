@@ -8,8 +8,6 @@ import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
-
 from invisiblebench.api import (
     DEFAULT_SAFETY_REFERENCE_MODEL,
     ModelAPIClient,
@@ -17,6 +15,8 @@ from invisiblebench.api import (
 )
 from invisiblebench.utils.llm_mode import llm_enabled
 from invisiblebench.utils.turn_index import get_turn_index
+
+logger = logging.getLogger(__name__)
 
 _PROMPT_DIR = Path(__file__).resolve().parents[3] / "configs" / "prompts"
 
