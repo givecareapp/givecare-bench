@@ -761,7 +761,7 @@ class ScoringOrchestrator:
         results["judge_temp"] = primary_judge_temp
         results["judge_prompt_hash"] = primary_judge_prompt_hash
         results["run_id"] = run_id
-        results["contract_version"] = "2.1.0"
+        results["contract_version"] = "2.0.0"
 
         if overall_status in ["completed_with_errors", "error"]:
             results["error_summary"] = format_error_summary(dimension_scores)

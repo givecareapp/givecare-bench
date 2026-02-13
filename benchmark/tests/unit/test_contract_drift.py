@@ -96,7 +96,7 @@ class TestSchemaStability:
             model="m",
             overall_score=0.5,
         )
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
 
     def test_no_unexpected_fields(self):
         """Fail if new fields are added without updating this test.

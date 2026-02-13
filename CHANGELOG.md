@@ -21,13 +21,13 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ---
 
-## [2.1.0] - 2026-02-13
+## [2.0.0] - 2026-02-13
 
 ### Schema
 - Added judge metadata fields: `run_id`, `judge_model`, `judge_prompt_hash`, `judge_temp`
 - Added `success` signal: bool (gates passed + quality >= threshold)
 - Added uncertainty flags for low judge confidence
-- Added `contract_version` field (defaults to "2.1.0")
+- Added `contract_version` field (defaults to "2.0.0")
 - Added `ScenarioResult.from_dict()` for backward-compatible ingestion
 
 ### Scorer Fixes
@@ -43,7 +43,7 @@ The leaderboard metadata includes a `code_version` field recording which code ve
 
 ### Backward Compatibility
 - All new fields are `Optional` with defaults — old result files still deserialize
-- `contract_version` defaults to "2.1.0" when not present
+- `contract_version` defaults to "2.0.0" when not present
 
 ---
 

@@ -166,7 +166,7 @@ class TestOrchestratorJudgeMeta:
             rules_path=rules_path,
             model_name="test-model",
         )
-        assert result["contract_version"] == "2.1.0"
+        assert result["contract_version"] == "2.0.0"
 
     def test_score_includes_judge_model(self, orchestrator, simple_scenario):
         transcript_path, scenario_path, rules_path = simple_scenario

@@ -73,7 +73,7 @@ class TestMakeErrorResult:
         model = {"name": "Test Model", "id": "test/model-v1"}
         result = _make_error_result(model, "Test Scenario", "test_001", "safety", "boom")
 
-        assert result["contract_version"] == "2.1.0"
+        assert result["contract_version"] == "2.0.0"
         assert result["success"] is False
 
 
@@ -150,7 +150,7 @@ class TestHealthV21:
                     "overall_score": 0.8,
                     "scenarios": [
                         {"scenario": "S1", "status": "pass"},
-                        {"scenario": "S2", "status": "pass", "contract_version": "2.1.0", "judge_model": "gemini"},
+                        {"scenario": "S2", "status": "pass", "contract_version": "2.0.0", "judge_model": "gemini"},
                     ],
                 },
             ],
@@ -169,7 +169,7 @@ class TestHealthV21:
                     "model": "Model A",
                     "overall_score": 0.8,
                     "scenarios": [
-                        {"scenario": "S1", "status": "pass", "contract_version": "2.1.0", "judge_model": "gemini"},
+                        {"scenario": "S1", "status": "pass", "contract_version": "2.0.0", "judge_model": "gemini"},
                     ],
                 },
             ],
@@ -188,8 +188,8 @@ class TestBatchReportV21:
         from invisiblebench.export.reports import ReportGenerator
 
         results = [
-            {"scenario": "S1", "overall_score": 0.8, "success": True, "judge_model": "gemini", "contract_version": "2.1.0"},
-            {"scenario": "S2", "overall_score": 0.3, "hard_fail": True, "success": False, "judge_model": "gemini", "contract_version": "2.1.0"},
+            {"scenario": "S1", "overall_score": 0.8, "success": True, "judge_model": "gemini", "contract_version": "2.0.0"},
+            {"scenario": "S2", "overall_score": 0.3, "hard_fail": True, "success": False, "judge_model": "gemini", "contract_version": "2.0.0"},
         ]
 
         gen = ReportGenerator()
@@ -199,7 +199,7 @@ class TestBatchReportV21:
 
         assert "Success" in html_content
         assert "Judge: gemini" in html_content
-        assert "Contract: 2.1.0" in html_content
+        assert "Contract: 2.0.0" in html_content
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ class TestSingleReportV21:
             "overall_score": 0.8,
             "hard_fail": False,
             "judge_model": "gemini-2.5-flash-lite",
-            "contract_version": "2.1.0",
+            "contract_version": "2.0.0",
             "metadata": {"scenario_id": "test", "jurisdiction": "ca", "timestamp": "2026-02-13", "llm_mode": "llm"},
             "dimension_scores": {},
         }
@@ -225,4 +225,4 @@ class TestSingleReportV21:
             html_content = Path(f.name).read_text()
 
         assert "gemini-2.5-flash-lite" in html_content
-        assert "2.1.0" in html_content
+        assert "2.0.0" in html_content

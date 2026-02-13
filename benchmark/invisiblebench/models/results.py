@@ -104,7 +104,7 @@ class ScenarioResult(BaseModel):
     judge_model: Optional[str] = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
     judge_prompt_hash: Optional[str] = Field(default=None, description="SHA256 of scorer prompt template")
     judge_temp: Optional[float] = Field(default=None, description="Temperature for LLM judge")
-    contract_version: str = Field(default="2.1.0", description="Schema version")
+    contract_version: str = Field(default="2.0.0", description="Schema version")
 
     # v2.1 — Success signal
     success: Optional[bool] = Field(default=None, description="True if gates passed AND overall_score >= threshold")
@@ -178,7 +178,7 @@ class ScenarioResult(BaseModel):
                 d["dimensions"] = dim_obj
 
         # Ensure contract_version default for legacy data
-        d.setdefault("contract_version", "2.1.0")
+        d.setdefault("contract_version", "2.0.0")
 
         # Compute success if not already set
         result = cls.model_validate(d)

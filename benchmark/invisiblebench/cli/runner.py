@@ -917,7 +917,7 @@ async def evaluate_scenario_async(
                 "judge_model": result.get("judge_model"),
                 "judge_prompt_hash": result.get("judge_prompt_hash"),
                 "judge_temp": result.get("judge_temp"),
-                "contract_version": result.get("contract_version", "2.1.0"),
+                "contract_version": result.get("contract_version", "2.0.0"),
                 "success": _compute_success(score, hard_fail, result.get("gates", {})),
             }
             summary.update(detail_paths)
@@ -977,7 +977,7 @@ def _make_error_result(
         "dimension_scores": {},
         "cost": cost if cost is not None else 0.0,
         "status": "error",
-        "contract_version": "2.1.0",
+        "contract_version": "2.0.0",
         "success": False,
     }
 
@@ -1062,7 +1062,7 @@ def _run_single_scenario(
             "judge_model": result.get("judge_model"),
             "judge_prompt_hash": result.get("judge_prompt_hash"),
             "judge_temp": result.get("judge_temp"),
-            "contract_version": result.get("contract_version", "2.1.0"),
+            "contract_version": result.get("contract_version", "2.0.0"),
             "success": _compute_success(score, hard_fail, result.get("gates", {})),
         }
         summary.update(detail_paths)

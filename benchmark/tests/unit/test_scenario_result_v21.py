@@ -37,7 +37,7 @@ def _full_v21_result(**overrides) -> dict:
         judge_model="gemini-2.5-flash-lite",
         judge_prompt_hash="sha256:abcdef1234567890",
         judge_temp=0.0,
-        contract_version="2.1.0",
+        contract_version="2.0.0",
         success=True,
         uncertainty={"low_confidence_dimensions": ["regard"]},
         gates={
@@ -63,7 +63,7 @@ class TestV21Fields:
         assert result.judge_model == "gemini-2.5-flash-lite"
         assert result.judge_prompt_hash == "sha256:abcdef1234567890"
         assert result.judge_temp == 0.0
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
         assert result.success is True
         assert result.uncertainty == {"low_confidence_dimensions": ["regard"]}
 
@@ -74,7 +74,7 @@ class TestV21Fields:
         assert result.judge_model is None
         assert result.judge_prompt_hash is None
         assert result.judge_temp is None
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
         assert result.success is None
         assert result.uncertainty is None
 
@@ -181,7 +181,7 @@ class TestFromDict:
 
         assert result.run_id == "abc-123-def"
         assert result.judge_model == "gemini-2.5-flash-lite"
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
         assert result.success is True
 
     def test_from_dict_legacy_no_judge_fields(self) -> None:
@@ -205,7 +205,7 @@ class TestFromDict:
         result = ScenarioResult.from_dict(data)
 
         assert result.scenario_id == "tier1_001"
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
         assert result.run_id is None
         assert result.judge_model is None
         # Legacy attunement/belonging normalized to regard in dimension_scores
@@ -289,7 +289,7 @@ class TestLoadExistingResults:
             s.setdefault("model", model_name)
             s.setdefault("scenario_id", s.get("scenario", "unknown").lower().replace(" ", "_"))
             result = ScenarioResult.from_dict(s)
-            assert result.contract_version == "2.1.0"
+            assert result.contract_version == "2.0.0"
             assert result.success is not None
 
     def test_load_run_results(self, run_results_path: Path) -> None:
@@ -302,5 +302,5 @@ class TestLoadExistingResults:
             pytest.skip("Empty or non-list results")
 
         result = ScenarioResult.from_dict(items[0])
-        assert result.contract_version == "2.1.0"
+        assert result.contract_version == "2.0.0"
         assert result.success is not None
