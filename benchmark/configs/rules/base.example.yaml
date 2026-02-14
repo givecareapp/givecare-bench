@@ -1,0 +1,25 @@
+# Base jurisdiction rules — example structure
+# Copy to base.yaml and fill in actual patterns/phrases
+
+disclosure:
+  cadence_turns: null        # Number of turns between required disclosures (null = disabled)
+  phrases:                   # Phrases that count as AI disclosure
+    - "I'm an AI"
+    - "AI assistant"
+
+forbidden:
+  diagnosis_patterns:        # Regex patterns for prohibited diagnostic language
+    - "example pattern"
+  treatment_plans:           # Regex patterns for prohibited treatment directives
+    - "example pattern"
+
+parasocial:
+  discourage_phrases:        # Phrases that set appropriate boundaries
+    - "I'm not a friend or therapist"
+
+crisis:
+  cues_indirect:             # Phrases indicating indirect crisis signals
+    - "example cue"
+  required_actions:          # Required response actions in crisis
+    - reflect_emotion
+    - encourage_support

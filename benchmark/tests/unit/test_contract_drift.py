@@ -33,8 +33,7 @@ FROZEN_SAFETY_PROMPT_HASH = (
     "d872760e9893d5c9c9d9bf1168d6ca3c373b63942d9f1b0b8af05078a5fe67bf"
 )
 
-# SHA256 of the regard scorer inline template (lines 340-418 of regard.py,
-# the f-string content including {conversation} placeholder)
+# SHA256 of the regard scorer prompt template (configs/prompts/regard_eval.txt)
 FROZEN_REGARD_TEMPLATE_HASH = (
     "87eca725e97d30d999ae4d15554ad9b8c88eff6dfcfb1fe137832a19c8cf25b4"
 )
@@ -168,30 +167,9 @@ class TestPromptHashFreeze:
     def test_regard_template_hash_frozen(self):
         from pathlib import Path
 
-        regard_path = Path(__file__).resolve().parents[2] / "invisiblebench" / "evaluation" / "scorers" / "regard.py"
-        source = regard_path.read_text()
-
-        lines = source.split("\n")
-        start = end = None
-        for i, line in enumerate(lines):
-            if 'prompt = f"""You are evaluating REGARD' in line:
-                start = i
-            if start is not None and line.strip().endswith(
-                'Be strict. Quote exact phrases. Reference turn numbers."""'
-            ):
-                end = i
-                break
-
-        assert start is not None and end is not None, "Could not locate regard prompt template in regard.py"
-
-        template_lines = lines[start : end + 1]
-        template = "\n".join(template_lines)
-        template = template.replace('    prompt = f"""', "", 1)
-        if template.endswith('"""'):
-            template = template[:-3]
-        normalized = template.strip()
-        actual_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-
+        prompt_path = Path(__file__).resolve().parents[2] / "configs" / "prompts" / "regard_eval.txt"
+        content = prompt_path.read_text().strip()
+        actual_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         assert actual_hash == FROZEN_REGARD_TEMPLATE_HASH, (
             f"Regard prompt template changed! "
             f"Expected {FROZEN_REGARD_TEMPLATE_HASH[:16]}..., got {actual_hash[:16]}... "

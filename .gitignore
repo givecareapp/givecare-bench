@@ -92,3 +92,9 @@ logs/night-nurse.log
 # Automation tool state
 .specify/
 state/
+
+# Private scoring internals (not for public release)
+benchmark/configs/prompts/*.txt
+benchmark/configs/scoring.yaml
+benchmark/configs/rules/*.yaml
+!benchmark/configs/rules/*.example.yaml
