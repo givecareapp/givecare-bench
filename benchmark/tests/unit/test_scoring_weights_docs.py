@@ -1,159 +1,91 @@
-"""Ensure doc-reported scoring weights stay in sync with scoring config."""
+"""Ensure v2 gate+quality docs stay in sync with scoring config.
+
+Diátaxis: reference
+"""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-import pytest
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCORING_CONFIG = PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 
-EXPECTED_KEYS = {"memory", "consistency", "attunement", "belonging", "compliance", "safety", "false_refusal"}
+
+def _load_config(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def _load_weights(path: Path) -> dict[str, float]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    weights = data.get("weights", {})
-    return weights
+def _normalize_space(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def _weights_to_percent(weights: dict[str, float]) -> dict[str, int]:
-    return {key: int(round(weights[key] * 100)) for key in EXPECTED_KEYS}
+def _assert_mentions_v2_architecture(doc_text: str, *, doc_name: str) -> None:
+    normalized = _normalize_space(doc_text)
+
+    assert "gate + quality" in normalized or "gate+quality" in normalized, (
+        f"{doc_name} should mention v2 gate+quality architecture"
+    )
+
+    # Gates
+    assert "safety" in normalized and "compliance" in normalized, (
+        f"{doc_name} should mention safety/compliance gates"
+    )
+
+    # Quality dimensions
+    assert "regard" in normalized and "coordination" in normalized, (
+        f"{doc_name} should mention regard/coordination quality dimensions"
+    )
 
 
-def _label_to_key(label: str) -> str:
-    normalized = label.strip().lower()
-    if "memory" in normalized:
-        return "memory"
-    if "consistency" in normalized:
-        return "consistency"
-    if "attunement" in normalized:
-        return "attunement"
-    if "belonging" in normalized:
-        return "belonging"
-    if "compliance" in normalized:
-        return "compliance"
-    if "safety" in normalized:
-        return "safety"
-    if "false" in normalized and "refusal" in normalized:
-        return "false_refusal"
-    raise AssertionError(f"Unrecognized dimension label: {label}")
-
-
-def _parse_root_readme_weights(text: str) -> dict[str, int]:
-    header = "### 7 Evaluation Dimensions"
-    start = text.find(header)
-    assert start != -1, "README.md missing '7 Evaluation Dimensions' section"
-
-    lines = text[start:].splitlines()
-    table_lines = []
-    for line in lines[1:]:
-        if line.startswith(("## ", "### ")) or line.strip() == "---":
-            break
-        table_lines.append(line)
-
-    pattern = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(\d+)%")
-    weights: dict[str, int] = {}
-    for line in table_lines:
-        match = pattern.match(line)
-        if match:
-            label, percent = match.group(1), match.group(2)
-            weights[_label_to_key(label)] = int(percent)
-
-    return weights
-
-
-def _parse_dimensions_line(text: str) -> dict[str, int]:
-    for line in text.splitlines():
-        if line.strip().startswith("**Dimensions**:") and "memory" in line.lower():
-            pairs = re.findall(r"([A-Za-z &-]+)\s*\((\d+)%\)", line)
-            weights = {_label_to_key(label): int(percent) for label, percent in pairs}
-            return weights
-    raise AssertionError("benchmark/README.md missing YAML orchestrator dimensions line")
-
-
-def _parse_yaml_orchestrator_list(text: str) -> dict[str, int]:
-    header = "### YAML Orchestrator (7 dimensions)"
-    start = text.find(header)
-    assert start != -1, "benchmark/README.md missing YAML Orchestrator section"
-
-    lines = text[start:].splitlines()
-    weights: dict[str, int] = {}
-    pattern = re.compile(r"^\d+\.\s+\*\*(.+?)\*\*\s*\((\d+)%\)")
-
-    for line in lines[1:]:
-        if line.startswith(("## ", "### ")) and not line.startswith("### YAML Orchestrator"):
-            break
-        match = pattern.match(line.strip())
-        if match:
-            label, percent = match.group(1), match.group(2)
-            weights[_label_to_key(label)] = int(percent)
-
-    return weights
-
-
-def _parse_scripts_dimensions_list(text: str) -> dict[str, int]:
-    marker = "Scores each transcript across 7 dimensions:"
-    lines = text.splitlines()
-    for idx, line in enumerate(lines):
-        if marker in line:
-            weights: dict[str, int] = {}
-            for follow in lines[idx + 1 :]:
-                stripped = follow.strip()
-                if not stripped.startswith("-"):
-                    if weights:
-                        break
-                    continue
-                match = re.match(r"^-\s*(.+?)\s*\((\d+)%\)", stripped)
-                if match:
-                    label, percent = match.group(1), match.group(2)
-                    weights[_label_to_key(label)] = int(percent)
-            return weights
-    raise AssertionError("benchmark/scripts/README.md missing 7-dimension bullet list")
-
-
-def _parse_scripts_weights_snippet(text: str) -> dict[str, float]:
-    marker = "Edit scoring weights in `benchmark/configs/scoring.yaml`:"
+def _extract_yaml_snippet(text: str, marker: str) -> dict:
     start = text.find(marker)
-    assert start != -1, "benchmark/scripts/README.md missing scoring weights snippet marker"
+    assert start != -1, f"Missing marker: {marker}"
 
     fence_start = text.find("```yaml", start)
-    assert fence_start != -1, "benchmark/scripts/README.md missing YAML code fence"
+    assert fence_start != -1, "Missing YAML code fence"
 
     fence_end = text.find("```", fence_start + len("```yaml"))
-    assert fence_end != -1, "benchmark/scripts/README.md missing closing YAML code fence"
+    assert fence_end != -1, "Missing closing YAML code fence"
 
     snippet = text[fence_start + len("```yaml") : fence_end].strip()
-    data = yaml.safe_load(snippet) if snippet else {}
-    return data.get("weights", {})
+    assert snippet, "Empty YAML snippet"
+    return yaml.safe_load(snippet)
 
 
+def test_scoring_config_uses_v2_gate_quality_contract() -> None:
+    data = _load_config(SCORING_CONFIG)
 
-@pytest.mark.skip(reason="v2 architecture: docs need updating to match new gate+quality weights")
-def test_scoring_weights_match_docs() -> None:
-    config_weights = _load_weights(SCORING_CONFIG)
-    assert set(config_weights.keys()) == EXPECTED_KEYS
-    expected_percent = _weights_to_percent(config_weights)
+    gates = data.get("gates", {})
+    quality = data.get("quality", {})
 
-    root_readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-    root_weights = _parse_root_readme_weights(root_readme)
-    assert root_weights == expected_percent
+    assert set(gates.keys()) == {"safety", "compliance"}
+    assert set(quality.keys()) == {"regard", "coordination"}
+    assert abs(float(quality["regard"]) + float(quality["coordination"]) - 1.0) < 1e-9
 
-    benchmark_readme = (PROJECT_ROOT / "benchmark" / "README.md").read_text(encoding="utf-8")
-    line_weights = _parse_dimensions_line(benchmark_readme)
-    assert line_weights == expected_percent
+    assert "weights" in data, "Legacy weights block should exist for backward compatibility"
 
-    list_weights = _parse_yaml_orchestrator_list(benchmark_readme)
-    assert list_weights == expected_percent
 
-    scripts_readme = (PROJECT_ROOT / "benchmark" / "scripts" / "README.md").read_text(
-        encoding="utf-8"
+def test_root_readme_mentions_v2_architecture() -> None:
+    text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    _assert_mentions_v2_architecture(text, doc_name="README.md")
+
+
+def test_benchmark_readme_mentions_v2_architecture() -> None:
+    text = (PROJECT_ROOT / "benchmark" / "README.md").read_text(encoding="utf-8")
+    _assert_mentions_v2_architecture(text, doc_name="benchmark/README.md")
+
+
+def test_scripts_readme_yaml_matches_scoring_config() -> None:
+    config = _load_config(SCORING_CONFIG)
+    text = (PROJECT_ROOT / "benchmark" / "scripts" / "README.md").read_text(encoding="utf-8")
+
+    snippet = _extract_yaml_snippet(
+        text,
+        marker="The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:",
     )
-    bullet_weights = _parse_scripts_dimensions_list(scripts_readme)
-    assert bullet_weights == expected_percent
 
-    snippet_weights = _parse_scripts_weights_snippet(scripts_readme)
-    assert snippet_weights == config_weights
+    assert snippet.get("gates") == config.get("gates")
+    assert snippet.get("quality") == config.get("quality")
