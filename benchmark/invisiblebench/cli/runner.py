@@ -2059,6 +2059,25 @@ def run_benchmark(
                 if RICH_AVAILABLE and console:
                     console.print(f"[dim]Health check skipped: {he}[/dim]")
 
+            # Auto-publish to Convex if configured
+            try:
+                from invisiblebench.cli.publish import publish
+
+                pub_result = publish(str(results_path))
+                if "error" not in pub_result:
+                    pub_msg = f"Published to Convex: {pub_result.get('runId', '?')}"
+                    if RICH_AVAILABLE and console:
+                        console.print(f"[bold green]✓[/bold green] {pub_msg}")
+                    else:
+                        print(pub_msg)
+                elif "not set" not in pub_result.get("error", ""):
+                    # Only warn if it's a real error, not just missing config
+                    if RICH_AVAILABLE and console:
+                        console.print(f"[dim]Convex publish skipped: {pub_result['error']}[/dim]")
+            except Exception as pe:
+                if RICH_AVAILABLE and console:
+                    console.print(f"[dim]Convex publish skipped: {pe}[/dim]")
+
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
             msg = f"Warning: Could not update leaderboard: {e}"
@@ -2493,12 +2512,12 @@ Examples:
   uv run bench -m gpt-5.2,claude -y   Multiple models by name
   uv run bench -m 1-4 -y              Models 1-4 (backward compat)
   uv run bench -m 7 -y                Model 7 = DeepSeek V3.2
-  uv run bench -t 1,2 -y              Tier 1 and 2 only
+  uv run bench -c safety,empathy -y   Safety + empathy categories only
 
   # System Evaluation (GiveCare/Mira product)
-  uv run bench --provider givecare -y           Standard (29 scenarios)
-  uv run bench --provider givecare -y --confidential  Full (32 scenarios)
-  uv run bench --provider givecare -t 1 -y      Tier 1 only
+  uv run bench --provider givecare -y                 Standard (44 scenarios)
+  uv run bench --provider givecare -y --confidential  Full (47 scenarios)
+  uv run bench --provider givecare -c safety -y       Safety category only
 
   # Diagnostics
   uv run bench --provider givecare -y --diagnose  Run with diagnostic report
@@ -2620,6 +2639,17 @@ Examples:
         "--output", "-o", type=str, default=None, help="Output directory for raw data"
     )
 
+    # Publish subcommand
+    publish_parser = subparsers.add_parser(
+        "publish", help="Publish results to Convex for real-time dashboard"
+    )
+    publish_parser.add_argument(
+        "results", type=str, help="Path to all_results.json or leaderboard_ready/ directory"
+    )
+    publish_parser.add_argument(
+        "--url", type=str, default=None, help="Convex site URL (overrides CONVEX_BENCH_URL)"
+    )
+
     # Annotate subcommand
     annotate_parser = subparsers.add_parser(
         "annotate", help="Human annotation kit for human-LLM agreement"
@@ -2698,7 +2728,7 @@ Examples:
     parser.add_argument(
         "--confidential",
         action="store_true",
-        help="Include confidential scenarios (38 vs 35) - only for givecare provider",
+        help="Include confidential scenarios (47 vs 44) - only for givecare provider",
     )
     parser.add_argument(
         "--diagnose",
@@ -2741,6 +2771,11 @@ Examples:
 
     if args.command == "diagnose":
         return diagnose_command(args)
+
+    if args.command == "publish":
+        from invisiblebench.cli.publish import run_publish
+
+        return run_publish(args.results, url=args.url)
 
     if args.command == "leaderboard":
         from invisiblebench.cli.leaderboard import run_leaderboard
