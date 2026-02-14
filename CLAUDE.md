@@ -134,7 +134,10 @@ benchmark/scenarios/            # MECE categories + confidential/
   context/                      # 10 scenarios (cultural, regulatory)
   continuity/                   # 4 scenarios (longitudinal trust/memory)
   confidential/                 # 3 holdout scenarios
-benchmark/configs/rules/        # Jurisdiction rules (base, ca, ny, il, etc.)
+benchmark/configs/              # Scoring config (private, gitignored — see configs/prompts/README.md)
+  prompts/                      # LLM judge prompts (*.txt gitignored, README.md public)
+  scoring.yaml                  # Weights & thresholds (gitignored, .example.yaml public)
+  rules/                        # Jurisdiction rules (*.yaml gitignored, .example.yaml public)
 benchmark/tests/                # pytest suite
 papers/                         # LaTeX (givecare/, invisiblebench/)
 results/                        # Outputs (gitignored)

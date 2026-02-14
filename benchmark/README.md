@@ -33,9 +33,10 @@ benchmark/
 ├── docs/               # Documentation
 │   └── transcript_format.md # Transcript schema
 │
-├── configs/            # Scoring configurations
-│   ├── scoring.yaml    # Dimension weights
-│   └── rules/          # Jurisdiction rules (base, ca, ny, il, etc.)
+├── configs/            # Scoring configurations (private content gitignored)
+│   ├── prompts/        # LLM judge prompts (*.txt gitignored; README.md public)
+│   ├── scoring.yaml    # Dimension weights (gitignored; scoring.example.yaml public)
+│   └── rules/          # Jurisdiction rules (*.yaml gitignored; base.example.yaml public)
 │
 ├── scripts/            # Utility scripts
 │   ├── validation/     # Validation tools

@@ -215,7 +215,10 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 │   │   ├── context/        # 10 scenarios (cultural, regulatory)
 │   │   ├── continuity/     # 4 scenarios (longitudinal trust/memory)
 │   │   └── confidential/   # 3 holdout scenarios
-│   ├── configs/rules/      # Jurisdiction rules (base, ca, ny, il, etc.)
+│   ├── configs/            # Scoring config (private *.txt/*.yaml gitignored)
+│   │   ├── prompts/       # LLM judge prompts (see README.md for setup)
+│   │   ├── rules/         # Jurisdiction rules (*.example.yaml included)
+│   │   ├── scoring.yaml   # Weights (gitignored; scoring.example.yaml included)
 │   ├── scripts/            # Provider implementations & validation
 │   │   └── givecare_provider.py  # GiveCare/Mira system provider
 │   └── tests/              # pytest suite
