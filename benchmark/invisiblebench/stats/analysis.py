@@ -323,9 +323,18 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
             if vals:
                 dim_avgs[dim] = round(statistics.mean(vals), 3)
 
-        # Success rate (v2.1)
-        success_count = sum(1 for s in scenarios if s.get("success") is True)
+        # Success rate (v2.1 explicit field) + derived fallback for legacy datasets.
+        explicit_success_values = [s.get("success") for s in scenarios if s.get("success") is not None]
+        success_count = sum(1 for v in explicit_success_values if v is True)
         success_rate = round(success_count / len(scenarios), 3) if scenarios else 0.0
+
+        derived_success_count = sum(1 for s in scenarios if _is_success(s))
+        derived_success_rate = round(derived_success_count / len(scenarios), 3) if scenarios else 0.0
+
+        if explicit_success_values:
+            success_source = "explicit"
+        else:
+            success_source = "derived"
 
         # Judge model (v2.1) — pick from first scenario that has one
         judge_model = None
@@ -345,6 +354,9 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
             "error_count": len(errors),
             "success_count": success_count,
             "success_rate": success_rate,
+            "derived_success_count": derived_success_count,
+            "derived_success_rate": derived_success_rate,
+            "success_source": success_source,
             "judge_model": judge_model,
             "categories": cat_stats,
             "dimensions": dim_avgs,
@@ -489,17 +501,25 @@ def format_stats_report(stats: Dict[str, Any]) -> str:
         row += f" {total_hf}/{total_n} {pct:>5}"
         lines.append(row)
 
-    # Success Rates (v2.1)
-    has_success = any(ms.get("success_count", 0) > 0 or ms.get("success_rate") is not None for ms in models.values())
-    if has_success:
+    # Success Rates (v2.1 explicit field, with derived fallback for legacy datasets)
+    has_explicit_success = any(ms.get("success_source") == "explicit" for ms in models.values())
+    has_any_success_data = bool(models)
+    if has_any_success_data:
         lines.append("")
-        lines.append("Success Rates")
+        if has_explicit_success:
+            lines.append("Success Rates")
+        else:
+            lines.append("Success Rates (derived)")
         lines.append(f"{'Model':<24} {'Success':>10} {'Rate':>8}")
         lines.append("─" * 44)
         for model, ms in sorted_models:
-            sc = ms.get("success_count", 0)
             n = ms.get("n_scenarios", 0)
-            sr = ms.get("success_rate", 0.0)
+            if ms.get("success_source") == "explicit":
+                sc = ms.get("success_count", 0)
+                sr = ms.get("success_rate", 0.0)
+            else:
+                sc = ms.get("derived_success_count", 0)
+                sr = ms.get("derived_success_rate", 0.0)
             lines.append(f"{model[:23]:<24} {sc}/{n:>7}  {sr*100:>5.1f}%")
 
     # Pairwise Comparisons (significant only)

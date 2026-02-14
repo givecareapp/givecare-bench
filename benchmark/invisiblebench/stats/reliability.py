@@ -257,10 +257,17 @@ def format_reliability_report(results: Dict[str, Any]) -> str:
     lines.append("─" * 60)
 
     dims = results.get("dimensions", {})
-    # Show LLM scorers first, then deterministic
+
+    # Show canonical scorers first, then any extra/legacy dimensions.
+    ordered_dims: List[str] = []
     for dim in LLM_SCORERS + DETERMINISTIC_SCORERS:
-        if dim not in dims:
-            continue
+        if dim in dims:
+            ordered_dims.append(dim)
+    for dim in sorted(dims.keys()):
+        if dim not in ordered_dims:
+            ordered_dims.append(dim)
+
+    for dim in ordered_dims:
         d = dims[dim]
         kappa = d.get("kappa", 0.0)
         mad = d.get("mean_abs_deviation", 0.0)
