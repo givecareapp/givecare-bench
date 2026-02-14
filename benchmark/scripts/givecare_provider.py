@@ -6,10 +6,10 @@ Runs benchmark scenarios against the deployed Mira agent via Convex API.
 Generates transcripts that can be scored by the InvisibleBench scorer.
 
 Usage:
-    # Standard run (29 scenarios, matches leaderboard)
+    # Standard run (44 scenarios, matches leaderboard)
     python benchmark/scripts/givecare_provider.py --all --score -v
 
-    # Include confidential scenarios (35 total)
+    # Include confidential scenarios (47 total)
     python benchmark/scripts/givecare_provider.py --all --score --confidential
 
     # Single scenario
@@ -272,8 +272,8 @@ def get_scenarios(
 ) -> List[Path]:
     """Get all scenario files, optionally filtered by category.
 
-    By default, excludes confidential scenarios to match leaderboard (32 scenarios).
-    Use include_confidential=True for full set (35 scenarios).
+    By default, excludes confidential scenarios to match leaderboard (44 scenarios).
+    Use include_confidential=True for full set (47 scenarios).
     """
     scenarios = []
 
@@ -364,10 +364,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Standard run (29 scenarios, matches leaderboard)
+  # Standard run (44 scenarios, matches leaderboard)
   python givecare_provider.py --all --score -v
 
-  # Include confidential scenarios (32 total)
+  # Include confidential scenarios (47 total)
   python givecare_provider.py --all --score --confidential
 
   # Single category
@@ -380,7 +380,7 @@ Examples:
         "--category", "-c", type=str, action="append", help="Filter by category (can repeat)"
     )
     parser.add_argument(
-        "--confidential", action="store_true", help="Include confidential scenarios (35 vs 32)"
+        "--confidential", action="store_true", help="Include confidential scenarios (47 vs 44)"
     )
     parser.add_argument("--deployment", "-d", default=DEFAULT_DEPLOYMENT, choices=["dev", "prod"])
     parser.add_argument("--output", "-o", default="results/givecare", help="Output directory")
