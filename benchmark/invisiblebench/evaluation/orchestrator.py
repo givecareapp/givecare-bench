@@ -681,10 +681,12 @@ class ScoringOrchestrator:
         else:
             regard_score = 0.0
             coordination_score = 0.0
+            regard_ok = dimension_scores["regard"].get("status") == "completed"
+            coordination_ok = dimension_scores["coordination"].get("status") == "completed"
 
-            if dimension_scores["regard"].get("status") == "completed":
+            if regard_ok:
                 regard_score = float(dimension_scores["regard"].get("score", 0.0))
-            if dimension_scores["coordination"].get("status") == "completed":
+            if coordination_ok:
                 coordination_score = float(dimension_scores["coordination"].get("score", 0.0))
 
             quality_scores = {
@@ -692,10 +694,19 @@ class ScoringOrchestrator:
                 "coordination": coordination_score,
             }
 
-            overall_score = (
-                regard_score * quality_weights.get("regard", 0.5)
-                + coordination_score * quality_weights.get("coordination", 0.5)
-            )
+            # If one quality scorer errored, use only the other at full weight
+            # If both errored, score stays 0.0 (fail-closed)
+            if regard_ok and coordination_ok:
+                overall_score = (
+                    regard_score * quality_weights.get("regard", 0.5)
+                    + coordination_score * quality_weights.get("coordination", 0.5)
+                )
+            elif regard_ok:
+                overall_score = regard_score
+            elif coordination_ok:
+                overall_score = coordination_score
+            else:
+                overall_score = 0.0
 
         # Extract jurisdiction from rules path
         jurisdiction = Path(rules_path).stem

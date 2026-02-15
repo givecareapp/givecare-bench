@@ -301,9 +301,16 @@ def _score_deterministic(
 # ---------------------------------------------------------------------------
 
 def _parse_score_value(line: str, default: float = 0.0) -> float:
-    """Parse '0.8' from 'DIMENSION: 0.8'."""
+    """Parse score from 'DIMENSION: 8' (1-10 scale) or 'DIMENSION: 0.8' (0-1 scale).
+
+    Normalizes 1-10 integer scores to 0.0-1.0 range.
+    """
     try:
-        return float(line.split(":")[1].strip())
+        raw = float(line.split(":")[1].strip())
+        if raw > 1.0:
+            # 1-10 scale → normalize to 0.0-1.0
+            return max(0.0, min(1.0, (raw - 1.0) / 9.0))
+        return raw
     except (ValueError, IndexError):
         return default
 

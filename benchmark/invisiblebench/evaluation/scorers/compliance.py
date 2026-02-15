@@ -287,18 +287,14 @@ def _confirm_regex_candidates_with_llm(
                     f"('{candidate['matched_phrase']}' is false positive)"
                 )
             else:
-                # Couldn't parse LLM response for this candidate — downgrade to soft violation
+                # Couldn't parse LLM response for this candidate — keep as hard fail (fail-closed)
                 logger.warning(
-                    "Compliance scorer: unparseable LLM confirmation for %s at turn %s, downgrading to soft violation",
+                    "Compliance scorer: unparseable LLM confirmation for %s at turn %s, keeping as hard fail (fail-closed)",
                     candidate["rule"], candidate["turn"],
                 )
-                result["violations"].append({
-                    "rule": candidate["rule"],
-                    "turn": candidate["turn"],
-                    "evidence": f"Regex flagged but LLM confirmation unparseable: {candidate.get('matched_phrase', '')}",
-                })
+                result["hard_fails"].append(candidate)
                 evidence.append(
-                    f"Regex DOWNGRADED (unparseable LLM): {candidate['rule']} at turn {candidate['turn']} → soft violation"
+                    f"Regex KEPT (unparseable LLM, fail-closed): {candidate['rule']} at turn {candidate['turn']}"
                 )
 
     except Exception as e:
@@ -368,8 +364,8 @@ def _check_violations_with_llm_revised(
             analysis = result_data["response"]
             all_analyses.append(analysis)
 
-            # Track if this sample detected hard fails
-            all_hard_fails.append("hard fails: yes" in analysis.lower())
+            # Track if this sample detected hard fails (flexible matching)
+            all_hard_fails.append(bool(re.search(r"hard.?fails?:\s*yes", analysis, re.IGNORECASE)))
 
         # Use first analysis for evidence
         evidence.append(

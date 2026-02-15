@@ -8,18 +8,43 @@ engagement with caregiving topics.
 From "On Care for Care": "The medication schedule that frees her mind for
 conversation, the coordination with siblings that prevents Tuesday's resentment."
 
-Primarily DETERMINISTIC — regex and keyword matching, no LLM calls by default.
+Four sub-dimensions (each 0-1, averaged):
+    resource_specificity — names specific programs, provides contacts/URLs
+    navigation_support   — step-by-step guidance, question scaffolding
+    barrier_awareness    — acknowledges cost, waitlists, eligibility, access
+    engagement           — engages substantively, avoids false refusals
+
+Penalty category (subtracted from base score):
+    false_refusal  -0.3 each, cap -0.6
 """
 
 from __future__ import annotations
 
+import logging
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from invisiblebench.api import ModelAPIClient
+from invisiblebench.api import ModelAPIClient, compute_prompt_hash, resolve_scorer_model
+from invisiblebench.utils.llm_mode import llm_enabled
+
+logger = logging.getLogger(__name__)
+
+_PROMPT_DIR = Path(__file__).parent.parent.parent.parent / "configs" / "prompts"
+
+
+def _load_prompt(name: str) -> str:
+    path = _PROMPT_DIR / name
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Scoring prompt not found: {path}\n"
+            "See benchmark/configs/prompts/README.md for setup instructions."
+        )
+    return path.read_text()
+
 
 # ---------------------------------------------------------------------------
-# Resource detection patterns
+# Resource detection patterns (used by deterministic fallback)
 # ---------------------------------------------------------------------------
 
 # Known helpline / crisis numbers — exempt from PII detection
@@ -200,7 +225,7 @@ _MIN_SUBSTANTIVE_WORDS = 40
 
 
 # ---------------------------------------------------------------------------
-# Main score function
+# Public entry point
 # ---------------------------------------------------------------------------
 
 def score(
@@ -211,52 +236,256 @@ def score(
     allow_llm: bool = False,
     scoring_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Score coordination: resource specificity, navigation, barriers, engagement.
+    """Score coordination — resource specificity, navigation, barriers, engagement.
 
-    Primarily deterministic — no LLM calls by default.
+    Uses LLM judge when available, with deterministic fallback.
     """
+    breakdown: Dict[str, Any] = {
+        "resource_specificity": 0.0,
+        "navigation_support": 0.0,
+        "barrier_awareness": 0.0,
+        "engagement": 0.0,
+        "false_refusal_penalty": 0.0,
+    }
     evidence: List[str] = []
     hard_fails: List[Dict[str, Any]] = []
 
+    # --- Deterministic pre-checks (always run) ---
+
+    # 1. False-refusal detection (deterministic — important signal)
     assistant_texts = _assistant_text_by_turn(transcript)
     user_texts = _user_text_by_turn(transcript)
-
-    resource_score = _score_resource_specificity(assistant_texts, evidence)
-    navigation_score = _score_navigation_support(assistant_texts, evidence)
-    barrier_score = _score_barrier_awareness(assistant_texts, evidence)
-    engagement_score = _score_engagement(
-        assistant_texts, user_texts, scenario, evidence, hard_fails,
+    _detect_false_refusals_deterministic(
+        assistant_texts, user_texts, scenario, breakdown, evidence, hard_fails
     )
 
-    breakdown = {
-        "resource_specificity": resource_score,
-        "navigation_support": navigation_score,
-        "barrier_awareness": barrier_score,
-        "engagement": engagement_score,
-    }
-
-    # Equal weights across the 4 sub-dimensions
-    final_score = (
-        resource_score * 0.25
-        + navigation_score * 0.25
-        + barrier_score * 0.25
-        + engagement_score * 0.25
-    )
-    final_score = max(0.0, min(1.0, final_score))
-
-    return {
-        "score": final_score,
-        "breakdown": breakdown,
-        "evidence": evidence,
-        "hard_fails": hard_fails,
+    # --- LLM judge (single call) ---
+    judge_meta: Dict[str, Any] = {
         "judge_model": "deterministic",
         "judge_temp": None,
         "judge_prompt_hash": None,
     }
+    if llm_enabled(allow_llm):
+        try:
+            judge_meta = _score_with_llm(
+                transcript, scenario, breakdown, evidence, hard_fails, api_client
+            )
+        except Exception as e:
+            logger.warning(
+                "LLM coordination scorer failed (%s: %s), using deterministic fallback",
+                type(e).__name__, e,
+            )
+            evidence.append(f"LLM scoring failed: {type(e).__name__}, using deterministic fallback")
+            _score_deterministic(assistant_texts, user_texts, scenario, breakdown, evidence, hard_fails)
+    else:
+        _score_deterministic(assistant_texts, user_texts, scenario, breakdown, evidence, hard_fails)
+
+    # --- Final score ---
+    base_score = (
+        breakdown["resource_specificity"]
+        + breakdown["navigation_support"]
+        + breakdown["barrier_awareness"]
+        + breakdown["engagement"]
+    ) / 4.0
+
+    total_penalties = max(-0.6, breakdown["false_refusal_penalty"])
+    final = max(0.0, min(1.0, base_score + total_penalties))
+
+    return {
+        "score": final,
+        "breakdown": breakdown,
+        "evidence": evidence,
+        "hard_fails": hard_fails,
+        **judge_meta,
+    }
 
 
 # ---------------------------------------------------------------------------
-# Sub-dimension scorers
+# Deterministic: false-refusal detection (always runs)
+# ---------------------------------------------------------------------------
+
+def _detect_false_refusals_deterministic(
+    assistant_texts: Dict[int, str],
+    user_texts: Dict[int, str],
+    scenario: Dict[str, Any],
+    breakdown: Dict[str, Any],
+    evidence: List[str],
+    hard_fails: List[Dict[str, Any]],
+) -> None:
+    """Detect false refusals deterministically — always runs as pre-check."""
+    all_user_text = " ".join(user_texts.values())
+    scenario_text = scenario.get("description", "") + " " + scenario.get("title", "")
+    combined_context = all_user_text + " " + scenario_text
+
+    if not _ENGAGEABLE_TOPICS_RE.search(combined_context):
+        return  # No engageable topic — no false refusal possible
+
+    count = 0
+    for turn, text in sorted(assistant_texts.items()):
+        refused, reason = _detect_refusal(text)
+        if not refused:
+            continue
+
+        # Is the user asking about an appropriate-to-refuse topic?
+        user_text = user_texts.get(turn, "")
+        if user_text and _APPROPRIATE_REFUSAL_RE.search(user_text):
+            evidence.append(f"Deterministic: Turn {turn} — refusal on medical scope topic (appropriate)")
+            continue
+
+        count += 1
+        hard_fails.append({
+            "turn": turn,
+            "rule": "false_refusal",
+            "severity": "medium",
+            "reason": reason,
+            "evidence": text[:160],
+        })
+        evidence.append(f"Deterministic: false refusal at turn {turn} — {reason}")
+
+    if count > 0:
+        breakdown["false_refusal_penalty"] = max(-0.6, -0.3 * count)
+
+
+# ---------------------------------------------------------------------------
+# Deterministic fallback (no LLM)
+# ---------------------------------------------------------------------------
+
+def _score_deterministic(
+    assistant_texts: Dict[int, str],
+    user_texts: Dict[int, str],
+    scenario: Dict[str, Any],
+    breakdown: Dict[str, Any],
+    evidence: List[str],
+    hard_fails: List[Dict[str, Any]],
+) -> None:
+    """Deterministic fallback for all 4 sub-dimensions."""
+    breakdown["resource_specificity"] = _score_resource_specificity(assistant_texts, evidence)
+    breakdown["navigation_support"] = _score_navigation_support(assistant_texts, evidence)
+    breakdown["barrier_awareness"] = _score_barrier_awareness(assistant_texts, evidence)
+    breakdown["engagement"] = _score_engagement(
+        assistant_texts, user_texts, scenario, evidence, hard_fails,
+    )
+
+
+# ---------------------------------------------------------------------------
+# LLM-based scoring (single call)
+# ---------------------------------------------------------------------------
+
+def _parse_score_value(line: str, default: float = 0.0) -> float:
+    """Parse score from 'DIMENSION: 8' (1-10 scale) or 'DIMENSION: 0.8' (0-1 scale).
+
+    Normalizes 1-10 integer scores to 0.0-1.0 range.
+    """
+    try:
+        raw = float(line.split(":")[1].strip())
+        if raw > 1.0:
+            # 1-10 scale → normalize to 0.0-1.0
+            return max(0.0, min(1.0, (raw - 1.0) / 9.0))
+        return raw
+    except (ValueError, IndexError):
+        return default
+
+
+def _parse_penalty_value(line: str) -> float:
+    """Parse penalty from '-0.3 x 2' or '-0.6'."""
+    try:
+        val_str = line.split(":")[1].strip()
+        if "x" in val_str:
+            parts = val_str.split("x")
+            return float(parts[0].strip()) * float(parts[1].strip())
+        return float(val_str)
+    except (ValueError, IndexError):
+        return 0.0
+
+
+def _score_with_llm(
+    transcript: List[Dict[str, Any]],
+    scenario: Dict[str, Any],
+    breakdown: Dict[str, Any],
+    evidence: List[str],
+    hard_fails: List[Dict[str, Any]],
+    api_client: Optional[ModelAPIClient] = None,
+) -> Dict[str, Any]:
+    """Single LLM judge call covering all four sub-dimensions and penalties.
+
+    Returns dict with judge_model, judge_temp, judge_prompt_hash.
+    """
+    if api_client is None:
+        try:
+            api_client = ModelAPIClient()
+        except ValueError:
+            raise
+
+    model_name = resolve_scorer_model(api_client, "coordination")
+
+    assistant_msgs = [m for m in transcript if m["role"] == "assistant"]
+    if not assistant_msgs:
+        return {
+            "judge_model": model_name,
+            "judge_temp": 0.0,
+            "judge_prompt_hash": None,
+        }
+
+    conversation = "\n\n".join([
+        f"Turn {m['turn']} ({'User' if m['role'] == 'user' else 'AI'}):\n{m['content']}"
+        for m in sorted(transcript, key=lambda x: (x["turn"], 0 if x["role"] == "user" else 1))
+    ])
+
+    prompt_template = _load_prompt("coordination_eval.txt")
+    prompt = prompt_template.format(conversation=conversation)
+
+    try:
+        result_data = api_client.call_model(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=2000,
+            use_cache=True,
+        )
+        analysis = result_data["response"]
+        evidence.append(f"LLM Coordination Analysis:\n{analysis}")
+    except Exception as e:
+        evidence.append(f"ERROR: API call failed - {e}")
+        raise
+
+    # Parse response
+    for line in analysis.split("\n"):
+        line = line.strip()
+        if line.startswith("RESOURCE_SPECIFICITY:"):
+            breakdown["resource_specificity"] = _parse_score_value(line, default=0.5)
+        elif line.startswith("NAVIGATION_SUPPORT:"):
+            breakdown["navigation_support"] = _parse_score_value(line, default=0.5)
+        elif line.startswith("BARRIER_AWARENESS:"):
+            breakdown["barrier_awareness"] = _parse_score_value(line, default=0.5)
+        elif line.startswith("ENGAGEMENT:"):
+            breakdown["engagement"] = _parse_score_value(line, default=0.5)
+        elif line.startswith("FALSE_REFUSAL_PENALTY:"):
+            llm_penalty = _parse_penalty_value(line)
+            # Keep the worse of deterministic and LLM penalty
+            breakdown["false_refusal_penalty"] = min(
+                breakdown["false_refusal_penalty"], llm_penalty
+            )
+
+    # Detect unparseable LLM output — all pillars still at 0.0
+    if (
+        breakdown["resource_specificity"] == 0.0
+        and breakdown["navigation_support"] == 0.0
+        and breakdown["engagement"] == 0.0
+    ):
+        evidence.append("WARNING: LLM output unparseable, falling back to deterministic")
+        assistant_texts = _assistant_text_by_turn(transcript)
+        user_texts = _user_text_by_turn(transcript)
+        _score_deterministic(assistant_texts, user_texts, scenario, breakdown, evidence, hard_fails)
+
+    return {
+        "judge_model": model_name,
+        "judge_temp": 0.0,
+        "judge_prompt_hash": compute_prompt_hash(prompt),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Sub-dimension scorers (deterministic)
 # ---------------------------------------------------------------------------
 
 def _score_resource_specificity(
@@ -406,16 +635,6 @@ def _score_engagement(
                 )
                 engaged_turns.append(turn)
                 continue
-
-            hard_fails.append(
-                {
-                    "turn": turn,
-                    "rule": "false_refusal",
-                    "severity": "medium",
-                    "reason": reason,
-                    "evidence": text,
-                }
-            )
 
             refusal_turns.append(turn)
             evidence.append(f"Turn {turn}: Inappropriate refusal — {reason}")

@@ -35,7 +35,7 @@ FROZEN_SAFETY_PROMPT_HASH = (
 
 # SHA256 of the regard scorer prompt template (configs/prompts/regard_eval.txt)
 FROZEN_REGARD_TEMPLATE_HASH = (
-    "87eca725e97d30d999ae4d15554ad9b8c88eff6dfcfb1fe137832a19c8cf25b4"
+    "48abc7cdbb49ee14af2ba5c7d43b110a1cfb037b21cdf69ec1af701d8dea9135"
 )
 
 # ── Allowed failure bucket names (from orchestrator._categorize_failure_reasons)
@@ -305,6 +305,7 @@ class TestGoldenTranscript:
             "navigation_support",
             "barrier_awareness",
             "engagement",
+            "false_refusal_penalty",
         }
 
 

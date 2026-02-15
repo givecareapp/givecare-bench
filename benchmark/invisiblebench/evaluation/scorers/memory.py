@@ -99,6 +99,8 @@ def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
     for turn in scenario.get("turns", []):
         if "facts" in turn:
             for fact in turn["facts"]:
+                if "=" not in fact:
+                    continue
                 key, value = fact.split("=", 1)
                 facts[key] = value
 
@@ -107,6 +109,8 @@ def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
         for turn in session.get("turns", []):
             if "facts" in turn:
                 for fact in turn["facts"]:
+                    if "=" not in fact:
+                        continue
                     key, value = fact.split("=", 1)
                     facts[key] = value
 
