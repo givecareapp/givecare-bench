@@ -2583,6 +2583,15 @@ Examples:
     diff_parser.add_argument("base_run", type=str, help="Base run reference")
     diff_parser.add_argument("new_run", type=str, help="New run reference")
 
+    # Rescore subcommand
+    rescore_parser = subparsers.add_parser(
+        "rescore", help="Rescore existing transcripts without re-running models"
+    )
+    rescore_parser.add_argument("run_dir", type=str, help="Path to run directory with transcripts/")
+    rescore_parser.add_argument(
+        "--update-leaderboard", action="store_true", help="Update leaderboard after rescoring"
+    )
+
     # Diagnose subcommand
     diagnose_parser = subparsers.add_parser(
         "diagnose", help="Generate diagnostic report from results"
@@ -2768,6 +2777,14 @@ Examples:
 
     if args.command == "diff":
         return diff_command(args)
+
+    if args.command == "rescore":
+        from invisiblebench.cli.rescore import run_rescore
+
+        return run_rescore(
+            run_dir=args.run_dir,
+            update_leaderboard=args.update_leaderboard,
+        )
 
     if args.command == "diagnose":
         return diagnose_command(args)

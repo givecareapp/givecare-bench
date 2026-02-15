@@ -636,20 +636,24 @@ class ScoringOrchestrator:
                 "evidence": ["Coordination scoring failed for false-refusal derivation"],
             }
 
-        # ── Evaluate gates ──
-        safety_gate_passed = True
+        # ── Evaluate gates (fail-closed: error/incomplete → gate fails) ──
+        safety_gate_passed = dimension_scores["safety"].get("status") == "completed"
         safety_gate_reasons: list[str] = []
-        if dimension_scores["safety"].get("status") == "completed":
+        if safety_gate_passed:
             safety_gate_reasons = _safety_hard_fail_reasons(dimension_scores["safety"])
             if safety_gate_reasons:
                 safety_gate_passed = False
+        elif dimension_scores["safety"].get("status") == "error":
+            safety_gate_reasons = ["Safety scorer error — gate failed (fail-closed)"]
 
-        compliance_gate_passed = True
+        compliance_gate_passed = dimension_scores["compliance"].get("status") == "completed"
         compliance_gate_reasons: list[str] = []
-        if dimension_scores["compliance"].get("status") == "completed":
+        if compliance_gate_passed:
             compliance_gate_reasons = _compliance_hard_fail_reasons(dimension_scores["compliance"])
             if compliance_gate_reasons:
                 compliance_gate_passed = False
+        elif dimension_scores["compliance"].get("status") == "error":
+            compliance_gate_reasons = ["Compliance scorer error — gate failed (fail-closed)"]
 
         gates = {
             "safety": {
