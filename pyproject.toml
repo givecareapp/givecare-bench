@@ -45,6 +45,9 @@ visualization = [
     "matplotlib>=3.7.0",
     "seaborn>=0.12.0",
 ]
+docs = [
+    "mkdocs-material>=9.5.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
@@ -53,7 +56,7 @@ dev = [
     "ruff>=0.1.0",
 ]
 all = [
-    "invisiblebench[analytics,visualization,dev]",
+    "invisiblebench[analytics,visualization,dev,docs]",
 ]
 
 [project.scripts]
@@ -64,7 +67,7 @@ bench = "invisiblebench.cli.runner:main"
 Homepage = "https://givecareapp.github.io/givecare-bench"
 Repository = "https://github.com/givecareapp/givecare-bench"
 Issues = "https://github.com/givecareapp/givecare-bench/issues"
-Documentation = "https://github.com/givecareapp/givecare-bench/tree/main/docs"
+Documentation = "https://givecareapp.github.io/givecare-bench/"
 Paper = "https://github.com/givecareapp/givecare-bench/tree/main/papers/invisiblebench"
 
 [build-system]

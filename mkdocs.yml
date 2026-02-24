@@ -1,0 +1,54 @@
+site_name: InvisibleBench
+site_url: https://givecareapp.github.io/givecare-bench/
+site_description: AI safety benchmark for longitudinal caregiver support
+site_author: Ali Madad
+repo_url: https://github.com/givecareapp/givecare-bench
+repo_name: givecareapp/givecare-bench
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Methodology: methodology.md
+  - Architecture: architecture.md
+  - Evolution: evolution.md
+  - Scenarios: scenarios.md
+  - Benchmark Card: benchmark-card.md
+  - Regulatory Landscape: regulatory.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html

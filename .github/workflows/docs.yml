@@ -1,0 +1,30 @@
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "METHODOLOGY.md"
+      - "benchmark/ARCHITECTURE.md"
+      - "benchmark/EVOLUTION.md"
+      - "benchmark/scenarios/README.md"
+      - "benchmark/BENCHMARK_CARD.md"
+      - "benchmark/docs/REGULATORY_LANDSCAPE.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install mkdocs-material
+      - run: mkdocs gh-deploy --force
