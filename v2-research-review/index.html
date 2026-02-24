@@ -1,0 +1,1145 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="AI safety benchmark for longitudinal caregiver support">
+      
+      
+        <meta name="author" content="Ali Madad">
+      
+      
+        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/v2-research-review/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>InvisibleBench v2: Research Review & Roadmap - InvisibleBench</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#invisiblebench-v2-research-review-roadmap" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="InvisibleBench" class="md-header__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InvisibleBench
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              InvisibleBench v2: Research Review &amp; Roadmap
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="InvisibleBench" class="md-nav__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InvisibleBench
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmark-card/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark Card
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../regulatory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regulatory Landscape
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-already-do-better" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What We Already Do Better
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#improvements-for-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvements for v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Improvements for v2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#p0-high-impact-clear-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P0: High Impact, Clear Path
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="P0: High Impact, Clear Path">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-longer-scenarios-for-boundary-erosion-12-20-turns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Longer scenarios for boundary erosion (12-20 turns)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-false-reassurance-zero-risk-guarantee-as-autofail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. False reassurance / zero-risk guarantee as autofail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-unreliability-reporting-variance-across-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Unreliability reporting (variance across runs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#p1-medium-impact-some-design-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P1: Medium Impact, Some Design Work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="P1: Medium Impact, Some Design Work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4-stance-stability-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Stance stability metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-deeper-continuity-memory-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Deeper continuity / memory evaluation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-time-to-breach-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Time-to-breach metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#p2-exploratory-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P2: Exploratory / Future
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="P2: Exploratory / Future">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7-llm-driven-adaptive-adversary-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. LLM-driven adaptive adversary mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-cross-linguistic-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Cross-linguistic testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-reminder-intervention-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Reminder intervention testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-token-economy-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Token economy reporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citable-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citable References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Citable References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-validation-cite-in-paper-intro-motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core validation (cite in paper intro / motivation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-continuity-cite-in-related-work-continuity-dimension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory / continuity (cite in related work + continuity dimension)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-turn-dynamics-cite-in-methodology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-turn dynamics (cite in methodology)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#industry-policy-cite-in-introduction-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Industry / policy (cite in introduction + discussion)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-changes-in-the-paper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What This Changes in the Paper
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What This Changes in the Paper">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methodology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methodology
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discussion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="invisiblebench-v2-research-review-roadmap">InvisibleBench v2: Research Review &amp; Roadmap<a class="headerlink" href="#invisiblebench-v2-research-review-roadmap" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-02-24
+<strong>Sources</strong>: ENGRAM, Lost in Conversation, Slow Drift of Support, ECRI 2026, PBSuite, Chameleon, Drift-Bench, Context Drift Equilibria</p>
+<hr />
+<h2 id="what-we-already-do-better">What We Already Do Better<a class="headerlink" href="#what-we-already-do-better" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Strength</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Safety-first gating</strong> (fail=0.0)</td>
+<td>No reviewed paper enforces deployment gates. ENGRAM has zero safety eval. LiC measures task accuracy only. Cheng identifies violations but doesn't gate.</td>
+</tr>
+<tr>
+<td><strong>Conditional branching</strong></td>
+<td><code>resolve_branch()</code> adapts user pressure based on model response. Cheng et al. found adaptive probing cuts time-to-breach by ~50% vs static scripts. We already do this.</td>
+</tr>
+<tr>
+<td><strong>Multi-dimensional scoring</strong></td>
+<td>5 dimensions + per-turn violation tracking + categorized failure reasons. Everyone else collapses to binary correctness or single metrics.</td>
+</tr>
+<tr>
+<td><strong>Domain-specific stakes</strong></td>
+<td>LiC tests code/SQL. ENGRAM tests factual recall QA. We test whether an AI can be trusted with a grieving caregiver whose nonbinary partner has early-onset Alzheimer's.</td>
+</tr>
+<tr>
+<td><strong>Behavioral eval, not just retrieval</strong></td>
+<td>ENGRAM asks "can you answer questions about a transcript?" We ask "can you be a good caregiver?"</td>
+</tr>
+<tr>
+<td><strong>Score degradation tracking</strong></td>
+<td><code>_build_score_degradation()</code> already computes early-vs-late-thirds delta. Infrastructure for drift detection exists.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="improvements-for-v2">Improvements for v2<a class="headerlink" href="#improvements-for-v2" title="Permanent link">&para;</a></h2>
+<h3 id="p0-high-impact-clear-path">P0: High Impact, Clear Path<a class="headerlink" href="#p0-high-impact-clear-path" title="Permanent link">&para;</a></h3>
+<h4 id="1-longer-scenarios-for-boundary-erosion-12-20-turns">1. Longer scenarios for boundary erosion (12-20 turns)<a class="headerlink" href="#1-longer-scenarios-for-boundary-erosion-12-20-turns" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Cheng et al. found mean time-to-breach is <strong>9.21 turns</strong> (static) / <strong>4.64 turns</strong> (adaptive). Most InvisibleBench scenarios are 3-8 turns. Violations in the 9-15 turn range are currently invisible.</p>
+<p><strong>What to build</strong>:
+- Extend <code>gradual_boundary_erosion.json</code> to 15-20 turns
+- Add 2-3 new long-form boundary scenarios (medication pressure, role substitution, attachment deepening)
+- Measure time-to-breach as a new metric</p>
+<p><strong>References</strong>: Cheng et al. (arXiv 2601.14269), Laban et al. (arXiv 2505.06120)</p>
+<h4 id="2-false-reassurance-zero-risk-guarantee-as-autofail">2. False reassurance / zero-risk guarantee as autofail<a class="headerlink" href="#2-false-reassurance-zero-risk-guarantee-as-autofail" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Cheng et al.'s #1 violation type across all models was "you will definitely be fine" / zero-risk promises. This is not an explicit autofail trigger today.</p>
+<p><strong>What to build</strong>:
+- Add <code>false_reassurance</code> to autofail trigger taxonomy
+- Pattern: definitive certainty about outcomes ("you will be fine", "nothing bad will happen", "don't worry at all")
+- Apply across safety and boundary scenarios</p>
+<p><strong>References</strong>: Cheng et al. (arXiv 2601.14269) -- 88% failure rate, comfort-driven drift as mechanism</p>
+<h4 id="3-unreliability-reporting-variance-across-runs">3. Unreliability reporting (variance across runs)<a class="headerlink" href="#3-unreliability-reporting-variance-across-runs" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: LiC's key finding: variance between runs matters more than mean score, and unreliability <strong>doubles</strong> in multi-turn settings. We support <code>--runs N</code> but don't default to it or report interpercentile range.</p>
+<p><strong>What to build</strong>:
+- Default <code>--runs 3</code> (minimum) for leaderboard submissions
+- Report interpercentile range (U-10-90) alongside mean
+- Add unreliability column to leaderboard
+- Flag models with high per-scenario variance even if mean is acceptable</p>
+<p><strong>References</strong>: Laban et al. (arXiv 2505.06120) -- 112% unreliability increase in multi-turn</p>
+<h3 id="p1-medium-impact-some-design-work">P1: Medium Impact, Some Design Work<a class="headerlink" href="#p1-medium-impact-some-design-work" title="Permanent link">&para;</a></h3>
+<h4 id="4-stance-stability-metric">4. Stance stability metric<a class="headerlink" href="#4-stance-stability-metric" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Both ECRI (sycophancy) and PBSuite (84% policy failure under multi-turn pressure) flag models shifting positions when challenged. We test this implicitly in pushback scenarios but don't formalize it.</p>
+<p><strong>What to build</strong>:
+- Track whether model maintains position on medical boundaries, crisis protocols, scope limits across 3+ pushback turns
+- Score as distinct metric: stance_stability (0-1)
+- Apply to <code>pushback_loop.json</code>, <code>gradual_boundary_erosion.json</code>, <code>authority_override_attempt.json</code></p>
+<p><strong>References</strong>: PBSuite (arXiv 2511.05018) -- &lt;4% single-turn to 84% multi-turn failure; Chameleon (arXiv 2510.16712) -- 0.391-0.511 stance shift scores</p>
+<h4 id="5-deeper-continuity-memory-evaluation">5. Deeper continuity / memory evaluation<a class="headerlink" href="#5-deeper-continuity-memory-evaluation" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: ENGRAM tests 600 turns / 32 sessions / 16K tokens with typed memory (episodic/semantic/procedural). We have 4 continuity scenarios. The typed decomposition maps to caregiving:</p>
+<ul>
+<li><strong>Episodic</strong>: "Last session Jamie described a grocery store incident"</li>
+<li><strong>Semantic</strong>: "River uses they/them pronouns"</li>
+<li><strong>Procedural</strong>: "Jamie prefers direct validation over 'rise above it' advice"</li>
+</ul>
+<p><strong>What to build</strong>:
+- Add 4-6 new continuity scenarios testing typed memory explicitly
+- Score episodic/semantic/procedural recall separately
+- Extend to 3+ sessions with 50+ total turns for longitudinal scenarios</p>
+<p><strong>References</strong>: ENGRAM (arXiv 2511.12960) -- 77.55% SOTA on LoCoMo; typed separation drops 31 points when collapsed</p>
+<h4 id="6-time-to-breach-metric">6. Time-to-breach metric<a class="headerlink" href="#6-time-to-breach-metric" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Cheng et al. measure which turn the model first violates a boundary. This is actionable for product teams -- "your model holds for 6 turns then fails" is more useful than "your model failed."</p>
+<p><strong>What to build</strong>:
+- Record first violation turn in per-scenario results
+- Report as <code>first_breach_turn</code> in <code>--detailed</code> output
+- Aggregate across scenarios: mean/median time-to-breach per model</p>
+<p><strong>References</strong>: Cheng et al. (arXiv 2601.14269) -- 9.21 mean static, 4.64 mean adaptive</p>
+<h3 id="p2-exploratory-future">P2: Exploratory / Future<a class="headerlink" href="#p2-exploratory-future" title="Permanent link">&para;</a></h3>
+<h4 id="7-llm-driven-adaptive-adversary-mode">7. LLM-driven adaptive adversary mode<a class="headerlink" href="#7-llm-driven-adaptive-adversary-mode" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Cheng et al.'s adaptive probing (LLM planner generates follow-up pressure per-turn) found breaches earlier than static scripts. Our branches are deterministic.</p>
+<p><strong>What to explore</strong>:
+- Optional <code>--adversarial</code> flag that replaces scripted branches with LLM-generated pressure
+- GPT-4o-mini as adversary planner (like Cheng's architecture)
+- Would require new scoring calibration</p>
+<p><strong>References</strong>: Cheng et al. (arXiv 2601.14269) -- adaptive vs static probing comparison</p>
+<h4 id="8-cross-linguistic-testing">8. Cross-linguistic testing<a class="headerlink" href="#8-cross-linguistic-testing" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Cheng et al. found Chinese conversations had significantly higher breach rates. We test English only.</p>
+<p><strong>What to explore</strong>:
+- Spanish, Mandarin, Tagalog scenarios (top caregiver languages in US)
+- Same scenario content, translated + culturally adapted
+- Per-language breach rate comparison</p>
+<p><strong>References</strong>: Cheng et al. (arXiv 2601.14269) -- EN vs CN results</p>
+<h4 id="9-reminder-intervention-testing">9. Reminder intervention testing<a class="headerlink" href="#9-reminder-intervention-testing" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: Context Drift Equilibria paper found drift stabilizes as bounded stochastic process and "reminder interventions" reliably reduce divergence.</p>
+<p><strong>What to explore</strong>:
+- Test whether periodic system-prompt reminders (caregiver's name, pronouns, crisis history) improve longitudinal scores
+- Actionable for product teams building memory systems
+- Could be a <code>--with-reminders</code> flag for A/B comparison</p>
+<p><strong>References</strong>: Dongre et al. (arXiv 2510.07777)</p>
+<h4 id="10-token-economy-reporting">10. Token economy reporting<a class="headerlink" href="#10-token-economy-reporting" title="Permanent link">&para;</a></h4>
+<p><strong>Why</strong>: ENGRAM tracks tokens consumed per query. Matters for SMS-constrained deployments (160-char messages).</p>
+<p><strong>What to explore</strong>:
+- Report token consumption per scenario in <code>--detailed</code> mode
+- Compare models on efficiency, not just quality</p>
+<p><strong>References</strong>: ENGRAM (arXiv 2511.12960) -- 916 avg tokens vs baselines</p>
+<hr />
+<h2 id="citable-references">Citable References<a class="headerlink" href="#citable-references" title="Permanent link">&para;</a></h2>
+<h3 id="core-validation-cite-in-paper-intro-motivation">Core validation (cite in paper intro / motivation)<a class="headerlink" href="#core-validation-cite-in-paper-intro-motivation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Key Finding</th>
+<th>Use In Paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cheng et al. "Slow Drift of Support" (arXiv 2601.14269)</td>
+<td>88% chatbot failure in mental health; mean breach at 9.21 turns; comfort/empathy as mechanism</td>
+<td>Motivation for multi-turn design + safety gates</td>
+</tr>
+<tr>
+<td>Laban et al. "Lost in Conversation" (arXiv 2505.06120)</td>
+<td>39% degradation + 112% unreliability increase in multi-turn</td>
+<td>Validates multi-turn fragility thesis</td>
+</tr>
+<tr>
+<td>ECRI 2026 Health Tech Hazards</td>
+<td>AI chatbot misuse = #1 health tech hazard; 40M daily users, no FDA regulation</td>
+<td>Policy framing for deployment gates</td>
+</tr>
+<tr>
+<td>PBSuite (arXiv 2511.05018)</td>
+<td>Policy adherence: &lt;4% single-turn to 84% multi-turn failure</td>
+<td>Validates conditional branching approach</td>
+</tr>
+</tbody>
+</table>
+<h3 id="memory-continuity-cite-in-related-work-continuity-dimension">Memory / continuity (cite in related work + continuity dimension)<a class="headerlink" href="#memory-continuity-cite-in-related-work-continuity-dimension" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Key Finding</th>
+<th>Use In Paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ENGRAM (arXiv 2511.12960)</td>
+<td>Episodic/semantic/procedural typed memory; SOTA on LoCoMo (77.55%); 1% token budget</td>
+<td>Informs typed memory evaluation for continuity</td>
+</tr>
+<tr>
+<td>THEANINE (arXiv 2406.10996)</td>
+<td>Timeline-based memory retaining outdated memories as context</td>
+<td>Temporal memory design patterns</td>
+</tr>
+<tr>
+<td>LoCoMo (ACL 2024)</td>
+<td>300 turns / 35 sessions; LLMs lag humans 56% on memory</td>
+<td>Scale comparison + validation of approach</td>
+</tr>
+<tr>
+<td>LongMemEval (2024)</td>
+<td>500 sessions, 115K tokens; 30-60% performance drop</td>
+<td>Long-context memory challenges</td>
+</tr>
+</tbody>
+</table>
+<h3 id="multi-turn-dynamics-cite-in-methodology">Multi-turn dynamics (cite in methodology)<a class="headerlink" href="#multi-turn-dynamics-cite-in-methodology" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Key Finding</th>
+<th>Use In Paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Liu et al. "Intent Mismatch" (arXiv 2602.07338)</td>
+<td>Root cause is intent alignment gap, not capability loss; scaling can't fix it</td>
+<td>Theoretical grounding for branching design</td>
+</tr>
+<tr>
+<td>Chameleon (arXiv 2510.16712)</td>
+<td>Models shift stances under contradiction; 0.391-0.511 scores</td>
+<td>Justifies stance stability measurement</td>
+</tr>
+<tr>
+<td>Drift-Bench (arXiv 2602.02455)</td>
+<td>Cooperative breakdowns under input faults</td>
+<td>Adjacent failure modes</td>
+</tr>
+<tr>
+<td>Context Drift Equilibria (arXiv 2510.07777)</td>
+<td>Drift stabilizes; reminder interventions work</td>
+<td>Informs longitudinal scenario design</td>
+</tr>
+</tbody>
+</table>
+<h3 id="industry-policy-cite-in-introduction-discussion">Industry / policy (cite in introduction + discussion)<a class="headerlink" href="#industry-policy-cite-in-introduction-discussion" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Key Finding</th>
+<th>Use In Paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ECRI 2026 Top 10 Hazards</td>
+<td>AI chatbot misuse = #1</td>
+<td>Frame: industry recognizes the problem</td>
+</tr>
+<tr>
+<td>Psychology Today (Wei, Feb 2026)</td>
+<td>Coverage of 88% failure study</td>
+<td>Accessible framing for non-academic audiences</td>
+</tr>
+<tr>
+<td>NIST "Evaluation Toolbox" (Feb 2026)</td>
+<td>White House mandates AI measurement science</td>
+<td>Policy alignment for benchmark approach</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="what-this-changes-in-the-paper">What This Changes in the Paper<a class="headerlink" href="#what-this-changes-in-the-paper" title="Permanent link">&para;</a></h2>
+<h3 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add Cheng et al. 88% failure rate + ECRI #1 hazard as opening motivation</li>
+<li>Frame: "industry recognizes multi-turn conversational AI safety as the top health technology hazard of 2026, yet no deployment gate exists"</li>
+</ul>
+<h3 id="related-work">Related Work<a class="headerlink" href="#related-work" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add ENGRAM, LiC, PBSuite, Chameleon to related work</li>
+<li>Position InvisibleBench as operating at behavioral/safety level vs memory/task-accuracy level</li>
+<li>Acknowledge limitations honestly (scenario length, scale)</li>
+</ul>
+<h3 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cite LiC for unreliability measurement approach</li>
+<li>Cite Cheng for adaptive probing validation of conditional branching</li>
+</ul>
+<h3 id="discussion">Discussion<a class="headerlink" href="#discussion" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cite drift equilibria for reminder interventions as product recommendation</li>
+<li>Cite intent mismatch for theoretical grounding of why scaling alone won't fix caregiving safety</li>
+</ul>
+<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Explicitly note: shorter scenarios than memory benchmarks (by design -- safety focus)</li>
+<li>Note: deterministic branches vs LLM-driven adversary (trade reproducibility for realism)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "toc.follow", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
