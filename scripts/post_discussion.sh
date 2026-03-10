@@ -45,9 +45,23 @@ case "${ARGS[0]}" in
         DATE=$(grep "Date" "$REPORT" | head -1 | sed 's/.*: //' || date +%Y-%m-%d)
         TITLE="AutoResearch: scenario differentiation — ${DATE}"
 
+        # Generate chart if matplotlib available
+        CHART="autoresearch/chart.png"
+        python3 autoresearch/generate_chart.py --output "$CHART" 2>/dev/null || true
+
         BODY="> Automated report from autoresearch campaign.
 
 $(cat "$REPORT")"
+
+        # Embed chart via raw GitHub URL (chart must be committed first)
+        if [ -f "$CHART" ]; then
+            CHART_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/${CHART}"
+            BODY="$BODY
+
+---
+
+![Spread Chart](${CHART_URL})"
+        fi
 
         if [ -f "$LOG" ]; then
             BODY="$BODY

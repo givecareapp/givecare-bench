@@ -43,8 +43,12 @@ python autoresearch/compare.py results/autoresearch/run_*/all_results.json
 # Full autonomous loop
 ./autoresearch/start.sh
 
+# Generate before/after spread chart
+python autoresearch/generate_chart.py                  # From REPORT.md → chart.png
+python autoresearch/generate_chart.py --json data.json # From JSON
+
 # Post session report to GitHub Discussions after campaign
-./scripts/post_discussion.sh autoresearch              # Post
+./scripts/post_discussion.sh autoresearch              # Post (auto-generates chart)
 ./scripts/post_discussion.sh autoresearch --dry-run    # Preview
 ```
 
