@@ -12,7 +12,6 @@ on:
       - "benchmark/EVOLUTION.md"
       - "benchmark/scenarios/README.md"
       - "benchmark/BENCHMARK_CARD.md"
-      - "benchmark/docs/REGULATORY_LANDSCAPE.md"
   workflow_dispatch:
 
 permissions:

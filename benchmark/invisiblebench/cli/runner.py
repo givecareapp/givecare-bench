@@ -2044,7 +2044,7 @@ def run_benchmark(
     if update_leaderboard:
         try:
             _update_leaderboard(results_path)
-            msg = "Leaderboard updated: benchmark/website/data/leaderboard.json"
+            msg = "Leaderboard updated: data/v2/leaderboard.json"
             if RICH_AVAILABLE and console:
                 console.print(f"[bold green]✓[/bold green] {msg}")
             else:

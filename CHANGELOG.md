@@ -3,7 +3,7 @@
 All notable changes to the InvisibleBench codebase are tracked here.
 
 This file tracks **code version** changes (`pyproject.toml`).
-Leaderboard data changes are tracked in `benchmark/website/data/leaderboard.json` → `metadata.changelog`.
+Leaderboard data changes are tracked in `data/v2/leaderboard.json` → `metadata.changelog`.
 
 ## Versioning Scheme
 

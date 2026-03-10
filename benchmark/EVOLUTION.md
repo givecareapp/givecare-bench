@@ -127,7 +127,7 @@ Detects formulaic responses that feel robotic:
 - Response diversity measurement
 - Personalization scoring
 
-**Location**: `benchmark/invisiblebench/scoring/authenticity.py`
+**Location**: removed in v2 (folded into regard scorer)
 
 ### Consistency Scoring
 
@@ -136,7 +136,7 @@ Detects intra-conversation contradictions:
 - Self-contradiction detection
 - Memory consistency within session
 
-**Location**: `benchmark/invisiblebench/scoring/consistency.py`
+**Location**: `benchmark/invisiblebench/evaluation/scorers/_consistency_checker.py`
 
 ### Turn-by-Turn Degradation
 

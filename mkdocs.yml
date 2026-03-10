@@ -32,11 +32,13 @@ theme:
 nav:
   - Home: index.md
   - Methodology: methodology.md
+  - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
   - Evolution: evolution.md
   - Scenarios: scenarios.md
   - Benchmark Card: benchmark-card.md
   - Regulatory Landscape: regulatory.md
+  - Research Review: research-review.md
 
 markdown_extensions:
   - admonition

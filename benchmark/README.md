@@ -43,8 +43,7 @@ benchmark/
 │   ├── leaderboard/    # Leaderboard data tooling
 │   └── givecare_provider.py  # GiveCare/Mira system provider
 │
-└── website/            # Static snapshot (canonical UI in web-bench)
-    └── data/           # leaderboard.json
+└── EVOLUTION.md        # v1 → v2 history
 ```
 
 ## Quick Start

@@ -35,7 +35,7 @@ def get_project_root() -> Path:
 def load_leaderboard() -> Dict[str, Any]:
     """Load the current leaderboard."""
     root = get_project_root()
-    lb_path = root / "benchmark" / "website" / "data" / "leaderboard.json"
+    lb_path = root / "data" / "v2" / "leaderboard.json"
     if not lb_path.exists():
         raise FileNotFoundError(f"Leaderboard not found: {lb_path}")
     with open(lb_path) as f:

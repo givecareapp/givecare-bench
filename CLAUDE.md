@@ -109,7 +109,7 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 ```
 
 - Canonical per-model files: `results/leaderboard_ready/`
-- Generated data: `benchmark/website/data/leaderboard.json`
+- Generated data: `data/v2/leaderboard.json`
 - Commit & push → Website auto-fetches from GitHub raw URL
 - Health check uses most-common scenario count as baseline (mixed counts OK)
 
@@ -123,11 +123,13 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 ## Structure
 
 ```
-benchmark/invisiblebench/       # Core package (evaluation, api, models, export)
-benchmark/invisiblebench/cli/   # CLI commands (runner with --provider flag)
-benchmark/invisiblebench/stats/ # Statistical analysis (CIs, reliability, annotation)
-benchmark/scripts/              # Provider implementations
-  givecare_provider.py          # GiveCare/Mira system provider
+benchmark/invisiblebench/       # Core package
+  api/                          # API client (OpenRouter/OpenAI)
+  cli/                          # CLI commands (runner, leaderboard, health, stats)
+  evaluation/                   # Orchestrator + scorers (safety, compliance, regard, coordination, memory)
+  export/                       # HTML/JSON report generation
+  models/                       # Model config + pricing
+  stats/                        # Statistical analysis (CIs, reliability, annotation)
 benchmark/scenarios/            # MECE categories + confidential/
   safety/                       # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
   empathy/                      # 13 scenarios (burnout, belonging, grief, relational)
@@ -138,14 +140,18 @@ benchmark/configs/              # Scoring config (private, gitignored — see co
   prompts/                      # LLM judge prompts (*.txt gitignored, README.md public)
   scoring.yaml                  # Weights & thresholds (gitignored, .example.yaml public)
   rules/                        # Jurisdiction rules (*.yaml gitignored, .example.yaml public)
+benchmark/scripts/              # Provider implementations + validation
 benchmark/tests/                # pytest suite
+autoresearch/                   # Autonomous scenario optimization (see autoresearch/CLAUDE.md)
+data/v2/                        # Published leaderboard (committed, fetched by web app)
+docs/                           # MkDocs site + scoring rubric
 papers/                         # LaTeX (givecare/, invisiblebench/)
+scripts/                        # Repo-level scripts (post_discussion.sh)
 results/                        # Outputs (gitignored)
-  run_YYYYMMDD_HHMMSS/          # Model eval runs (--provider openrouter)
-  givecare/                     # System eval runs (--provider givecare)
-    transcripts/                # Conversation transcripts
-    givecare_results.json       # Scored results
-  archive/                      # Archived old runs
+  leaderboard_ready/            # Canonical per-model score files
+  full_benchmark_YYYYMMDD/      # Full run transcripts + scores
+  autoresearch/                 # Autoresearch probe runs
+  archive/                      # Old runs
 ```
 
 ## Diagnostic Reports

@@ -65,7 +65,7 @@ uv run bench --full -y --update-leaderboard
 python benchmark/scripts/validation/prepare_for_leaderboard.py \
   --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
 python benchmark/scripts/leaderboard/generate_leaderboard.py \
-  --input /tmp/lb_ready/ --output benchmark/website/data/
+  --input /tmp/lb_ready/ --output data/v2/
 ```
 
 ## Output Files

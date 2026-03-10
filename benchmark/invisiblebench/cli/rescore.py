@@ -191,7 +191,7 @@ def run_rescore(
             from invisiblebench.cli.leaderboard import add_results
 
             add_results(results_file)
-            print("Leaderboard updated: benchmark/website/data/leaderboard.json")
+            print("Leaderboard updated: data/v2/leaderboard.json")
         except Exception as e:
             print(f"Warning: Could not update leaderboard: {e}")
 

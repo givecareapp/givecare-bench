@@ -169,8 +169,15 @@ def run_reliability(
             # Find matching scenario
             scenario_path = None
             sid = item["scenario_id"]
-            # Try direct match, then partial match
-            for key in [sid, sid.split("_", 1)[-1] if "_" in sid else sid]:
+            # Try direct match, then progressively strip prefixes
+            # Transcript stems often include model prefix:
+            #   "anthropic_claude-sonnet-4_tier1_crisis_001" → "tier1_crisis_001"
+            candidates = [sid]
+            remaining = sid
+            while "_" in remaining:
+                remaining = remaining.split("_", 1)[1]
+                candidates.append(remaining)
+            for key in candidates:
                 if key in scenario_files:
                     scenario_path = scenario_files[key]
                     break

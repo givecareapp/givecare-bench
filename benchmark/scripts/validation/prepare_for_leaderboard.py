@@ -116,7 +116,7 @@ def main():
     print("\nReady for leaderboard generation!")
     print("Run: python benchmark/scripts/leaderboard/generate_leaderboard.py \\")
     print(f"       --input {output_dir} \\")
-    print("       --output benchmark/website/data/")
+    print("       --output data/v2/")
 
 
 if __name__ == "__main__":

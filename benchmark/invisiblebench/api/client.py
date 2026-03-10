@@ -163,6 +163,9 @@ OPENROUTER_HEADERS = {
 }
 
 
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+
+
 @dataclass
 class APIConfig:
     """Configuration for API clients."""
@@ -178,8 +181,34 @@ class APIConfig:
         return cls(openrouter_api_key=os.getenv("OPENROUTER_API_KEY"))
 
 
+def _resolve_api_backend() -> tuple:
+    """Resolve API key and base URL from available env vars.
+
+    Priority: INVISIBLEBENCH_API_BACKEND (explicit) > OPENROUTER_API_KEY > OPENAI_API_KEY.
+    Set INVISIBLEBENCH_API_BACKEND=openai to force OpenAI even when OpenRouter key exists.
+    Returns (api_key, base_url, extra_headers).
+    """
+    forced = os.getenv("INVISIBLEBENCH_API_BACKEND", "").strip().lower()
+
+    if forced == "openai":
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key and not openai_key.startswith("your_"):
+            return openai_key, OPENAI_BASE_URL, {}
+
+    if forced != "openai":
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        if openrouter_key and not openrouter_key.startswith("your_"):
+            return openrouter_key, OPENROUTER_BASE_URL, OPENROUTER_HEADERS
+
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key and not openai_key.startswith("your_"):
+        return openai_key, OPENAI_BASE_URL, {}
+
+    return None, None, {}
+
+
 class ModelAPIClient:
-    """Client for calling various AI models via OpenRouter."""
+    """Client for calling AI models via OpenRouter or OpenAI-compatible APIs."""
 
     def __init__(self, config: Optional[APIConfig] = None):
         """Initialize API client with configuration."""
@@ -189,12 +218,14 @@ class ModelAPIClient:
 
         self.config = config or APIConfig.from_env()
 
-        api_key = self.config.openrouter_api_key
-        if not api_key or api_key.startswith("your_"):
-            raise ValueError("OPENROUTER_API_KEY must be set for model access")
+        api_key, base_url, extra_headers = _resolve_api_backend()
+        if not api_key:
+            raise ValueError(
+                "No API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY."
+            )
 
-        self.base_url = OPENROUTER_BASE_URL
-        self.headers = {"Authorization": f"Bearer {api_key}", **OPENROUTER_HEADERS}
+        self.base_url = base_url
+        self.headers = {"Authorization": f"Bearer {api_key}", **extra_headers}
 
         self.session = requests.Session()
         self.session.headers.update(self.headers)
@@ -468,9 +499,12 @@ class ModelAPIClient:
 
 
 # Default model for LLM-based scorers (safety, compliance, regard/coordination)
-# Can be overridden by passing api_client with different model in scorer calls
-DEFAULT_SCORER_MODEL = "google/gemini-2.5-flash-lite"
-DEFAULT_SAFETY_REFERENCE_MODEL = "google/gemini-2.5-flash"
+# Resolve based on which backend will actually be used at runtime.
+# The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
+_default_key, _default_base, _ = _resolve_api_backend()
+_USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
+DEFAULT_SCORER_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash-lite"
+DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"
 
 
 def compute_prompt_hash(prompt_text: str) -> str:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from invisiblebench.scoring.consistency import ConsistencyChecker
+from invisiblebench.evaluation.scorers._consistency_checker import ConsistencyChecker
 
 
 def score(

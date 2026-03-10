@@ -3,7 +3,7 @@
 Generate leaderboard data from canonical benchmark results.
 
 Usage:
-    python benchmark/scripts/leaderboard/generate_leaderboard.py --input results/leaderboard_ready/ --output benchmark/website/data/
+    python benchmark/scripts/leaderboard/generate_leaderboard.py --input results/leaderboard_ready/ --output data/v2/
 """
 
 import argparse
@@ -360,7 +360,7 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("benchmark/website/data"),
+        default=Path("data/v2"),
         help="Output directory for leaderboard data",
     )
     parser.add_argument(

@@ -42,7 +42,7 @@ def _canonical_dir() -> Path:
 
 def _leaderboard_output() -> Path:
     """Return the leaderboard output directory."""
-    return get_project_root() / "benchmark" / "website" / "data"
+    return get_project_root() / "data" / "v2"
 
 
 def _prepare(input_path: Path, output_dir: Path) -> List[str]:

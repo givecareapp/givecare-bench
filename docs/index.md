@@ -114,7 +114,9 @@ uv run bench -m deepseek -y --diagnose
 | [Evolution](evolution.md) | v1 → v2 pivot, what changed and why, migration guide |
 | [Scenarios](scenarios.md) | Full corpus, categories, branching examples, how to add scenarios |
 | [Benchmark Card](benchmark-card.md) | Formal specification, dataset characteristics, ethical considerations |
+| [Scoring Rubric](scoring-rubric.md) | Public rubric: dimensions, scales, penalties, what's kept private |
 | [Regulatory Landscape](regulatory.md) | 9 state laws, operationally testable criteria, compliance mapping |
+| [Research Review](research-review.md) | Literature review, prioritized improvements, references |
 
 ---
 
