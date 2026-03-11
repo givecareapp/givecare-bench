@@ -66,16 +66,16 @@ class GiveCareProvider:
         self.wait_ms = wait_ms
         self.phone = self._generate_phone()
 
-        # Path to gc CLI (in givecare repo)
+        # Path to gc CLI (in give-care-mono repo)
         self.gc_cli = (
             Path(__file__).parent.parent.parent.parent
-            / "givecare"
+            / "give-care-mono"
             / "packages"
             / "cli"
             / "dist"
             / "index.js"
         )
-        self.givecare_dir = Path(__file__).parent.parent.parent.parent / "givecare"
+        self.givecare_dir = Path(__file__).parent.parent.parent.parent / "give-care-mono"
 
         if not self.gc_cli.exists():
             raise RuntimeError(f"gc CLI not found at {self.gc_cli}")
@@ -100,9 +100,41 @@ class GiveCareProvider:
 
         return result.stdout + result.stderr
 
+    def bootstrap(self) -> None:
+        """Pre-boot a fresh phone number through Mira's opt-in and setup flow.
+
+        New phone numbers hit the consent gate ("Reply YES to opt in") before
+        Mira engages with scenario content. Running this bootstrap sequence first
+        puts the phone in the ready state so all scenario turns reach Mira directly.
+
+        Bootstrap steps: START (trigger opt-in) → YES (consent) → name → situation → zip.
+        Uses self.wait_ms to match Convex response latency (~5-7s observed in practice).
+        """
+        bootstrap_steps = [
+            "START",                       # Trigger opt-in prompt
+            "YES",                         # Consent
+            "Alex",                        # Name
+            "Caring for a family member",  # Situation
+            "10001",                       # Zip code
+        ]
+        for step in bootstrap_steps:
+            self._run_gc(
+                [
+                    "simulate",
+                    "--message",
+                    step,
+                    "--phone",
+                    self.phone,
+                    "--deployment",
+                    self.deployment,
+                    "--wait",
+                    str(self.wait_ms),
+                ]
+            )
+
     def reset(self) -> None:
-        """Reset the test user (handled by gc CLI per-run)."""
-        pass  # gc CLI resets automatically
+        """Bootstrap the phone number so scenario turns reach Mira directly."""
+        self.bootstrap()
 
     def send_message(self, message: str) -> str:
         """Send a message and get Mira's response."""
