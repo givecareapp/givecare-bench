@@ -110,13 +110,18 @@ class GiveCareProvider:
         Bootstrap steps: START (trigger opt-in) → YES (consent) → name → situation → zip.
         Uses self.wait_ms to match Convex response latency (~5-7s observed in practice).
         """
+        # Bootstrap steps in order. Each takes ~8-9s on dev.
+        # Flow: regulatory START → consent YES → name → situation → timezone → zip
         bootstrap_steps = [
-            "START",                       # Trigger opt-in prompt
+            "START",                       # Regulatory opt-in (no response expected)
             "YES",                         # Consent
             "Alex",                        # Name
             "Caring for a family member",  # Situation
+            "OK",                          # Timezone (accept Mira's inferred default)
             "10001",                       # Zip code
         ]
+        # Use at least 10s per step — Convex pipeline takes ~9s on dev
+        bootstrap_wait = max(self.wait_ms, 10000)
         for step in bootstrap_steps:
             self._run_gc(
                 [
@@ -128,7 +133,7 @@ class GiveCareProvider:
                     "--deployment",
                     self.deployment,
                     "--wait",
-                    str(self.wait_ms),
+                    str(bootstrap_wait),
                 ]
             )
 
