@@ -44,77 +44,72 @@ uv pip install -e ".[all]"
 echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 ```
 
-### Two Evaluation Modes
+### Benchmark Families
 
-InvisibleBench supports two distinct evaluation modes:
+InvisibleBench supports one raw benchmark family plus two GiveCare harness modes:
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| **Model Eval** | `uv run bench --full -y` | Raw LLM capability | 44 |
-| **System Eval** | `uv run bench --provider givecare -y` | Full product stack (Mira) | 44 (or 47 with `--confidential`) |
+| **Raw LLM Eval** | `uv run bench --full -y` | Base model capability | 44 |
+| **GiveCare Live Harness** | `uv run bench --harness givecare --mode live -y` | Full deployed product path (Mira) | 44 (or 47 with `--confidential`) |
+| **GiveCare Orchestrator Harness** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior | 44 (or 47 with `--confidential`) |
 
-**Scores are NOT directly comparable** across modes. Model eval uses a minimal 91-word prompt; system eval tests the full product with tools, memory, and SMS constraints.
+**Scores are not directly comparable** across these modes. Raw eval uses the benchmark prompt only. Live mode includes transport/runtime noise. Orchestrator mode isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
 
-### Model Evaluation (Raw LLM)
+### Raw LLM Evaluation
 
 ```bash
-# Full benchmark (12 models x all scenarios, ~$5-10)
+# Full benchmark (all configured models)
 uv run bench --full -y
 
 # Select models by name (case-insensitive partial match)
-uv run bench -m deepseek -y             # DeepSeek V3.2
-uv run bench -m gpt-5.2,claude -y       # GPT-5.2 + all Claude models
-uv run bench -m gemini -y               # All Gemini models
+uv run bench -m deepseek -y
+uv run bench -m gpt-5.2,claude -y
+uv run bench -m gemini -y
 
 # Select models by number (backward compatible)
-uv run bench -m 1-4 -y                  # First 4 models
-uv run bench -m 4 -c safety -y          # Model 4 only, safety category
-uv run bench -m 1,3,5 -y               # Specific models
-uv run bench -m 4- -y                  # Models 4 onwards
+uv run bench -m 1-4 -y
+uv run bench -m 4 -c safety -y
+uv run bench -m 1,3,5 -y
+uv run bench -m 4- -y
 
 # Mixed: names and numbers
-uv run bench -m 1,deepseek -y           # Model 1 + DeepSeek
+uv run bench -m 1,deepseek -y
 
 # Filter by category
-uv run bench -m deepseek -c safety,empathy -y  # Safety and empathy only
+uv run bench -m deepseek -c safety,empathy -y
 
 # Parallel execution (multiple models concurrently)
-uv run bench -m 1-4 -p 4 -y             # 4 models in parallel
+uv run bench -m 1-4 -p 4 -y
 
-# Dry run (cost estimate + model catalog)
+# Dry run (cost estimate + current model catalog)
 uv run bench --dry-run
 
 # Write per-scenario JSON + HTML reports with turn flags
 uv run bench -m deepseek -y --detailed
 ```
 
-### System Evaluation (GiveCare/Mira)
+Use `uv run bench --dry-run` to see the current numbered model catalog.
+
+### GiveCare Harness Evaluation
 
 ```bash
-# Standard evaluation (44 scenarios)
-uv run bench --provider givecare -y
+# Live product path (44 scenarios)
+uv run bench --harness givecare --mode live -y
+
+# Direct orchestrator target (44 scenarios)
+uv run bench --harness givecare --mode orchestrator -y
 
 # Include confidential scenarios (47 total)
-uv run bench --provider givecare -y --confidential
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode orchestrator -y --confidential
 
 # Filter by category
-uv run bench --provider givecare -c safety -y
+uv run bench --harness givecare --mode live -c safety -y
 
 # Dry run
-uv run bench --provider givecare --dry-run
+uv run bench --harness givecare --mode live --dry-run
 ```
-
-**Models (selectable by name or number with `-m`):**
-| # | Model | # | Model |
-|---|-------|---|-------|
-| 1 | Claude Opus 4.5 | 7 | DeepSeek V3.2 |
-| 2 | GPT-5.2 | 8 | Gemini 2.5 Flash |
-| 3 | Gemini 3 Pro | 9 | MiniMax M2.1 |
-| 4 | Claude Sonnet 4.5 | 10 | Qwen3 235B |
-| 5 | Grok 4 | 11 | Kimi K2.5 |
-| 6 | GPT-5 Mini | 12 | Claude Opus 4.6 |
-
-Use `-m deepseek` or `-m 7` — both select DeepSeek V3.2. Partial names match case-insensitively.
 
 The `bench` CLI provides:
 - Rich terminal output with live progress
@@ -157,11 +152,13 @@ Generate actionable reports to identify and fix issues:
 
 ```bash
 # Generate after run (--diagnose flag)
-uv run bench --provider givecare -y --diagnose
+uv run bench --harness givecare --mode live -y --diagnose
+uv run bench --harness givecare --mode orchestrator -y --diagnose
 uv run bench -m deepseek -y --diagnose
 
 # Generate from existing results
-uv run bench diagnose results/givecare/givecare_results.json
+uv run bench diagnose results/givecare/run_YYYYMMDD_HHMMSS/givecare_results.json
+uv run bench diagnose results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/all_results.json
 uv run bench diagnose results/run_*/all_results.json
 
 # Compare with previous run
@@ -205,34 +202,34 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 ## Repository Structure
 
 ```
-├── benchmark/              # InvisibleBench evaluation framework
-│   ├── invisiblebench/     # Core package (evaluation, api, models, export)
-│   │   ├── api/            # OpenRouter client + LRU scorer cache
-│   │   └── cli/            # CLI commands (runner with --provider flag)
-│   ├── scenarios/          # Test scenarios by MECE category
-│   │   ├── safety/         # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
-│   │   ├── empathy/        # 13 scenarios (burnout, belonging, grief, relational)
-│   │   ├── context/        # 10 scenarios (cultural, regulatory)
-│   │   ├── continuity/     # 4 scenarios (longitudinal trust/memory)
-│   │   └── confidential/   # 3 holdout scenarios
-│   ├── configs/            # Scoring config (private *.txt/*.yaml gitignored)
-│   │   ├── prompts/       # LLM judge prompts (see README.md for setup)
-│   │   ├── rules/         # Jurisdiction rules (*.example.yaml included)
-│   │   ├── scoring.yaml   # Weights (gitignored; scoring.example.yaml included)
-│   ├── scripts/            # Provider implementations & validation
-│   │   └── givecare_provider.py  # GiveCare/Mira system provider
-│   └── tests/              # pytest suite
+├── benchmark/                    # InvisibleBench evaluation framework
+│   ├── invisiblebench/           # Core package (CLI, harnesses, scoring, artifacts, audits)
+│   │   ├── api/                  # OpenRouter client + LRU scorer cache
+│   │   └── cli/                  # CLI commands (runner with harness/mode flags)
+│   ├── adapters/                 # Non-Python target adapters
+│   │   └── givecare-orchestrator/ # TS bridge for direct Pi orchestrator eval
+│   ├── scenarios/                # Test scenarios by MECE category
+│   │   ├── safety/               # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
+│   │   ├── empathy/              # 13 scenarios (burnout, belonging, grief, relational)
+│   │   ├── context/              # 10 scenarios (cultural, regulatory)
+│   │   ├── continuity/           # 4 scenarios (longitudinal trust/memory)
+│   │   └── confidential/         # 3 holdout scenarios
+│   ├── configs/                  # Scoring config (private *.txt/*.yaml gitignored)
+│   ├── scripts/                  # Live/provider implementations & validation
+│   │   └── givecare_provider.py  # GiveCare/Mira live harness
+│   └── tests/                    # pytest suite
 │
-├── papers/                 # Research papers (LaTeX + PDF)
-│   ├── givecare/           # GiveCare system paper
-│   └── invisiblebench/     # InvisibleBench benchmark paper
+├── papers/                       # Research papers (LaTeX + PDF)
+│   ├── givecare/                 # GiveCare system paper
+│   └── invisiblebench/           # InvisibleBench benchmark paper
 │
-├── results/                # Outputs (gitignored)
-│   ├── run_YYYYMMDD_*/     # Model eval runs
-│   ├── givecare/           # System eval runs
-│   └── archive/            # Archived old runs
+├── results/                      # Outputs (gitignored)
+│   ├── run_YYYYMMDD_*/           # Raw model eval runs
+│   ├── givecare/run_YYYYMMDD_*/  # GiveCare live harness runs
+│   ├── givecare_orchestrator/run_YYYYMMDD_*/ # Direct orchestrator runs
+│   └── archive/                  # Archived old runs
 │
-└── docs/                   # Documentation
+└── docs/                         # Documentation
 ```
 
 ---

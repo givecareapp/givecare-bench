@@ -111,7 +111,7 @@ def main():
     # Check data exists
     data_dir = Path(DATA_DIR)
     if not (data_dir / "train.jsonl").exists():
-        print(f"No training data. Run: python autoresearch/train/prepare.py")
+        print("No training data. Run: python autoresearch/train/prepare.py")
         sys.exit(1)
 
     rc = train()

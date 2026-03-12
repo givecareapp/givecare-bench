@@ -25,12 +25,14 @@ uv run ruff check .
 uv run bench --full -y
 uv run bench -m deepseek -c safety,empathy -y
 
-# System evaluation (GiveCare/Mira)
-uv run bench --provider givecare -y
-uv run bench --provider givecare -y --confidential
-uv run bench --provider givecare -c safety -y
+# GiveCare eval harness
+uv run bench --harness givecare --mode live -y
+uv run bench --harness givecare --mode orchestrator -y
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode live -c safety -y
 
 # Utilities
+uv run bench audit results/run_YYYYMMDD_HHMMSS/
 uv run bench diff <base_run> <new_run>
 uv run bench stats results/leaderboard_ready/
 uv run bench reliability results/run_YYYYMMDD_HHMMSS/

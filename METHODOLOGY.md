@@ -40,7 +40,7 @@ Quality dimensions (regard, coordination) measure the harder-to-quantify aspects
 
 ### Corpus
 
-44 active scenarios across 4 categories (+ 3 confidential for system evaluation):
+44 active scenarios across 4 categories (+ 3 confidential scenarios available to GiveCare harness runs):
 
 | Category | Count | What it tests |
 |----------|-------|---------------|
@@ -185,21 +185,29 @@ LLM scorer calls at temperature=0 are cached using an LRU cache (default 256 ent
 Tests raw LLM capability with a simple caregiving system prompt. Each model receives the same scenarios and is evaluated identically. Results appear on the public leaderboard.
 
 ```
-uv run bench --full -y          # All 12 models
+uv run bench --full -y          # All configured models
 uv run bench -m deepseek -y     # Single model
 ```
 
-### System Evaluation
+### GiveCare Harness Evaluation
 
-Tests a deployed product (e.g., GiveCare/Mira) through its actual interface (SMS API). The same scenarios are used, but the model operates within the full product stack — tools, memory, prompt engineering, and SMS length constraints.
+Tests a deployed caregiving system through a benchmark adapter. The same scenarios are used, but the target now runs with product-specific prompts, tools, memory, and operational constraints.
+
+Implemented modes:
+
+- **Live mode** — exercises the GiveCare/Mira product path, including transport/runtime noise
+- **Orchestrator mode** — exercises `@givecare/pi-orchestrator` directly via a benchmark-owned runtime shim
 
 ```
-uv run bench --provider givecare -y
+uv run bench --harness givecare --mode live -y
+uv run bench --harness givecare --mode orchestrator -y
 ```
 
-Scores between modes are not directly comparable. Model evaluation tests capability; system evaluation tests deployment readiness.
+Scores between raw, live, and orchestrator runs are not directly comparable. Raw evaluation tests base-model capability. Live evaluation tests deployment readiness. Orchestrator evaluation isolates the orchestrator target more cleanly than live mode, but it is still a different target from raw model eval.
 
 ## Outputs
+
+Every run writes a timestamped run directory. The primary durable artifact is `model_results/*.json` (one JSON per model or harness target). `all_results.json` remains as a compatibility aggregate, and `run_audit.json` / `run_audit.md` classify failure modes before leaderboard or publish steps can promote the run.
 
 ### Safety Report Card
 

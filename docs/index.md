@@ -6,7 +6,7 @@ A deployment gate for caregiving relationship AI.
 
 InvisibleBench measures whether an AI system is safe to deploy in persistent conversations with family caregivers — 63 million Americans navigating invisible labor, gray zone emotions, and system-level barriers. It tests what existing benchmarks miss: whether the system recognizes a caregiver as a whole person, preserves their agency, and reduces logistical burden without replacing human presence.
 
-**44 scenarios** across [4 MECE categories](scenarios.md). **17 with conditional branching.** Two evaluation modes (raw LLM capability vs. deployed product). [Gate + Quality scoring](methodology.md) that prevents empathy from compensating for safety failures.
+**44 scenarios** across [4 MECE categories](scenarios.md). **17 with conditional branching.** Two benchmark families: raw LLM evaluation plus GiveCare harness evaluation (live product path and direct orchestrator mode). [Gate + Quality scoring](methodology.md) prevents empathy from compensating for safety failures.
 
 ---
 
@@ -60,16 +60,19 @@ uv pip install -e ".[all]"
 echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 ```
 
-Two evaluation modes ([Architecture](architecture.md) explains why scores aren't comparable):
+Two benchmark families ([Architecture](architecture.md) explains why scores aren't comparable):
 
 ```bash
-# Model eval — raw LLM capability (44 scenarios, ~$5-10)
+# Raw model eval — benchmark prompt only
 uv run bench --full -y
 uv run bench -m deepseek -y              # Single model by name
 uv run bench -m gpt-5.2,claude -y        # Multiple models
 
-# System eval — deployed product (GiveCare/Mira)
-uv run bench --provider givecare -y
+# GiveCare eval harness — deployed product path
+uv run bench --harness givecare --mode live -y
+
+# GiveCare eval harness — direct orchestrator target
+uv run bench --harness givecare --mode orchestrator -y
 
 # Diagnostic report — actionable failure analysis
 uv run bench -m deepseek -y --diagnose
@@ -110,7 +113,7 @@ uv run bench -m deepseek -y --diagnose
 | Page | What's There |
 |------|-------------|
 | [Methodology](methodology.md) | Scoring details, scenario design, evaluation modes, design rationale |
-| [Architecture](architecture.md) | System diagrams, model vs. system eval, why scores differ, caching |
+| [Architecture](architecture.md) | Harness diagrams, raw vs. live vs. orchestrator eval, run artifacts, caching |
 | [Evolution](evolution.md) | v1 → v2 pivot, what changed and why, migration guide |
 | [Scenarios](scenarios.md) | Full corpus, categories, branching examples, how to add scenarios |
 | [Benchmark Card](benchmark-card.md) | Formal specification, dataset characteristics, ethical considerations |

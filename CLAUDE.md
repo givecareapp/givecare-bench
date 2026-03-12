@@ -6,34 +6,40 @@ Research benchmark project. Say "done" when finished (no verbose summaries).
 
 ```bash
 # Benchmark (primary: uv run bench) - tests raw LLMs
-uv run bench --full -y                 # All 12 models (~$5-10)
+uv run bench --full -y                 # All configured models
 uv run bench -m deepseek -y            # Single model by name
 uv run bench -m gpt-5.2,claude -y      # Multiple models by name
 uv run bench -m 1-4 -y                 # Models 1-4 (backward compat)
-uv run bench -m 4 -c safety -y        # Model 4, safety category only
-uv run bench -m 1-4 -p 4 -y           # 4 parallel
-uv run bench -m deepseek --runs 3 -y  # 3 runs per scenario (median score)
-uv run bench --dry-run                 # Cost estimate + model catalog
+uv run bench -m 4 -c safety -y         # Model 4, safety category only
+uv run bench -m 1-4 -p 4 -y            # 4 parallel
+uv run bench -m deepseek --runs 3 -y   # 3 runs per scenario (median score)
+uv run bench --dry-run                 # Cost estimate + current model catalog
 uv run bench -m deepseek -y --detailed # Per-scenario JSON/HTML
 
 # Rerun specific model (use after errors)
 uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 
-# Models: 1=Opus4.5 2=GPT-5.2 3=Gemini3Pro 4=Sonnet4.5 5=Grok4
-#         6=GPT-5Mini 7=DeepSeekV3.2 8=Gemini2.5Flash 9=MiniMaxM2.1 10=Qwen3-235B
-#         11=KimiK2.5 12=Opus4.6
-# -m accepts names (partial, case-insensitive) or numbers
+# -m accepts names (partial, case-insensitive) or numbers.
+# Use `uv run bench --dry-run` to see the current numbered catalog.
 
-# GiveCare Provider - tests Mira product (not raw LLM)
-uv run bench --provider givecare -y                    # Standard (44 scenarios)
-uv run bench --provider givecare -y --confidential     # Full (47 scenarios)
-uv run bench --provider givecare -c safety -y          # Safety category only
-uv run bench --provider givecare -y --diagnose         # With diagnostic report
+# GiveCare Eval Harness - tests Mira product (not raw LLM)
+uv run bench --harness givecare --mode live -y         # Standard live/system path (44 scenarios)
+uv run bench --provider givecare -y                    # Backward-compatible alias for live mode
+uv run bench --harness givecare --mode orchestrator -y # Direct Pi orchestrator benchmark harness
+uv run bench --harness givecare --mode orchestrator -m gemini-3.1-flash-lite-preview -y
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode live -c safety -y
+uv run bench --harness givecare --mode live -y --diagnose
+uv run bench --harness givecare --mode live -y --output results/givecare/run_name
 
-# Diagnostic Reports (actionable fix suggestions)
-uv run bench diagnose results/givecare/givecare_results.json   # From givecare results
-uv run bench diagnose results/run_*/all_results.json           # From model eval
-uv run bench diagnose results.json -p previous.json            # With comparison
+# Run Audit + Diagnostic Reports
+uv run bench audit results/run_YYYYMMDD_HHMMSS/                            # Benchmark run failure-mode audit
+uv run bench audit results/givecare/run_YYYYMMDD_HHMMSS/                   # GiveCare live run audit
+uv run bench audit results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/      # GiveCare orchestrator run audit
+uv run bench diagnose results/givecare/run_YYYYMMDD_HHMMSS/givecare_results.json      # From givecare live results
+uv run bench diagnose results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/all_results.json  # From orchestrator runs
+uv run bench diagnose results/run_*/all_results.json                       # From raw model eval
+uv run bench diagnose results.json -p previous.json                        # With comparison
 
 # Health & Maintenance
 uv run bench health                    # Check leaderboard for issues
@@ -87,16 +93,17 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Model Eval | `uv run bench --full -y` | Raw LLM capability | 44 |
-| System Eval | `uv run bench --provider givecare -y` | Mira product behavior | 44 (or 47 with --confidential) |
+| Raw LLM Eval | `uv run bench --full -y` | Base model capability with the benchmark prompt only | 44 |
+| GiveCare Live Harness | `uv run bench --harness givecare --mode live -y` | Full Mira product path, including transport/runtime noise | 44 (or 47 with `--confidential`) |
+| GiveCare Orchestrator Harness | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` policy/runtime behavior | 44 (or 47 with `--confidential`) |
 
-**Scores are NOT directly comparable** - model eval tests raw models with simple prompt, system eval tests full product stack (tools, memory, SMS constraints).
+**Scores are not directly comparable across these modes.** Raw eval measures base model capability. GiveCare live adds real product-path behavior. GiveCare orchestrator isolates the orchestrator with a benchmark-owned runtime shim, so it is cleaner than live mode but still not the same target as raw eval.
 
 ## Leaderboard Management
 
 ```bash
 # Add model results to leaderboard (merges, doesn't overwrite)
-uv run bench leaderboard add results/run_YYYYMMDD_*/all_results.json
+uv run bench leaderboard add results/run_YYYYMMDD_HHMMSS/
 
 # Rebuild from canonical files (results/leaderboard_ready/)
 uv run bench leaderboard rebuild
@@ -112,10 +119,15 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 - Generated data: `data/v2/leaderboard.json`
 - Commit & push → Website auto-fetches from GitHub raw URL
 - Health check uses most-common scenario count as baseline (mixed counts OK)
+- Leaderboard add / publish / `--update-leaderboard` are blocked when `run_audit.json` marks a run non-publishable
 
 ## Results Management
 
-- **Active runs**: `results/run_YYYYMMDD_HHMMSS/`
+- **Active model runs**: `results/run_YYYYMMDD_HHMMSS/`
+- **Active GiveCare live runs**: `results/givecare/run_YYYYMMDD_HHMMSS/`
+- **Active GiveCare orchestrator runs**: `results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/`
+- **Primary scored artifacts**: `results/.../model_results/*.json` (one JSON per model/provider)
+- **Compatibility aggregate**: `results/.../all_results.json`
 - **Archived runs**: `results/archive/`
 - Run `bench archive` periodically to keep results dir clean
 - `bench runs` shows active + archived count
@@ -140,6 +152,8 @@ benchmark/configs/              # Scoring config (private, gitignored — see co
   prompts/                      # LLM judge prompts (*.txt gitignored, README.md public)
   scoring.yaml                  # Weights & thresholds (gitignored, .example.yaml public)
   rules/                        # Jurisdiction rules (*.yaml gitignored, .example.yaml public)
+benchmark/adapters/             # Non-Python target adapters owned by the benchmark
+  givecare-orchestrator/        # TS bridge bundle for direct Pi orchestrator evals
 benchmark/scripts/              # Provider implementations + validation
 benchmark/tests/                # pytest suite
 autoresearch/                   # Autonomous scenario optimization (see autoresearch/CLAUDE.md)
@@ -149,7 +163,12 @@ papers/                         # LaTeX (givecare/, invisiblebench/)
 scripts/                        # Repo-level scripts (post_discussion.sh)
 results/                        # Outputs (gitignored)
   leaderboard_ready/            # Canonical per-model score files
-  full_benchmark_YYYYMMDD/      # Full run transcripts + scores
+  run_YYYYMMDD_HHMMSS/          # Raw LLM benchmark run
+    model_results/              # One JSON per model
+  givecare/run_YYYYMMDD_HHMMSS/ # GiveCare live eval run
+    model_results/              # One JSON per provider target
+  givecare_orchestrator/run_YYYYMMDD_HHMMSS/  # Direct orchestrator harness run
+    model_results/              # One JSON per orchestration model
   autoresearch/                 # Autoresearch probe runs
   archive/                      # Old runs
 ```
@@ -174,7 +193,7 @@ Scenarios can include conditional branches where the user's next message depends
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
 - **17 branched scenarios**: includes medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust, and 12 more
 - **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
-- **Both eval modes**: Works in model eval (runner.py) and system eval (givecare_provider.py)
+- **All implemented transcript generators**: Works in raw model eval, GiveCare live mode, and GiveCare orchestrator mode
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
 - **Rerun required**: Branching changes transcript content for branched scenarios
 

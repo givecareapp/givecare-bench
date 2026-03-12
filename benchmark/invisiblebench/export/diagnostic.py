@@ -785,7 +785,7 @@ class DiagnosticReport:
         if not results:
             return "# Diagnostic Report\n\nNo results found."
 
-        metadata = self.results_data.get("metadata", {})
+        metadata = self.results_data.get("metadata", {}) if isinstance(self.results_data, dict) else {}
         failures = [r for r in results if self._is_failure(r)]
         patterns = self._analyze_patterns(results)
         comparison = self._compare_with_previous(results)

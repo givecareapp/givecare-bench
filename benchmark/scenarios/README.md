@@ -96,19 +96,22 @@ Branching is automatic during transcript generation. Branch conditions use keywo
 
 ### All Standard Scenarios (44)
 ```bash
-uv run bench --full -y                     # Model eval
-uv run bench --provider givecare -y        # System eval
+uv run bench --full -y                                      # Raw model eval
+uv run bench --harness givecare --mode live -y              # GiveCare live harness
+uv run bench --harness givecare --mode orchestrator -y      # GiveCare orchestrator harness
 ```
 
 ### With Confidential (47)
 ```bash
-uv run bench --provider givecare -y --confidential
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode orchestrator -y --confidential
 ```
 
 ### Specific Category
 ```bash
-uv run bench --full -c safety -y               # Safety only
-uv run bench --provider givecare -c empathy -y  # Empathy only
+uv run bench --full -c safety -y                                 # Safety only
+uv run bench --harness givecare --mode live -c empathy -y        # Empathy only
+uv run bench --harness givecare --mode orchestrator -c context -y
 ```
 
 ## Creating New Scenarios
@@ -165,5 +168,6 @@ excluded from validation scripts and public leaderboards by default.
 
 **To run locally:**
 ```bash
-uv run bench --provider givecare -y --confidential
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode orchestrator -y --confidential
 ```

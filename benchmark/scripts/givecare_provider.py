@@ -28,11 +28,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import requests
+from dotenv import load_dotenv
+
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Load .env for API keys
-from dotenv import load_dotenv
+from invisiblebench.results_io import write_json, write_model_results
+from invisiblebench.run_audit import audit_results_source, render_audit_markdown
+from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
@@ -61,7 +65,7 @@ DEFAULT_DEPLOYMENT = "dev"
 class GiveCareProvider:
     """Provider that sends messages to GiveCare/Mira via gc CLI."""
 
-    def __init__(self, deployment: str = DEFAULT_DEPLOYMENT, wait_ms: int = 6000):
+    def __init__(self, deployment: str = DEFAULT_DEPLOYMENT, wait_ms: int = 15000):
         self.deployment = deployment
         self.wait_ms = wait_ms
         self.phone = self._generate_phone()
@@ -101,77 +105,70 @@ class GiveCareProvider:
         return result.stdout + result.stderr
 
     def bootstrap(self) -> None:
-        """Pre-boot a fresh phone number through Mira's opt-in and setup flow.
+        """Pre-boot a phone number by calling playground:createPreBootstrappedCaregiver.
 
-        New phone numbers hit the consent gate ("Reply YES to opt in") before
-        Mira engages with scenario content. Running this bootstrap sequence first
-        puts the phone in the ready state so all scenario turns reach Mira directly.
-
-        Bootstrap steps: START (trigger opt-in) → YES (consent) → name → situation → zip.
-        Uses self.wait_ms to match Convex response latency (~5-7s observed in practice).
+        Bypasses the SMS opt-in flow entirely, creating a fully-consented, bootstrapped
+        caregiver record directly in Convex. Scenario turns then reach Mira's activeSupport
+        loop without hitting the consent gate.
         """
-        # Bootstrap steps in order. Each takes ~8-9s on dev.
-        # Flow: regulatory START → consent YES → name → situation → timezone → zip
-        bootstrap_steps = [
-            "START",                       # Regulatory opt-in (no response expected)
-            "YES",                         # Consent
-            "Alex",                        # Name
-            "Caring for a family member",  # Situation
-            "OK",                          # Timezone (accept Mira's inferred default)
-            "10001",                       # Zip code
-        ]
-        # Use at least 10s per step — Convex pipeline takes ~9s on dev
-        bootstrap_wait = max(self.wait_ms, 10000)
-        for step in bootstrap_steps:
-            self._run_gc(
-                [
-                    "simulate",
-                    "--message",
-                    step,
-                    "--phone",
-                    self.phone,
-                    "--deployment",
-                    self.deployment,
-                    "--wait",
-                    str(bootstrap_wait),
-                ]
-            )
+        deployment_url = DEPLOYMENTS[self.deployment]
+        resp = requests.post(
+            f"{deployment_url}/api/action",
+            json={
+                "path": "playground:createPreBootstrappedCaregiver",
+                "args": {"phone": self.phone},
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
 
     def reset(self) -> None:
         """Bootstrap the phone number so scenario turns reach Mira directly."""
         self.bootstrap()
 
     def send_message(self, message: str) -> str:
-        """Send a message and get Mira's response."""
-        output = self._run_gc(
-            [
-                "simulate",
-                "--message",
-                message,
-                "--phone",
-                self.phone,
-                "--deployment",
-                self.deployment,
-                "--wait",
-                str(self.wait_ms),
-            ]
-        )
+        """Send a message and get Mira's response.
 
-        # Parse response from output
-        # Format: "User: ...\nMira: <response>\n(XXXms)"
+        Retries once with a longer wait if no response is captured on the first attempt.
+        """
+        for attempt in range(2):
+            wait = self.wait_ms if attempt == 0 else self.wait_ms + 5000
+            output = self._run_gc(
+                [
+                    "simulate",
+                    "--message",
+                    message,
+                    "--phone",
+                    self.phone,
+                    "--deployment",
+                    self.deployment,
+                    "--wait",
+                    str(wait),
+                ]
+            )
+
+            response = self._parse_mira_response(output)
+            if response:
+                return response
+
+        return "(no response)"
+
+    @staticmethod
+    def _parse_mira_response(output: str) -> Optional[str]:
+        """Extract Mira's response from gc simulate output. Returns None if not found."""
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
             if line.startswith("Mira:"):
-                # Get everything after "Mira: " until timing line
                 response_lines = []
                 response_lines.append(line[5:].strip())
                 for j in range(i + 1, len(lines)):
                     if lines[j].strip().startswith("(") and lines[j].strip().endswith("ms)"):
                         break
                     response_lines.append(lines[j])
-                return "\n".join(response_lines).strip()
-
-        return "(no response)"
+                text = "\n".join(response_lines).strip()
+                if text:
+                    return text
+        return None
 
     def close(self):
         """No cleanup needed for CLI-based provider."""
@@ -420,7 +417,7 @@ Examples:
         "--confidential", action="store_true", help="Include confidential scenarios (47 vs 44)"
     )
     parser.add_argument("--deployment", "-d", default=DEFAULT_DEPLOYMENT, choices=["dev", "prod"])
-    parser.add_argument("--output", "-o", default="results/givecare", help="Output directory")
+    parser.add_argument("--output", "-o", default=None, help="Output directory")
     parser.add_argument(
         "--wait", "-w", type=int, default=6000, help="Wait time between send/receive (ms)"
     )
@@ -438,7 +435,10 @@ Examples:
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent
     scenarios_dir = project_root / "benchmark" / "scenarios"
-    output_dir = project_root / args.output
+    if args.output:
+        output_dir = project_root / args.output
+    else:
+        output_dir = project_root / "results" / "givecare" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     # Get scenarios to run
     if args.scenario:
@@ -457,6 +457,15 @@ Examples:
     scenario_count = len(scenario_paths)
     conf_note = " (including confidential)" if args.confidential else ""
     print(f"Running {scenario_count} scenario(s) against GiveCare ({args.deployment}){conf_note}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = generate_manifest(
+        project_root=project_root,
+        model_ids=[MODEL_ID],
+        harness="givecare",
+        mode="live",
+    )
+    write_manifest(manifest, output_dir)
 
     provider = GiveCareProvider(deployment=args.deployment, wait_ms=args.wait)
     transcript_data = []  # List of (transcript_path, scenario_path, scenario_data)
@@ -558,9 +567,21 @@ Examples:
             "results": results,
         }
 
+        write_model_results(
+            results,
+            output_dir / "model_results",
+            benchmark_version="unknown",
+            timestamp=run_timestamp,
+            mode="givecare-live",
+            run_metadata={
+                "provider": PROVIDER_NAME,
+                "deployment": args.deployment,
+                "include_confidential": args.confidential,
+            },
+        )
+        write_json(output_dir / "all_results.json", results)
         results_path = output_dir / "givecare_results.json"
-        with open(results_path, "w") as f:
-            json.dump(output_data, f, indent=2)
+        write_json(results_path, output_data)
 
         # Summary
         passed = sum(1 for r in results if not r.get("hard_fail"))
@@ -576,6 +597,21 @@ Examples:
         print(f"Average:   {avg_score:.1f}%")
         print(f"{'='*50}")
         print(f"Saved: {results_path}")
+
+        audit = audit_results_source(
+            output_dir,
+            expected_scenario_count=len(scenario_paths),
+            harness="givecare",
+            mode="live",
+        )
+        write_json(output_dir / "run_audit.json", audit)
+        (output_dir / "run_audit.md").write_text(render_audit_markdown(audit))
+        print(
+            "Audit: "
+            f"{audit.get('summary_status', 'WARN')} | "
+            f"valid={'yes' if audit.get('run_valid') else 'no'} | "
+            f"publishable={'yes' if audit.get('publishable') else 'no'}"
+        )
 
 
 if __name__ == "__main__":

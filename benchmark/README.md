@@ -9,41 +9,41 @@ This directory contains the complete InvisibleBench benchmark for evaluating AI 
 ```
 benchmark/
 ├── invisiblebench/       # Python package (source code)
-│   ├── api/            # OpenRouter client + LRU scorer cache
-│   ├── cli/            # CLI commands (runner with --provider flag)
-│   ├── evaluation/     # Scoring orchestrator, scorers & branching
-│   ├── export/         # Report generators (HTML, JSON, diagnostic)
-│   ├── loaders/        # YAML/JSON loaders
-│   ├── models/         # Data models
-│   └── utils/          # Utilities
+│   ├── api/              # OpenRouter client + LRU scorer cache
+│   ├── cli/              # CLI commands (runner with harness/mode flags)
+│   ├── evaluation/       # Shared scoring orchestrator, scorers & branching
+│   ├── export/           # Report generators (HTML, JSON, diagnostic)
+│   ├── loaders/          # YAML/JSON loaders
+│   ├── models/           # Data models
+│   └── utils/            # Utilities
 │
-├── scenarios/          # Test scenarios (44 standard + 3 confidential)
-│   ├── safety/         # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
-│   ├── empathy/        # 13 scenarios (burnout, belonging, grief, relational)
-│   ├── context/        # 10 scenarios (cultural, regulatory)
-│   ├── continuity/     # 4 scenarios (longitudinal trust/memory)
-│   ├── confidential/   # 3 holdout scenarios (not in standard runs)
-│   └── archive/        # 25 archived v1 scenarios
+├── adapters/             # Non-Python target adapters
+│   └── givecare-orchestrator/ # TS bridge for direct Pi orchestrator evals
 │
-├── tests/              # Test suite
-│   ├── unit/           # Unit tests
-│   ├── integration/    # Integration tests
-│   └── fixtures/       # Test data
+├── scenarios/            # Test scenarios (44 standard + 3 confidential)
+│   ├── safety/           # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
+│   ├── empathy/          # 13 scenarios (burnout, belonging, grief, relational)
+│   ├── context/          # 10 scenarios (cultural, regulatory)
+│   ├── continuity/       # 4 scenarios (longitudinal trust/memory)
+│   ├── confidential/     # 3 holdout scenarios (not in standard runs)
+│   └── archive/          # 25 archived v1 scenarios
 │
-├── docs/               # Documentation
-│   └── transcript_format.md # Transcript schema
+├── tests/                # Test suite
+│   ├── unit/             # Unit tests
+│   ├── integration/      # Integration tests
+│   └── fixtures/         # Test data
 │
-├── configs/            # Scoring configurations (private content gitignored)
-│   ├── prompts/        # LLM judge prompts (*.txt gitignored; README.md public)
-│   ├── scoring.yaml    # Dimension weights (gitignored; scoring.example.yaml public)
-│   └── rules/          # Jurisdiction rules (*.yaml gitignored; base.example.yaml public)
+├── configs/              # Scoring configurations (private content gitignored)
+│   ├── prompts/          # LLM judge prompts (*.txt gitignored; README.md public)
+│   ├── scoring.yaml      # Dimension weights (gitignored; scoring.example.yaml public)
+│   └── rules/            # Jurisdiction rules (*.yaml gitignored; base.example.yaml public)
 │
-├── scripts/            # Utility scripts
-│   ├── validation/     # Validation tools
-│   ├── leaderboard/    # Leaderboard data tooling
-│   └── givecare_provider.py  # GiveCare/Mira system provider
+├── scripts/              # Utility scripts and live harness helpers
+│   ├── validation/       # Validation tools
+│   ├── leaderboard/      # Leaderboard data tooling
+│   └── givecare_provider.py  # GiveCare/Mira live harness
 │
-└── EVOLUTION.md        # v1 → v2 history
+└── EVOLUTION.md          # v1 → v2 history
 ```
 
 ## Quick Start
@@ -54,45 +54,50 @@ cd ../  # Go to project root
 uv pip install -e ".[all]"
 ```
 
-### Two Evaluation Modes
+### Benchmark Families
 
-InvisibleBench supports two distinct evaluation modes:
+InvisibleBench supports one raw benchmark family plus two GiveCare harness modes:
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| **Model Eval** | `uv run bench --full -y` | Raw LLM capability | 44 |
-| **System Eval** | `uv run bench --provider givecare -y` | Full product stack (Mira) | 44 (or 47 with `--confidential`) |
+| **Raw LLM Eval** | `uv run bench --full -y` | Base model capability | 44 |
+| **GiveCare Live Harness** | `uv run bench --harness givecare --mode live -y` | Full deployed product path (Mira) | 44 (or 47 with `--confidential`) |
+| **GiveCare Orchestrator Harness** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior | 44 (or 47 with `--confidential`) |
 
-**Scores are NOT directly comparable** across modes. Model eval uses a minimal 91-word prompt; system eval tests the full product with tools, memory, and SMS constraints.
+**Scores are not directly comparable** across these modes. Raw eval uses the benchmark prompt only. Live mode includes transport/runtime noise. Orchestrator mode isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
 
-### Run Model Evaluation
+### Run Raw LLM Evaluation
 ```bash
-# Full benchmark (12 models)
+# Full benchmark (all configured models)
 uv run bench --full -y
 
 # Select by name or number
-uv run bench -m deepseek -y             # By name
-uv run bench -m gpt-5.2,claude -y       # Multiple names
-uv run bench -m 1-4 -y                  # By number (backward compat)
-uv run bench -m 4 -c safety,empathy -y  # Specific model + categories
+uv run bench -m deepseek -y
+uv run bench -m gpt-5.2,claude -y
+uv run bench -m 1-4 -y                  # Backward-compatible numbering
+uv run bench -m 4 -c safety,empathy -y
+uv run bench --dry-run                  # Current model catalog + cost estimate
 ```
 
-### Run System Evaluation (GiveCare/Mira)
+### Run GiveCare Harness Evaluation
 ```bash
-# Standard (44 scenarios)
-uv run bench --provider givecare -y
+# Live product path
+uv run bench --harness givecare --mode live -y
+uv run bench --harness givecare --mode live -y --diagnose
 
-# With diagnostic report
-uv run bench --provider givecare -y --diagnose
+# Direct orchestrator target
+uv run bench --harness givecare --mode orchestrator -y
 
 # Include confidential scenarios (47 total)
-uv run bench --provider givecare -y --confidential
+uv run bench --harness givecare --mode live -y --confidential
+uv run bench --harness givecare --mode orchestrator -y --confidential
 ```
 
 ### Generate Diagnostic Report
 ```bash
 # From existing results
-uv run bench diagnose results/givecare/givecare_results.json
+uv run bench diagnose results/givecare/run_YYYYMMDD_HHMMSS/givecare_results.json
+uv run bench diagnose results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/all_results.json
 
 # Compare with previous run
 uv run bench diagnose results.json --previous old_results.json
@@ -147,7 +152,7 @@ See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
 - **Categories**: safety (17), empathy (13), context (10), continuity (4)
 - **Branched Scenarios**: 17 scenarios with conditional branches (adaptive user messages)
 - **Archived Scenarios**: 25 scenarios (available via `--include-archive`)
-- **Models**: 12 models in full benchmark
+- **Models**: configurable catalog (see `uv run bench --dry-run`)
 - **Scoring**: Gate + Quality (safety/compliance gates → regard/coordination quality)
 
 ### Category Distribution

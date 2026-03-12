@@ -20,13 +20,21 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
 from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
 from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
+from invisiblebench.results_io import write_json, write_model_results
+from invisiblebench.run_artifacts import (
+    detect_transcripts_dir,
+    load_result_rows,
+    write_aggregate_results,
+)
+from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
@@ -94,16 +102,21 @@ MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 def run_givecare_eval(
     category_filter: Optional[List[str]] = None,
+    scenario_filter: Optional[List[str]] = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
     auto_confirm: bool = False,
     generate_diagnostic: bool = False,
+    output_dir: Optional[Path] = None,
+    adapter_name: str = "givecare-live",
+    harness_mode: str = "live",
+    update_leaderboard: bool = False,
 ) -> int:
-    """Run GiveCare/Mira system evaluation.
+    """Run the GiveCare eval harness in one supported mode.
 
-    This tests the full Mira product stack, not raw LLM capability.
-    Uses the givecare_provider module to generate transcripts via the gc CLI.
+    Current implementation supports the live/system path via the GiveCare provider.
+    Additional harness modes can reuse the same benchmark core once implemented.
     """
     # Import givecare provider
     import sys
@@ -131,7 +144,9 @@ def run_givecare_eval(
         return 1
 
     scenarios_dir = root / "benchmark" / "scenarios"
-    output_dir = root / "results" / "givecare"
+    if output_dir is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = root / "results" / "givecare" / f"run_{timestamp}"
 
     # Get scenarios
     scenario_paths = get_givecare_scenarios(
@@ -139,6 +154,13 @@ def run_givecare_eval(
         category_filter=category_filter,
         include_confidential=include_confidential,
     )
+    if scenario_filter:
+        lowered = set(scenario_filter)
+        scenario_paths = [
+            path
+            for path in scenario_paths
+            if path.stem.lower() in lowered or any(token in path.stem.lower() for token in lowered)
+        ]
 
     if not scenario_paths:
         print("No scenarios found")
@@ -146,7 +168,7 @@ def run_givecare_eval(
 
     scenario_count = len(scenario_paths)
     conf_note = " (including confidential)" if include_confidential else ""
-    print(f"GiveCare System Eval: {scenario_count} scenario(s){conf_note}")
+    print(f"GiveCare Eval Harness [{harness_mode}]: {scenario_count} scenario(s){conf_note}")
 
     if dry_run:
         print("\nDry run - no transcripts will be generated")
@@ -160,8 +182,17 @@ def run_givecare_eval(
             print("Aborted")
             return 0
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = generate_manifest(
+        project_root=root,
+        model_ids=[MODEL_ID],
+        harness="givecare",
+        mode=harness_mode,
+    )
+    write_manifest(manifest, output_dir)
+
     # Run scenarios
-    provider = GiveCareProvider(deployment="dev", wait_ms=6000)
+    provider = GiveCareProvider(deployment="dev", wait_ms=15000)
     transcript_data = []
 
     try:
@@ -238,8 +269,6 @@ def run_givecare_eval(
             )
 
     # Save results
-    from datetime import datetime
-
     run_timestamp = datetime.now().isoformat()
     output_data = {
         "metadata": {
@@ -255,10 +284,33 @@ def run_givecare_eval(
         "results": results,
     }
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    model_results_dir = output_dir / "model_results"
+    write_model_results(
+        results,
+        model_results_dir,
+        benchmark_version=manifest.get("benchmark_version", "unknown"),
+        timestamp=run_timestamp,
+        mode=adapter_name,
+        run_metadata={
+            "run_id": givecare_run_id,
+            "adapter": adapter_name,
+            "provider": PROVIDER_NAME,
+            "deployment": "dev",
+            "include_confidential": include_confidential,
+        },
+    )
+
+    write_json(output_dir / "all_results.json", results)
     results_path = output_dir / "givecare_results.json"
-    with open(results_path, "w") as f:
-        json.dump(output_data, f, indent=2)
+    write_json(results_path, output_data)
+
+    audit = _write_run_audit(
+        results_path,
+        output_dir=output_dir,
+        expected_scenario_count=len(scenario_paths),
+        harness="givecare",
+        mode=harness_mode,
+    )
 
     # Summary
     passed = sum(1 for r in results if not r.get("hard_fail"))
@@ -292,6 +344,355 @@ def run_givecare_eval(
             print(f"Diagnostic: {diag_path}")
         except Exception as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
+
+    _print_audit_summary(audit)
+    print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
+
+    if update_leaderboard:
+        if not audit.get("publishable", False):
+            print(
+                "Skipping leaderboard update: run audit marked this run as not publishable "
+                f"(owner={audit.get('primary_owner', 'benchmark')})."
+            )
+        else:
+            try:
+                _update_leaderboard(output_dir)
+                print("Leaderboard updated: data/v2/leaderboard.json")
+            except Exception as e:
+                print(f"Warning: Could not update leaderboard: {e}")
+
+    return 0 if failed == 0 else 1
+
+
+def _parse_harness_model_names(spec: Optional[str], default_model: str) -> List[str]:
+    """Parse comma-separated harness model names, preserving order and uniqueness."""
+    if not spec:
+        return [default_model]
+    seen: set[str] = set()
+    models: List[str] = []
+    for item in spec.split(","):
+        name = item.strip()
+        if name and name not in seen:
+            seen.add(name)
+            models.append(name)
+    return models or [default_model]
+
+
+def run_givecare_orchestrator_eval(
+    category_filter: Optional[List[str]] = None,
+    scenario_filter: Optional[List[str]] = None,
+    include_confidential: bool = False,
+    verbose: bool = True,
+    dry_run: bool = False,
+    auto_confirm: bool = False,
+    generate_diagnostic: bool = False,
+    output_dir: Optional[Path] = None,
+    adapter_name: str = "givecare-orchestrator",
+    model_names: Optional[List[str]] = None,
+    update_leaderboard: bool = False,
+) -> int:
+    """Run the GiveCare orchestrator harness directly against the benchmark."""
+    from invisiblebench.givecare_orchestrator import (
+        DEFAULT_ORCHESTRATOR_MODEL,
+        PROVIDER_NAME,
+        PROVIDER_VERSION,
+        bridge_healthcheck,
+        get_model_id,
+        get_model_label,
+        run_scenario,
+    )
+
+    root = get_project_root()
+    scenarios_dir = root / "benchmark" / "scenarios"
+    if output_dir is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = root / "results" / "givecare_orchestrator" / f"run_{timestamp}"
+
+    categories = ["safety", "empathy", "context", "continuity"]
+    if include_confidential:
+        categories.append("confidential")
+    scenario_paths: List[Dict[str, Any]] = []
+    for category in categories:
+        if category_filter and category not in category_filter:
+            continue
+        cat_dir = scenarios_dir / category
+        if not cat_dir.exists():
+            continue
+        for path in sorted(cat_dir.rglob("*.json")):
+            scenario_paths.append(
+                {
+                    "category": category,
+                    "path": str(path),
+                    "name": path.stem.replace("_", " ").title(),
+                }
+            )
+
+    if scenario_filter:
+        lowered = set(scenario_filter)
+        scenario_paths = [
+            scenario
+            for scenario in scenario_paths
+            if Path(str(scenario["path"])).stem.lower() in lowered
+            or any(token in Path(str(scenario["path"])).stem.lower() for token in lowered)
+        ]
+
+    if not scenario_paths:
+        print("No scenarios found")
+        return 1
+
+    selected_models = model_names or [DEFAULT_ORCHESTRATOR_MODEL]
+    scenario_count = len(scenario_paths)
+    conf_note = " (including confidential)" if include_confidential else ""
+    print(
+        f"GiveCare Eval Harness [orchestrator]: {len(selected_models)} model(s) × {scenario_count} scenario(s){conf_note}"
+    )
+
+    if dry_run:
+        print("\nDry run - no transcripts will be generated")
+        try:
+            health = bridge_healthcheck()
+            print(f"Bridge: {health.get('status', 'unknown')}")
+        except Exception as e:
+            print(f"Bridge healthcheck failed: {e}")
+        print("Models:")
+        for model_name in selected_models:
+            print(f"  - {model_name}")
+        print("Scenarios:")
+        for scenario in scenario_paths:
+            print(f"  - {Path(scenario['path']).stem}")
+        return 0
+
+    if not auto_confirm:
+        confirm = input(
+            f"\nRun {scenario_count} scenarios against {len(selected_models)} GiveCare orchestrator model(s)? [y/N] "
+        )
+        if confirm.lower() != "y":
+            print("Aborted")
+            return 0
+
+    try:
+        health = bridge_healthcheck()
+        if verbose:
+            print(f"Bridge ready: {health.get('status', 'unknown')}")
+    except Exception as e:
+        print(f"Error: GiveCare orchestrator bridge is not ready: {e}")
+        return 1
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = generate_manifest(
+        project_root=root,
+        model_ids=[get_model_id(name) for name in selected_models],
+        harness="givecare",
+        mode="orchestrator",
+    )
+    write_manifest(manifest, output_dir)
+
+    transcript_data: List[Tuple[str, Path, Dict[str, Any], str]] = []
+    for model_name in selected_models:
+        for scenario in scenario_paths:
+            scenario_path = Path(scenario["path"])
+            transcript_path, scenario_data = run_scenario(
+                model_name,
+                str(scenario_path),
+                output_dir / "transcripts",
+                verbose=verbose,
+            )
+            transcript_data.append((model_name, transcript_path, scenario_path, scenario_data))
+
+    print(f"\nGenerated {len(transcript_data)} transcript(s)")
+    print("\nScoring transcripts...")
+    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
+
+    scoring_config = root / "benchmark" / "configs" / "scoring.yaml"
+    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
+
+    orchestrator = ScoringOrchestrator(
+        scoring_config_path=str(scoring_config),
+        enable_state_persistence=False,
+        enable_llm=True,
+    )
+
+    benchmark_run_id = str(uuid.uuid4())
+    results: List[Dict[str, Any]] = []
+    for model_name, transcript_path, scenario_path, scenario_data in transcript_data:
+        model_label = get_model_label(model_name)
+        model_id = get_model_id(model_name)
+        try:
+            score_result = orchestrator.score(
+                transcript_path=str(transcript_path),
+                scenario_path=str(scenario_path),
+                rules_path=str(rules_path),
+                model_name=model_label,
+                run_id=benchmark_run_id,
+            )
+            formatted = {
+                "model": model_label,
+                "model_id": model_id,
+                "provider": PROVIDER_NAME,
+                "scenario": scenario_data.get("title", scenario_path.stem),
+                "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
+                "category": scenario_data.get("category", "unknown"),
+                "overall_score": score_result.get("overall_score", 0.0),
+                "hard_fail": score_result.get("hard_fail", False),
+                "hard_fail_reasons": score_result.get("hard_fail_reasons", []),
+                "failure_categories": score_result.get("failure_categories", {}),
+                "gates": score_result.get("gates", {}),
+                "dimensions": score_result.get("dimensions", {}),
+                "dimension_scores": {
+                    k: v.get("score") if isinstance(v, dict) else v
+                    for k, v in score_result.get("dimension_scores", {}).items()
+                },
+                "dimensions_detailed": score_result.get("dimension_scores", {}),
+                "status": "fail" if score_result.get("hard_fail") else "pass",
+                "run_id": score_result.get("run_id"),
+                "judge_model": score_result.get("judge_model"),
+                "judge_prompt_hash": score_result.get("judge_prompt_hash"),
+                "judge_temp": score_result.get("judge_temp"),
+                "contract_version": score_result.get("contract_version", "2.0.0"),
+                "success": _compute_success(
+                    score_result.get("overall_score", 0.0),
+                    score_result.get("hard_fail", False),
+                    score_result.get("gates", {}),
+                ),
+                "transcript_path": str(transcript_path),
+                "harness_mode": "orchestrator",
+                "orchestrator_model": model_name,
+            }
+            results.append(formatted)
+            score = formatted["overall_score"]
+            status = "FAIL" if formatted["hard_fail"] else "PASS"
+            print(f"  {formatted['model']} :: {formatted['scenario']}: {status} ({int(score * 100)}%)")
+        except Exception as e:
+            print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
+            results.append(
+                {
+                    "model": model_label,
+                    "model_id": model_id,
+                    "provider": PROVIDER_NAME,
+                    "scenario": scenario_data.get("title", scenario_path.stem),
+                    "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
+                    "category": scenario_data.get("category", "unknown"),
+                    "overall_score": 0.0,
+                    "hard_fail": True,
+                    "hard_fail_reasons": [str(e)],
+                    "failure_categories": {
+                        "categories": ["error"],
+                        "details": {},
+                        "primary_category": "error",
+                        "count": 1,
+                    },
+                    "gates": {
+                        "safety": {"passed": False, "reasons": [str(e)]},
+                        "compliance": {"passed": False, "reasons": []},
+                    },
+                    "dimensions": {"regard": 0.0, "coordination": 0.0},
+                    "dimension_scores": {},
+                    "status": "error",
+                    "error": str(e),
+                    "harness_mode": "orchestrator",
+                    "orchestrator_model": model_name,
+                }
+            )
+
+    run_timestamp = datetime.now().isoformat()
+    output_data = {
+        "metadata": {
+            "provider": PROVIDER_NAME,
+            "provider_version": PROVIDER_VERSION,
+            "models": selected_models,
+            "timestamp": run_timestamp,
+            "scenario_count": len(results),
+            "include_confidential": include_confidential,
+            "mode": "orchestrator",
+        },
+        "results": results,
+    }
+
+    write_model_results(
+        results,
+        output_dir / "model_results",
+        benchmark_version=manifest.get("benchmark_version", "unknown"),
+        timestamp=run_timestamp,
+        mode=adapter_name,
+        run_metadata={
+            "run_id": benchmark_run_id,
+            "adapter": adapter_name,
+            "provider": PROVIDER_NAME,
+            "include_confidential": include_confidential,
+            "mode": "orchestrator",
+        },
+    )
+    results_path = output_dir / "all_results.json"
+    write_json(results_path, results)
+    wrapper_path = output_dir / "givecare_orchestrator_results.json"
+    write_json(wrapper_path, output_data)
+
+    report_path = output_dir / "report.html"
+    try:
+        from invisiblebench.export.reports import ReportGenerator
+
+        reporter = ReportGenerator()
+        reporter.generate_batch_report(
+            results,
+            str(report_path),
+            metadata={"model": ", ".join(selected_models), "mode": adapter_name},
+        )
+    except Exception as e:
+        print(f"Warning: Could not generate HTML report: {e}")
+
+    diag_path = None
+    if generate_diagnostic:
+        try:
+            from invisiblebench.export.diagnostic import generate_diagnostic_report
+
+            diag_path = output_dir / "diagnostic_report.md"
+            transcripts_path = output_dir / "transcripts"
+            generate_diagnostic_report(
+                results_path=str(results_path),
+                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
+                output_path=str(diag_path),
+            )
+        except Exception as e:
+            print(f"Warning: Could not generate diagnostic report: {e}")
+
+    audit = _write_run_audit(
+        results_path,
+        output_dir=output_dir,
+        expected_scenario_count=len(scenario_paths),
+        harness="givecare",
+        mode="orchestrator",
+    )
+
+    passed = sum(1 for r in results if not r.get("hard_fail"))
+    failed = len(results) - passed
+    avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
+    print(f"\n{'='*50}")
+    print("GiveCare Orchestrator Eval Results")
+    print(f"{'='*50}")
+    print(f"Models:     {len(selected_models)}")
+    print(f"Scenarios:  {len(results)}")
+    print(f"Passed:     {passed}")
+    print(f"Failed:     {failed}")
+    print(f"Average:    {avg_score:.1f}%")
+    print(f"{'='*50}")
+    print(f"Saved: {wrapper_path}")
+    if diag_path:
+        print(f"Diagnostic: {diag_path}")
+    _print_audit_summary(audit)
+    print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
+
+    if update_leaderboard:
+        if not audit.get("publishable", False):
+            print(
+                "Skipping leaderboard update: run audit marked this run as not publishable "
+                f"(owner={audit.get('primary_owner', 'benchmark')})."
+            )
+        else:
+            try:
+                _update_leaderboard(output_dir)
+                print("Leaderboard updated: data/v2/leaderboard.json")
+            except Exception as e:
+                print(f"Warning: Could not update leaderboard: {e}")
 
     return 0 if failed == 0 else 1
 
@@ -1181,6 +1582,43 @@ def _update_leaderboard(results_path: Path) -> None:
     add_results(results_path)
 
 
+def _write_run_audit(
+    source: Path,
+    *,
+    output_dir: Path,
+    expected_scenario_count: Optional[int],
+    harness: str,
+    mode: str,
+    previous_source: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Generate run audit artifacts and return the audit dict."""
+    audit = audit_results_source(
+        source,
+        expected_scenario_count=expected_scenario_count,
+        harness=harness,
+        mode=mode,
+        previous_source=previous_source,
+    )
+    write_json(output_dir / "run_audit.json", audit)
+    (output_dir / "run_audit.md").write_text(render_audit_markdown(audit))
+    return audit
+
+
+def _print_audit_summary(audit: Dict[str, Any], console: Optional[Console] = None) -> None:
+    """Print compact audit summary to console/stdout."""
+    msg = (
+        f"Audit: {audit.get('summary_status', 'WARN')} | "
+        f"valid={'yes' if audit.get('run_valid') else 'no'} | "
+        f"publishable={'yes' if audit.get('publishable') else 'no'} | "
+        f"owner={audit.get('primary_owner', 'benchmark')}"
+    )
+    if console:
+        color = "green" if audit.get("summary_status") == "PASS" else "yellow" if audit.get("summary_status") == "WARN" else "red"
+        console.print(f"[{color}]{msg}[/{color}]")
+    else:
+        print(msg)
+
+
 def run_benchmark(
     models: List[Dict],
     output_dir: Path,
@@ -1237,8 +1675,22 @@ def run_benchmark(
     manifest = generate_manifest(
         project_root=root,
         model_ids=[m["id"] for m in models],
+        harness="llm",
+        mode="raw",
     )
     write_manifest(manifest, output_dir)
+    model_results_dir = output_dir / "model_results"
+
+    def persist_model_results(model_rows: List[Dict[str, Any]]) -> None:
+        if not model_rows:
+            return
+        write_model_results(
+            model_rows,
+            model_results_dir,
+            benchmark_version=manifest.get("benchmark_version", "unknown"),
+            mode="benchmark",
+            run_metadata={"run_id": run_id, "provider": "openrouter"},
+        )
 
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
@@ -1374,6 +1826,7 @@ def run_benchmark(
                 with progress_lock:
                     model_progress[model_name] = (len(scenarios), len(scenarios), "Done")
 
+                persist_model_results(model_results)
                 return model_results
 
             async def run_models_parallel():
@@ -1478,6 +1931,7 @@ def run_benchmark(
                             run_id=run_id,
                         )
                     model_results.append(result)
+                persist_model_results(model_results)
                 return model_results
 
             async def run_parallel():
@@ -1511,6 +1965,7 @@ def run_benchmark(
         scenarios_by_cat = {c: [s for s in scenarios if s["category"] == c] for c in cats}
 
         for model in models:
+            model_results: List[Dict[str, Any]] = []
             display = ScenarioDisplay(model["name"], scenarios, start_time)
 
             with Live(
@@ -1588,6 +2043,7 @@ def run_benchmark(
                             final = run_results[0]
 
                         results.append(final)
+                        model_results.append(final)
 
                         score = final["overall_score"]
                         is_pass = not final.get("hard_fail")
@@ -1623,11 +2079,13 @@ def run_benchmark(
 
             # Print final state after Live exits (since transient=True clears it)
             console.print(display)
+            persist_model_results(model_results)
 
     else:
         # Fallback without rich - still run actual evaluations
         eval_num = 0
         for model in models:
+            model_results: List[Dict[str, Any]] = []
             for scenario in scenarios:
                 eval_num += 1
                 print(
@@ -1695,6 +2153,7 @@ def run_benchmark(
                     final = run_results[0]
 
                 results.append(final)
+                model_results.append(final)
 
                 score_val = final["overall_score"]
                 is_pass = not final.get("hard_fail")
@@ -1717,6 +2176,7 @@ def run_benchmark(
 
                 if credits_exhausted:
                     break
+            persist_model_results(model_results)
             if credits_exhausted:
                 break
 
@@ -1734,9 +2194,15 @@ def run_benchmark(
         return 1
 
     # Save results
+    write_model_results(
+        results,
+        model_results_dir,
+        benchmark_version=manifest.get("benchmark_version", "unknown"),
+        mode="benchmark",
+        run_metadata={"run_id": run_id, "provider": "openrouter"},
+    )
     results_path = output_dir / "all_results.json"
-    with open(results_path, "w") as f:
-        json.dump(results, f, indent=2)
+    write_json(results_path, results)
 
     # Generate HTML report
     report_path = output_dir / "report.html"
@@ -1748,7 +2214,7 @@ def run_benchmark(
         reporter.generate_batch_report(
             results,
             str(report_path),
-            metadata={"model": model_names, "mode": "full"},
+            metadata={"model": model_names, "mode": "llm-raw"},
         )
     except Exception as e:
         print(f"Warning: Could not generate HTML report: {e}")
@@ -1769,6 +2235,14 @@ def run_benchmark(
             )
         except Exception as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
+
+    audit = _write_run_audit(
+        results_path,
+        output_dir=output_dir,
+        expected_scenario_count=len(scenarios),
+        harness="llm",
+        mode="raw",
+    )
 
     # Print summary — use actual metered cost from OpenRouter
     if RICH_AVAILABLE and console:
@@ -2040,8 +2514,24 @@ def run_benchmark(
         if diag_path:
             print(f"Diagnostic: {diag_path}")
 
+    _print_audit_summary(audit, console if RICH_AVAILABLE else None)
+    if RICH_AVAILABLE and console:
+        console.print(f"[dim]{output_dir / 'run_audit.json'}[/dim]")
+    else:
+        print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
+
     # Update leaderboard if requested
     if update_leaderboard:
+        if not audit.get("publishable", False):
+            msg = (
+                "Skipping leaderboard update: run audit marked this run as not publishable "
+                f"(owner={audit.get('primary_owner', 'benchmark')})."
+            )
+            if RICH_AVAILABLE and console:
+                console.print(f"[yellow]{msg}[/yellow]")
+            else:
+                print(msg)
+            return 0
         try:
             _update_leaderboard(results_path)
             msg = "Leaderboard updated: data/v2/leaderboard.json"
@@ -2092,7 +2582,7 @@ def run_benchmark(
 
 
 def report_command(args) -> int:
-    """Generate HTML report from results JSON."""
+    """Generate HTML report from any supported results source."""
     console = Console() if RICH_AVAILABLE else None
 
     results_path = Path(args.results)
@@ -2104,13 +2594,20 @@ def report_command(args) -> int:
             print(msg)
         return 1
 
-    with open(results_path) as f:
-        results = json.load(f)
+    try:
+        results = load_result_rows(results_path)
+    except Exception as e:
+        msg = f"Could not load results: {e}"
+        if console:
+            console.print(f"[red]{msg}[/red]")
+        else:
+            print(msg)
+        return 1
 
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = results_path.parent / "report.html"
+        output_path = _infer_run_dir_for_output(results_path) / "report.html"
 
     try:
         from invisiblebench.export.reports import ReportGenerator
@@ -2149,26 +2646,26 @@ def diagnose_command(args) -> int:
         return 1
 
     # Determine transcripts directory
-    transcripts_dir = None
-    if args.transcripts:
-        transcripts_dir = Path(args.transcripts)
-    else:
-        # Try to find transcripts relative to results
-        parent = results_path.parent
-        if (parent / "transcripts").exists():
-            transcripts_dir = parent / "transcripts"
+    transcripts_dir = Path(args.transcripts) if args.transcripts else detect_transcripts_dir(results_path)
 
     # Determine output path
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = results_path.parent / "diagnostic_report.md"
+        output_path = (results_path if results_path.is_dir() else results_path.parent) / "diagnostic_report.md"
 
     try:
         from invisiblebench.export.diagnostic import generate_diagnostic_report
 
+        if results_path.is_file():
+            diagnostic_input = results_path
+        elif (results_path / "all_results.json").exists():
+            diagnostic_input = results_path / "all_results.json"
+        else:
+            diagnostic_input = write_aggregate_results(results_path)
+
         report = generate_diagnostic_report(
-            results_path=str(results_path),
+            results_path=str(diagnostic_input),
             transcripts_dir=str(transcripts_dir) if transcripts_dir else None,
             previous_results_path=args.previous,
             output_path=str(output_path),
@@ -2206,6 +2703,59 @@ def diagnose_command(args) -> int:
         return 1
 
 
+def audit_command(args) -> int:
+    """Generate run audit artifacts from a run/results source."""
+    console = Console() if RICH_AVAILABLE else None
+
+    results_path = Path(args.results)
+    if not results_path.exists():
+        msg = f"Results source not found: {results_path}"
+        if console:
+            console.print(f"[red]{msg}[/red]")
+        else:
+            print(msg)
+        return 1
+
+    try:
+        audit = audit_results_source(
+            results_path,
+            expected_scenario_count=args.expected_scenarios,
+            harness=args.harness,
+            mode=args.mode,
+            previous_source=args.previous,
+        )
+    except Exception as e:
+        msg = f"Failed to audit results: {e}"
+        if console:
+            console.print(f"[red]{msg}[/red]")
+        else:
+            print(msg)
+        return 1
+
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        output_dir = _infer_run_dir_for_output(results_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    write_json(output_dir / "run_audit.json", audit)
+    (output_dir / "run_audit.md").write_text(render_audit_markdown(audit))
+
+    _print_audit_summary(audit, console)
+    if console:
+        console.print(f"[green]✓[/green] Audit written: {output_dir / 'run_audit.json'}")
+    else:
+        print(f"Audit written: {output_dir / 'run_audit.json'}")
+    return 0 if audit.get("run_valid") else 1
+
+
+def _infer_run_dir_for_output(source: Path) -> Path:
+    if source.is_dir():
+        return source.parent if source.name == "model_results" else source
+    if source.parent.name == "model_results":
+        return source.parent.parent
+    return source.parent
+
+
 def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> Path:
     """Resolve a run reference to an all_results.json path.
 
@@ -2230,10 +2780,14 @@ def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> 
             return candidate.resolve()
 
         if candidate.is_dir():
-            results_file = candidate / "all_results.json"
-            if results_file.exists():
-                return results_file.resolve()
-            raise ValueError(f"Run directory missing all_results.json: {candidate}")
+            for name in ("all_results.json", "givecare_results.json"):
+                results_file = candidate / name
+                if results_file.exists():
+                    return results_file.resolve()
+            model_results_dir = candidate / "model_results"
+            if model_results_dir.exists():
+                return candidate.resolve()
+            raise ValueError(f"Run directory missing supported result artifacts: {candidate}")
 
     # Run ID / prefix reference
     results_dir = root / "results"
@@ -2263,28 +2817,22 @@ def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> 
         matches = ", ".join(str(p.relative_to(root)) for p in sorted(matched_runs))
         raise ValueError(f"Ambiguous run reference '{run_ref}' matched multiple runs: {matches}")
 
-    resolved_results = matched_runs[0] / "all_results.json"
-    if not resolved_results.exists():
-        raise ValueError(f"Resolved run is missing all_results.json: {matched_runs[0]}")
-
-    return resolved_results.resolve()
+    run_dir = matched_runs[0]
+    for name in ("all_results.json", "givecare_results.json"):
+        resolved_results = run_dir / name
+        if resolved_results.exists():
+            return resolved_results.resolve()
+    if (run_dir / "model_results").exists():
+        return run_dir.resolve()
+    raise ValueError(f"Resolved run is missing supported result artifacts: {run_dir}")
 
 
 def load_run_results(results_path: Path) -> List[Dict[str, Any]]:
-    """Load a run's all_results.json as a list of scenario result rows."""
+    """Load a run's result rows from any supported artifact source."""
     try:
-        with open(results_path) as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in {results_path}: {e}") from e
-
-    if not isinstance(data, list):
-        raise ValueError(
-            f"Expected list in {results_path}, got {type(data).__name__}. "
-            "Expected all_results.json format."
-        )
-
-    return [row for row in data if isinstance(row, dict)]
+        return [row for row in load_result_rows(results_path) if isinstance(row, dict)]
+    except Exception as e:
+        raise ValueError(f"Could not load run results from {results_path}: {e}") from e
 
 
 def aggregate_results_by_model(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -2507,17 +3055,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         epilog="""
 Examples:
   # Model Evaluation (raw LLM capability)
-  uv run bench --full -y              All 12 models (~$5-10)
-  uv run bench -m deepseek -y         Single model by name
-  uv run bench -m gpt-5.2,claude -y   Multiple models by name
-  uv run bench -m 1-4 -y              Models 1-4 (backward compat)
-  uv run bench -m 7 -y                Model 7 = DeepSeek V3.2
-  uv run bench -c safety,empathy -y   Safety + empathy categories only
+  uv run bench --full -y                    All 12 models (~$5-10)
+  uv run bench -m deepseek -y               Single model by name
+  uv run bench -m gpt-5.2,claude -y         Multiple models by name
+  uv run bench -m 1-4 -y                    Models 1-4 (backward compat)
+  uv run bench -m 7 -y                      Model 7 = DeepSeek V3.2
+  uv run bench -c safety,empathy -y         Safety + empathy categories only
+  uv run bench --harness llm --mode raw -m deepseek -y
 
-  # System Evaluation (GiveCare/Mira product)
-  uv run bench --provider givecare -y                 Standard (44 scenarios)
-  uv run bench --provider givecare -y --confidential  Full (47 scenarios)
-  uv run bench --provider givecare -c safety -y       Safety category only
+  # Eval Harness (GiveCare/Mira product)
+  uv run bench --harness givecare --mode live -y              Full live/system path
+  uv run bench --harness givecare --mode orchestrator -y      Direct Pi orchestrator harness
+  uv run bench --harness givecare --mode orchestrator -m gemini-3.1-flash-lite-preview -y
+  uv run bench --provider givecare -y                         Backward-compatible alias for live
+  uv run bench --harness givecare --mode live -y --confidential
+  uv run bench --harness givecare --mode live -c safety -y
 
   # Diagnostics
   uv run bench --provider givecare -y --diagnose  Run with diagnostic report
@@ -2603,6 +3155,16 @@ Examples:
     )
     diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
 
+    audit_parser = subparsers.add_parser(
+        "audit", help="Audit a run/results source and classify benchmark failure modes"
+    )
+    audit_parser.add_argument("results", type=str, help="Path to run dir, results JSON, or model_results/")
+    audit_parser.add_argument("--previous", "-p", type=str, help="Previous run/results source for comparability checks")
+    audit_parser.add_argument("--expected-scenarios", type=int, default=None, help="Expected scenario count per model/provider")
+    audit_parser.add_argument("--harness", type=str, choices=["llm", "givecare"], default=None)
+    audit_parser.add_argument("--mode", type=str, default=None)
+    audit_parser.add_argument("--output-dir", type=str, default=None, help="Directory for run_audit.json and run_audit.md")
+
     # Leaderboard subcommand
     lb_parser = subparsers.add_parser(
         "leaderboard", help="Manage leaderboard (add, rebuild, status)"
@@ -2685,6 +3247,19 @@ Examples:
     parser.add_argument("--full", action="store_true", help="All 12 models × all scenarios")
 
     parser.add_argument("--output", type=Path, default=None, help="Output directory")
+    parser.add_argument(
+        "--harness",
+        type=str,
+        choices=["llm", "givecare"],
+        default=None,
+        help="Eval harness to run: 'llm' (raw model benchmark) or 'givecare' (system harness)",
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default=None,
+        help="Harness mode. LLM: raw. GiveCare: live | integration | orchestrator",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
     parser.add_argument(
@@ -2732,7 +3307,7 @@ Examples:
         type=str,
         choices=["openrouter", "givecare"],
         default="openrouter",
-        help="Provider for transcript generation: 'openrouter' (raw LLM) or 'givecare' (Mira product)",
+        help="Backward-compatible alias for selecting the eval harness target",
     )
     parser.add_argument(
         "--confidential",
@@ -2757,6 +3332,9 @@ Examples:
     # Handle subcommands
     if args.command == "report":
         return report_command(args)
+
+    if args.command == "audit":
+        return audit_command(args)
 
     if args.command == "health":
         from invisiblebench.cli.health import run_health
@@ -2876,18 +3454,62 @@ Examples:
     if args.category:
         category_filter = [c.strip().lower() for c in args.category.split(",")]
 
-    # Handle GiveCare provider (system eval)
-    if args.provider == "givecare":
+    # Parse scenario filter
+    scenario_filter = None
+    if args.scenario:
+        scenario_filter = [s.strip().lower() for s in args.scenario.split(",")]
+
+    try:
+        harness_name, harness_mode = resolve_harness_mode(
+            harness=args.harness,
+            provider=args.provider,
+            mode=args.mode,
+        )
+    except ValueError as e:
+        print(str(e))
+        return 1
+
+    if not is_mode_implemented(harness_name, harness_mode):
+        print(
+            f"Harness mode not implemented yet: {harness_name}/{harness_mode}. "
+            f"Use '{harness_name}/{'live' if harness_name == 'givecare' else 'raw'}' for now."
+        )
+        return 1
+
+    # Handle GiveCare eval harness
+    if harness_name == "givecare":
+        if harness_mode == "orchestrator":
+            return run_givecare_orchestrator_eval(
+                category_filter=category_filter,
+                scenario_filter=scenario_filter,
+                include_confidential=args.confidential,
+                verbose=True,
+                dry_run=args.dry_run,
+                auto_confirm=args.yes,
+                generate_diagnostic=args.diagnose,
+                output_dir=args.output,
+                adapter_name=adapter_name(harness_name, harness_mode),
+                model_names=_parse_harness_model_names(
+                    args.models,
+                    os.environ.get("GIVECARE_ORCHESTRATOR_MODEL", "gemini-3.1-flash-lite-preview"),
+                ),
+                update_leaderboard=args.update_leaderboard,
+            )
         return run_givecare_eval(
             category_filter=category_filter,
+            scenario_filter=scenario_filter,
             include_confidential=args.confidential,
             verbose=True,
             dry_run=args.dry_run,
             auto_confirm=args.yes,
             generate_diagnostic=args.diagnose,
+            output_dir=args.output,
+            adapter_name=adapter_name(harness_name, harness_mode),
+            harness_mode=harness_mode,
+            update_leaderboard=args.update_leaderboard,
         )
 
-    # Default: run benchmark with OpenRouter (model eval)
+    # Default: raw LLM benchmark via llm/raw harness
     all_models = MODELS_FULL
 
     # Resolve which models to run
@@ -2928,11 +3550,6 @@ Examples:
                 print(f"  {i+1:>2}. {m['name']:<24} {m['id']}")
             print("\nExamples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y")
         return 1
-
-    # Parse scenario filter
-    scenario_filter = None
-    if args.scenario:
-        scenario_filter = [s.strip().lower() for s in args.scenario.split(",")]
 
     if args.output:
         output_dir = args.output

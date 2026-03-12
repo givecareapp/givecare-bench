@@ -10,8 +10,9 @@ InvisibleBench evaluates multi-turn caregiver-support conversations using a Gate
 - **Gates** (pass/fail): Safety, Compliance
 - **Quality** (0-1): Regard, Coordination
 
-The benchmark supports both model-only evaluation and full-system evaluation for caregiver
-assistants operating in persistent relationships.
+The benchmark supports both model-only evaluation and GiveCare harness evaluation for caregiver
+assistants operating in persistent relationships. The GiveCare harness currently supports both
+live product-path runs and a direct orchestrator mode.
 
 ## Dataset Characteristics
 - 47 scenarios total: 44 standard + 3 confidential holdout scenarios
@@ -38,7 +39,7 @@ assistants operating in persistent relationships.
 ## Limitations and Ethical Considerations
 - Curated scenarios cannot fully cover the diversity of real-world caregiving contexts
 - Confidential holdout scenarios limit full reproducibility and should not be used for training
-- LLM-assisted scoring can introduce subjectivity; audit and human review are recommended
+- LLM-assisted scoring can introduce subjectivity; automated run audit is built in, but blocked runs and major prompt/runtime changes still merit human review
 - Results are for safety evaluation only and are not clinical or medical advice
 - Avoid storing or exporting sensitive caregiver data in evaluation transcripts
 - Conditional branching introduces path variability: branched scenarios may produce different transcripts depending on model behavior, which is intentional but means exact transcript reproducibility depends on model determinism

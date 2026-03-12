@@ -3,10 +3,11 @@
 Leaderboard management for InvisibleBench.
 
 Usage:
-    bench leaderboard add results/run_*/all_results.json   # Add/update models from a run
-    bench leaderboard rebuild                               # Rebuild from leaderboard_ready/
-    bench leaderboard status                                # Show current leaderboard + health
-    bench leaderboard status -v                             # Verbose (per-scenario details)
+    bench leaderboard add results/run_*/all_results.json   # Add/update from flat run results
+    bench leaderboard add results/run_*/                   # Add/update from run directory model_results/
+    bench leaderboard rebuild                              # Rebuild from leaderboard_ready/
+    bench leaderboard status                               # Show current leaderboard + health
+    bench leaderboard status -v                            # Verbose (per-scenario details)
 """
 from __future__ import annotations
 
@@ -16,6 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from invisiblebench.run_audit import find_existing_audit_file
 
 try:
     from rich.console import Console
@@ -108,13 +111,47 @@ def add_results(results_path: Path) -> int:
         out(f"[red]File not found: {results_path}[/red]")
         return 1
 
+    audit_file = find_existing_audit_file(results_path)
+    if audit_file is not None:
+        with open(audit_file) as f:
+            audit = json.load(f)
+        if not audit.get("publishable", False):
+            out(
+                f"[red]Run audit blocks leaderboard add:[/red] owner={audit.get('primary_owner', 'benchmark')} "
+                f"status={audit.get('summary_status', 'BLOCK')}"
+            )
+            out(f"[dim]See {audit_file}[/dim]")
+            return 1
+
     canonical = _canonical_dir()
     canonical.mkdir(parents=True, exist_ok=True)
+
+    # Accept either a flat all_results.json or a run/model_results directory.
+    per_model_source: Optional[Path] = None
+    if results_path.is_dir():
+        model_results_dir = results_path / "model_results"
+        if model_results_dir.exists():
+            per_model_source = model_results_dir
+        elif list(results_path.glob("*.json")):
+            per_model_source = results_path
+        else:
+            out(f"[red]No model_results/ or JSON files found in: {results_path}[/red]")
+            return 1
 
     # Prepare per-model files in a temp dir first
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp = Path(tmp_dir)
-        models = _prepare(results_path, tmp)
+        if per_model_source is not None:
+            models = []
+            for f in per_model_source.glob("*.json"):
+                if f.name.startswith("."):
+                    continue
+                data = json.loads(f.read_text())
+                model_name = data.get("model", data.get("model_name", f.stem))
+                models.append(model_name)
+                (tmp / f.name).write_text(f.read_text())
+        else:
+            models = _prepare(results_path, tmp)
 
         if not models:
             out("[red]No models found in results file[/red]")

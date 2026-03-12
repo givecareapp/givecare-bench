@@ -13,69 +13,9 @@ Usage:
 
 import argparse
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
 
-
-def aggregate_model_results(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """Group results by model and aggregate scores."""
-    models = {}
-
-    for result in results:
-        model_id = result["model"]
-
-        if model_id not in models:
-            models[model_id] = {
-                "model": model_id,
-                "model_name": result.get("model", result.get("model_id", model_id)),
-                "scenarios": [],
-                "dimension_scores": {},
-                "overall_scores": [],
-                "total_cost": 0.0,
-                "benchmark_version": "v1.0.0",
-                "timestamp": result.get("timestamp", datetime.now().isoformat()),
-            }
-
-        # Collect scenario results
-        models[model_id]["scenarios"].append(
-            {
-                "scenario": result["scenario"],
-                "tier": result.get("tier", result.get("category", "unknown")),
-                "overall_score": result["overall_score"],
-                "dimension_scores": result.get("dimensions", result.get("dimension_scores", {})),
-                "status": result["status"],
-            }
-        )
-
-        # Aggregate dimension scores
-        for dim, score in result.get("dimensions", result.get("dimension_scores", {})).items():
-            if dim not in models[model_id]["dimension_scores"]:
-                models[model_id]["dimension_scores"][dim] = []
-            models[model_id]["dimension_scores"][dim].append(score)
-
-        # Collect overall scores
-        models[model_id]["overall_scores"].append(result["overall_score"])
-
-        # Add cost
-        models[model_id]["total_cost"] += result.get("cost", 0.0)
-
-    # Compute averages
-    for model_data in models.values():
-        # Average dimension scores
-        for dim in model_data["dimension_scores"]:
-            scores = model_data["dimension_scores"][dim]
-            model_data["dimension_scores"][dim] = sum(scores) / len(scores)
-
-        # Average overall score
-        model_data["overall_score"] = sum(model_data["overall_scores"]) / len(
-            model_data["overall_scores"]
-        )
-
-        # Remove temporary list
-        del model_data["overall_scores"]
-
-    return models
+from invisiblebench.results_io import aggregate_model_results
 
 
 def main():

@@ -18,6 +18,9 @@ from typing import Any
 
 import requests
 
+from invisiblebench.run_artifacts import load_model_result_documents, load_result_rows
+from invisiblebench.run_audit import find_existing_audit_file
+
 
 def _model_id_map() -> dict[str, str]:
     """Build name→id map from model config. Falls back to slug if unavailable."""
@@ -35,28 +38,22 @@ def _slugify(name: str) -> str:
 
 
 def _load_all_results(path: Path) -> list[dict[str, Any]]:
-    """Load all_results.json (flat list of scenario results)."""
-    with open(path) as f:
-        data = json.load(f)
-    if isinstance(data, list):
-        return data
-    raise ValueError(f"Expected list in {path}, got {type(data).__name__}")
+    """Load flat scenario result rows from any supported artifact source."""
+    return load_result_rows(path)
 
 
 def _load_leaderboard_ready(directory: Path) -> list[dict[str, Any]]:
-    """Load per-model JSON files from leaderboard_ready/ directory."""
-    results = []
-    for fp in sorted(directory.glob("*.json")):
-        with open(fp) as f:
-            results.append(json.load(f))
-    return results
+    """Load per-model JSON files from a canonical or run model_results directory."""
+    return load_model_result_documents(directory)
 
 
 def _build_payload_from_all_results(
     results: list[dict[str, Any]], run_id: str
 ) -> dict[str, Any]:
-    """Transform flat all_results.json into Convex publish payload."""
+    """Transform flat result rows into Convex publish payload."""
     id_map = _model_id_map()
+
+    provider_name = next((str(r.get("provider")) for r in results if r.get("provider")), "openrouter")
 
     # Group by model
     by_model: dict[str, list[dict[str, Any]]] = {}
@@ -121,7 +118,7 @@ def _build_payload_from_all_results(
 
     return {
         "runId": run_id,
-        "provider": "openrouter",
+        "provider": provider_name,
         "models": models,
     }
 
@@ -131,6 +128,7 @@ def _build_payload_from_leaderboard_ready(
 ) -> dict[str, Any]:
     """Transform leaderboard_ready/ per-model files into Convex publish payload."""
     id_map = _model_id_map()
+    provider_name = next((str(mf.get("provider")) for mf in model_files if mf.get("provider")), "openrouter")
 
     models = []
     for mf in model_files:
@@ -181,7 +179,7 @@ def _build_payload_from_leaderboard_ready(
 
     return {
         "runId": run_id,
-        "provider": "openrouter",
+        "provider": provider_name,
         "models": models,
     }
 
@@ -208,6 +206,20 @@ def publish(
         return {"error": "CONVEX_SITE_URL not set (or pass --url)"}
 
     path = Path(results_path)
+
+    audit_file = find_existing_audit_file(path)
+    if audit_file is not None:
+        with open(audit_file) as f:
+            audit = json.load(f)
+        if not audit.get("publishable", False):
+            return {
+                "error": (
+                    "Run audit blocks publish: "
+                    f"owner={audit.get('primary_owner', 'benchmark')} "
+                    f"status={audit.get('summary_status', 'BLOCK')} "
+                    f"see {audit_file}"
+                )
+            }
 
     # Generate run ID from timestamp
     run_id = f"run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"

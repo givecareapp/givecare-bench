@@ -103,6 +103,8 @@ def generate_manifest(
     project_root: Path,
     model_ids: List[str],
     run_id: Optional[str] = None,
+    harness: Optional[str] = None,
+    mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate a reproducibility manifest for a benchmark run.
 
@@ -110,6 +112,8 @@ def generate_manifest(
         project_root: Path to project root (where pyproject.toml lives).
         model_ids: List of model IDs being evaluated.
         run_id: Optional UUID4 string. Generated if not provided.
+        harness: Optional harness name (e.g. 'llm', 'givecare').
+        mode: Optional harness mode (e.g. 'raw', 'live').
 
     Returns:
         Dict with all manifest fields.
@@ -120,7 +124,7 @@ def generate_manifest(
     scenarios_dir = project_root / "benchmark" / "scenarios"
     config_path = project_root / "benchmark" / "configs" / "scoring.yaml"
 
-    return {
+    manifest = {
         "run_id": run_id,
         "git_sha": _git_sha(),
         "git_dirty": _git_dirty(),
@@ -133,6 +137,11 @@ def generate_manifest(
         "python_version": sys.version,
         "benchmark_version": _read_benchmark_version(project_root),
     }
+    if harness is not None:
+        manifest["harness"] = harness
+    if mode is not None:
+        manifest["mode"] = mode
+    return manifest
 
 
 def write_manifest(manifest: Dict[str, Any], output_dir: Path) -> Path:

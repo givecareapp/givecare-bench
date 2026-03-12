@@ -8,16 +8,17 @@ The main entry point is `uv run bench`. See root `CLAUDE.md` for full CLI refere
 
 ```bash
 # Model Evaluation (raw LLM capability)
-uv run bench --full -y                 # 12 models (~$5-10)
-uv run bench -m deepseek -y           # Single model by name
+uv run bench --full -y                 # All configured models
+uv run bench -m deepseek -y            # Single model by name
 
-# System Evaluation (GiveCare/Mira product)
-uv run bench --provider givecare -y    # 44 scenarios
-uv run bench --provider givecare -y --confidential  # 47 scenarios
+# GiveCare eval harnesses
+uv run bench --harness givecare --mode live -y
+uv run bench --harness givecare --mode orchestrator -y
+uv run bench --harness givecare --mode live -y --confidential
 
 # Diagnostic Reports
-uv run bench --provider givecare -y --diagnose
-uv run bench diagnose results/givecare/givecare_results.json
+uv run bench --harness givecare --mode live -y --diagnose
+uv run bench diagnose results/givecare/run_YYYYMMDD_HHMMSS/givecare_results.json
 
 # Health & Maintenance
 uv run bench health                    # Check leaderboard
@@ -29,17 +30,31 @@ uv run bench archive --keep 5          # Keep 5 most recent
 
 ### `givecare_provider.py`
 
-**Purpose**: System evaluation provider for GiveCare/Mira product.
+**Purpose**: Live/system-path transcript generator for the GiveCare/Mira harness.
 
-**Usage**: Called automatically via `--provider givecare` flag:
+**Usage**: Called automatically via the live GiveCare harness:
 ```bash
-uv run bench --provider givecare -y
+uv run bench --harness givecare --mode live -y
 ```
 
 **What it does**:
-1. Generates transcripts by calling Mira via gc CLI (with conditional branching support)
-2. Scores transcripts using standard scoring pipeline
-3. Outputs standardized results with `provider: "givecare"`
+1. Generates transcripts by calling Mira via the product path (with conditional branching support)
+2. Scores transcripts using the standard scoring pipeline
+3. Writes run artifacts under `results/givecare/run_YYYYMMDD_HHMMSS/`
+
+### `benchmark/invisiblebench/givecare_orchestrator.py`
+
+**Purpose**: Direct orchestrator harness for `@givecare/pi-orchestrator`.
+
+**Usage**:
+```bash
+uv run bench --harness givecare --mode orchestrator -y
+```
+
+**What it does**:
+1. Builds the local TypeScript bridge in `benchmark/adapters/givecare-orchestrator/`
+2. Runs scenarios directly against the orchestrator with a benchmark-owned runtime shim
+3. Writes run artifacts under `results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/`
 
 ### `validation/`
 
@@ -73,23 +88,77 @@ python benchmark/scripts/leaderboard/generate_leaderboard.py \
 ### Model Evaluation
 ```
 results/run_YYYYMMDD_HHMMSS/
+├── run_manifest.json               # Reproducibility manifest
 ├── transcripts/                    # Model-generated transcripts
 │   ├── model_scenario.jsonl
 │   └── ...
-├── all_results.json                # Combined results
+├── model_results/                  # Primary durable artifacts (one JSON per model)
+│   ├── GPT_5_4.json
+│   └── ...
+├── all_results.json                # Combined compatibility output
 ├── report.html                     # Summary report
+├── run_audit.json                  # Machine-readable run audit
+├── run_audit.md                    # Human-readable run audit
 └── diagnostic_report.md            # Actionable fixes (if --diagnose)
 ```
 
-### System Evaluation
+### Eval Harness (GiveCare live mode)
 ```
-results/givecare/
+results/givecare/run_YYYYMMDD_HHMMSS/
+├── run_manifest.json               # Reproducibility manifest
 ├── transcripts/                    # Mira-generated transcripts
 │   ├── givecare_*.jsonl
 │   └── ...
-├── givecare_results.json           # Scored results
+├── model_results/                  # Primary durable artifact(s)
+│   └── GiveCare__Mira_.json
+├── all_results.json                # Flat compatibility output
+├── givecare_results.json           # Provider metadata + scored results
+├── run_audit.json                  # Machine-readable run audit
+├── run_audit.md                    # Human-readable run audit
 └── diagnostic_report.md            # Actionable fixes (if --diagnose)
 ```
+
+### Eval Harness (GiveCare orchestrator mode)
+```
+results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/
+├── run_manifest.json               # Reproducibility manifest
+├── transcripts/                    # Direct orchestrator-generated transcripts
+├── model_results/                  # One JSON per underlying orchestration model
+├── all_results.json                # Flat compatibility output
+├── givecare_orchestrator_results.json
+├── report.html
+├── run_audit.json
+└── run_audit.md
+```
+
+## Run Audit
+
+Every benchmark run now emits:
+
+- `run_audit.json` — machine-readable run failure-mode audit
+- `run_audit.md` — human-readable audit checklist
+
+Audit sections cover:
+- run integrity
+- comparability / drift
+- state isolation
+- provider health
+- transcript integrity
+- judge health
+- scoring integrity
+- target configuration
+- model behavior
+- statistical stability
+- publication eligibility
+
+Use:
+```bash
+uv run bench audit results/run_YYYYMMDD_HHMMSS/
+uv run bench audit results/givecare/run_YYYYMMDD_HHMMSS/
+uv run bench audit results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/
+```
+
+Leaderboard add / publish are blocked automatically when an existing run audit marks a run as not publishable.
 
 ## Interpreting Results
 
@@ -119,7 +188,7 @@ If either gate fails → overall score = **0.0** (hard fail).
 - **error**: Evaluation error (treat as failure)
 
 ### Conditional Branches
-17 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. Both model eval and system eval support branching.
+17 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. Raw model eval, GiveCare live mode, and GiveCare orchestrator mode all support branching.
 
 ### Hard Fails
 If `hard_fail: true`, the model made a critical error:
