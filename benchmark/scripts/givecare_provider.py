@@ -28,6 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import requests
+
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -61,21 +63,21 @@ DEFAULT_DEPLOYMENT = "dev"
 class GiveCareProvider:
     """Provider that sends messages to GiveCare/Mira via gc CLI."""
 
-    def __init__(self, deployment: str = DEFAULT_DEPLOYMENT, wait_ms: int = 6000):
+    def __init__(self, deployment: str = DEFAULT_DEPLOYMENT, wait_ms: int = 15000):
         self.deployment = deployment
         self.wait_ms = wait_ms
         self.phone = self._generate_phone()
 
-        # Path to gc CLI (in givecare repo)
+        # Path to gc CLI (in give-care-mono repo)
         self.gc_cli = (
             Path(__file__).parent.parent.parent.parent
-            / "givecare"
+            / "give-care-mono"
             / "packages"
             / "cli"
             / "dist"
             / "index.js"
         )
-        self.givecare_dir = Path(__file__).parent.parent.parent.parent / "givecare"
+        self.givecare_dir = Path(__file__).parent.parent.parent.parent / "give-care-mono"
 
         if not self.gc_cli.exists():
             raise RuntimeError(f"gc CLI not found at {self.gc_cli}")
@@ -100,41 +102,71 @@ class GiveCareProvider:
 
         return result.stdout + result.stderr
 
+    def bootstrap(self) -> None:
+        """Pre-boot a phone number by calling playground:createPreBootstrappedCaregiver.
+
+        Bypasses the SMS opt-in flow entirely, creating a fully-consented, bootstrapped
+        caregiver record directly in Convex. Scenario turns then reach Mira's activeSupport
+        loop without hitting the consent gate.
+        """
+        deployment_url = DEPLOYMENTS[self.deployment]
+        resp = requests.post(
+            f"{deployment_url}/api/action",
+            json={
+                "path": "playground:createPreBootstrappedCaregiver",
+                "args": {"phone": self.phone},
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+
     def reset(self) -> None:
-        """Reset the test user (handled by gc CLI per-run)."""
-        pass  # gc CLI resets automatically
+        """Bootstrap the phone number so scenario turns reach Mira directly."""
+        self.bootstrap()
 
     def send_message(self, message: str) -> str:
-        """Send a message and get Mira's response."""
-        output = self._run_gc(
-            [
-                "simulate",
-                "--message",
-                message,
-                "--phone",
-                self.phone,
-                "--deployment",
-                self.deployment,
-                "--wait",
-                str(self.wait_ms),
-            ]
-        )
+        """Send a message and get Mira's response.
 
-        # Parse response from output
-        # Format: "User: ...\nMira: <response>\n(XXXms)"
+        Retries once with a longer wait if no response is captured on the first attempt.
+        """
+        for attempt in range(2):
+            wait = self.wait_ms if attempt == 0 else self.wait_ms + 5000
+            output = self._run_gc(
+                [
+                    "simulate",
+                    "--message",
+                    message,
+                    "--phone",
+                    self.phone,
+                    "--deployment",
+                    self.deployment,
+                    "--wait",
+                    str(wait),
+                ]
+            )
+
+            response = self._parse_mira_response(output)
+            if response:
+                return response
+
+        return "(no response)"
+
+    @staticmethod
+    def _parse_mira_response(output: str) -> Optional[str]:
+        """Extract Mira's response from gc simulate output. Returns None if not found."""
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
             if line.startswith("Mira:"):
-                # Get everything after "Mira: " until timing line
                 response_lines = []
                 response_lines.append(line[5:].strip())
                 for j in range(i + 1, len(lines)):
                     if lines[j].strip().startswith("(") and lines[j].strip().endswith("ms)"):
                         break
                     response_lines.append(lines[j])
-                return "\n".join(response_lines).strip()
-
-        return "(no response)"
+                text = "\n".join(response_lines).strip()
+                if text:
+                    return text
+        return None
 
     def close(self):
         """No cleanup needed for CLI-based provider."""
