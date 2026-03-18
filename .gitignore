@@ -100,3 +100,7 @@ benchmark/configs/prompts/*.txt
 benchmark/configs/scoring.yaml
 benchmark/configs/rules/*.yaml
 !benchmark/configs/rules/*.example.yaml
+
+# Autoresearch campaign artifacts
+autoresearch/
+.learnings/
