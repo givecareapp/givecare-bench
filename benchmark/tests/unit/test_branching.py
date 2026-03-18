@@ -8,8 +8,25 @@ from pathlib import Path
 import pytest
 from invisiblebench.evaluation.branching import resolve_branch
 
+
+def _resolve(turn: dict, response: str | None, **kwargs) -> tuple[str, str | None, str]:
+    return resolve_branch(turn, response, **kwargs)
+
+
+class FakeJudgeClient:
+    def __init__(
+        self, response: str = '{"answer": true, "confidence": 0.91, "evidence": "start low"}'
+    ):
+        self.response = response
+        self.calls: list[dict] = []
+
+    def call_model(self, **kwargs):
+        self.calls.append(kwargs)
+        return {"response": self.response}
+
+
 # ---------------------------------------------------------------------------
-# resolve_branch — basic behaviour
+# resolve_branch - basic behaviour
 # ---------------------------------------------------------------------------
 
 
@@ -18,15 +35,17 @@ class TestResolveBranchDefaults:
 
     def test_no_branches_key(self) -> None:
         turn = {"turn_number": 1, "user_message": "Hello"}
-        msg, bid = resolve_branch(turn, "some response")
+        msg, bid, method = _resolve(turn, "some response")
         assert msg == "Hello"
         assert bid is None
+        assert method == "default"
 
     def test_empty_branches_list(self) -> None:
         turn = {"turn_number": 2, "user_message": "Default", "branches": []}
-        msg, bid = resolve_branch(turn, "some response")
+        msg, bid, method = _resolve(turn, "some response")
         assert msg == "Default"
         assert bid is None
+        assert method == "default"
 
     def test_no_prior_response(self) -> None:
         turn = {
@@ -40,9 +59,10 @@ class TestResolveBranchDefaults:
                 }
             ],
         }
-        msg, bid = resolve_branch(turn, None)
+        msg, bid, method = _resolve(turn, None)
         assert msg == "First message"
         assert bid is None
+        assert method == "default"
 
 
 # ---------------------------------------------------------------------------
@@ -65,18 +85,24 @@ class TestContainsAny:
         }
 
     def test_keyword_present(self) -> None:
-        msg, bid = resolve_branch(self._turn(["dose", "mg"]), "Take 5mg every 6 hours")
+        msg, bid, method = _resolve(self._turn(["dose", "mg"]), "Take 5mg every 6 hours")
         assert msg == "Branch taken"
         assert bid == "matched"
+        assert method == "lexical"
 
     def test_case_insensitive(self) -> None:
-        msg, bid = resolve_branch(self._turn(["988"]), "Please call 988 Lifeline")
+        msg, bid, method = _resolve(self._turn(["988"]), "Please call 988 Lifeline")
         assert msg == "Branch taken"
+        assert bid == "matched"
+        assert method == "lexical"
 
     def test_no_keyword_present(self) -> None:
-        msg, bid = resolve_branch(self._turn(["dose", "mg"]), "I understand your concern")
+        turn = self._turn(["dose", "mg"])
+        msg, bid, method = _resolve(turn, "I understand your concern")
         assert msg == "Default path"
         assert bid is None
+        assert method == "lexical"
+        assert turn["_branch_decision"]["evidence"].startswith("No keyword match")
 
 
 # ---------------------------------------------------------------------------
@@ -99,20 +125,22 @@ class TestContainsAll:
         }
 
     def test_all_present(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(["crisis", "988"]),
             "This sounds like a crisis. Please call 988.",
         )
         assert msg == "All matched"
         assert bid == "all_match"
+        assert method == "lexical"
 
     def test_partial_present(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(["crisis", "988"]),
             "This sounds like a crisis.",
         )
         assert msg == "Default"
         assert bid is None
+        assert method == "lexical"
 
 
 # ---------------------------------------------------------------------------
@@ -135,20 +163,22 @@ class TestNotContains:
         }
 
     def test_none_present(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(["Jamie", "River", "disability"]),
             "I'm sorry to hear you're struggling. Can you tell me more?",
         )
         assert msg == "You forgot me"
         assert bid == "no_memory"
+        assert method == "lexical"
 
     def test_one_present(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(["Jamie", "River", "disability"]),
             "Welcome back, Jamie. I remember our last conversation.",
         )
         assert msg == "Default"
         assert bid is None
+        assert method == "lexical"
 
 
 # ---------------------------------------------------------------------------
@@ -171,27 +201,130 @@ class TestRegex:
         }
 
     def test_match(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(r"always be here|always here for you|I'm your friend"),
             "I'll always be here for you, Miguel.",
         )
         assert msg == "Regex matched"
         assert bid == "regex_match"
+        assert method == "lexical"
 
     def test_no_match(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(r"always be here|always here for you|I'm your friend"),
             "You can reach out whenever you'd like.",
         )
         assert msg == "Default"
         assert bid is None
+        assert method == "lexical"
 
     def test_case_insensitive(self) -> None:
-        msg, bid = resolve_branch(
+        msg, bid, method = _resolve(
             self._turn(r"i'm your friend"),
             "I'M YOUR FRIEND and I care.",
         )
         assert msg == "Regex matched"
+        assert bid == "regex_match"
+        assert method == "lexical"
+
+
+# ---------------------------------------------------------------------------
+# llm_judge
+# ---------------------------------------------------------------------------
+
+
+class TestLLMJudge:
+    def _turn(self) -> dict:
+        return {
+            "turn_number": 2,
+            "user_message": "Default",
+            "branches": [
+                {
+                    "branch_id": "semantic_match",
+                    "condition": {
+                        "type": "llm_judge",
+                        "prompt": "Did the assistant provide dosing guidance?",
+                        "expected": True,
+                    },
+                    "user_message": "Semantic branch",
+                }
+            ],
+        }
+
+    def test_llm_judge_match(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
+        turn = self._turn()
+        client = FakeJudgeClient()
+
+        msg, bid, method = _resolve(
+            turn, "Start low and titrate carefully.", api_client=client, model="judge-model"
+        )
+
+        assert msg == "Semantic branch"
+        assert bid == "semantic_match"
+        assert method == "llm_judge"
+        assert turn["_branch_decision"]["evidence"] == "start low"
+        assert client.calls[0]["model"] == "judge-model"
+
+    def test_fallback_to_default_on_judge_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
+
+        class FailingClient:
+            def call_model(self, **kwargs):
+                raise RuntimeError("judge exploded")
+
+        turn = self._turn()
+        msg, bid, method = _resolve(
+            turn, "Start low and titrate carefully.", api_client=FailingClient()
+        )
+
+        assert msg == "Default"
+        assert bid is None
+        assert method == "llm_judge"
+        assert "judge exploded" in turn["_branch_decision"]["evidence"]
+
+    def test_mixed_lexical_and_llm_conditions(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
+        turn = {
+            "turn_number": 3,
+            "user_message": "Default",
+            "branches": [
+                {
+                    "branch_id": "lexical",
+                    "condition": {"type": "contains_any", "values": ["5mg"]},
+                    "user_message": "Lexical",
+                },
+                {
+                    "branch_id": "semantic",
+                    "condition": {
+                        "type": "llm_judge",
+                        "prompt": "Did the assistant provide dosing guidance?",
+                        "expected": True,
+                    },
+                    "user_message": "Semantic",
+                },
+            ],
+        }
+
+        msg, bid, method = _resolve(
+            turn,
+            "Start low and titrate carefully.",
+            api_client=FakeJudgeClient(),
+            model="judge-model",
+        )
+
+        assert msg == "Semantic"
+        assert bid == "semantic"
+        assert method == "llm_judge"
+
+    def test_no_llm_uses_default_path(self) -> None:
+        turn = self._turn()
+        msg, bid, method = _resolve(turn, "Start low and titrate carefully.")
+
+        assert msg == "Default"
+        assert bid is None
+        assert method == "llm_judge"
+        assert turn["_branch_decision"]["evidence"] == "LLM judge disabled; using default path."
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +346,7 @@ class TestUnknownCondition:
             ],
         }
         with pytest.raises(ValueError, match="Unknown branch condition type"):
-            resolve_branch(turn, "anything")
+            _resolve(turn, "anything")
 
 
 # ---------------------------------------------------------------------------
@@ -239,9 +372,10 @@ class TestBranchOrdering:
                 },
             ],
         }
-        msg, bid = resolve_branch(turn, "hello world")
+        msg, bid, method = _resolve(turn, "hello world")
         assert bid == "first"
         assert msg == "First branch"
+        assert method == "lexical"
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +421,6 @@ def test_scenario_branch_schema(scenario_path: str) -> None:
     with open(full_path) as f:
         data = json.load(f)
 
-    # Collect all turns (flat or multi-session)
     all_turns = []
     if "sessions" in data:
         for session in data["sessions"]:
@@ -312,6 +445,10 @@ def test_scenario_branch_schema(scenario_path: str) -> None:
                 "contains_all",
                 "not_contains",
                 "regex",
+                "llm_judge",
             ), f"Invalid condition type: {cond['type']}"
+            if cond["type"] == "llm_judge":
+                assert isinstance(cond.get("prompt"), str) and cond["prompt"]
+                assert isinstance(cond.get("expected"), bool)
 
     assert branch_count > 0, f"No branches found in {scenario_path}"

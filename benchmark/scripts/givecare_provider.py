@@ -17,10 +17,14 @@ Usage:
 
     # Filter by category
     python benchmark/scripts/givecare_provider.py --all --category safety --score
+
+    # Disable LLM judges for offline/default-path branching
+    python benchmark/scripts/givecare_provider.py --all --score --no-llm
 """
 
 import argparse
 import json
+import os
 import random
 import string
 import sys
@@ -34,6 +38,7 @@ from dotenv import load_dotenv
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.results_io import write_json, write_model_results
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
@@ -220,6 +225,7 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
+    allow_llm: bool = True,
 ) -> tuple[Path, Dict]:
     """Run a single scenario and generate transcript. Returns (transcript_path, scenario_data)."""
     scenario = load_scenario(scenario_path)
@@ -237,12 +243,26 @@ def run_scenario(
 
     transcript = []
     prev_assistant_msg: Optional[str] = None
+    branch_api_client: Optional[ModelAPIClient] = None
+    branch_model: Optional[str] = None
+    if allow_llm:
+        try:
+            branch_api_client = ModelAPIClient()
+            branch_model = resolve_scorer_model(branch_api_client, "branching")
+        except Exception:
+            branch_api_client = None
+            branch_model = None
 
     for turn in turns:
         turn_num = turn["turn_number"]
 
         # Resolve conditional branch (adaptive user message).
-        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+        user_msg, branch_id, branch_method = resolve_branch(
+            turn,
+            prev_assistant_msg,
+            api_client=branch_api_client,
+            model=branch_model,
+        )
 
         if verbose:
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
@@ -255,6 +275,10 @@ def run_scenario(
         }
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
+        branch_decision = turn.pop("_branch_decision", None)
+        if branch_decision:
+            user_entry["branch_method"] = branch_method
+            user_entry["branch_evidence"] = branch_decision.get("evidence", "")
         transcript.append(user_entry)
 
         try:
@@ -423,8 +447,16 @@ Examples:
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--score", action="store_true", help="Score transcripts after generation")
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Disable LLM-based scorers and llm_judge branch routing (default path only)",
+    )
 
     args = parser.parse_args()
+
+    if args.no_llm:
+        os.environ["INVISIBLEBENCH_DISABLE_JUDGE_LLM"] = "1"
 
     if not args.scenario and not args.all:
         parser.print_help()
@@ -438,7 +470,12 @@ Examples:
     if args.output:
         output_dir = project_root / args.output
     else:
-        output_dir = project_root / "results" / "givecare" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        output_dir = (
+            project_root
+            / "results"
+            / "givecare"
+            / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
 
     # Get scenarios to run
     if args.scenario:
@@ -480,6 +517,7 @@ Examples:
                 str(scenario_path),
                 output_dir / "transcripts",
                 verbose=args.verbose,
+                allow_llm=not args.no_llm,
             )
             transcript_data.append((transcript_path, scenario_path, scenario_data))
     finally:
@@ -498,7 +536,7 @@ Examples:
         orchestrator = ScoringOrchestrator(
             scoring_config_path=str(scoring_config),
             enable_state_persistence=False,
-            enable_llm=True,
+            enable_llm=not args.no_llm,
         )
 
         results = []
@@ -588,14 +626,14 @@ Examples:
         failed = len(results) - passed
         avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
 
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print("GiveCare Eval Results")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
         print(f"Scenarios: {len(results)}")
         print(f"Passed:    {passed}")
         print(f"Failed:    {failed}")
         print(f"Average:   {avg_score:.1f}%")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
         print(f"Saved: {results_path}")
 
         audit = audit_results_source(

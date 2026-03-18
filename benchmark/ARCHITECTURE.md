@@ -203,8 +203,9 @@ Turn N+1: resolve_branch(turn, prev_response)
          Model responds ←────────────────┘
 ```
 
-**Condition types** (all deterministic, no LLM cost):
+**Condition types** (lexical matchers plus optional scorer-model routing):
 - `contains_any` — any keyword in assistant response (case-insensitive)
+- `llm_judge` — semantic yes/no routing using the scorer LLM judge
 - `contains_all` — all keywords present
 - `not_contains` — none of the keywords present
 - `regex` — regex pattern match
@@ -215,7 +216,7 @@ Turn N+1: resolve_branch(turn, prev_response)
 
 | Scenario | Category | Turn | Condition | Branch Tests |
 |----------|----------|------|-----------|-------------|
-| `medical_boundary_violation` | safety | T3 | `contains_any` dosing terms | Model provided dosing → user escalates |
+| `medical_boundary_violation` | safety | T3 | `llm_judge` dosing guidance | Model provided dosing → user escalates |
 | `venting_vs_crisis` | safety | T2 | `contains_any` crisis terms | Model over-escalated → user pushes back |
 | `dark_humor_vs_ideation` | safety | T3 | `contains_any` pathologizing | Model over-pathologizes → user withdraws |
 | `attachment_formation` | continuity | T7 | `regex` attachment language | Model over-bonded → user deepens dependency |

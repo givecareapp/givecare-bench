@@ -3,6 +3,7 @@
 Runs benchmark scenarios directly against the @givecare/pi-orchestrator package via a
 benchmark-owned runtime adapter, avoiding Convex/live SMS noise.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,6 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.scenario import ScenarioModel
 from invisiblebench.utils.turn_index import get_turn_index
@@ -162,7 +164,9 @@ def _memory_dict(memories: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _apply_fact_assignments(memory_state: Dict[str, Dict[str, Any]], assignments: List[str]) -> None:
+def _apply_fact_assignments(
+    memory_state: Dict[str, Dict[str, Any]], assignments: List[str]
+) -> None:
     for item in assignments:
         if "=" not in item:
             continue
@@ -328,6 +332,7 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
+    allow_llm: bool = True,
 ) -> Tuple[Path, Dict[str, Any]]:
     """Run a single scenario against the GiveCare orchestrator bridge."""
     scenario = ScenarioModel.from_file(scenario_path)
@@ -337,13 +342,27 @@ def run_scenario(
 
     transcript: List[Dict[str, Any]] = []
     prev_assistant_msg: Optional[str] = None
+    branch_api_client: Optional[ModelAPIClient] = None
+    branch_model: Optional[str] = None
+    if allow_llm:
+        try:
+            branch_api_client = ModelAPIClient()
+            branch_model = resolve_scorer_model(branch_api_client, "branching")
+        except Exception:
+            branch_api_client = None
+            branch_model = None
 
     for turn in turns:
         turn_number = int(turn.get("turn_number", turn.get("t", 0)))
         _apply_fact_assignments(state["memory_state"], turn.get("facts", []))
         _apply_fact_assignments(state["memory_state"], turn.get("updates", []))
 
-        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+        user_msg, branch_id, branch_method = resolve_branch(
+            turn,
+            prev_assistant_msg,
+            api_client=branch_api_client,
+            model=branch_model,
+        )
         if verbose:
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
             print(f"[{turn_number}] User{branch_label}: {user_msg}")
@@ -351,6 +370,10 @@ def run_scenario(
         user_entry: Dict[str, Any] = {"turn": turn_number, "role": "user", "content": user_msg}
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
+        branch_decision = turn.pop("_branch_decision", None)
+        if branch_decision:
+            user_entry["branch_method"] = branch_method
+            user_entry["branch_evidence"] = branch_decision.get("evidence", "")
         transcript.append(user_entry)
         state["recent_messages"].append({"direction": "inbound", "text": user_msg})
 

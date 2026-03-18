@@ -81,7 +81,7 @@ Tests long-term relationship dynamics:
 
 ## Conditional Branching
 
-17 scenarios include **conditional branches** where the user's next message adapts based on the model's response. Examples:
+17 scenarios include **conditional branches** where the user's next message adapts based on the model's response. Branches can use lexical matchers or semantic `llm_judge` routing. Examples:
 
 | Scenario | Category | Branch At | Tests |
 |----------|----------|-----------|-------|

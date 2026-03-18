@@ -64,6 +64,51 @@ class ScenarioValidator:
                 errors.append(f"{label}[{idx}] missing severity")
 
     @staticmethod
+    def _validate_branches(branches: Any, errors: List[str], label: str) -> None:
+        if not isinstance(branches, list):
+            errors.append(f"{label} must be a list")
+            return
+
+        valid_types = {"contains_any", "contains_all", "not_contains", "regex", "llm_judge"}
+        lexical_types = {"contains_any", "contains_all", "not_contains"}
+
+        for idx, branch in enumerate(branches):
+            if not isinstance(branch, dict):
+                errors.append(f"{label}[{idx}] must be an object")
+                continue
+
+            if not isinstance(branch.get("branch_id"), str) or not branch.get("branch_id"):
+                errors.append(f"{label}[{idx}] missing branch_id")
+
+            if not isinstance(branch.get("user_message"), str) or not branch.get("user_message"):
+                errors.append(f"{label}[{idx}] missing user_message")
+
+            condition = branch.get("condition")
+            if not isinstance(condition, dict):
+                errors.append(f"{label}[{idx}].condition must be an object")
+                continue
+
+            ctype = condition.get("type")
+            if ctype not in valid_types:
+                errors.append(f"{label}[{idx}] invalid condition type: {ctype}")
+                continue
+
+            if ctype in lexical_types:
+                values = condition.get("values")
+                if not isinstance(values, list) or not values:
+                    errors.append(f"{label}[{idx}].condition.values must be a non-empty list")
+            elif ctype == "regex":
+                pattern = condition.get("pattern")
+                if not isinstance(pattern, str) or not pattern:
+                    errors.append(f"{label}[{idx}].condition.pattern must be a non-empty string")
+            elif ctype == "llm_judge":
+                prompt = condition.get("prompt")
+                if not isinstance(prompt, str) or not prompt:
+                    errors.append(f"{label}[{idx}].condition.prompt must be a non-empty string")
+                if not isinstance(condition.get("expected"), bool):
+                    errors.append(f"{label}[{idx}].condition.expected must be a boolean")
+
+    @staticmethod
     def _validate_turn_list(turns: Any, errors: List[str], label: str) -> None:
         if not isinstance(turns, list):
             errors.append(f"{label} must be a list")
@@ -107,6 +152,11 @@ class ScenarioValidator:
                     turn.get("probes"), errors, f"{label}[{idx}].probes"
                 )
 
+            if "branches" in turn:
+                ScenarioValidator._validate_branches(
+                    turn.get("branches"), errors, f"{label}[{idx}].branches"
+                )
+
     @staticmethod
     def validate_scenario(data: Dict[str, Any]) -> List[str]:
         """
@@ -128,8 +178,17 @@ class ScenarioValidator:
             errors.append("Missing required field: tier or category")
 
         # Validate category values (accept both old tier_N and new category names)
-        VALID_VALUES = {"safety", "empathy", "context", "continuity", "confidential",
-                       "tier_0", "tier_1", "tier_2", "tier_3"}
+        VALID_VALUES = {
+            "safety",
+            "empathy",
+            "context",
+            "continuity",
+            "confidential",
+            "tier_0",
+            "tier_1",
+            "tier_2",
+            "tier_3",
+        }
         tier_val = data.get("tier", "")
         cat_val = data.get("category", "")
         if tier_val and tier_val not in VALID_VALUES:

@@ -192,9 +192,10 @@ Scenarios can include conditional branches where the user's next message depends
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
 - **17 branched scenarios**: includes medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust, and 12 more
-- **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
+- **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`, `llm_judge`
 - **All implemented transcript generators**: Works in raw model eval, GiveCare live mode, and GiveCare orchestrator mode
-- **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
+- **`--no-llm` fallback**: disables `llm_judge` routing and keeps the default user path
+- **Transcript audit**: Branch IDs plus branch method/evidence recorded in JSONL (`"branch_id": "boundary_failed"`, `"branch_method": "llm_judge"`)
 - **Rerun required**: Branching changes transcript content for branched scenarios
 
 ## Statistical Analysis
