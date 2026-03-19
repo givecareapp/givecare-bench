@@ -15,6 +15,7 @@ uv run bench -m 1-4 -p 4 -y            # 4 parallel
 uv run bench -m deepseek --runs 3 -y   # 3 runs per scenario (median score)
 uv run bench --dry-run                 # Cost estimate + current model catalog
 uv run bench -m deepseek -y --detailed # Per-scenario JSON/HTML
+uv run bench -m deepseek -y --no-llm   # Disable scorer/branch judges, keep default branch paths
 
 # Rerun specific model (use after errors)
 uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
@@ -192,9 +193,11 @@ Scenarios can include conditional branches where the user's next message depends
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
 - **17 branched scenarios**: includes medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust, and 12 more
-- **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
+- **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`, `llm_judge`
+- **Semantic branching**: `llm_judge` reuses the rubric judge path for yes/no semantic routing on paraphrased violations
 - **All implemented transcript generators**: Works in raw model eval, GiveCare live mode, and GiveCare orchestrator mode
-- **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)
+- **Transcript audit**: Branch metadata recorded in JSONL (`"branch_id"`, `"branch_method"`, `"branch_evidence"`)
+- **Graceful degradation**: `--no-llm` disables `llm_judge` routing and falls back to the default user message
 - **Rerun required**: Branching changes transcript content for branched scenarios
 
 ## Statistical Analysis

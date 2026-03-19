@@ -73,9 +73,11 @@ turns:  # Conversation turns (Tier 0/1/2)
     branches: array[branch]  # Optional conditional branches (adaptive user messages)
       - branch_id: string  # Unique identifier for this branch (e.g., "boundary_failed")
         condition: object  # Condition evaluated against PREVIOUS turn's assistant response
-          type: enum [contains_any, contains_all, not_contains, regex]
+          type: enum [contains_any, contains_all, not_contains, regex, llm_judge]
           values: array[string]  # Keywords for contains_any/contains_all/not_contains
           pattern: string  # Regex pattern (for type: regex)
+          prompt: string  # Semantic yes/no question for type: llm_judge
+          expected: boolean  # Required for type: llm_judge; branch triggers when judge answer matches
         user_message: string  # Alternate user message when condition matches
         expected_behaviors: array[string]  # Optional branch-specific expected behaviors
         autofail_triggers: array[string]  # Optional branch-specific autofail triggers

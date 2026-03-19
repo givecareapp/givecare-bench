@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.evaluation.branching import get_branch_resolution, resolve_branch
 from invisiblebench.models.scenario import ScenarioModel
 from invisiblebench.utils.turn_index import get_turn_index
 
@@ -328,6 +328,7 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
+    branch_api_client: Optional[Any] = None,
 ) -> Tuple[Path, Dict[str, Any]]:
     """Run a single scenario against the GiveCare orchestrator bridge."""
     scenario = ScenarioModel.from_file(scenario_path)
@@ -343,14 +344,23 @@ def run_scenario(
         _apply_fact_assignments(state["memory_state"], turn.get("facts", []))
         _apply_fact_assignments(state["memory_state"], turn.get("updates", []))
 
-        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+        user_msg, branch_id, branch_method = resolve_branch(
+            turn,
+            prev_assistant_msg,
+            api_client=branch_api_client,
+            model=None,
+        )
         if verbose:
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
             print(f"[{turn_number}] User{branch_label}: {user_msg}")
 
         user_entry: Dict[str, Any] = {"turn": turn_number, "role": "user", "content": user_msg}
+        resolution = get_branch_resolution(turn)
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
+        if resolution is not None:
+            user_entry["branch_method"] = branch_method
+            user_entry["branch_evidence"] = resolution["evidence"]
         transcript.append(user_entry)
         state["recent_messages"].append({"direction": "inbound", "text": user_msg})
 

@@ -13,6 +13,8 @@ from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indic
 class ScenarioValidator:
     """Validate scenario JSON structure and content."""
 
+    VALID_BRANCH_TYPES = {"contains_any", "contains_all", "not_contains", "regex", "llm_judge"}
+
     @staticmethod
     def _validate_probe_list(probes: Any, errors: List[str], label: str) -> None:
         if not isinstance(probes, list):
@@ -64,6 +66,53 @@ class ScenarioValidator:
                 errors.append(f"{label}[{idx}] missing severity")
 
     @staticmethod
+    def _validate_branches(branches: Any, errors: List[str], label: str) -> None:
+        if not isinstance(branches, list):
+            errors.append(f"{label} must be a list")
+            return
+
+        for idx, branch in enumerate(branches):
+            if not isinstance(branch, dict):
+                errors.append(f"{label}[{idx}] must be an object")
+                continue
+
+            if not isinstance(branch.get("branch_id"), str) or not branch.get("branch_id"):
+                errors.append(f"{label}[{idx}] missing branch_id")
+
+            if "condition" not in branch:
+                errors.append(f"{label}[{idx}] missing condition")
+                continue
+
+            if not isinstance(branch.get("user_message"), str) or not branch.get("user_message"):
+                errors.append(f"{label}[{idx}] missing user_message")
+
+            condition = branch.get("condition")
+            if not isinstance(condition, dict):
+                errors.append(f"{label}[{idx}].condition must be an object")
+                continue
+
+            ctype = condition.get("type")
+            if not isinstance(ctype, str) or ctype not in ScenarioValidator.VALID_BRANCH_TYPES:
+                errors.append(f"{label}[{idx}].condition has invalid type")
+                continue
+
+            if ctype in {"contains_any", "contains_all", "not_contains"}:
+                values = condition.get("values")
+                if not isinstance(values, list) or not values:
+                    errors.append(f"{label}[{idx}].condition.values must be a non-empty list")
+            elif ctype == "regex":
+                pattern = condition.get("pattern")
+                if not isinstance(pattern, str) or not pattern:
+                    errors.append(f"{label}[{idx}].condition.pattern must be a non-empty string")
+            elif ctype == "llm_judge":
+                prompt = condition.get("prompt")
+                expected = condition.get("expected")
+                if not isinstance(prompt, str) or not prompt.strip():
+                    errors.append(f"{label}[{idx}].condition.prompt must be a non-empty string")
+                if not isinstance(expected, bool):
+                    errors.append(f"{label}[{idx}].condition.expected must be a boolean")
+
+    @staticmethod
     def _validate_turn_list(turns: Any, errors: List[str], label: str) -> None:
         if not isinstance(turns, list):
             errors.append(f"{label} must be a list")
@@ -105,6 +154,11 @@ class ScenarioValidator:
             if "probes" in turn:
                 ScenarioValidator._validate_probe_list(
                     turn.get("probes"), errors, f"{label}[{idx}].probes"
+                )
+
+            if "branches" in turn:
+                ScenarioValidator._validate_branches(
+                    turn.get("branches"), errors, f"{label}[{idx}].branches"
                 )
 
     @staticmethod

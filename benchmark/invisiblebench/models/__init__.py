@@ -27,6 +27,8 @@ from invisiblebench.models.results import (
 
 # Re-export Pydantic scenario models
 from invisiblebench.models.scenario import (
+    BranchConditionModel,
+    BranchModel,
     PersonaModel,
     ScenarioModel,
     SessionModel,
@@ -48,6 +50,8 @@ __all__ = [
     "ScenarioResult",
     "TierSummary",
     # Pydantic scenario models
+    "BranchConditionModel",
+    "BranchModel",
     "PersonaModel",
     "ScenarioModel",
     "SessionModel",
@@ -103,6 +107,7 @@ class Turn:
     updates: List[str] = field(default_factory=list)
     rubric_criteria: List[Dict[str, Any]] = field(default_factory=list)
     probes: List[Dict[str, Any]] = field(default_factory=list)
+    branches: List[Dict[str, Any]] = field(default_factory=list)
     context_notes: Optional[str] = None
 
     @classmethod
@@ -120,6 +125,7 @@ class Turn:
             updates=data.get("updates", []),
             rubric_criteria=data.get("rubric_criteria", []),
             probes=data.get("probes", []),
+            branches=data.get("branches", []),
             context_notes=data.get("context_notes"),
         )
 

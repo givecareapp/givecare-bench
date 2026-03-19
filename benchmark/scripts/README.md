@@ -188,7 +188,9 @@ If either gate fails → overall score = **0.0** (hard fail).
 - **error**: Evaluation error (treat as failure)
 
 ### Conditional Branches
-17 scenarios include adaptive user messages. When a branch is taken, the transcript JSONL includes a `branch_id` field on the user message entry. Raw model eval, GiveCare live mode, and GiveCare orchestrator mode all support branching.
+17 scenarios include adaptive user messages. When a branch is evaluated, the transcript JSONL can include `branch_id`, `branch_method`, and `branch_evidence` on the user message entry. Raw model eval, GiveCare live mode, and GiveCare orchestrator mode all support branching.
+
+Branch conditions can be lexical (`contains_any`, `contains_all`, `not_contains`, `regex`) or semantic (`llm_judge`). `llm_judge` reuses the rubric judge path for paraphrase-robust routing and falls back to the default user path if the judge is unavailable or disabled with `--no-llm`.
 
 ### Hard Fails
 If `hard_fail: true`, the model made a critical error:
@@ -230,6 +232,8 @@ uv run bench -m deepseek -y
 | `INVISIBLEBENCH_DISABLE_LLM` | `false` | Force offline mode (deterministic scoring only) |
 | `INVISIBLEBENCH_SCORER_MODEL` | `google/gemini-2.5-flash-lite` | Override scorer model globally |
 | `INVISIBLEBENCH_{SCORER}_MODEL` | (per-scorer) | Override model for specific scorer (e.g., `INVISIBLEBENCH_SAFETY_MODEL`) |
+
+CLI note: `uv run bench ... --no-llm` disables scorer LLMs and `llm_judge` branch conditions without disabling transcript generation against the model under test.
 
 ## Development
 

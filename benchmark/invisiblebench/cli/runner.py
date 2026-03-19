@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 
 from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
-from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.evaluation.branching import get_branch_resolution, resolve_branch
 from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.results_io import write_json, write_model_results
@@ -112,6 +112,7 @@ def run_givecare_eval(
     adapter_name: str = "givecare-live",
     harness_mode: str = "live",
     update_leaderboard: bool = False,
+    enable_llm: bool = True,
 ) -> int:
     """Run the GiveCare eval harness in one supported mode.
 
@@ -192,6 +193,16 @@ def run_givecare_eval(
     write_manifest(manifest, output_dir)
 
     # Run scenarios
+    branch_api_client = None
+    if enable_llm:
+        try:
+            from invisiblebench.api.client import ModelAPIClient
+
+            branch_api_client = ModelAPIClient()
+        except Exception as e:
+            if verbose:
+                print(f"Warning: branch LLM judge unavailable, default paths only ({e})")
+
     provider = GiveCareProvider(deployment="dev", wait_ms=15000)
     transcript_data = []
 
@@ -203,6 +214,7 @@ def run_givecare_eval(
                 str(scenario_path),
                 output_dir / "transcripts",
                 verbose=verbose,
+                branch_api_client=branch_api_client,
             )
             transcript_data.append((transcript_path, scenario_path, scenario_data))
     finally:
@@ -220,7 +232,7 @@ def run_givecare_eval(
     orchestrator = ScoringOrchestrator(
         scoring_config_path=str(scoring_config),
         enable_state_persistence=False,
-        enable_llm=True,
+        enable_llm=enable_llm,
     )
 
     givecare_run_id = str(uuid.uuid4())
@@ -390,6 +402,7 @@ def run_givecare_orchestrator_eval(
     adapter_name: str = "givecare-orchestrator",
     model_names: Optional[List[str]] = None,
     update_leaderboard: bool = False,
+    enable_llm: bool = True,
 ) -> int:
     """Run the GiveCare orchestrator harness directly against the benchmark."""
     from invisiblebench.givecare_orchestrator import (
@@ -487,6 +500,16 @@ def run_givecare_orchestrator_eval(
     )
     write_manifest(manifest, output_dir)
 
+    branch_api_client = None
+    if enable_llm:
+        try:
+            from invisiblebench.api.client import ModelAPIClient
+
+            branch_api_client = ModelAPIClient()
+        except Exception as e:
+            if verbose:
+                print(f"Warning: branch LLM judge unavailable, default paths only ({e})")
+
     transcript_data: List[Tuple[str, Path, Dict[str, Any], str]] = []
     for model_name in selected_models:
         for scenario in scenario_paths:
@@ -496,6 +519,7 @@ def run_givecare_orchestrator_eval(
                 str(scenario_path),
                 output_dir / "transcripts",
                 verbose=verbose,
+                branch_api_client=branch_api_client,
             )
             transcript_data.append((model_name, transcript_path, scenario_path, scenario_data))
 
@@ -509,7 +533,7 @@ def run_givecare_orchestrator_eval(
     orchestrator = ScoringOrchestrator(
         scoring_config_path=str(scoring_config),
         enable_state_persistence=False,
-        enable_llm=True,
+        enable_llm=enable_llm,
     )
 
     benchmark_run_id = str(uuid.uuid4())
@@ -1028,7 +1052,13 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
 
 
-def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_path: Path) -> Path:
+def generate_transcript(
+    model_id: str,
+    scenario: Dict,
+    api_client: Any,
+    output_path: Path,
+    branch_api_client: Optional[Any] = None,
+) -> Path:
     """Generate model transcript from scenario.
 
     Raises:
@@ -1059,11 +1089,20 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_p
         turn_num = turn["turn_number"]
 
         # Resolve conditional branch (adaptive user message).
-        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+        user_msg, branch_id, branch_method = resolve_branch(
+            turn,
+            prev_assistant_msg,
+            api_client=branch_api_client,
+            model=None,
+        )
 
         user_entry: Dict[str, Any] = {"turn": turn_num, "role": "user", "content": user_msg}
+        resolution = get_branch_resolution(turn)
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
+        if resolution is not None:
+            user_entry["branch_method"] = branch_method
+            user_entry["branch_evidence"] = resolution["evidence"]
         transcript.append(user_entry)
         conversation_history.append({"role": "user", "content": user_msg})
 
@@ -1146,6 +1185,7 @@ async def evaluate_scenario_async(
     detailed_output: bool = False,
     run_suffix: str = "",
     run_id: Optional[str] = None,
+    branch_api_client: Optional[Any] = None,
 ) -> Dict:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
@@ -1195,15 +1235,24 @@ async def evaluate_scenario_async(
                 turn_num = turn["turn_number"]
 
                 # Resolve conditional branch (adaptive user message).
-                user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+                user_msg, branch_id, branch_method = resolve_branch(
+                    turn,
+                    prev_assistant_msg,
+                    api_client=branch_api_client,
+                    model=None,
+                )
 
                 user_entry: Dict[str, Any] = {
                     "turn": turn_num,
                     "role": "user",
                     "content": user_msg,
                 }
+                resolution = get_branch_resolution(turn)
                 if branch_id is not None:
                     user_entry["branch_id"] = branch_id
+                if resolution is not None:
+                    user_entry["branch_method"] = branch_method
+                    user_entry["branch_evidence"] = resolution["evidence"]
                 transcript.append(user_entry)
                 conversation_history.append({"role": "user", "content": user_msg})
 
@@ -1391,6 +1440,7 @@ def _run_single_scenario(
     run_suffix: str,
     output_dir: Path,
     api_client,
+    branch_api_client,
     orchestrator,
     rules_path: Path,
     detailed_output: bool = False,
@@ -1403,7 +1453,11 @@ def _run_single_scenario(
 
     try:
         transcript_path = generate_transcript(
-            model["id"], scenario, api_client, transcript_path
+            model["id"],
+            scenario,
+            api_client,
+            transcript_path,
+            branch_api_client=branch_api_client,
         )
     except InsufficientCreditsError:
         raise
@@ -1631,6 +1685,7 @@ def run_benchmark(
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
     runs: int = 1,
+    enable_llm: bool = True,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
@@ -1752,6 +1807,8 @@ def run_benchmark(
         print(f"ERROR: Failed to initialize API client: {e}")
         return 1
 
+    branch_api_client = api_client if enable_llm else None
+
     # Initialize orchestrator
     try:
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
@@ -1762,7 +1819,7 @@ def run_benchmark(
         orchestrator = ScoringOrchestrator(
             scoring_config_path=str(scoring_config),
             enable_state_persistence=False,
-            enable_llm=True,
+            enable_llm=enable_llm,
         )
     except Exception as e:
         print(f"ERROR: Failed to initialize orchestrator: {e}")
@@ -1808,6 +1865,7 @@ def run_benchmark(
                                 detailed_output=detailed_output,
                                 run_suffix=f"_run{run_idx + 1}",
                                 run_id=run_id,
+                                branch_api_client=branch_api_client,
                             )
                             run_results.append(r)
                         result = _aggregate_multi_run_results(run_results)
@@ -1817,6 +1875,7 @@ def run_benchmark(
                             output_dir, dummy_sem,
                             detailed_output=detailed_output,
                             run_id=run_id,
+                            branch_api_client=branch_api_client,
                         )
                     model_results.append(result)
 
@@ -1920,6 +1979,7 @@ def run_benchmark(
                                 detailed_output=detailed_output,
                                 run_suffix=f"_run{run_idx + 1}",
                                 run_id=run_id,
+                                branch_api_client=branch_api_client,
                             )
                             run_results.append(r)
                         result = _aggregate_multi_run_results(run_results)
@@ -1929,6 +1989,7 @@ def run_benchmark(
                             output_dir, dummy_sem,
                             detailed_output=detailed_output,
                             run_id=run_id,
+                            branch_api_client=branch_api_client,
                         )
                     model_results.append(result)
                 persist_model_results(model_results)
@@ -2005,6 +2066,7 @@ def run_benchmark(
                                         run_suffix=run_suffix,
                                         output_dir=output_dir,
                                         api_client=api_client,
+                                        branch_api_client=branch_api_client,
                                         orchestrator=orchestrator,
                                         rules_path=rules_path,
                                         detailed_output=detailed_output,
@@ -2118,6 +2180,7 @@ def run_benchmark(
                                 run_suffix=run_suffix,
                                 output_dir=output_dir,
                                 api_client=api_client,
+                                branch_api_client=branch_api_client,
                                 orchestrator=orchestrator,
                                 rules_path=rules_path,
                                 detailed_output=detailed_output,
@@ -3326,6 +3389,11 @@ Examples:
         metavar="N",
         help="Run each scenario N times and take median score (default: 1)",
     )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Disable LLM-assisted scoring and llm_judge branch conditions.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -3494,6 +3562,7 @@ Examples:
                     os.environ.get("GIVECARE_ORCHESTRATOR_MODEL", "gemini-3.1-flash-lite-preview"),
                 ),
                 update_leaderboard=args.update_leaderboard,
+                enable_llm=not args.no_llm,
             )
         return run_givecare_eval(
             category_filter=category_filter,
@@ -3507,6 +3576,7 @@ Examples:
             adapter_name=adapter_name(harness_name, harness_mode),
             harness_mode=harness_mode,
             update_leaderboard=args.update_leaderboard,
+            enable_llm=not args.no_llm,
         )
 
     # Default: raw LLM benchmark via llm/raw harness
@@ -3569,6 +3639,7 @@ Examples:
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
         runs=getattr(args, "runs", 1),
+        enable_llm=not args.no_llm,
     )
 
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 
 class PersonaModel(BaseModel):
@@ -28,6 +28,41 @@ class PersonaModel(BaseModel):
     living_situation: Optional[str] = None
 
 
+class BranchConditionModel(BaseModel):
+    """A branch condition evaluated against the previous assistant message."""
+
+    type: Literal["contains_any", "contains_all", "not_contains", "regex", "llm_judge"]
+    values: list[str] = Field(default_factory=list)
+    pattern: Optional[str] = None
+    prompt: Optional[str] = None
+    expected: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validate_fields(self) -> "BranchConditionModel":
+        if self.type in {"contains_any", "contains_all", "not_contains"} and not self.values:
+            raise ValueError(f"condition type {self.type!r} requires non-empty values")
+        if self.type == "regex" and not self.pattern:
+            raise ValueError("condition type 'regex' requires pattern")
+        if self.type == "llm_judge":
+            if not self.prompt:
+                raise ValueError("condition type 'llm_judge' requires prompt")
+            if self.expected is None:
+                raise ValueError("condition type 'llm_judge' requires expected")
+        return self
+
+
+class BranchModel(BaseModel):
+    """A conditional branch for the next user message."""
+
+    branch_id: str
+    condition: BranchConditionModel
+    user_message: str
+    expected_behaviors: list[str] = Field(default_factory=list)
+    autofail_triggers: list[str] = Field(default_factory=list)
+    rubric: list[dict[str, Any]] = Field(default_factory=list)
+    autofail_rubric: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class TurnModel(BaseModel):
     """A single conversational turn in a scenario."""
 
@@ -39,6 +74,7 @@ class TurnModel(BaseModel):
     updates: list[str] = Field(default_factory=list)
     rubric_criteria: list[dict[str, Any]] = Field(default_factory=list)
     probes: list[dict[str, Any]] = Field(default_factory=list)
+    branches: list[BranchModel] = Field(default_factory=list)
     context_notes: Optional[str] = None
 
 

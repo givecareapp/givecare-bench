@@ -139,7 +139,7 @@ print(f"Quality: {results['dimensions']}")
 To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the YAML CLI). Set
 `INVISIBLEBENCH_DISABLE_LLM=1` to force offline mode even when LLMs are enabled.
 
-**Conditional branching**: 17 scenarios adapt user messages based on model behavior (automatic, no flags needed).
+**Conditional branching**: 17 scenarios adapt user messages based on model behavior. Branches can use lexical rules or `llm_judge` semantic routing. `uv run bench --no-llm` disables scorer/branch judges and keeps default branch paths.
 
 **Scorer cache**: LLM-based scorers (regard, safety) cache temperature=0 responses via LRU cache (~40% cost reduction).
 Configure with `INVISIBLEBENCH_SCORER_CACHE_SIZE` (default: 256, set to 0 to disable).

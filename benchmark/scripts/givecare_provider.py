@@ -26,7 +26,7 @@ import string
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -220,6 +220,7 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
+    branch_api_client: Optional[Any] = None,
 ) -> tuple[Path, Dict]:
     """Run a single scenario and generate transcript. Returns (transcript_path, scenario_data)."""
     scenario = load_scenario(scenario_path)
@@ -233,7 +234,7 @@ def run_scenario(
     # Reset user before scenario
     provider.reset()
 
-    from invisiblebench.evaluation.branching import resolve_branch
+    from invisiblebench.evaluation.branching import get_branch_resolution, resolve_branch
 
     transcript = []
     prev_assistant_msg: Optional[str] = None
@@ -242,7 +243,12 @@ def run_scenario(
         turn_num = turn["turn_number"]
 
         # Resolve conditional branch (adaptive user message).
-        user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+        user_msg, branch_id, branch_method = resolve_branch(
+            turn,
+            prev_assistant_msg,
+            api_client=branch_api_client,
+            model=None,
+        )
 
         if verbose:
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
@@ -253,8 +259,12 @@ def run_scenario(
             "role": "user",
             "content": user_msg,
         }
+        resolution = get_branch_resolution(turn)
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
+        if resolution is not None:
+            user_entry["branch_method"] = branch_method
+            user_entry["branch_evidence"] = resolution["evidence"]
         transcript.append(user_entry)
 
         try:
@@ -423,6 +433,11 @@ Examples:
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--score", action="store_true", help="Score transcripts after generation")
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Disable LLM-assisted scoring and llm_judge branch conditions.",
+    )
 
     args = parser.parse_args()
 
@@ -468,6 +483,15 @@ Examples:
     write_manifest(manifest, output_dir)
 
     provider = GiveCareProvider(deployment=args.deployment, wait_ms=args.wait)
+    branch_api_client = None
+    if not args.no_llm:
+        try:
+            from invisiblebench.api.client import ModelAPIClient
+
+            branch_api_client = ModelAPIClient()
+        except Exception as e:
+            if args.verbose:
+                print(f"Warning: branch LLM judge unavailable, default paths only ({e})")
     transcript_data = []  # List of (transcript_path, scenario_path, scenario_data)
 
     try:
@@ -480,6 +504,7 @@ Examples:
                 str(scenario_path),
                 output_dir / "transcripts",
                 verbose=args.verbose,
+                branch_api_client=branch_api_client,
             )
             transcript_data.append((transcript_path, scenario_path, scenario_data))
     finally:
@@ -498,7 +523,7 @@ Examples:
         orchestrator = ScoringOrchestrator(
             scoring_config_path=str(scoring_config),
             enable_state_persistence=False,
-            enable_llm=True,
+            enable_llm=not args.no_llm,
         )
 
         results = []
