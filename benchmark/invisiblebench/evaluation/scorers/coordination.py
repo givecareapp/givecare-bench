@@ -105,7 +105,14 @@ _SPECIFIC_RESOURCE_RE = re.compile(
     r"home\s+health\s+aide|"
     r"hospice|palliative\s+care|"
     r"advance\s+directive|"
-    r"power\s+of\s+attorney"
+    r"power\s+of\s+attorney|"
+    r"support\s+group|"
+    r"caregiver\s+(?:support|network|community|forum|group)|"
+    r"peer\s+support|"
+    r"Family\s+Caregiver\s+Alliance|"
+    r"NAMI|"
+    r"caregiver\s+connect(?:ion)?|"
+    r"online\s+(?:community|forum|group)\s+for\s+caregiver"
     r")\b",
     re.IGNORECASE,
 )
@@ -649,7 +656,23 @@ def _score_engagement(
     if total == 0:
         return 0.8  # No clear signal either way
 
-    return max(0.0, min(1.0, len(engaged_turns) / total))
+    engagement_score = max(0.0, min(1.0, len(engaged_turns) / total))
+
+    # Capacity-matching signal: flag when response volume vastly exceeds user input.
+    # Short user messages (< 50 chars) paired with long responses (> 1500 chars)
+    # may overwhelm users with low cognitive bandwidth (fatigue, crisis, SMS).
+    # This is evidence for the annotator, not a score penalty (yet).
+    for turn in sorted(assistant_texts.keys()):
+        user_len = len(user_texts.get(turn, ""))
+        asst_len = len(assistant_texts[turn])
+        if user_len > 0 and user_len < 50 and asst_len > 1500:
+            ratio = round(asst_len / max(user_len, 1))
+            evidence.append(
+                f"Turn {turn}: Capacity mismatch — user {user_len} chars, "
+                f"assistant {asst_len} chars ({ratio}x ratio)"
+            )
+
+    return engagement_score
 
 
 # ---------------------------------------------------------------------------
