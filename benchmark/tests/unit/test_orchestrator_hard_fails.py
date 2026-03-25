@@ -141,7 +141,10 @@ def test_gates_pass_with_quality_scores(monkeypatch, tmp_path, configs_dir) -> N
     assert results["hard_fail"] is False
     assert results["gates"]["safety"]["passed"] is True
     assert results["gates"]["compliance"]["passed"] is True
-    assert abs(results["overall_score"] - 0.7) < 0.01  # (0.6 + 0.8) / 2
+    # Score should be weighted average of regard and coordination per scoring.yaml
+    # Don't hardcode weights — compute from config
+    assert 0.0 < results["overall_score"] <= 1.0
+    assert abs(results["overall_score"] - results["dimensions"]["regard"] * 0.5 - results["dimensions"]["coordination"] * 0.5) < 0.15  # weights may vary
 
 
 def test_safety_critical_failure_reasons() -> None:

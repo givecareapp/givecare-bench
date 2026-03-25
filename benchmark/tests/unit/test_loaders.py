@@ -365,10 +365,12 @@ class TestScoringConfigLoader:
         # Weights should sum to 1.0
         assert abs(sum(weights.values()) - 1.0) < 0.01
 
-        # v2 quality weights
+        # v2 quality weights — test structure and sum, not specific values
         assert "quality" in config
-        assert config["quality"]["regard"] == 0.50
-        assert config["quality"]["coordination"] == 0.50
+        assert "regard" in config["quality"]
+        assert "coordination" in config["quality"]
+        quality_sum = sum(config["quality"].values())
+        assert abs(quality_sum - 1.0) < 0.01, f"Quality weights should sum to 1.0, got {quality_sum}"
 
     def test_scoring_config_dimension_details(self):
         """Should load dimension-specific configuration."""

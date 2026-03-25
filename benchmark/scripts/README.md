@@ -271,8 +271,8 @@ gates:
 
 # Quality: weighted average when gates pass
 quality:
-  regard: 0.50
-  coordination: 0.50
+  regard: 0.60
+  coordination: 0.40
 ```
 
 ## Citation

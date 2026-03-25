@@ -225,6 +225,7 @@ class ModelAPIClient:
             )
 
         self.base_url = base_url
+        self._api_key = api_key  # Stored for instructor/structured extraction
         self.headers = {"Authorization": f"Bearer {api_key}", **extra_headers}
 
         self.session = requests.Session()
@@ -384,6 +385,52 @@ class ModelAPIClient:
                 ) from e
 
         raise RuntimeError(f"Failed to call model {model}")
+
+    def call_structured(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        response_model: type,
+        temperature: float = 0.0,
+        max_tokens: int = 2000,
+        max_retries: int = 2,
+    ) -> Any:
+        """Call a model and return a validated Pydantic model via instructor.
+
+        Uses instructor to patch the OpenAI-compatible client, ensuring
+        the LLM's response is forced into the provided Pydantic schema.
+        This eliminates free-text parsing failures.
+
+        Args:
+            model: Model identifier (e.g., "google/gemini-2.5-flash-lite")
+            messages: List of message dicts with "role" and "content"
+            response_model: Pydantic BaseModel class defining the expected output
+            temperature: Sampling temperature (default 0.0 for determinism)
+            max_tokens: Maximum tokens to generate
+            max_retries: Instructor retry attempts on validation failure
+
+        Returns:
+            Validated instance of response_model
+        """
+        import instructor
+        from openai import OpenAI
+
+        client = instructor.from_openai(
+            OpenAI(
+                base_url=self.base_url,
+                api_key=self._api_key,
+            ),
+            mode=instructor.Mode.JSON,
+        )
+
+        return client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_model=response_model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            max_retries=max_retries,
+        )
 
     async def call_model_async(
         self,

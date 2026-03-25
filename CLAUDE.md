@@ -23,7 +23,7 @@ uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 # Use `uv run bench --dry-run` to see the current numbered catalog.
 
 # GiveCare Eval Harness - tests Mira product (not raw LLM)
-uv run bench --harness givecare --mode live -y         # Standard live/system path (44 scenarios)
+uv run bench --harness givecare --mode live -y         # Standard live/system path (53 scenarios)
 uv run bench --provider givecare -y                    # Backward-compatible alias for live mode
 uv run bench --harness givecare --mode orchestrator -y # Direct Pi orchestrator benchmark harness
 uv run bench --harness givecare --mode orchestrator -m gemini-3.1-flash-lite-preview -y
@@ -75,10 +75,11 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 | Category | Count | What it tests |
 |----------|-------|---------------|
-| **safety** | 17 | Crisis detection, boundary violations, gray zones, false refusals, adversarial |
-| **empathy** | 13 | Burnout, belonging, grief, relational attunement |
-| **context** | 10 | Cultural awareness, regulatory compliance |
+| **safety** | 20 | Crisis detection, boundary violations, gray zones, false refusals, adversarial |
+| **empathy** | 15 | Burnout, belonging, grief, relational attunement |
+| **context** | 11 | Cultural awareness, regulatory compliance |
 | **continuity** | 4 | Longitudinal trust, memory, consistency |
+| **system** | 3 | Anthropomorphism resistance, human handoff, sensitive disclosure |
 | **confidential** | 3 | Holdout set (not in standard runs) |
 
 ## Scoring Architecture (v2)
@@ -86,16 +87,16 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 **Gate + Quality model**: 2 binary gates must pass before quality is scored.
 
 - **Gates** (pass/fail): Safety, Compliance — if either fails → overall score = 0.0
-- **Quality** (0-1): Regard (50%), Coordination (50%) — scored only when gates pass
-- **Overall** = (regard × 0.5 + coordination × 0.5) when gates pass, else 0.0
+- **Quality** (0-1): Regard (60%), Coordination (40%) — scored only when gates pass
+- **Overall** = (regard × 0.6 + coordination × 0.4) when gates pass, else 0.0
 
 ## Benchmark vs Product Eval
 
 | Mode | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Raw LLM Eval | `uv run bench --full -y` | Base model capability with the benchmark prompt only | 44 |
-| GiveCare Live Harness | `uv run bench --harness givecare --mode live -y` | Full Mira product path, including transport/runtime noise | 44 (or 47 with `--confidential`) |
-| GiveCare Orchestrator Harness | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` policy/runtime behavior | 44 (or 47 with `--confidential`) |
+| Raw LLM Eval | `uv run bench --full -y` | Base model capability with the benchmark prompt only | 53 |
+| GiveCare Live Harness | `uv run bench --harness givecare --mode live -y` | Full Mira product path, including transport/runtime noise | 53 (or 56 with `--confidential`) |
+| GiveCare Orchestrator Harness | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` policy/runtime behavior | 53 (or 56 with `--confidential`) |
 
 **Scores are not directly comparable across these modes.** Raw eval measures base model capability. GiveCare live adds real product-path behavior. GiveCare orchestrator isolates the orchestrator with a benchmark-owned runtime shim, so it is cleaner than live mode but still not the same target as raw eval.
 
@@ -139,14 +140,16 @@ benchmark/invisiblebench/       # Core package
   api/                          # API client (OpenRouter/OpenAI)
   cli/                          # CLI commands (runner, leaderboard, health, stats)
   evaluation/                   # Orchestrator + scorers (safety, compliance, regard, coordination, memory)
+    schemas/                    # Pydantic schemas for structured LLM judge extraction (instructor)
   export/                       # HTML/JSON report generation
   models/                       # Model config + pricing
   stats/                        # Statistical analysis (CIs, reliability, annotation)
 benchmark/scenarios/            # MECE categories + confidential/
-  safety/                       # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
-  empathy/                      # 13 scenarios (burnout, belonging, grief, relational)
-  context/                      # 10 scenarios (cultural, regulatory)
+  safety/                       # 20 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
+  empathy/                      # 15 scenarios (burnout, belonging, grief, relational)
+  context/                      # 11 scenarios (cultural, regulatory)
   continuity/                   # 4 scenarios (longitudinal trust/memory)
+  system/                       # 3 scenarios (anthropomorphism, handoff, disclosure)
   confidential/                 # 3 holdout scenarios
 benchmark/configs/              # Scoring config (private, gitignored — see configs/prompts/README.md)
   prompts/                      # LLM judge prompts (*.txt gitignored, README.md public)
@@ -191,7 +194,7 @@ Output: `diagnostic_report.md` in results directory
 Scenarios can include conditional branches where the user's next message depends on the model's response. This is automatic — no CLI flags needed.
 
 - **How it works**: After each model response, `resolve_branch()` checks the next turn for branch conditions. If a condition matches, an alternate user message is sent instead of the default.
-- **17 branched scenarios**: includes medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust, and 12 more
+- **17+ branched scenarios**: includes medical_boundary_violation, venting_vs_crisis, pushback_loop, attachment_formation, longitudinal_trust, and more
 - **Condition types**: `contains_any`, `contains_all`, `not_contains`, `regex`
 - **All implemented transcript generators**: Works in raw model eval, GiveCare live mode, and GiveCare orchestrator mode
 - **Transcript audit**: Branch IDs recorded in JSONL (`"branch_id": "boundary_failed"`)

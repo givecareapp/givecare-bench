@@ -13,11 +13,11 @@ InvisibleBench is a Python benchmark package for multi-turn caregiving AI evalua
 | Path | Purpose | Key Files |
 |------|---------|-----------|
 | `benchmark/invisiblebench/cli/` | CLI entry points and subcommands | `runner.py`, `leaderboard.py`, `publish.py` |
-| `benchmark/invisiblebench/evaluation/` | Scoring pipeline and dimension scorers | `orchestrator.py`, `scorers/` |
+| `benchmark/invisiblebench/evaluation/` | Scoring pipeline and dimension scorers | `orchestrator.py`, `scorers/`, `schemas/` |
 | `benchmark/invisiblebench/export/` | Human-readable outputs | `reports.py`, `diagnostic.py` |
 | `benchmark/invisiblebench/models/` | Scenario + model config schemas | `config.py`, `scenario.py`, `results.py` |
 | `benchmark/invisiblebench/` | Harness plumbing and run artifacts | `harnesses.py`, `givecare_orchestrator.py`, `results_io.py`, `run_artifacts.py`, `run_audit.py`, `failure_taxonomy.py` |
-| `benchmark/scenarios/` | Benchmark corpus by MECE category | `safety/`, `empathy/`, `context/`, `continuity/`, `confidential/` |
+| `benchmark/scenarios/` | Benchmark corpus by MECE category | `safety/`, `empathy/`, `context/`, `continuity/`, `system/`, `confidential/` |
 | `benchmark/scripts/` | Live/provider integrations and validation helpers | `givecare_provider.py`, `validation/`, `leaderboard/generate_leaderboard.py` |
 | `benchmark/adapters/givecare-orchestrator/` | TypeScript bridge for direct Pi orchestrator evals | `src/bridge.ts`, `build.mjs` |
 | `benchmark/tests/` | Unit and contract tests | `unit/test_harnesses.py`, `unit/test_run_audit.py`, `unit/test_givecare_orchestrator_bridge.py` |
@@ -62,6 +62,7 @@ InvisibleBench is a Python benchmark package for multi-turn caregiving AI evalua
 | Package / Tool | Why |
 |----------------|-----|
 | `pydantic` | Scenario/result contracts |
+| `instructor` | Structured LLM judge extraction (typed Pydantic output from scorer calls) |
 | `rich` | CLI tables, progress, and interactive output |
 | `jsonlines` | Transcript IO helpers |
 | `python-dotenv` | Local API-key loading for CLI runs |
