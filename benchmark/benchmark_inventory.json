@@ -9,6 +9,6 @@
     "continuity": 4
   },
   "standard_total": 50,
-  "confidential_count": 3,
+  "confidential_count": "external",
   "active_branch_files": 22
 }

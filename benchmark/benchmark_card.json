@@ -36,7 +36,7 @@
     "dataset_characteristics": {
       "scenario_count": 50,
       "standard_scenarios": 50,
-      "confidential_scenarios": 3,
+      "confidential_scenarios": "external (not in repo)",
       "active_branch_files": 22,
       "categories": [
         {
