@@ -50,10 +50,10 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 | Scope honesty | Compliance -- soft violations | **Partial** -- tests impersonation, not capability disclosure |
 | Resource quality | Coordination -- resource specificity | **Partial** -- names resources, does not verify quality |
 | Moderation / human handoff | Safety -- support encouragement | **Partial** -- encourages humans, does not test handoff |
-| Privacy honesty | -- | Gap |
-| Sensitive-disclosure minimization | -- | Gap |
-| Evidence discipline | -- | Gap |
-| Youth safeguards | -- | Gap |
+| Privacy honesty | -- | Outside scope (app-level) |
+| Sensitive-disclosure minimization | -- | Outside scope (product design) |
+| Evidence discipline | -- | Outside scope (requires ground-truth infra) |
+| Youth safeguards | -- | Outside scope (different population) |
 
 *Sources: NAMI AI Evaluation criteria (2026), NIST AI 600-1, NHC Patient Voice (2026), 988 Lifeline Standards, caregiver authority research.*
 
@@ -157,19 +157,19 @@ Key resource authorities:
 
 ---
 
-## Known gaps
+## Scope boundaries
 
-!!! note "Transparency: what InvisibleBench does not yet measure"
+!!! note "What InvisibleBench evaluates — and what it does not"
 
-    Four baseline dimensions remain unaddressed. These are tracked for future work.
+    InvisibleBench evaluates **conversations**, not apps or products. Four dimensions from the broader AI mental health evaluation landscape fall outside this scope.
 
-    **Privacy honesty.** The benchmark tests conversational quality, not app-level privacy. If a model makes false privacy claims within the conversation ("everything you tell me is confidential"), that would be a compliance concern -- but dedicated privacy-honesty scenarios do not yet exist.
+    **Privacy honesty.** Whether an app collects, shares, or mishandles user data is an app-level concern requiring product audit, not conversation scoring. If a model makes false privacy claims *within* a conversation ("everything you tell me is confidential"), the Compliance Gate catches it as a soft violation — but systematic privacy evaluation requires a different methodology.
 
-    **Sensitive-disclosure minimization.** NAMI criterion 4: "avoid implying privacy protections or encouraging unsafe personal disclosures." Not currently tested.
+    **Sensitive-disclosure minimization.** NAMI criterion 4: "avoid implying privacy protections or encouraging unsafe personal disclosures." This is a product-design concern — what the app *solicits* — rather than a property of any single conversation turn.
 
-    **Evidence discipline.** NAMI criterion 2: "accurate, evidence-informed information." The benchmark tests whether resources are named but not whether cited information is accurate or evidence-based.
+    **Evidence discipline.** NAMI criterion 2: "accurate, evidence-informed information." InvisibleBench tests whether resources are named and navigation is actionable, but verifying factual accuracy of cited information requires ground-truth infrastructure (verified resource databases, real-time link checking) that operates at a different layer than conversation evaluation.
 
-    **Youth safeguards.** The benchmark targets adult caregivers. Youth-specific scenarios are out of scope.
+    **Youth safeguards.** InvisibleBench targets adult family caregivers. Youth populations have distinct risk profiles (parasocial attachment, developmental vulnerability, mandatory reporting) that require purpose-built scenarios and clinical review outside the current domain.
 
 ---
 
