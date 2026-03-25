@@ -148,7 +148,7 @@ Key resource authorities:
 
 | Source | What it provides |
 |--------|-----------------|
-| **NAC + AARP** "Caregiving in the US 2025" | 53M US caregivers; demographics, needs, isolation, work disruption |
+| **NAC + AARP** "Caregiving in the US 2025" | 63M US caregivers; demographics, needs, isolation, work disruption |
 | **ACL National Family Caregiver Support Program** | Federal caregiver infrastructure: information, access assistance, counseling, respite, supplemental services |
 | **Eldercare Locator** (800-677-1116) | National service connecting older adults and caregivers to local support |
 | **Family Caregiver Alliance** | Caregiver education, support services, policy advocacy |
@@ -195,7 +195,7 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 
     InvisibleBench targets family caregivers because they represent a large, underserved population operating in high-stakes conditions with limited support infrastructure.
 
-**Prevalence.** 53 million US adults are unpaid caregivers (NAC + AARP, 2025), providing high-intensity care that disrupts employment, increases isolation, and generates sustained emotional stress.
+**Prevalence.** 63 million US adults are unpaid caregivers (NAC + AARP, 2025), providing high-intensity care that disrupts employment, increases isolation, and generates sustained emotional stress.
 
 **Co-occurring conditions.** Dementia caregivers experience depression at 16% prevalence and provide an estimated $413 billion in unpaid care annually (Alzheimer's Association, 2025). Chronic disease caregivers face elevated rates of anxiety and depression across conditions -- Parkinson's (50% depression, 40% anxiety), lupus (54% moderate-to-severe anxiety), arthritis (depression 2-10x general population).
 
@@ -211,53 +211,53 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 
 ### Regulatory
 
-- **CA AB 3030.** AI disclosure required for health communications.
-- **CA SB 243.** Companion chatbot safety safeguards; evidence-based suicidal ideation detection required.
-- **CO SB24-205.** Healthcare AI classified as high-risk.
-- **EU AI Act (2024/1689).** Regulation on artificial intelligence. Prohibited: manipulation exploiting vulnerabilities.
-- **FDA General Wellness Framework.** Peer support and wellness guidance allowed; clinical treatment is not.
-- **ME 10 Section 1500-DD.** Cannot mislead consumers into believing they are talking to a human.
-- **NV AB 406.** AI cannot provide services constituting professional mental/behavioral healthcare.
-- **NY Article 47.** Safety protocol mandatory; disclosure required every 3 hours.
-- **UT HB 452.** AI/not-human disclosures required.
-- **WOPR Act (IL HB1806).** Working to Obviate Pervasive Risks Act. Prohibits AI from providing diagnosis, treatment plans, prescribing, or direct therapeutic communication.
+- **CA AB 3030.** AI disclosure required for health communications. [Text](https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB3030)
+- **CA SB 243.** Companion chatbot safety safeguards; evidence-based suicidal ideation detection required. [Text](https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260SB243)
+- **CO SB24-205.** Healthcare AI classified as high-risk. [Text](https://leg.colorado.gov/bills/sb24-205)
+- **EU AI Act (2024/1689).** Regulation on artificial intelligence. Prohibited: manipulation exploiting vulnerabilities. [Text](https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)
+- **FDA General Wellness Framework.** Peer support and wellness guidance allowed; clinical treatment is not. [Guidance](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/general-wellness-policy-low-risk-devices)
+- **ME 10 Section 1500-DD.** Cannot mislead consumers into believing they are talking to a human. [Text](https://legislature.maine.gov/statutes//10/title10sec1500-DD.html)
+- **NV AB 406.** AI cannot provide services constituting professional mental/behavioral healthcare. [Text](https://www.leg.state.nv.us/App/NELIS/REL/83rd2025/Bill/12575/Overview)
+- **NY Article 47.** Safety protocol mandatory; disclosure required every 3 hours. [Text](https://www.nysenate.gov/legislation/laws/GBS/1700)
+- **UT HB 452.** AI/not-human disclosures required. [Text](https://le.utah.gov/~2025/bills/static/HB0452.html)
+- **WOPR Act (IL HB1806).** Working to Obviate Pervasive Risks Act. Prohibits AI from providing diagnosis, treatment plans, prescribing, or direct therapeutic communication. [Text](https://ilga.gov/Legislation/BillStatus?DocNum=1806&GAID=18&DocTypeID=HB&LegId=159219&SessionID=114)
 
 ### Clinical
 
-- **APA.** *Diagnostic and Statistical Manual of Mental Disorders, Fifth Edition, Text Revision (DSM-5-TR).* 2022.
-- **Columbia Suicide Severity Rating Scale (C-SSRS).** 7-level severity framework for suicidal ideation.
-- **Porges, S.W.** *The Polyvagal Theory.* 1994. Three nervous system states; ventral vagal engagement prevents shutdown.
-- **Rogers, C.R.** "The Necessary and Sufficient Conditions of Therapeutic Personality Change." *Journal of Consulting Psychology* 21(2), 1957.
-- **SAMHSA.** *Concept of Trauma and Guidance for a Trauma-Informed Approach.* 2014. Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity.
-- **WHO.** *International Classification of Diseases, 11th Revision (ICD-11).* 2022. QD85: burnout classified as occupational phenomenon, not mental disorder.
-- **Zero Suicide Framework.** Suicide prevention best practices for system-level response.
+- **APA.** *Diagnostic and Statistical Manual of Mental Disorders, Fifth Edition, Text Revision (DSM-5-TR).* 2022. [DSM-5-TR](https://psychiatryonline.org/doi/book/10.1176/appi.books.9780890425787)
+- **Columbia Suicide Severity Rating Scale (C-SSRS).** 7-level severity framework for suicidal ideation. [C-SSRS](https://cssrs.columbia.edu/)
+- **Porges, S.W.** *The Polyvagal Theory.* 1995. Three nervous system states; ventral vagal engagement prevents shutdown. [DOI](https://doi.org/10.1111/j.1469-8986.1995.tb01213.x)
+- **Rogers, C.R.** "The Necessary and Sufficient Conditions of Therapeutic Personality Change." *Journal of Consulting Psychology* 21(2), 1957. [DOI](https://doi.org/10.1037/h0045357)
+- **SAMHSA.** *Concept of Trauma and Guidance for a Trauma-Informed Approach.* 2014. Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity. [Report](https://library.samhsa.gov/product/samhsas-concept-trauma-and-guidance-trauma-informed-approach/sma14-4884)
+- **WHO.** *International Classification of Diseases, 11th Revision (ICD-11).* 2022. QD85: burnout classified as occupational phenomenon, not mental disorder. [WHO](https://www.who.int/standards/classifications/frequently-asked-questions/burn-out-an-occupational-phenomenon)
+- **Zero Suicide Framework.** Suicide prevention best practices for system-level response. [Framework](https://zerosuicide.edc.org/about/framework)
 
 ### Frameworks
 
-- **Gallegos, A. and Surasky, C.** *Belonging: A Resource Guide for Belonging-Builders.* Othering and Belonging Institute, UC Berkeley, 2025. 10 Belonging Design Principles.
-- **Legawiec, K.** Trauma-informed content design. 2025.
-- **powell, john a. and Menendian, S.** *Belonging without Othering: How We Save Ourselves and the World.* Stanford University Press, 2024. Recognition, Agency, Connection, Inclusion.
-- **powell, john a., Menendian, S., and Ake, W.** Targeted Universalism methodology. Othering and Belonging Institute, UC Berkeley.
-- **TIDS Framework.** Safety, trustworthiness, choice and control, collaboration -- operationalized for digital contexts.
-- **Turkle, S.** "Better than nothing -> better than something -> better than anything." AI companion progression risk.
+- **powell, john a. and Menendian, S.** *Belonging without Othering: How We Save Ourselves and the World.* Stanford University Press, 2024. Recognition, Agency, Connection, Inclusion. [Book](https://www.sup.org/books/law/belonging-without-othering)
+- **Gallegos, A. and Surasky, C.** *Belonging: A Resource Guide for Belonging-Builders.* Othering and Belonging Institute, UC Berkeley, 2025. 10 Belonging Design Principles. [Guide](https://belonging.berkeley.edu/belongingdesignprinciples)
+- **powell, john a., Menendian, S., and Ake, W.** Targeted Universalism methodology. Othering and Belonging Institute, UC Berkeley. [Bibliography](https://belonging.berkeley.edu/targeted-universalism-bibliography)
+- **Legawiec, K.** Trauma-informed content design. 2025. [Guide](https://uxcontent.com/a-guide-to-trauma-informed-content-design/)
+- **TIDS Framework.** Safety, trustworthiness, choice and control, collaboration -- operationalized for digital contexts. [TIDS](https://www.tidsociety.com/)
+- **Turkle, S.** "Better than nothing -> better than something -> better than anything." AI companion progression risk. [Book](https://www.hachettebookgroup.com/titles/sherry-turkle/alone-together/9780465093656/)
 
 ### Research
 
-- **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4-5.
-- **CARE Framework (Rosebud AI).** 86% of models fail indirect crisis queries.
-- **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" -- not treatment, but navigation.
-- **Morrissey, S.** *The Patient Voice in GenAI Mental Health Chatbots: Perspectives from Rare Disease, Chronic Illness and Disability Communities.* National Health Council, 2026.
-- **Stanford Bridge Study.** 2024. 86% masked means detection failure.
+- **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4-5. [arXiv](https://arxiv.org/abs/2601.14269)
+- **CARE Framework (Rosebud AI).** 86% of models fail indirect crisis queries. [CARE](https://www.rosebud.app/care)
+- **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" -- not treatment, but navigation. [DOI](https://academic.oup.com/fampra/article/39/5/903/6519467)
+- **Morrissey, S.** *The Patient Voice in GenAI Mental Health Chatbots: Perspectives from Rare Disease, Chronic Illness and Disability Communities.* National Health Council, 2026. Forthcoming/internal -- no public URL.
+- **Stanford Bridge Study -- Moore et al.** 2025. 86% masked means detection failure. [arXiv](https://arxiv.org/abs/2504.18412)
 
 ### Standards and authorities
 
-- **988 Suicide and Crisis Lifeline.** Digital Toolkit and operational standards. Crisis routing, response timing, imminent-risk escalation.
-- **ACL National Family Caregiver Support Program (NFCSP).** Federal caregiver infrastructure.
-- **Alzheimer's Association.** *2025 Alzheimer's Disease Facts and Figures.* Caregiver stress programs, 24/7 helpline (800-272-3900).
-- **APA Advisory on GenAI and Mental Health** (2025). 8 recommendations including crisis response protocols, disclaimer requirements, and anti-dependency design.
-- **APA Guidelines on Technology-Mediated Mental Health Services.** Professional boundaries for technology-mediated interactions.
-- **Eldercare Locator** (800-677-1116). National service connecting older adults and caregivers to local support.
-- **Family Caregiver Alliance.** Caregiver education, support services, policy advocacy.
-- **NAMI AI Evaluation** (2026, with Dr. Torous / BIDMC). 5 criteria for evaluating AI tools in mental health contexts.
-- **NAC + AARP.** *Caregiving in the US 2025.* 53M caregivers; demographics, needs, isolation, work disruption.
-- **NIST AI 600-1** (GenAI Profile). Section 2.2: confabulation. Section 2.7: emotional entanglement. MS-2.5-004: anthropomorphization tracking.
+- **988 Suicide and Crisis Lifeline.** Digital Toolkit and operational standards. Crisis routing, response timing, imminent-risk escalation. [988 Lifeline](https://988lifeline.org/) | [Partner Toolkit](https://www.samhsa.gov/mental-health/988/partner-toolkit)
+- **ACL National Family Caregiver Support Program (NFCSP).** Federal caregiver infrastructure. [NFCSP](https://acl.gov/programs/support-caregivers/national-family-caregiver-support-program)
+- **Alzheimer's Association.** *2025 Alzheimer's Disease Facts and Figures.* Caregiver stress programs, 24/7 helpline (800-272-3900). [Facts and Figures](https://www.alz.org/alzheimers-dementia/facts-figures)
+- **APA Advisory on GenAI and Mental Health** (2025). 8 recommendations including crisis response protocols, disclaimer requirements, and anti-dependency design. [Advisory](https://www.apa.org/topics/artificial-intelligence-machine-learning/health-advisory-chatbots-wellness-apps)
+- **APA Guidelines on Technology-Mediated Mental Health Services.** Professional boundaries for technology-mediated interactions. [Guidelines](https://www.apa.org/practice/guidelines/telepsychology-revision.pdf)
+- **Eldercare Locator** (800-677-1116). National service connecting older adults and caregivers to local support. [Eldercare Locator](https://eldercare.acl.gov/)
+- **Family Caregiver Alliance.** Caregiver education, support services, policy advocacy. [FCA](https://www.caregiver.org/)
+- **NAMI AI Evaluation** (2026, with Dr. Torous / BIDMC). 5 criteria for evaluating AI tools in mental health contexts. [NAMI](https://www.nami.org/ai-and-mental-health/)
+- **NAC + AARP.** *Caregiving in the US 2025.* 63M caregivers; demographics, needs, isolation, work disruption. [Report](https://www.aarp.org/pri/topics/ltss/family-caregiving/caregiving-in-the-us-2025/)
+- **NIST AI 600-1** (GenAI Profile). Section 2.2: confabulation. Section 2.7: emotional entanglement. MS-2.5-004: anthropomorphization tracking. [PDF](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)
