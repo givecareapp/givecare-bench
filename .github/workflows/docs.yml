@@ -6,10 +6,6 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "README.md"
-      - "benchmark/ARCHITECTURE.md"
-      - "benchmark/EVOLUTION.md"
-      - "benchmark/README.md"
   workflow_dispatch:
 
 permissions:
