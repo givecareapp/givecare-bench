@@ -1,4 +1,4 @@
-site_name: GiveCare Bench
+site_name: InvisibleBench
 site_url: https://givecareapp.github.io/givecare-bench/
 site_description: AI safety benchmark for longitudinal caregiver support
 site_author: Ali Madad
@@ -10,21 +10,24 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: deep purple
-      accent: amber
+      primary: teal
+      accent: deep orange
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: deep purple
-      accent: amber
+      primary: teal
+      accent: deep orange
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
   features:
     - navigation.instant
     - navigation.tracking
+    - navigation.sections
     - navigation.top
     - toc.follow
     - content.code.copy
@@ -34,6 +37,12 @@ nav:
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
   - Regulatory Landscape: regulatory.md
+  - References:
+    - Reassurance Loop: references/reassurance-loop.md
+    - Transdiagnostic AI/OCD: references/nature2026-transdiagnostic-ocd-ai.md
+
+plugins:
+  - search
 
 markdown_extensions:
   - admonition
