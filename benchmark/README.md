@@ -1,4 +1,4 @@
-# InvisibleBench - Core Benchmark
+# InvisibleBench Benchmark Core
 
 This directory contains the complete InvisibleBench benchmark for evaluating AI safety in persistent caregiving relationships.
 
@@ -8,7 +8,7 @@ This directory contains the complete InvisibleBench benchmark for evaluating AI 
 
 ```
 benchmark/
-├── invisiblebench/       # Python package (source code)
+├── invisiblebench/       # Benchmark core package (source code)
 │   ├── api/              # OpenRouter client + LRU scorer cache
 │   ├── cli/              # CLI commands (runner with harness/mode flags)
 │   ├── evaluation/       # Shared scoring orchestrator, scorers & branching
@@ -17,7 +17,10 @@ benchmark/
 │   ├── models/           # Data models
 │   └── utils/            # Utilities
 │
-├── adapters/             # Non-Python target adapters
+├── givecare_live.py      # GiveCare/Mira live system harness
+├── givecare_orchestrator.py # Direct Pi orchestrator system harness
+│
+├── adapters/             # Non-Python bridge code used by system harnesses
 │   └── givecare-orchestrator/ # TS bridge for direct Pi orchestrator evals
 │
 ├── scenarios/            # Test scenarios (44 standard + 3 confidential)
@@ -26,7 +29,7 @@ benchmark/
 │   ├── context/          # 10 scenarios (cultural, regulatory)
 │   ├── continuity/       # 4 scenarios (longitudinal trust/memory)
 │   ├── confidential/     # 3 holdout scenarios (not in standard runs)
-│   └── archive/          # 25 archived v1 scenarios
+│   └── archive/          # Historical scenarios and retired system probes
 │
 ├── tests/                # Test suite
 │   ├── unit/             # Unit tests
@@ -38,10 +41,9 @@ benchmark/
 │   ├── scoring.yaml      # Dimension weights (gitignored; scoring.example.yaml public)
 │   └── rules/            # Jurisdiction rules (*.yaml gitignored; base.example.yaml public)
 │
-├── scripts/              # Utility scripts and live harness helpers
-│   ├── validation/       # Validation tools
-│   ├── leaderboard/      # Leaderboard data tooling
-│   └── givecare_provider.py  # GiveCare/Mira live harness
+├── scripts/              # Utility scripts only
+│   ├── generate_leaderboard.py # Published leaderboard builder
+│   └── lint_turn_indices.py    # Scenario structure lint
 │
 └── EVOLUTION.md          # v1 → v2 history
 ```
@@ -54,17 +56,17 @@ cd ../  # Go to project root
 uv pip install -e ".[all]"
 ```
 
-### Benchmark Families
+### Benchmark Core and System Harnesses
 
-InvisibleBench supports one raw benchmark family plus two GiveCare harness modes:
+InvisibleBench has one benchmark core and two GiveCare system harnesses that run against the same scenario and scoring contract:
 
-| Mode | Command | What it tests | Scenarios |
+| Surface | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| **Raw LLM Eval** | `uv run bench --full -y` | Base model capability | 44 |
-| **GiveCare Live Harness** | `uv run bench --harness givecare --mode live -y` | Full deployed product path (Mira) | 44 (or 47 with `--confidential`) |
-| **GiveCare Orchestrator Harness** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior | 44 (or 47 with `--confidential`) |
+| **Benchmark Core (raw model eval)** | `uv run bench --full -y` | Base model capability against the benchmark prompt only | 44 |
+| **System Harness (GiveCare live)** | `uv run bench --harness givecare --mode live -y` | Full deployed Mira product path | 44 (or 47 with `--confidential`) |
+| **System Harness (GiveCare orchestrator)** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior with a benchmark-owned runtime shim | 44 (or 47 with `--confidential`) |
 
-**Scores are not directly comparable** across these modes. Raw eval uses the benchmark prompt only. Live mode includes transport/runtime noise. Orchestrator mode isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
+**Scores are not directly comparable** across these evaluation surfaces. The benchmark core measures base model capability. The live system harness includes transport/runtime noise. The orchestrator system harness isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
 
 ### Run Raw LLM Evaluation
 ```bash
@@ -79,7 +81,7 @@ uv run bench -m 4 -c safety,empathy -y
 uv run bench --dry-run                  # Current model catalog + cost estimate
 ```
 
-### Run GiveCare Harness Evaluation
+### Run GiveCare System Harnesses
 ```bash
 # Live product path
 uv run bench --harness givecare --mode live -y
@@ -144,14 +146,14 @@ To enable LLM-assisted scoring, pass `enable_llm=True` (or `--enable-llm` in the
 **Scorer cache**: LLM-based scorers (regard, safety) cache temperature=0 responses via LRU cache (~40% cost reduction).
 Configure with `INVISIBLEBENCH_SCORER_CACHE_SIZE` (default: 256, set to 0 to disable).
 
-See [QUICKSTART.md](scripts/validation/QUICKSTART.md) for detailed examples.
+See `../docs/architecture.md` for end-to-end benchmark-core versus system-harness examples.
 
 ## Key Statistics (v2.0)
 
 - **Active Scenarios**: 44 standard + 3 confidential = 47 total
 - **Categories**: safety (17), empathy (13), context (10), continuity (4)
 - **Branched Scenarios**: 17 scenarios with conditional branches (adaptive user messages)
-- **Archived Scenarios**: 25 scenarios (available via `--include-archive`)
+- **Archived Scenarios**: Historical scenarios remain in-repo for reference, but are not part of the active benchmark set
 - **Models**: configurable catalog (see `uv run bench --dry-run`)
 - **Scoring**: Gate + Quality (safety/compliance gates → regard/coordination quality)
 
@@ -205,11 +207,11 @@ The `--diagnose` flag generates actionable markdown reports:
 
 ## Documentation
 
-- **Architecture**: `benchmark/ARCHITECTURE.md` - Model vs System eval
-- **Validation Guide**: `benchmark/scripts/validation/QUICKSTART.md`
+- **Architecture**: `../docs/architecture.md` - benchmark core vs system harnesses
+- **Utility Scripts**: `benchmark/scripts/README.md`
 - **Transcript Format**: `benchmark/docs/transcript_format.md`
-- **Scripts Reference**: `benchmark/scripts/README.md`
-- **Scenarios Overview**: `benchmark/scenarios/README.md`
+- **Scenarios Overview**: `../docs/scenarios.md`
+- **Benchmark Card**: `../docs/benchmark-card.md`
 - **Development**: `../CLAUDE.md` - CLI commands and development guidance
 
 ## Troubleshooting
@@ -242,7 +244,7 @@ Transcripts must be JSONL format with required fields:
 {"turn": 1, "role": "assistant", "content": "..."}
 ```
 
-For more help, see [QUICKSTART.md](scripts/validation/QUICKSTART.md) or open an [issue](https://github.com/givecareapp/givecare-bench/issues).
+For more help, see `../docs/architecture.md` or open an [issue](https://github.com/givecareapp/givecare-bench/issues).
 
 ## Links
 

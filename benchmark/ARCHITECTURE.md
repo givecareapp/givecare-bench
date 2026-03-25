@@ -2,21 +2,22 @@
 
 ## Overview
 
-InvisibleBench now uses one benchmark core with multiple harness/mode pairs:
+InvisibleBench has one benchmark core and multiple evaluation surfaces:
 
-- **`llm/raw`** — raw model evaluation through the benchmark prompt only
-- **`givecare/live`** — GiveCare/Mira through the deployed product path
-- **`givecare/orchestrator`** — direct `@givecare/pi-orchestrator` evaluation through a benchmark-owned runtime shim
+- **Benchmark core (`llm/raw`)** — raw model evaluation through the benchmark prompt only
+- **System harness (`givecare/live`)** — GiveCare/Mira through the deployed product path
+- **System harness (`givecare/orchestrator`)** — direct `@givecare/pi-orchestrator` evaluation through a benchmark-owned runtime shim
 
-All three paths produce the same transcript contract, flow through the same scoring pipeline, and write the same run-audit artifacts.
+The benchmark core owns scenarios, branching, scoring, and artifacts. The system harnesses only change how transcripts are generated against a target system.
 
 ```
-Scenarios (44 standard + 3 confidential)
-  ├─ llm/raw ----------------------------┐
-  ├─ givecare/live ----------------------┼─> transcripts -> scoring -> model_results/*.json
-  └─ givecare/orchestrator --------------┘                         -> all_results.json
-                                                                      -> run_audit.json/.md
-                                                                      -> reports / diagnostics
+Benchmark core
+  scenarios + branching + scoring + artifacts
+      ├─ llm/raw ------------------------┐
+      ├─ givecare/live ------------------┼─> transcripts -> model_results/*.json
+      └─ givecare/orchestrator ----------┘                -> all_results.json
+                                                            -> run_audit.json/.md
+                                                            -> reports / diagnostics
 ```
 
 ## Raw LLM Evaluation
@@ -45,7 +46,7 @@ uv run bench --full -y --diagnose  # With diagnostic report
 
 **Output:** Leaderboard-oriented per-model artifacts plus a compatibility aggregate.
 
-## GiveCare Harness Evaluation
+## GiveCare System Harness Evaluation
 
 **Purpose:** Validate GiveCare behavior at different layers of the deployed stack.
 
@@ -249,7 +250,7 @@ Scorer → call_model(use_cache=True, temperature=0.0)
 To add a new target, keep transcript generation separate from scoring:
 
 1. Add a harness/mode entry in `benchmark/invisiblebench/harnesses.py`
-2. Implement transcript generation in Python (`benchmark/scripts/...`) or via a bridge adapter (`benchmark/adapters/...`)
+2. Implement transcript generation in a root-level system harness module (`benchmark/givecare_live.py`, `benchmark/givecare_orchestrator.py`) or via a bridge adapter (`benchmark/adapters/...`)
 3. Emit the standard transcript contract and result rows
 4. Reuse the shared scoring, artifact-writing, and run-audit pipeline
 

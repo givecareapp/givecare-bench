@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from invisiblebench.givecare_orchestrator import bridge_healthcheck, ensure_bridge_bundle
+
+from benchmark.givecare_orchestrator import bridge_healthcheck, ensure_bridge_bundle
 
 MONO_ROOT = Path(__file__).resolve().parents[4] / "give-care-mono"
 

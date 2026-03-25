@@ -1,6 +1,12 @@
-# InvisibleBench Scripts
+# InvisibleBench Utility Scripts
 
-Utility scripts for running benchmarks, generating leaderboards, and validating results.
+Utility scripts that remain outside the main `bench` CLI.
+
+The benchmark core and GiveCare system harnesses are not part of `benchmark/scripts/`:
+
+- Benchmark core: `benchmark/invisiblebench/`
+- System harnesses: `benchmark/givecare_live.py`, `benchmark/givecare_orchestrator.py`
+- Bridge adapters: `benchmark/adapters/`
 
 ## Primary CLI
 
@@ -11,7 +17,7 @@ The main entry point is `uv run bench`. See root `CLAUDE.md` for full CLI refere
 uv run bench --full -y                 # All configured models
 uv run bench -m deepseek -y            # Single model by name
 
-# GiveCare eval harnesses
+# GiveCare system harnesses
 uv run bench --harness givecare --mode live -y
 uv run bench --harness givecare --mode orchestrator -y
 uv run bench --harness givecare --mode live -y --confidential
@@ -26,49 +32,19 @@ uv run bench runs                      # List runs
 uv run bench archive --keep 5          # Keep 5 most recent
 ```
 
+## System Harness Code
+
+The GiveCare system harness implementations live at the benchmark root:
+
+- `benchmark/givecare_live.py` — deployed Mira product path
+- `benchmark/givecare_orchestrator.py` — direct `@givecare/pi-orchestrator` harness
+- `benchmark/adapters/givecare-orchestrator/` — TypeScript bridge used by the orchestrator harness
+
+`benchmark/scripts/` is reserved for utility scripts such as leaderboard publishing and scenario linting.
+
 ## Scripts
 
-### `givecare_provider.py`
-
-**Purpose**: Live/system-path transcript generator for the GiveCare/Mira harness.
-
-**Usage**: Called automatically via the live GiveCare harness:
-```bash
-uv run bench --harness givecare --mode live -y
-```
-
-**What it does**:
-1. Generates transcripts by calling Mira via the product path (with conditional branching support)
-2. Scores transcripts using the standard scoring pipeline
-3. Writes run artifacts under `results/givecare/run_YYYYMMDD_HHMMSS/`
-
-### `benchmark/invisiblebench/givecare_orchestrator.py`
-
-**Purpose**: Direct orchestrator harness for `@givecare/pi-orchestrator`.
-
-**Usage**:
-```bash
-uv run bench --harness givecare --mode orchestrator -y
-```
-
-**What it does**:
-1. Builds the local TypeScript bridge in `benchmark/adapters/givecare-orchestrator/`
-2. Runs scenarios directly against the orchestrator with a benchmark-owned runtime shim
-3. Writes run artifacts under `results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/`
-
-### `validation/`
-
-Validation tools for scenario structure and results.
-
-```bash
-# Check scenario structure
-python benchmark/scripts/validation/lint_turn_indices.py
-
-# Pre-run checks
-python benchmark/scripts/validation/check_ready.py
-```
-
-### `leaderboard/`
+### `generate_leaderboard.py`
 
 Leaderboard generation from benchmark results.
 
@@ -76,11 +52,19 @@ Leaderboard generation from benchmark results.
 # Automatic (after benchmark run)
 uv run bench --full -y --update-leaderboard
 
-# Manual (two-step)
-python benchmark/scripts/validation/prepare_for_leaderboard.py \
-  --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
-python benchmark/scripts/leaderboard/generate_leaderboard.py \
-  --input /tmp/lb_ready/ --output data/v2/
+# Manual
+uv run bench leaderboard add results/run_YYYYMMDD_HHMMSS/
+python benchmark/scripts/generate_leaderboard.py \
+  --input results/leaderboard_ready/ --output data/v2/
+```
+
+### `lint_turn_indices.py`
+
+Scenario structure lint for mixed turn index usage.
+
+```bash
+python benchmark/scripts/lint_turn_indices.py
+python benchmark/scripts/lint_turn_indices.py --strict
 ```
 
 ## Output Files
@@ -102,7 +86,7 @@ results/run_YYYYMMDD_HHMMSS/
 └── diagnostic_report.md            # Actionable fixes (if --diagnose)
 ```
 
-### Eval Harness (GiveCare live mode)
+### System Harness (GiveCare live mode)
 ```
 results/givecare/run_YYYYMMDD_HHMMSS/
 ├── run_manifest.json               # Reproducibility manifest
@@ -118,7 +102,7 @@ results/givecare/run_YYYYMMDD_HHMMSS/
 └── diagnostic_report.md            # Actionable fixes (if --diagnose)
 ```
 
-### Eval Harness (GiveCare orchestrator mode)
+### System Harness (GiveCare orchestrator mode)
 ```
 results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/
 ├── run_manifest.json               # Reproducibility manifest
@@ -250,12 +234,12 @@ MODELS_FULL = [
 ]
 ```
 
-### Adding New Providers
+### Adding New System Harnesses
 
-1. Create `benchmark/scripts/yourproduct_provider.py`
+1. Create a target module at `benchmark/yourproduct_live.py` or `benchmark/yourproduct_orchestrator.py`
 2. Implement transcript generation
-3. Add to CLI runner choices
-4. Output standardized format with `provider: "yourproduct"`
+3. Add the harness/mode to `benchmark/invisiblebench/harnesses.py`
+4. Keep `benchmark/scripts/` utility-only
 
 ### Scoring Configuration
 

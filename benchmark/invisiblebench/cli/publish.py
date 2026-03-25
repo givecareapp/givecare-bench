@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import requests
-
 from invisiblebench.run_artifacts import load_model_result_documents, load_result_rows
 from invisiblebench.run_audit import find_existing_audit_file
 

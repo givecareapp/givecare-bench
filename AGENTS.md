@@ -25,7 +25,7 @@ uv run ruff check .
 uv run bench --full -y
 uv run bench -m deepseek -c safety,empathy -y
 
-# GiveCare eval harness
+# GiveCare system harness
 uv run bench --harness givecare --mode live -y
 uv run bench --harness givecare --mode orchestrator -y
 uv run bench --harness givecare --mode live -y --confidential
@@ -50,7 +50,7 @@ uv run bench annotate export results/run_YYYYMMDD_HHMMSS/
 - Treat `pass`, `fail`, `error` as canonical statuses (`error` counts as failure).
 - If scenario set/count changes, update:
   - `benchmark/invisiblebench/cli/runner.py` help text
-  - `benchmark/scripts/givecare_provider.py` help/docstrings
+  - `benchmark/givecare_live.py` help/docstrings
   - `CLAUDE.md` and any user-facing docs
 - Avoid silent exception swallowing in new code; fail loudly when possible.
 

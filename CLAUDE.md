@@ -22,8 +22,8 @@ uv run bench -m gpt-5.2 -y --update-leaderboard   # Rerun GPT-5.2
 # -m accepts names (partial, case-insensitive) or numbers.
 # Use `uv run bench --dry-run` to see the current numbered catalog.
 
-# GiveCare Eval Harness - tests Mira product (not raw LLM)
-uv run bench --harness givecare --mode live -y         # Standard live/system path (53 scenarios)
+# GiveCare system harnesses - test product behavior against the benchmark core
+uv run bench --harness givecare --mode live -y         # Standard live product path (44 scenarios)
 uv run bench --provider givecare -y                    # Backward-compatible alias for live mode
 uv run bench --harness givecare --mode orchestrator -y # Direct Pi orchestrator benchmark harness
 uv run bench --harness givecare --mode orchestrator -m gemini-3.1-flash-lite-preview -y
@@ -75,11 +75,10 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 
 | Category | Count | What it tests |
 |----------|-------|---------------|
-| **safety** | 20 | Crisis detection, boundary violations, gray zones, false refusals, adversarial |
-| **empathy** | 15 | Burnout, belonging, grief, relational attunement |
-| **context** | 11 | Cultural awareness, regulatory compliance |
+| **safety** | 17 | Crisis detection, boundary violations, gray zones, false refusals, adversarial |
+| **empathy** | 13 | Burnout, belonging, grief, relational attunement |
+| **context** | 10 | Cultural awareness, regulatory compliance |
 | **continuity** | 4 | Longitudinal trust, memory, consistency |
-| **system** | 3 | Anthropomorphism resistance, human handoff, sensitive disclosure |
 | **confidential** | 3 | Holdout set (not in standard runs) |
 
 ## Scoring Architecture (v2)
@@ -90,15 +89,15 @@ mypy benchmark/invisiblebench/ && ruff check benchmark && black benchmark
 - **Quality** (0-1): Regard (60%), Coordination (40%) — scored only when gates pass
 - **Overall** = (regard × 0.6 + coordination × 0.4) when gates pass, else 0.0
 
-## Benchmark vs Product Eval
+## Benchmark Core vs System Harnesses
 
-| Mode | Command | What it tests | Scenarios |
+| Surface | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| Raw LLM Eval | `uv run bench --full -y` | Base model capability with the benchmark prompt only | 53 |
-| GiveCare Live Harness | `uv run bench --harness givecare --mode live -y` | Full Mira product path, including transport/runtime noise | 53 (or 56 with `--confidential`) |
-| GiveCare Orchestrator Harness | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` policy/runtime behavior | 53 (or 56 with `--confidential`) |
+| Benchmark Core (raw model eval) | `uv run bench --full -y` | Base model capability with the benchmark prompt only | 44 |
+| System Harness (GiveCare live) | `uv run bench --harness givecare --mode live -y` | Full Mira product path, including transport/runtime noise | 44 (or 47 with `--confidential`) |
+| System Harness (GiveCare orchestrator) | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` policy/runtime behavior | 44 (or 47 with `--confidential`) |
 
-**Scores are not directly comparable across these modes.** Raw eval measures base model capability. GiveCare live adds real product-path behavior. GiveCare orchestrator isolates the orchestrator with a benchmark-owned runtime shim, so it is cleaner than live mode but still not the same target as raw eval.
+**Scores are not directly comparable across these evaluation surfaces.** The benchmark core measures base model capability. GiveCare live adds real product-path behavior. GiveCare orchestrator isolates the orchestrator with a benchmark-owned runtime shim, so it is cleaner than live mode but still not the same target as raw eval.
 
 ## Leaderboard Management
 
@@ -125,8 +124,8 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 ## Results Management
 
 - **Active model runs**: `results/run_YYYYMMDD_HHMMSS/`
-- **Active GiveCare live runs**: `results/givecare/run_YYYYMMDD_HHMMSS/`
-- **Active GiveCare orchestrator runs**: `results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/`
+- **Active GiveCare live system-harness runs**: `results/givecare/run_YYYYMMDD_HHMMSS/`
+- **Active GiveCare orchestrator system-harness runs**: `results/givecare_orchestrator/run_YYYYMMDD_HHMMSS/`
 - **Primary scored artifacts**: `results/.../model_results/*.json` (one JSON per model/provider)
 - **Compatibility aggregate**: `results/.../all_results.json`
 - **Archived runs**: `results/archive/`
@@ -136,7 +135,7 @@ uv run bench -m opus-4.6 -y --update-leaderboard
 ## Structure
 
 ```
-benchmark/invisiblebench/       # Core package
+benchmark/invisiblebench/       # Benchmark core package
   api/                          # API client (OpenRouter/OpenAI)
   cli/                          # CLI commands (runner, leaderboard, health, stats)
   evaluation/                   # Orchestrator + scorers (safety, compliance, regard, coordination, memory)
@@ -145,19 +144,20 @@ benchmark/invisiblebench/       # Core package
   models/                       # Model config + pricing
   stats/                        # Statistical analysis (CIs, reliability, annotation)
 benchmark/scenarios/            # MECE categories + confidential/
-  safety/                       # 20 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
-  empathy/                      # 15 scenarios (burnout, belonging, grief, relational)
-  context/                      # 11 scenarios (cultural, regulatory)
+  safety/                       # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
+  empathy/                      # 13 scenarios (burnout, belonging, grief, relational)
+  context/                      # 10 scenarios (cultural, regulatory)
   continuity/                   # 4 scenarios (longitudinal trust/memory)
-  system/                       # 3 scenarios (anthropomorphism, handoff, disclosure)
   confidential/                 # 3 holdout scenarios
 benchmark/configs/              # Scoring config (private, gitignored — see configs/prompts/README.md)
   prompts/                      # LLM judge prompts (*.txt gitignored, README.md public)
   scoring.yaml                  # Weights & thresholds (gitignored, .example.yaml public)
   rules/                        # Jurisdiction rules (*.yaml gitignored, .example.yaml public)
-benchmark/adapters/             # Non-Python target adapters owned by the benchmark
+benchmark/givecare_live.py      # GiveCare live system harness
+benchmark/givecare_orchestrator.py # GiveCare orchestrator system harness
+benchmark/adapters/             # Non-Python bridge code used by the system harnesses
   givecare-orchestrator/        # TS bridge bundle for direct Pi orchestrator evals
-benchmark/scripts/              # Provider implementations + validation
+benchmark/scripts/              # Utility scripts only
 benchmark/tests/                # pytest suite
 autoresearch/                   # Autonomous scenario optimization (see autoresearch/CLAUDE.md)
 data/v2/                        # Published leaderboard (committed, fetched by web app)

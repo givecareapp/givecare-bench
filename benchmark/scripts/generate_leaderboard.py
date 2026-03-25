@@ -3,7 +3,7 @@
 Generate leaderboard data from canonical benchmark results.
 
 Usage:
-    python benchmark/scripts/leaderboard/generate_leaderboard.py --input results/leaderboard_ready/ --output data/v2/
+    python benchmark/scripts/generate_leaderboard.py --input results/leaderboard_ready/ --output data/v2/
 """
 
 import argparse

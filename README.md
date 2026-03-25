@@ -44,17 +44,17 @@ uv pip install -e ".[all]"
 echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env
 ```
 
-### Benchmark Families
+### Benchmark Core and System Harnesses
 
-InvisibleBench supports one raw benchmark family plus two GiveCare harness modes:
+InvisibleBench has one benchmark core and two GiveCare system harnesses that run against the same scenario and scoring contract:
 
-| Mode | Command | What it tests | Scenarios |
+| Surface | Command | What it tests | Scenarios |
 |------|---------|---------------|-----------|
-| **Raw LLM Eval** | `uv run bench --full -y` | Base model capability | 44 |
-| **GiveCare Live Harness** | `uv run bench --harness givecare --mode live -y` | Full deployed product path (Mira) | 44 (or 47 with `--confidential`) |
-| **GiveCare Orchestrator Harness** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior | 44 (or 47 with `--confidential`) |
+| **Benchmark Core (raw model eval)** | `uv run bench --full -y` | Base model capability against the benchmark prompt only | 44 |
+| **System Harness (GiveCare live)** | `uv run bench --harness givecare --mode live -y` | Full deployed Mira product path | 44 (or 47 with `--confidential`) |
+| **System Harness (GiveCare orchestrator)** | `uv run bench --harness givecare --mode orchestrator -y` | Direct `@givecare/pi-orchestrator` behavior with a benchmark-owned runtime shim | 44 (or 47 with `--confidential`) |
 
-**Scores are not directly comparable** across these modes. Raw eval uses the benchmark prompt only. Live mode includes transport/runtime noise. Orchestrator mode isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
+**Scores are not directly comparable** across these evaluation surfaces. The benchmark core measures base model capability. The live system harness includes transport/runtime noise. The orchestrator system harness isolates the orchestrator more cleanly than live mode, but still targets product behavior rather than raw model capability.
 
 ### Raw LLM Evaluation
 
@@ -91,7 +91,7 @@ uv run bench -m deepseek -y --detailed
 
 Use `uv run bench --dry-run` to see the current numbered model catalog.
 
-### GiveCare Harness Evaluation
+### GiveCare System Harness Evaluation
 
 ```bash
 # Live product path (44 scenarios)
@@ -139,11 +139,10 @@ The CLI runs offline (deterministic) by default. Add `--enable-llm` for LLM-assi
 # Automatic (after benchmark run)
 uv run bench --full -y --update-leaderboard
 
-# Manual (two-step)
-python benchmark/scripts/validation/prepare_for_leaderboard.py \
-  --input results/run_YYYYMMDD_*/all_results.json --output /tmp/lb_ready/
-python benchmark/scripts/leaderboard/generate_leaderboard.py \
-  --input /tmp/lb_ready/ --output data/v2/
+# Manual
+uv run bench leaderboard add results/run_YYYYMMDD_HHMMSS/
+python benchmark/scripts/generate_leaderboard.py \
+  --input results/leaderboard_ready/ --output data/v2/
 ```
 
 ### Diagnostic Reports
@@ -185,8 +184,8 @@ uv run bench archive --keep 5          # Keep only 5 most recent runs
 ### Validation Tools
 
 ```bash
-python benchmark/scripts/validation/check_ready.py        # Pre-run checks
-python benchmark/scripts/validation/lint_turn_indices.py  # Validate scenario structure
+python benchmark/scripts/lint_turn_indices.py             # Validate scenario structure
+uv run bench --dry-run                                    # Validate model catalog and cost surface
 ```
 
 ### Report Status Semantics
@@ -203,10 +202,12 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 
 ```
 ├── benchmark/                    # InvisibleBench evaluation framework
-│   ├── invisiblebench/           # Core package (CLI, harnesses, scoring, artifacts, audits)
+│   ├── invisiblebench/           # Benchmark core package (CLI, scoring, artifacts, audits)
 │   │   ├── api/                  # OpenRouter client + LRU scorer cache
 │   │   └── cli/                  # CLI commands (runner with harness/mode flags)
-│   ├── adapters/                 # Non-Python target adapters
+│   ├── givecare_live.py          # GiveCare/Mira live system harness
+│   ├── givecare_orchestrator.py  # Direct Pi orchestrator system harness
+│   ├── adapters/                 # Non-Python bridge code used by system harnesses
 │   │   └── givecare-orchestrator/ # TS bridge for direct Pi orchestrator eval
 │   ├── scenarios/                # Test scenarios by MECE category
 │   │   ├── safety/               # 17 scenarios (crisis, boundaries, gray_zone, false_refusal, adversarial)
@@ -215,8 +216,7 @@ When running with `--detailed`, per-scenario JSON/HTML reports include a
 │   │   ├── continuity/           # 4 scenarios (longitudinal trust/memory)
 │   │   └── confidential/         # 3 holdout scenarios
 │   ├── configs/                  # Scoring config (private *.txt/*.yaml gitignored)
-│   ├── scripts/                  # Live/provider implementations & validation
-│   │   └── givecare_provider.py  # GiveCare/Mira live harness
+│   ├── scripts/                  # Utility scripts (leaderboard, lint)
 │   └── tests/                    # pytest suite
 │
 ├── papers/                       # Research papers (LaTeX + PDF)
@@ -324,7 +324,7 @@ State-specific rules for 9 jurisdictions with active AI mental health regulation
 | **CT** | Consumer Health Data | Health data protections |
 | **ME** | 10 §1500-DD | No deception, clear AI notice |
 
-See [`benchmark/docs/REGULATORY_LANDSCAPE.md`](./benchmark/docs/REGULATORY_LANDSCAPE.md) for full operationally-testable criteria.
+See [`docs/regulatory.md`](./docs/regulatory.md) for full operationally-testable criteria.
 
 ---
 
@@ -342,11 +342,12 @@ ruff check benchmark && black --check benchmark             # Lint + format
 ## Documentation
 
 - [**Benchmark Evolution**](./benchmark/EVOLUTION.md) - How v2.0 diverged from the paper
-- [Benchmark Overview](./benchmark/README.md)
-- [Scenarios Guide](./benchmark/scenarios/README.md)
-- [Validation Quickstart](./benchmark/scripts/validation/QUICKSTART.md)
-- [Transcript Format](./benchmark/docs/transcript_format.md)
-- [Research Validation](./docs/RESEARCH_VALIDATION.md)
+- [Public Docs Home](./docs/index.md)
+- [Methodology](./docs/methodology.md)
+- [Scenarios Guide](./docs/scenarios.md)
+- [Benchmark Card](./docs/benchmark-card.md)
+- [Scripts Reference](./benchmark/scripts/README.md)
+- [Regulatory Landscape](./docs/regulatory.md)
 
 ---
 

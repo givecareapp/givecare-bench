@@ -201,8 +201,8 @@ Key sources informing the evolution:
 If you were running the benchmark with v1.0 scenarios:
 
 ```bash
-# Run with archived scenarios included
-uv run bench --full -y --include-archive
+# Archived scenarios now live under benchmark/scenarios/archive/
+# and are kept for historical reference rather than CLI inclusion
 
 # Run only new v2.0 scenarios
 uv run bench --full -y

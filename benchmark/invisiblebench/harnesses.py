@@ -1,6 +1,6 @@
-"""Eval harness resolution and dispatch helpers.
+"""Harness resolution and dispatch helpers.
 
-A harness adapts a target system to the benchmark core.
+A harness either runs the benchmark core directly or adapts a target system to it.
 A mode selects how that harness runs.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ _MODE_ALIASES = {
 
 _ALLOWED_MODES = {
     "llm": {"raw"},
-    "givecare": {"live", "integration", "orchestrator"},
+    "givecare": {"live", "orchestrator"},
 }
 
 _IMPLEMENTED_MODES = {

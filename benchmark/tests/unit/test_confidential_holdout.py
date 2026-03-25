@@ -20,7 +20,7 @@ def _load_module(module_name: str, relative_path: str):
 def test_generate_leaderboard_detects_confidential() -> None:
     leaderboard_module = _load_module(
         "generate_leaderboard",
-        "benchmark/scripts/leaderboard/generate_leaderboard.py",
+        "benchmark/scripts/generate_leaderboard.py",
     )
     result = {
         "scenarios": [

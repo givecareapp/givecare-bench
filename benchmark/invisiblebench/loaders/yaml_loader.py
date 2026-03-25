@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-
 from invisiblebench.loaders.scenario_loader import ScenarioValidator
 from invisiblebench.utils.turn_index import normalize_turn_indices
 

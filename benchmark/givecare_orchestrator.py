@@ -1,4 +1,4 @@
-"""GiveCare orchestrator harness.
+"""GiveCare orchestrator system harness.
 
 Runs benchmark scenarios directly against the @givecare/pi-orchestrator package via a
 benchmark-owned runtime adapter, avoiding Convex/live SMS noise.

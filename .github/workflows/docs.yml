@@ -7,11 +7,9 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - "README.md"
-      - "METHODOLOGY.md"
       - "benchmark/ARCHITECTURE.md"
       - "benchmark/EVOLUTION.md"
-      - "benchmark/scenarios/README.md"
-      - "benchmark/BENCHMARK_CARD.md"
+      - "benchmark/README.md"
   workflow_dispatch:
 
 permissions:

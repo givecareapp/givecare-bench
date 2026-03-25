@@ -25,6 +25,11 @@ def test_invalid_mode_raises() -> None:
         resolve_harness_mode(harness="llm", mode="live")
 
 
+def test_removed_integration_mode_raises() -> None:
+    with pytest.raises(ValueError):
+        resolve_harness_mode(harness="givecare", mode="integration")
+
+
 def test_mode_implementation_tracking() -> None:
     assert is_mode_implemented("llm", "raw") is True
     assert is_mode_implemented("givecare", "live") is True

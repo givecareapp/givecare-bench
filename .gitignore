@@ -102,5 +102,8 @@ benchmark/configs/rules/*.yaml
 !benchmark/configs/rules/*.example.yaml
 
 # Autoresearch campaign artifacts
-autoresearch/
+autoresearch/results/*.json
+autoresearch/results.tsv
+autoresearch/REPORT.md
+autoresearch/chart.png
 .learnings/

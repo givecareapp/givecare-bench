@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
-
 from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
@@ -113,20 +112,11 @@ def run_givecare_eval(
     harness_mode: str = "live",
     update_leaderboard: bool = False,
 ) -> int:
-    """Run the GiveCare eval harness in one supported mode.
-
-    Current implementation supports the live/system path via the GiveCare provider.
-    Additional harness modes can reuse the same benchmark core once implemented.
-    """
-    # Import givecare provider
-    import sys
-
+    """Run the GiveCare live system harness against the benchmark core."""
     root = get_project_root()
-    scripts_dir = root / "benchmark" / "scripts"
-    sys.path.insert(0, str(scripts_dir))
 
     try:
-        from givecare_provider import (
+        from benchmark.givecare_live import (
             MODEL_ID,
             MODEL_NAME,
             PROVIDER_NAME,
@@ -135,12 +125,12 @@ def run_givecare_eval(
             format_result,
             run_scenario,
         )
-        from givecare_provider import (
+        from benchmark.givecare_live import (
             get_scenarios as get_givecare_scenarios,
         )
     except ImportError as e:
-        print(f"Error: Could not import givecare_provider: {e}")
-        print("Make sure benchmark/scripts/givecare_provider.py exists")
+        print(f"Error: Could not import GiveCare live system harness: {e}")
+        print("Make sure benchmark/givecare_live.py exists")
         return 1
 
     scenarios_dir = root / "benchmark" / "scenarios"
@@ -168,7 +158,7 @@ def run_givecare_eval(
 
     scenario_count = len(scenario_paths)
     conf_note = " (including confidential)" if include_confidential else ""
-    print(f"GiveCare Eval Harness [{harness_mode}]: {scenario_count} scenario(s){conf_note}")
+    print(f"GiveCare System Harness [{harness_mode}]: {scenario_count} scenario(s){conf_note}")
 
     if dry_run:
         print("\nDry run - no transcripts will be generated")
@@ -177,7 +167,9 @@ def run_givecare_eval(
         return 0
 
     if not auto_confirm:
-        confirm = input(f"\nRun {scenario_count} scenarios against Mira? [y/N] ")
+        confirm = input(
+            f"\nRun {scenario_count} scenarios against the GiveCare live system harness? [y/N] "
+        )
         if confirm.lower() != "y":
             print("Aborted")
             return 0
@@ -243,7 +235,7 @@ def run_givecare_eval(
             print(f"  {formatted['scenario']}: {status} ({int(score * 100)}%)")
         except Exception as e:
             print(f"  {scenario_path.stem}: ERROR ({e})")
-            from givecare_provider import get_category_from_path, get_scenario_title
+            from benchmark.givecare_live import get_category_from_path, get_scenario_title
 
             results.append(
                 {
@@ -391,8 +383,8 @@ def run_givecare_orchestrator_eval(
     model_names: Optional[List[str]] = None,
     update_leaderboard: bool = False,
 ) -> int:
-    """Run the GiveCare orchestrator harness directly against the benchmark."""
-    from invisiblebench.givecare_orchestrator import (
+    """Run the GiveCare orchestrator system harness against the benchmark core."""
+    from benchmark.givecare_orchestrator import (
         DEFAULT_ORCHESTRATOR_MODEL,
         PROVIDER_NAME,
         PROVIDER_VERSION,
@@ -444,7 +436,7 @@ def run_givecare_orchestrator_eval(
     scenario_count = len(scenario_paths)
     conf_note = " (including confidential)" if include_confidential else ""
     print(
-        f"GiveCare Eval Harness [orchestrator]: {len(selected_models)} model(s) × {scenario_count} scenario(s){conf_note}"
+        f"GiveCare System Harness [orchestrator]: {len(selected_models)} model(s) × {scenario_count} scenario(s){conf_note}"
     )
 
     if dry_run:
@@ -3252,13 +3244,13 @@ Examples:
         type=str,
         choices=["llm", "givecare"],
         default=None,
-        help="Eval harness to run: 'llm' (raw model benchmark) or 'givecare' (system harness)",
+        help="Evaluation surface to run: 'llm' (benchmark core) or 'givecare' (system harnesses)",
     )
     parser.add_argument(
         "--mode",
         type=str,
         default=None,
-        help="Harness mode. LLM: raw. GiveCare: live | integration | orchestrator",
+        help="Harness mode. LLM: raw. GiveCare: live | orchestrator",
     )
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")

@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""
-GiveCare Provider for InvisibleBench
+"""GiveCare live system harness for InvisibleBench.
 
 Runs benchmark scenarios against the deployed Mira agent via Convex API.
-Generates transcripts that can be scored by the InvisibleBench scorer.
+Generates transcripts that can be scored by the InvisibleBench benchmark core.
 
 Usage:
     # Standard run (44 scenarios, matches leaderboard)
-    python benchmark/scripts/givecare_provider.py --all --score -v
+    python benchmark/givecare_live.py --all --score -v
 
     # Include confidential scenarios (47 total)
-    python benchmark/scripts/givecare_provider.py --all --score --confidential
+    python benchmark/givecare_live.py --all --score --confidential
 
     # Single scenario
-    python benchmark/scripts/givecare_provider.py --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json
+    python benchmark/givecare_live.py --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json
 
     # Filter by category
-    python benchmark/scripts/givecare_provider.py --all --category safety --score
+    python benchmark/givecare_live.py --all --category safety --score
 """
 
 import argparse
@@ -31,14 +30,14 @@ from typing import Dict, List, Optional
 import requests
 from dotenv import load_dotenv
 
-# Add parent to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from invisiblebench.results_io import write_json, write_model_results
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 try:
     import jsonlines
@@ -63,7 +62,7 @@ DEFAULT_DEPLOYMENT = "dev"
 
 
 class GiveCareProvider:
-    """Provider that sends messages to GiveCare/Mira via gc CLI."""
+    """Live harness that sends messages to GiveCare/Mira via gc CLI."""
 
     def __init__(self, deployment: str = DEFAULT_DEPLOYMENT, wait_ms: int = 15000):
         self.deployment = deployment
@@ -72,14 +71,14 @@ class GiveCareProvider:
 
         # Path to gc CLI (in give-care-mono repo)
         self.gc_cli = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "give-care-mono"
             / "packages"
             / "cli"
             / "dist"
             / "index.js"
         )
-        self.givecare_dir = Path(__file__).parent.parent.parent.parent / "give-care-mono"
+        self.givecare_dir = Path(__file__).parent.parent.parent / "give-care-mono"
 
         if not self.gc_cli.exists():
             raise RuntimeError(f"gc CLI not found at {self.gc_cli}")
@@ -394,18 +393,18 @@ def format_result(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run GiveCare against InvisibleBench scenarios",
+        description="Run the GiveCare live system harness against InvisibleBench scenarios",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Standard run (44 scenarios, matches leaderboard)
-  python givecare_provider.py --all --score -v
+  python benchmark/givecare_live.py --all --score -v
 
   # Include confidential scenarios (47 total)
-  python givecare_provider.py --all --score --confidential
+  python benchmark/givecare_live.py --all --score --confidential
 
   # Single category
-  python givecare_provider.py --all --category safety --score
+  python benchmark/givecare_live.py --all --category safety --score
         """,
     )
     parser.add_argument("--scenario", "-s", help="Single scenario JSON file")
@@ -433,7 +432,7 @@ Examples:
 
     # Find project root
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent
+    project_root = script_dir.parent
     scenarios_dir = project_root / "benchmark" / "scenarios"
     if args.output:
         output_dir = project_root / args.output
@@ -456,7 +455,10 @@ Examples:
 
     scenario_count = len(scenario_paths)
     conf_note = " (including confidential)" if args.confidential else ""
-    print(f"Running {scenario_count} scenario(s) against GiveCare ({args.deployment}){conf_note}")
+    print(
+        f"Running {scenario_count} scenario(s) against the GiveCare live system harness "
+        f"({args.deployment}){conf_note}"
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = generate_manifest(

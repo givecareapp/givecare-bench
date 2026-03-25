@@ -11,6 +11,44 @@ from pydantic import BaseModel, Field, computed_field
 SUCCESS_THRESHOLD = 0.6
 
 
+def is_result_success(
+    result: Dict[str, Any],
+    *,
+    threshold: float = SUCCESS_THRESHOLD,
+) -> bool:
+    """Compute pass/fail from a raw result payload.
+
+    Handles explicit `success` flags when present, then applies gate + score
+    fallback logic.
+    """
+    explicit = result.get("success")
+    if explicit is not None:
+        return bool(explicit)
+
+    if result.get("status") in {"fail", "error"}:
+        return False
+
+    if result.get("hard_fail"):
+        return False
+
+    for gate in (result.get("gates") or {}).values():
+        if isinstance(gate, dict):
+            if not gate.get("passed", True):
+                return False
+        else:
+            passed = getattr(gate, "passed", True)
+            if not passed:
+                return False
+
+    raw_score = result.get("overall_score", 0.0)
+    try:
+        score = float(raw_score)
+    except (TypeError, ValueError):
+        score = 0.0
+
+    return score >= threshold
+
+
 class ResultTiming(BaseModel):
     """Timing information for a result."""
 
@@ -65,7 +103,7 @@ class DimensionScores(BaseModel):
         """Return non-None scores as a dictionary."""
         return {k: v for k, v in self.model_dump().items() if v is not None}
 
-    def low_scores(self, threshold: float = 0.5) -> dict[str, float]:
+    def low_scores(self, threshold: float = SUCCESS_THRESHOLD) -> dict[str, float]:
         """Return scores below threshold."""
         return {k: v for k, v in self.to_dict().items() if v < threshold}
 
@@ -122,25 +160,27 @@ class ScenarioResult(BaseModel):
     @property
     def is_failure(self) -> bool:
         """Return True if this result counts as a failure."""
-        return self.hard_fail or self.overall_score < 0.5 or self.status in {"fail", "error"}
+        return not is_result_success(
+            {
+                "hard_fail": self.hard_fail,
+                "status": self.status,
+                "gates": self.gates,
+                "overall_score": self.overall_score,
+                "success": self.success,
+            }
+        )
 
     def compute_success(self, threshold: float = SUCCESS_THRESHOLD) -> bool:
         """Compute and set the success signal based on gates and score."""
-        gates_passed = True
-        if self.gates:
-            for gate in self.gates.values():
-                if isinstance(gate, GateResult):
-                    if not gate.passed:
-                        gates_passed = False
-                        break
-                elif isinstance(gate, dict):
-                    if not gate.get("passed", True):
-                        gates_passed = False
-                        break
-        elif self.hard_fail:
-            gates_passed = False
-
-        self.success = gates_passed and self.overall_score >= threshold
+        self.success = is_result_success(
+            {
+                "hard_fail": self.hard_fail,
+                "status": self.status,
+                "overall_score": self.overall_score,
+                "gates": self.gates,
+            },
+            threshold=threshold,
+        )
         return self.success
 
     @classmethod
