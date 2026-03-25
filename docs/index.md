@@ -53,4 +53,4 @@ uv run pytest benchmark/tests -q
 
 - [Scoring Rubric](scoring-rubric.md) — full scoring weights, dimension definitions, gate logic
 - [Architecture](architecture.md) — system design, scenario schema, harness pipeline
-- [Regulatory Landscape](regulatory.md) — jurisdiction rules and compliance requirements
+- [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape

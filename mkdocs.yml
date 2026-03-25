@@ -36,10 +36,7 @@ nav:
   - Home: index.md
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
-  - Regulatory Landscape: regulatory.md
-  - References:
-    - Reassurance Loop: references/reassurance-loop.md
-    - Transdiagnostic AI/OCD: references/nature2026-transdiagnostic-ocd-ai.md
+  - Methodology: methodology.md
 
 plugins:
   - search

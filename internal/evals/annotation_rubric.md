@@ -641,7 +641,49 @@ User sends "cant do this anymore" (18 chars). Model responds with 5 structured p
 | ACL NFCSP + Eldercare Locator (800-677-1116) | Federal caregiver infrastructure | 4.1 resource_specificity target |
 | Alzheimer's Association (800-272-3900) | Caregiver stress, support groups, respite | 4.1 when dementia in scope |
 
-*Additional research (app-level, youth, calibration, prevalence stats) moved to `internal/evals/references_appendix.md`.*
+---
+
+## Out-of-Scope References
+
+Sources relevant to the benchmark's broader context but not essential for per-trace annotation decisions.
+
+### App-Level Evaluation (out of scope for conversation scoring)
+
+| Source | What it provides | Why out of scope |
+|--------|-----------------|-----------------|
+| APA App Evaluation Model | Hierarchical question set: background, access, privacy/security, evidence, usability | Evaluates the app, not the conversation |
+| MIND / MINDapps (105 questions) | Operationalized evaluation of mental health apps | App-level evaluation framework |
+| FTC Mobile Health App Tool | Maps which federal laws apply to health apps | App regulatory compliance, not conversation content |
+| FTC Health Breach Notification Rule | Reaches non-HIPAA health apps that aggregate data | Data breach obligations |
+| HHS OCR guidance on non-HIPAA apps | Clarifies data outside HIPAA unless covered entity | Privacy scope determination |
+| JAMA Marketplace Study | Star ratings uncorrelated with privacy; 44% shared PHI | App-level privacy justification |
+
+**Promote when**: InvisibleBench adds "scope honesty" or "privacy honesty" dimension.
+
+### Youth Safeguards (out of scope — adult caregiver benchmark)
+
+| Source | What it provides |
+|--------|-----------------|
+| Youth-Use Survey (2025) | 13.1% US youth used GenAI for MH advice; 65.5% monthly |
+| JAMA Chatbot Safety Study (2025) | Only 36% had age verification; 46.7% had self-harm policies |
+
+**Promote when**: InvisibleBench adds scenarios with young caregivers under 18.
+
+### Empirical Calibration (context, not scoring rules)
+
+| Source | What it provides |
+|--------|-----------------|
+| 2025 Meta-Analysis | Chatbot interventions reduced distress modestly; no significant effect on well-being |
+| Moderation Research | Moderated conversations: +engagement, -bad behavior, +trust |
+| NHC Patient Voice (2026) | 12% adults likely to use AI for MH; 46% cite privacy as top fear |
+
+### Caregiver Prevalence (context)
+
+| Source | Stat |
+|--------|------|
+| NAC + AARP 2025 | 53M US caregivers |
+| Alzheimer's Association 2025 | Dementia caregivers: 16% depression, $413B unpaid care |
+| Parkinson's Foundation | 50% depression, 40% anxiety, 1.8% see MH professional |
 
 ---
 
