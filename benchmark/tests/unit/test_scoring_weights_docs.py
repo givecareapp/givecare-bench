@@ -80,7 +80,7 @@ def test_benchmark_readme_mentions_v2_architecture() -> None:
 
 def test_scripts_readme_yaml_matches_scoring_config() -> None:
     config = _load_config(SCORING_CONFIG)
-    text = (PROJECT_ROOT / "benchmark" / "scripts" / "README.md").read_text(encoding="utf-8")
+    text = (PROJECT_ROOT / "scripts" / "README.md").read_text(encoding="utf-8")
 
     snippet = _extract_yaml_snippet(
         text,

@@ -6,6 +6,7 @@ Tests in this module catch accidental changes to:
 - Dimension vocabulary (canonical vs legacy names)
 - Coordination scorer deterministic behavior (golden transcript)
 - Failure bucket taxonomy (allowed category and reason strings)
+- Public scenario corpus (count, required fields, tier vocabulary)
 
 If a test fails, it means the contract changed — bump contract_version
 and update the frozen constants here consciously.
@@ -13,7 +14,10 @@ and update the frozen constants here consciously.
 
 from __future__ import annotations
 
+import glob
 import hashlib
+import json
+from pathlib import Path
 
 from invisiblebench.evaluation.scorers import coordination
 from invisiblebench.models.results import (
@@ -24,18 +28,21 @@ from invisiblebench.models.results import (
 )
 from invisiblebench.utils.dimension_aliases import DIMENSION_ALIASES, V2_DIMENSIONS
 
+# Path to the scenario corpus
+_SCENARIO_ROOT = Path(__file__).resolve().parents[2] / "scenarios"
+
 # ── Frozen prompt hashes ──────────────────────────────────────────────
 # Update these ONLY when intentionally changing scorer prompts.
 # After updating, bump contract_version in scoring.yaml + ScenarioResult.
 
 # SHA256 of benchmark/configs/prompts/safety_crisis_eval.txt (stripped)
 FROZEN_SAFETY_PROMPT_HASH = (
-    "d872760e9893d5c9c9d9bf1168d6ca3c373b63942d9f1b0b8af05078a5fe67bf"
+    "e38afaaf2a068810a62b5c005931ec525097a5e4edaa1ac42e19a7e6b7bf69c2"
 )
 
 # SHA256 of the regard scorer prompt template (configs/prompts/regard_eval.txt)
 FROZEN_REGARD_TEMPLATE_HASH = (
-    "48abc7cdbb49ee14af2ba5c7d43b110a1cfb037b21cdf69ec1af701d8dea9135"
+    "dc9c89876f57d179acce4d20cac3e7686f1fd3010eb9caad1113cfb2db665e00"
 )
 
 # ── Allowed failure bucket names (from orchestrator._categorize_failure_reasons)
@@ -95,7 +102,7 @@ class TestSchemaStability:
             model="m",
             overall_score=0.5,
         )
-        assert result.contract_version == "2.0.0"
+        assert result.contract_version == "2.1.0"
 
     def test_no_unexpected_fields(self):
         """Fail if new fields are added without updating this test.
@@ -422,3 +429,61 @@ class TestFailureBucketTaxonomy:
         assert result["categories"] == []
         assert result["count"] == 0
         assert result["primary_category"] is None
+
+
+# =====================================================================
+# Scenario corpus contract tests
+# =====================================================================
+
+class TestScenarioCorpus:
+    """Assert public scenario corpus matches the v2.1 contract."""
+
+    EXPECTED_SCENARIO_COUNT = 50
+    VALID_TIERS = {"safety", "empathy", "context", "continuity"}
+    REQUIRED_FIELDS = {"scenario_id", "tier", "title", "persona", "scoring_dimensions"}
+
+    @staticmethod
+    def _load_all_scenarios() -> list[tuple[str, dict]]:
+        """Return list of (path, data) for every scenario JSON."""
+        paths = sorted(glob.glob(
+            str(_SCENARIO_ROOT / "**" / "*.json"), recursive=True,
+        ))
+        results = []
+        for p in paths:
+            with open(p) as f:
+                results.append((p, json.load(f)))
+        return results
+
+    def test_public_scenario_count(self):
+        scenario_files = glob.glob(
+            str(_SCENARIO_ROOT / "**" / "*.json"), recursive=True,
+        )
+        assert len(scenario_files) == self.EXPECTED_SCENARIO_COUNT, (
+            f"Expected {self.EXPECTED_SCENARIO_COUNT} public scenarios, "
+            f"found {len(scenario_files)}"
+        )
+
+    def test_all_scenarios_have_required_fields(self):
+        for path, data in self._load_all_scenarios():
+            for field in self.REQUIRED_FIELDS:
+                assert field in data, (
+                    f"{Path(path).name} missing required field '{field}'"
+                )
+            has_turns = "turns" in data
+            has_sessions = "sessions" in data
+            assert has_turns or has_sessions, (
+                f"{Path(path).name} must have 'turns' or 'sessions'"
+            )
+
+    def test_tier_values_are_valid(self):
+        for path, data in self._load_all_scenarios():
+            tier = data.get("tier")
+            assert tier in self.VALID_TIERS, (
+                f"{Path(path).name} has invalid tier '{tier}'; "
+                f"expected one of {self.VALID_TIERS}"
+            )
+
+    def test_scenario_ids_unique(self):
+        ids = [data["scenario_id"] for _, data in self._load_all_scenarios()]
+        dupes = [sid for sid in ids if ids.count(sid) > 1]
+        assert not dupes, f"Duplicate scenario_ids: {set(dupes)}"

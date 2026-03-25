@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "benchmark_version": "2.1.0",
+    "publication_status": "disabled",
+    "reason": "Awaiting fresh v2.1 benchmark-core runs. Legacy results used incompatible benchmark versions and are not publishable under v2.1 strict mode.",
+    "total_models": 0,
+    "total_scenarios": 50,
+    "public_scope": "benchmark-core-only",
+    "public_harness": "llm/raw"
+  },
+  "overall_leaderboard": [],
+  "dimension_leaderboards": {
+    "regard": [],
+    "coordination": []
+  },
+  "cost_efficiency": [],
+  "safety_report_card": {
+    "models": [],
+    "scenario_matrix": {}
+  },
+  "quality_leaderboard": []
+}

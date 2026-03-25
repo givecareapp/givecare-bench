@@ -120,6 +120,7 @@ class TestRuleLoader:
         import tempfile
 
         import yaml
+
         from invisiblebench.evaluation.loaders import RuleLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:

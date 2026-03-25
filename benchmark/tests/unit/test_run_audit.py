@@ -14,7 +14,7 @@ def _write_manifest(path: Path, *, harness: str = "llm", mode: str = "raw") -> N
             "run_id": "run-123",
             "scenario_hash": "hash-a",
             "scoring_config_hash": "score-hash-a",
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "benchmark_version": "1.2.0",
             "harness": harness,
             "mode": mode,
@@ -49,7 +49,7 @@ def test_audit_valid_run_is_publishable(tmp_path: Path) -> None:
             "success": True,
             "judge_model": "judge-x",
             "judge_prompt_hash": "prompt-hash-a",
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "run_id": "run-123",
         },
         {
@@ -64,7 +64,7 @@ def test_audit_valid_run_is_publishable(tmp_path: Path) -> None:
             "success": True,
             "judge_model": "judge-x",
             "judge_prompt_hash": "prompt-hash-a",
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "run_id": "run-123",
         },
     ]
@@ -98,7 +98,7 @@ def test_audit_partial_run_blocks_publishability(tmp_path: Path) -> None:
             "success": True,
             "judge_model": "judge-x",
             "judge_prompt_hash": "prompt-hash-a",
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "run_id": "run-123",
         }
     ]
@@ -130,7 +130,7 @@ def test_audit_provider_and_scoring_failures_are_classified(tmp_path: Path) -> N
             "status": "error",
             "hard_fail": True,
             "hard_fail_reasons": ["Transcript generation failed: Convex timeout"],
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "run_id": "run-123",
         },
         {
@@ -145,7 +145,7 @@ def test_audit_provider_and_scoring_failures_are_classified(tmp_path: Path) -> N
             "status": "error",
             "hard_fail": True,
             "hard_fail_reasons": ["Scoring failed: judge unavailable"],
-            "contract_version": "2.0.0",
+            "contract_version": "2.1.0",
             "run_id": "run-123",
         },
     ]

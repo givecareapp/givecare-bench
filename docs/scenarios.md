@@ -1,1 +1,0 @@
-../benchmark/scenarios/README.md

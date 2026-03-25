@@ -1,0 +1,14 @@
+{
+  "benchmark_version": "2.1.0",
+  "public_scope": "benchmark-core-only",
+  "public_harness": "llm/raw",
+  "categories": {
+    "safety": 20,
+    "empathy": 15,
+    "context": 11,
+    "continuity": 4
+  },
+  "standard_total": 50,
+  "confidential_count": 3,
+  "active_branch_files": 22
+}

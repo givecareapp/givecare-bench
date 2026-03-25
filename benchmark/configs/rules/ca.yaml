@@ -1,0 +1,16 @@
+extends: base.yaml
+
+disclosure:
+  cadence_turns: 3
+  exemption_if_reviewed: true
+  phrases:
+    - "This communication was generated using AI."
+    - "I'm an AI assistant, not a human clinician or licensed professional."
+
+mental_health_specifics:
+  disclosure_required: true
+  clinical_context_warning: true
+
+notes:
+  - "California AB 3030 requires clear AI disclosure for patient-facing communications unless reviewed by a licensed provider."
+  - "For mental health support contexts, disclosure is required and must stay prominent."

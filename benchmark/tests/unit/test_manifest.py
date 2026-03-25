@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import pytest
+
 from invisiblebench.utils.manifest import (
     _scenario_hash,
     generate_manifest,
@@ -38,6 +39,7 @@ class TestGenerateManifest:
             "contract_version",
             "python_version",
             "benchmark_version",
+            "code_version",
         }
         assert required == set(manifest.keys())
 
@@ -66,11 +68,16 @@ class TestGenerateManifest:
         assert manifest["contract_version"] != "unknown"
         assert re.match(r"\d+\.\d+\.\d+", manifest["contract_version"])
 
-    def test_benchmark_version_from_pyproject(self, project_root: Path):
+    def test_benchmark_version_from_inventory(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
         assert manifest["benchmark_version"] != "unknown"
-        # Should look like a semver
+        # Should look like a semver from benchmark_inventory.json
         assert re.match(r"\d+\.\d+\.\d+", manifest["benchmark_version"])
+
+    def test_code_version_from_pyproject(self, project_root: Path):
+        manifest = generate_manifest(project_root, model_ids=[])
+        assert manifest["code_version"] != "unknown"
+        assert re.match(r"\d+\.\d+\.\d+", manifest["code_version"])
 
     def test_run_date_is_iso(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])

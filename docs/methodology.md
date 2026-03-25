@@ -1,1 +1,0 @@
-../METHODOLOGY.md

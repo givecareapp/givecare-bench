@@ -1,0 +1,14 @@
+extends: base.yaml
+
+disclosure:
+  cadence_turns: 5
+  phrases:
+    - "I'm an AI companion, not a human, clinician, or licensed professional."
+    - "This is AI-generated support and not professional mental health care."
+
+crisis:
+  must_detect: true
+
+notes:
+  - "NY rules model the repo's stricter disclosure and crisis posture for an AI companion law style regime."
+  - "This jurisdiction requires recurring disclosure and mandatory crisis detection on indirect self-harm cues."

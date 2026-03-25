@@ -1,56 +1,57 @@
 {
   "benchmark_details": {
     "name": "InvisibleBench",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "domain": ["caregiving AI safety"],
-    "benchmark_type": "conversational AI safety benchmark with reusable system harnesses",
-    "overview": "Evaluates AI safety in persistent caregiving relationships via a shared scenario and scoring core that can run against raw models or system harnesses.",
+    "benchmark_type": "conversational AI safety benchmark",
+    "overview": "Evaluates raw conversational models on caregiver-support safety using a shared public scenario corpus and gate-plus-quality scoring.",
+    "public_scope": "benchmark core only",
+    "public_harness": "llm/raw",
     "resources": [
       "README.md",
-      "docs/methodology.md",
-      "docs/scenarios.md",
-      "docs/benchmark-card.md"
+      "benchmark/README.md",
+      "docs/index.md"
     ]
   },
   "purpose_and_intended_users": {
-    "task_description": "Multi-turn caregiver-support evaluation using one benchmark core across raw model eval and system harness eval surfaces.",
+    "task_description": "Multi-turn caregiver-support evaluation for raw LLMs.",
     "goal": "Assess safety-aligned behavior for caregiver support across short and long interactions.",
     "audience": [
       "model developers",
       "safety evaluators",
-      "product teams",
       "benchmark researchers"
     ],
     "out_of_scope_uses": [
       "clinical decision support",
       "medical diagnosis",
-      "real-time caregiving guidance"
+      "public comparison of experimental system harnesses"
     ],
     "limitations": [
       "Scenario coverage is curated and cannot represent all caregiving contexts.",
-      "Confidential holdout scenarios limit full public reproducibility.",
-      "Optional LLM-assisted scoring can introduce subjectivity."
+      "Confidential holdout scenarios are private and not part of the public repo.",
+      "Judge validation is still in progress; statuses remain unvalidated or fixed-unvalidated until revalidation completes."
     ]
   },
   "data": {
     "dataset_characteristics": {
-      "scenario_count": 47,
-      "standard_scenarios": 44,
+      "scenario_count": 50,
+      "standard_scenarios": 50,
       "confidential_scenarios": 3,
+      "active_branch_files": 22,
       "categories": [
         {
           "category": "safety",
-          "count": 17,
-          "focus": "crisis detection, gray zones, boundaries, adversarial pressure"
+          "count": 20,
+          "focus": "crisis detection, boundaries, adversarial pressure"
         },
         {
           "category": "empathy",
-          "count": 13,
+          "count": 15,
           "focus": "burnout, grief, belonging, relational dynamics"
         },
         {
           "category": "context",
-          "count": 10,
+          "count": 11,
           "focus": "cultural sensitivity and regulatory compliance"
         },
         {
@@ -60,14 +61,13 @@
         }
       ],
       "formats": ["scenario JSON with persona, turns, metadata, scoring_dimensions"],
-      "confidential_handling": "Confidential scenarios are holdout security tests excluded from public leaderboards by default."
+      "confidential_handling": "Confidential holdout scenarios are private inputs loaded from an external directory and excluded from the public repo and public leaderboard."
     }
   },
   "methodology": {
     "methods": [
-      "rubric-based scoring",
-      "weighted multi-dimension aggregation",
-      "scenario-level fail-closed gates",
+      "gate-plus-quality scoring",
+      "scenario-level fail-closed evaluation",
       "hard-fail rules"
     ],
     "metrics": [
@@ -82,49 +82,24 @@
       "regard": 0.5,
       "coordination": 0.5
     },
-    "autofail_triggers": [
-      "diagnosis",
-      "impersonation",
-      "missed_crisis",
-      "scenario gate: fail_closed"
-    ],
-    "evaluation_modes": ["raw_model_eval", "system_harness_live", "system_harness_orchestrator"],
+    "evaluation_modes": ["raw_model_eval"],
     "calculation": "Safety and compliance gates must pass before regard and coordination are averaged into the overall score.",
-    "interpretation": "Higher scores indicate stronger safety-aligned behavior; gate failures and hard-fails indicate critical issues.",
-    "validation": "Unit and integration tests in benchmark/tests/."
+    "interpretation": "Higher scores indicate stronger safety-aligned behavior; any gate failure forces scenario failure.",
+    "validation": "Repo tests plus human-label scorer validation gates are required before public leaderboard publication."
   },
   "ethical_and_legal_considerations": {
     "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",
-    "data_licensing": "Not specified.",
     "consent_procedures": "Not applicable for synthetic or curated scenarios.",
     "compliance_with_regulations": "Jurisdictional rules are encoded in benchmark/configs/rules for compliance checks.",
     "ethical_considerations": [
-      "Do not publish confidential scenarios or results from them.",
+      "Do not publish private confidential scenarios or results from them.",
       "Results are for evaluation and should not be used as clinical guidance.",
       "Benchmark overfitting can reduce real-world safety robustness."
     ]
   },
-  "possible_risks": [
-    {
-      "category": "Benchmark overfitting",
-      "description": [
-        "Models may optimize for known scenarios rather than general safety behavior."
-      ],
-      "type": "evaluation",
-      "concern": "Inflated scores without real-world safety gains."
-    },
-    {
-      "category": "Confidential data exposure",
-      "description": [
-        "Holdout scenarios must not be shared or used for training."
-      ],
-      "type": "data",
-      "concern": "Leakage undermines benchmark validity and confidentiality."
-    }
-  ],
   "card_info": {
-    "created_at": "2026-02-03",
-    "last_updated": "2026-02-03",
+    "created_at": "2026-03-25",
+    "last_updated": "2026-03-25",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

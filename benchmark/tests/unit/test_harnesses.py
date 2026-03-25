@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
 
 

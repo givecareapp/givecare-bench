@@ -1,32 +1,22 @@
-# InvisibleBench Scenario Schema v1.2
-# Human-readable specification aligned with current JSON scenario files
+# InvisibleBench Scenario Schema v2.1
+# Human-readable specification aligned with the live v2.1 corpus (50 scenarios)
 
-scenario_id: string  # Unique identifier (e.g., "tier1_crisis_001")
-  pattern: "tier{0|1|2|3}_{category}_{number}"
+scenario_id: string  # Stable opaque identifier. Legacy IDs use "tier{N}_{name}_{number}" prefix but new scenarios may use any unique string.
   required: true
 
-tier: enum  # Scenario complexity tier
-  values: ["tier_0", "tier_1", "tier_2", "tier_3"]
-  tier_0: 1-2 turns, smoke tests
-  tier_1: 3-5 turns, foundational safety
-  tier_2: 8-12 turns, memory and attachment
-  tier_3: 20+ turns across multiple sessions, longitudinal consistency
+tier: enum  # Scenario category (despite the field name, this is the primary category label)
+  values: ["safety", "empathy", "context", "continuity"]
+  safety: crisis detection, regulatory compliance, medical boundaries
+  empathy: trauma-informed care, cultural sensitivity, relational quality
+  context: regulatory fitness, professional boundaries, adversarial resilience
+  continuity: longitudinal consistency, memory across sessions
   required: true
 
 title: string  # Human-readable scenario name
   example: "Medication Affordability Crisis with Masked Suicidal Ideation"
   required: true
 
-category: enum  # Primary safety dimension being tested (optional)
-  values:
-    - crisis_safety
-    - regulatory_fitness
-    - trauma_informed_flow
-    - belonging_cultural_fitness
-    - relational_quality
-    - actionable_support
-    - longitudinal_consistency
-    - memory_hygiene
+category: string  # Optional legacy field from earlier taxonomy (e.g., crisis_safety, regulatory_fitness). Not part of the public contract; use `tier` for category.
   required: false
 
 persona:  # Caregiver characteristics
@@ -53,7 +43,7 @@ persona:  # Caregiver characteristics
 
   required_fields: [name, age, care_recipient, care_duration, context]
 
-turns:  # Conversation turns (Tier 0/1/2)
+turns:  # Conversation turns (single-session scenarios; 47/50 use this)
   - t: integer  # Canonical turn index (1-indexed)
     turn_number: integer  # Optional legacy alias
     user_message: string  # What the caregiver says
@@ -62,7 +52,7 @@ turns:  # Conversation turns (Tier 0/1/2)
       - criterion_id: string
         description: string
         max_points: integer
-        dimension: enum [crisis_safety, regulatory_fitness, trauma_informed_flow, belonging_cultural_fitness, relational_quality, actionable_support, longitudinal_consistency, memory_hygiene]
+        dimension: string  # Scenario-level dimension name (see scoring_dimensions)
         scoring_guide: object
     autofail_triggers: array[string]  # Instant failure conditions
     facts: array[string]  # Optional key=value facts introduced (e.g., "caregiver_name=Sarah")
@@ -85,7 +75,7 @@ turns:  # Conversation turns (Tier 0/1/2)
     conditional_fields:
       - expected_behaviors OR rubric_criteria
 
-sessions:  # Tier 3 only (multi-session scenarios)
+sessions:  # Multi-session scenarios (3/50 use this instead of turns)
   - session_number: integer  # Sequential, starts at 1
     time_elapsed: string  # Time since last session (e.g., "3 months later")
     session_context: string  # Optional summary of what changed
@@ -93,33 +83,36 @@ sessions:  # Tier 3 only (multi-session scenarios)
 
     required_fields: [session_number, time_elapsed, turns]
 
-probes:  # Scenario-level probes for memory/consistency checks
+probes:  # Scenario-level probes for memory/consistency checks (27/50)
   - t: integer  # Turn to evaluate (canonical index)
     kind: enum [recall, abstention, time, multi_session, boundary_check, pronoun_continuity]
     expected: array[string]  # Expected recall or abstention targets
     from_sessions: array[int]  # Optional, for multi_session probes
     comment: string  # Optional notes
 
-risk_triggers:  # Crisis/safety cues used by safety/compliance scorers
+risk_triggers:  # Crisis/safety cues used by safety/compliance scorers (38/50)
   - t: integer  # Turn where the cue appears
     cue: string  # Description of the cue
     severity: enum [low, medium, high]
 
-scoring_dimensions:  # Expected point ranges per dimension
-  crisis_safety: integer  # 0-3
-  regulatory_fitness: integer  # 0-3
-  trauma_informed_flow: integer  # 0-3
-  belonging_cultural_fitness: integer  # 0-2
-  relational_quality: integer  # 0-3
-  actionable_support: integer  # 0-3
-  longitudinal_consistency: integer  # 0-2 (Tier 2/3 only)
-  memory_hygiene: integer  # 0-1 (Tier 3 only)
+scoring_dimensions:  # Scenario-level expected scores using per-scenario dimension names
+  # Keys are scenario-specific dimension names from the old taxonomy:
+  #   crisis_safety, regulatory_fitness, trauma_informed_flow,
+  #   belonging_cultural_fitness, relational_quality, actionable_support,
+  #   longitudinal_consistency, memory_hygiene
+  # Values are expected perfect-response scores (integers).
+  #
+  # NOTE: These are SCENARIO metadata (expected ideal scores), NOT the
+  # runtime gate+quality dimensions (safety gate, compliance gate, regard,
+  # coordination) used by the scoring pipeline.
+  required: true
 
-  note: "These are EXPECTED scores for a perfect AI response (used for validation)"
+description: string  # Optional prose description of the scenario (32/50)
+  required: false
 
-dif_variables: array[string]  # Optional fairness variables for analysis
+dif_variables: array[string]  # Optional fairness variables for analysis (46/50)
 
-metadata:  # Scenario development tracking (optional)
+metadata:  # Scenario development tracking (optional, 22/50)
   author: string
   created_date: date  # YYYY-MM-DD
   last_modified: date  # YYYY-MM-DD

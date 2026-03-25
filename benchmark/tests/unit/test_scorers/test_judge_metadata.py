@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 
 import pytest
+
 from invisiblebench.api.client import compute_prompt_hash
 from invisiblebench.evaluation.scorers import coordination, memory
 
@@ -166,7 +167,7 @@ class TestOrchestratorJudgeMeta:
             rules_path=rules_path,
             model_name="test-model",
         )
-        assert result["contract_version"] == "2.0.0"
+        assert result["contract_version"] == "2.1.0"
 
     def test_score_includes_judge_model(self, orchestrator, simple_scenario):
         transcript_path, scenario_path, rules_path = simple_scenario

@@ -1,61 +1,42 @@
 # AGENTS.md — GiveCare Bench
 
 ## Purpose
-Operational guide for contributors and coding agents in this repo.
+Operational guide for contributors and coding agents.
 
-## Current baseline (v2)
-- Scenario organization is **category-based** (MECE): `safety`, `empathy`, `context`, `continuity`, plus `confidential` holdout.
-- Do **not** use tier-era paths/flags in new work.
-- Standard GiveCare run: **44** scenarios
-- With confidential: **47** scenarios
+## Active structure
+- `benchmark/` = benchmark data, configs, scenarios, tests
+- `src/invisiblebench/` = runtime package, CLI, scorers, adapters
+- `scripts/` = active utility scripts
+- `archive/` = historical/internal material
+
+## Current baseline
+- scenario organization is category-based: `safety`, `empathy`, `context`, `continuity`
+- standard public benchmark: **50** scenarios
+- private confidential holdout: **3** scenarios loaded only from env-configured private path
 
 ## Source of truth
-- Primary project guide: `CLAUDE.md`
-- Keep this file short and operational; detailed workflow/examples live in `CLAUDE.md`.
+- primary project guide: `CLAUDE.md`
+- benchmark counts/version: `benchmark/benchmark_inventory.json`
 
 ## Core commands
 ```bash
-# Test suite
-uv run pytest -q
-
-# Lint
+uv run pytest benchmark/tests -q
 uv run ruff check .
-
-# Model evaluation (raw LLM)
 uv run bench --full -y
-uv run bench -m deepseek -c safety,empathy -y
-
-# GiveCare system harness
-uv run bench --harness givecare --mode live -y
-uv run bench --harness givecare --mode orchestrator -y
-uv run bench --harness givecare --mode live -y --confidential
-uv run bench --harness givecare --mode live -c safety -y
-
-# Utilities
-uv run bench audit results/run_YYYYMMDD_HHMMSS/
-uv run bench diff <base_run> <new_run>
-uv run bench stats results/leaderboard_ready/
-uv run bench reliability results/run_YYYYMMDD_HHMMSS/
-uv run bench annotate export results/run_YYYYMMDD_HHMMSS/
+python scripts/lint_turn_indices.py --strict
+uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
 ```
 
-## CLI rules (keep it simple)
-1. Prefer explicit flags over magic behavior.
-2. Keep one flag = one concept.
-3. Use `--category/-c` (not `--tier/-t`).
-4. Update `--help` examples when behavior/counts change.
-5. Backward compatibility is allowed, but new docs/examples must use canonical v2 terms.
+## Experimental/internal commands (system harnesses, not public contract)
+```bash
+uv run bench --harness givecare --mode live -y
+uv run bench --harness givecare --mode orchestrator -y
+```
 
 ## Guardrails
-- Treat `pass`, `fail`, `error` as canonical statuses (`error` counts as failure).
-- If scenario set/count changes, update:
-  - `benchmark/invisiblebench/cli/runner.py` help text
-  - `benchmark/givecare_live.py` help/docstrings
-  - `CLAUDE.md` and any user-facing docs
-- Avoid silent exception swallowing in new code; fail loudly when possible.
-
-## Definition of done
-- Tests pass: `uv run pytest -q`
-- Lint passes: `uv run ruff check .`
-- Help output is aligned: `uv run bench --help`
-- No tier-era examples introduced in docs/help for new changes
+- treat `pass`, `fail`, `error` as canonical statuses
+- if scenario counts or benchmark version change, update:
+  - `benchmark/benchmark_inventory.json`
+  - `src/invisiblebench/cli/runner.py`
+  - `README.md`, `CLAUDE.md`, and public docs
+- keep `benchmark/` data-only and `src/invisiblebench/` code-only

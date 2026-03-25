@@ -1,4 +1,24 @@
-# LaTeX temporary files
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+.venv_figs/
+
+# Testing / Linting
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Build / Docs
+site/
+*.egg-info/
+
+# LaTeX
 *.aux
 *.log
 *.out
@@ -8,102 +28,45 @@
 *.lof
 *.lot
 *.synctex.gz
+*.synctex
 *.fls
 *.fdb_latexmk
-
-# arXiv submission artifacts
-papers/*/arxiv_upload/
-papers/*/*.zip
-
-# macOS system files
-.DS_Store
-
-# Editor temporary files
-*~
-*.swp
-*.swo
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-
-# Development artifacts
-.vscode/
-.idea/
-
-# Build artifacts (keep final PDFs)
-*.synctex
 *.nav
 *.snm
 *.vrb
-.env
-# Node modules (if any)
-node_modules/
-benchmark/adapters/givecare-orchestrator/dist/
-
-# Environment and local config
-.env
-.claude/
-.mcp.json
-REPOSITORY_STRUCTURE.md
-CLEANUP_VERIFICATION.txt
-arxiv_submissions/
-
-# Development artifacts (not for public release)
-dev/experiments/
-results/
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-
-# Testing/Development
-.pytest_cache/
-.mypy_cache/
-.coverage
-htmlcov/
+internal/papers/*/arxiv_upload/
+internal/papers/*/*.zip
 
 # macOS
 .DS_Store
 
 # Editor
+*~
 *.swp
 *.swo
-*~
 .vscode/
 .idea/
-# MkDocs build output
-site/
 
-# bv (beads viewer) local config and caches
-.bv/
+# Node
+node_modules/
+adapters/givecare-orchestrator/dist/
+
+# Environment / Local config
+.env
+.claude/
 .mcp.json
+
+# Run artifacts (user-generated, not committed)
+results/
 runs/
 
-# Ralph Wiggum
-logs/ralph/
-*.tmp
-
-# Night Nurse
-logs/night-nurse.log
-.night-nurse/
-
-# Automation tool state
-.specify/
-state/
-
-# Private scoring internals (not for public release)
-benchmark/configs/prompts/*.txt
-benchmark/configs/scoring.yaml
-benchmark/configs/rules/*.yaml
-!benchmark/configs/rules/*.example.yaml
-
 # Autoresearch campaign artifacts
-autoresearch/results/*.json
-autoresearch/results.tsv
-autoresearch/REPORT.md
-autoresearch/chart.png
+internal/autoresearch/results/*.json
+internal/autoresearch/results.tsv
+internal/autoresearch/REPORT.md
+internal/autoresearch/chart.png
 .learnings/
+
+# Misc
+*.tmp
+logs/

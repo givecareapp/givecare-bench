@@ -1,0 +1,18 @@
+extends: base.yaml
+
+disclosure:
+  transparency_required: true
+  phrases:
+    - "You are interacting with an AI system, not a human professional."
+
+therapeutic_exception:
+  available: false
+  rationale: "Caregiving support benchmark assumes no therapeutic-provider exception for direct user-facing support."
+
+risk_classification:
+  mental_health_support: high_risk
+  caregiver_support: limited_risk_with_heightened_monitoring
+
+notes:
+  - "EU AI Act transparency duties apply to user-facing AI systems, especially where emotional dependence or sensitive support is plausible."
+  - "This profile references the EU AI Act and keeps mental-health-adjacent support in a high-scrutiny category."

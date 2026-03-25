@@ -1,4 +1,4 @@
-site_name: InvisibleBench
+site_name: GiveCare Bench
 site_url: https://givecareapp.github.io/givecare-bench/
 site_description: AI safety benchmark for longitudinal caregiver support
 site_author: Ali Madad
@@ -31,14 +31,9 @@ theme:
 
 nav:
   - Home: index.md
-  - Methodology: methodology.md
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
-  - Evolution: evolution.md
-  - Scenarios: scenarios.md
-  - Benchmark Card: benchmark-card.md
   - Regulatory Landscape: regulatory.md
-  - Research Review: research-review.md
 
 markdown_extensions:
   - admonition

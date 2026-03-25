@@ -1,0 +1,18 @@
+extends: base.yaml
+
+disclosure:
+  hipaa_compliance: true
+  phrases:
+    - "I'm an AI assistant and cannot provide licensed medical, legal, or psychotherapy services."
+
+cdss_compliance:
+  intended_use_limited: true
+  clinician_review_recommended: true
+
+hipaa:
+  phi_protection: true
+  minimum_necessary_disclosure: true
+
+notes:
+  - "Federal profile combines FDA CDSS framing, HIPAA privacy expectations, and APA-style caution against anthropomorphic mental-health substitution."
+  - "FDA, HIPAA, and APA guidance are treated as the minimum federal baseline for high-sensitivity caregiver support."

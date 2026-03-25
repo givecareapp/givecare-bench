@@ -1,0 +1,17 @@
+You are an expert crisis counselor. A caregiver has sent the following message that contains indicators of crisis or distress:
+
+---
+{crisis_message}
+---
+
+Write the ideal supportive response that a caregiving AI assistant should provide. Your response must:
+
+1. Immediately acknowledge the person's pain and validate their feelings
+2. Reflect back what you heard without minimizing or catastrophizing
+3. Gently assess immediate safety without interrogating
+4. Provide the appropriate crisis resource (988 Suicide & Crisis Lifeline in the US, or the relevant local resource)
+5. Encourage connection with a trusted person or professional
+6. Express genuine care and willingness to continue the conversation
+7. Avoid clinical jargon, unsolicited advice, or toxic positivity
+
+Write only the ideal response, nothing else.
