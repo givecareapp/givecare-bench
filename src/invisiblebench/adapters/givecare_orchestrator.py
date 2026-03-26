@@ -124,14 +124,37 @@ def bridge_healthcheck() -> Dict[str, Any]:
 def bridge_diagnostics() -> Dict[str, Any]:
     """Return dependency diagnostics without building or executing the bridge."""
     mono_root = _mono_root()
+    build_script = _bridge_build_script()
+    bundle = _bridge_bundle()
+    source_paths = _collect_source_paths()
+
+    bundle_exists = bundle.exists()
+    bundle_current = False
+    if bundle_exists and source_paths:
+        latest_src_mtime = max(path.stat().st_mtime for path in source_paths)
+        bundle_current = bundle.stat().st_mtime >= latest_src_mtime
+
+    if not mono_root.exists():
+        status = "missing_dependency"
+    elif not build_script.exists():
+        status = "missing_build_script"
+    elif not bundle_exists:
+        status = "build_required"
+    elif not bundle_current:
+        status = "stale_bundle"
+    else:
+        status = "ready"
+
     return {
-        "status": "ready" if mono_root.exists() else "missing_dependency",
+        "status": status,
         "adapter_root": str(_adapter_root()),
-        "bundle_path": str(_bridge_bundle()),
-        "build_script_exists": _bridge_build_script().exists(),
-        "bundle_exists": _bridge_bundle().exists(),
+        "bundle_path": str(bundle),
+        "build_script_exists": build_script.exists(),
+        "bundle_exists": bundle_exists,
+        "bundle_current": bundle_current,
         "mono_root": str(mono_root),
         "mono_root_exists": mono_root.exists(),
+        "source_count": len(source_paths),
     }
 
 
@@ -351,6 +374,7 @@ def run_scenario(
 
     transcript: List[Dict[str, Any]] = []
     prev_assistant_msg: Optional[str] = None
+    errors: List[str] = []
 
     for turn in turns:
         turn_number = int(turn.get("turn_number", turn.get("t", 0)))
@@ -379,6 +403,8 @@ def run_scenario(
         try:
             bridge_output = _call_bridge(payload)
             assistant_text = str(bridge_output.get("assistantText", "")).strip()
+            if not assistant_text:
+                raise RuntimeError("Bridge returned empty assistant response")
             if verbose:
                 print(
                     f"    Orchestrator: {assistant_text[:100]}{'...' if len(assistant_text) > 100 else ''}"
@@ -401,6 +427,7 @@ def run_scenario(
             state["recent_messages"].append({"direction": "outbound", "text": assistant_text})
             _apply_bridge_effects(state, bridge_output)
         except Exception as e:
+            errors.append(f"Turn {turn_number}: {e}")
             error_msg = f"[ERROR: {e}]"
             if verbose:
                 print(f"    ERROR: {e}")
@@ -414,6 +441,7 @@ def run_scenario(
             )
             prev_assistant_msg = None
             state["recent_messages"].append({"direction": "outbound", "text": error_msg})
+            break
 
     output_dir.mkdir(parents=True, exist_ok=True)
     transcript_path = output_dir / f"{_slugify(model_name)}_{scenario_id}.jsonl"
@@ -424,4 +452,6 @@ def run_scenario(
     scenario_data = scenario.model_dump()
     if verbose:
         print(f"Saved: {transcript_path}")
+    if errors:
+        raise RuntimeError(f"Transcript generation had {len(errors)} error(s): {errors[0]}")
     return transcript_path, scenario_data

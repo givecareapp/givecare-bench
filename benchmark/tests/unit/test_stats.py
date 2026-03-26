@@ -3,6 +3,7 @@
 import csv
 import json
 import tempfile
+import warnings
 from pathlib import Path
 
 
@@ -275,7 +276,11 @@ class TestAnnotationKit:
                     "hard_fails": {"s1": False},
                 }, f)
 
-            result = import_annotations(str(csv_path), str(llm_path))
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("error", DeprecationWarning)
+                result = import_annotations(str(csv_path), str(llm_path))
+
+            assert caught == []
             assert "human_llm" in result
             assert "hard_fail_agreement" in result
 

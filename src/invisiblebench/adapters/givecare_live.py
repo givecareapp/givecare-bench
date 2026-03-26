@@ -89,7 +89,12 @@ class GiveCareProvider:
             timeout=60,
         )
 
-        return result.stdout + result.stderr
+        output = result.stdout + result.stderr
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"gc CLI simulate failed (exit {result.returncode}): {output.strip() or 'no output'}"
+            )
+        return output
 
     def bootstrap(self) -> None:
         """Pre-boot a phone number by calling playground:createPreBootstrappedCaregiver.
@@ -138,7 +143,7 @@ class GiveCareProvider:
             if response:
                 return response
 
-        return "(no response)"
+        raise RuntimeError("gc simulate returned no response after 2 attempts")
 
     @staticmethod
     def _parse_mira_response(output: str) -> Optional[str]:
@@ -224,6 +229,7 @@ def run_scenario(
 
     transcript = []
     prev_assistant_msg: Optional[str] = None
+    errors: List[str] = []
 
     for turn in turns:
         turn_num = turn["turn_number"]
@@ -259,6 +265,7 @@ def run_scenario(
             )
             prev_assistant_msg = response
         except Exception as e:
+            errors.append(f"Turn {turn_num}: {e}")
             error_msg = f"[ERROR: {e}]"
             if verbose:
                 print(f"    ERROR: {e}")
@@ -271,6 +278,7 @@ def run_scenario(
                 }
             )
             prev_assistant_msg = None
+            break
 
     # Save transcript
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -286,6 +294,9 @@ def run_scenario(
 
     if verbose:
         print(f"Saved: {transcript_path}")
+
+    if errors:
+        raise RuntimeError(f"Transcript generation had {len(errors)} error(s): {errors[0]}")
 
     return transcript_path, scenario
 
@@ -371,6 +382,37 @@ def format_result(
     }
 
 
+def format_error_result(scenario_path: Path, scenario_data: Dict, reason: str) -> Dict:
+    """Format a system-harness transport/runtime failure as an error result."""
+    return {
+        "model": MODEL_NAME,
+        "model_id": MODEL_ID,
+        "provider": PROVIDER_NAME,
+        "scenario": get_scenario_title(scenario_data, scenario_path),
+        "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
+        "category": get_category_from_path(scenario_path),
+        "overall_score": 0.0,
+        "hard_fail": True,
+        "hard_fail_reasons": [reason],
+        "failure_categories": {
+            "categories": ["error"],
+            "details": {},
+            "primary_category": "error",
+            "count": 1,
+        },
+        "gates": {
+            "safety": {"passed": False, "reasons": [reason]},
+            "compliance": {"passed": False, "reasons": []},
+        },
+        "dimensions": {"regard": 0.0, "coordination": 0.0},
+        "dimension_scores": {},
+        "status": "error",
+        "error": reason,
+        "success": False,
+        "contract_version": "2.1.0",
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run the GiveCare live system harness against InvisibleBench scenarios",
@@ -424,11 +466,15 @@ Examples:
     if args.scenario:
         scenario_paths = [Path(args.scenario)]
     else:
-        scenario_paths = get_scenarios(
-            scenarios_dir,
-            category_filter=args.category,
-            include_confidential=args.confidential,
-        )
+        try:
+            scenario_paths = get_scenarios(
+                scenarios_dir,
+                category_filter=args.category,
+                include_confidential=args.confidential,
+            )
+        except RuntimeError as e:
+            print(str(e))
+            sys.exit(1)
 
     if not scenario_paths:
         print("No scenarios found")
@@ -453,19 +499,29 @@ Examples:
 
     provider = GiveCareProvider(deployment=args.deployment, wait_ms=args.wait)
     transcript_data = []  # List of (transcript_path, scenario_path, scenario_data)
+    results = []
+    had_generation_errors = False
 
     try:
         for scenario_path in scenario_paths:
             # Use fresh phone for each scenario
             provider.phone = provider._generate_phone()
 
-            transcript_path, scenario_data = run_scenario(
-                provider,
-                str(scenario_path),
-                output_dir / "transcripts",
-                verbose=args.verbose,
-            )
-            transcript_data.append((transcript_path, scenario_path, scenario_data))
+            try:
+                transcript_path, scenario_data = run_scenario(
+                    provider,
+                    str(scenario_path),
+                    output_dir / "transcripts",
+                    verbose=args.verbose,
+                )
+                transcript_data.append((transcript_path, scenario_path, scenario_data))
+            except Exception as e:
+                had_generation_errors = True
+                scenario_data = load_scenario(str(scenario_path))
+                reason = f"Transcript generation failed: {e}"
+                print(f"  {scenario_path.stem}: ERROR ({e})")
+                if args.score:
+                    results.append(format_error_result(scenario_path, scenario_data, reason))
     finally:
         provider.close()
 
@@ -485,7 +541,6 @@ Examples:
             enable_llm=True,
         )
 
-        results = []
         for transcript_path, scenario_path, scenario_data in transcript_data:
             try:
                 score_result = orchestrator.score(
@@ -505,34 +560,12 @@ Examples:
 
             except Exception as e:
                 print(f"  {scenario_path.stem}: ERROR ({e})")
-                # Create error result in standard format
-                scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
                 results.append(
-                    {
-                        "model": MODEL_NAME,
-                        "model_id": MODEL_ID,
-                        "provider": PROVIDER_NAME,
-                        "scenario": get_scenario_title(scenario_data, scenario_path),
-                        "scenario_id": scenario_id,
-                        "category": get_category_from_path(scenario_path),
-                        "overall_score": 0.0,
-                        "hard_fail": True,
-                        "hard_fail_reasons": [str(e)],
-                        "failure_categories": {
-                            "categories": ["error"],
-                            "details": {},
-                            "primary_category": "error",
-                            "count": 1,
-                        },
-                        "gates": {
-                            "safety": {"passed": False, "reasons": [str(e)]},
-                            "compliance": {"passed": False, "reasons": []},
-                        },
-                        "dimensions": {"regard": 0.0, "coordination": 0.0},
-                        "dimension_scores": {},
-                        "status": "error",
-                        "error": str(e),
-                    }
+                    format_error_result(
+                        scenario_path,
+                        scenario_data,
+                        f"Scoring failed: {e}",
+                    )
                 )
 
         # Save results with metadata
@@ -596,6 +629,9 @@ Examples:
             f"valid={'yes' if audit.get('run_valid') else 'no'} | "
             f"publishable={'yes' if audit.get('publishable') else 'no'}"
         )
+    elif had_generation_errors:
+        print("\nCompleted with transcript generation errors.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

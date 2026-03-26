@@ -78,7 +78,11 @@ from invisiblebench.run_artifacts import (
     write_aggregate_results,
 )
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
-from invisiblebench.utils.benchmark_inventory import collect_scenario_paths, get_benchmark_version
+from invisiblebench.utils.benchmark_inventory import (
+    collect_scenario_paths,
+    get_benchmark_version,
+    get_private_confidential_dir,
+)
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
@@ -171,11 +175,15 @@ def run_givecare_eval(
         output_dir = root / "results" / "givecare" / f"run_{timestamp}"
 
     # Get scenarios
-    scenario_paths = get_givecare_scenarios(
-        scenarios_dir,
-        category_filter=category_filter,
-        include_confidential=include_confidential,
-    )
+    try:
+        scenario_paths = get_givecare_scenarios(
+            scenarios_dir,
+            category_filter=category_filter,
+            include_confidential=include_confidential,
+        )
+    except RuntimeError as e:
+        print(str(e))
+        return 1
     if scenario_filter:
         lowered = set(scenario_filter)
         scenario_paths = [
@@ -222,17 +230,33 @@ def run_givecare_eval(
     # Run scenarios
     provider = GiveCareProvider(deployment="dev", wait_ms=15000)
     transcript_data = []
+    results: List[Dict[str, Any]] = []
 
     try:
         for scenario_path in scenario_paths:
             provider.phone = provider._generate_phone()
-            transcript_path, scenario_data = run_givecare_live_scenario(
-                provider,
-                str(scenario_path),
-                output_dir / "transcripts",
-                verbose=verbose,
-            )
-            transcript_data.append((transcript_path, scenario_path, scenario_data))
+            try:
+                transcript_path, scenario_data = run_givecare_live_scenario(
+                    provider,
+                    str(scenario_path),
+                    output_dir / "transcripts",
+                    verbose=verbose,
+                )
+                transcript_data.append((transcript_path, scenario_path, scenario_data))
+            except Exception as e:
+                scenario_data = _safe_load_scenario_data(scenario_path)
+                results.append(
+                    _make_harness_error_result(
+                        model_name=MODEL_NAME,
+                        model_id=MODEL_ID,
+                        provider=PROVIDER_NAME,
+                        scenario_name=get_scenario_title(scenario_data, scenario_path),
+                        scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
+                        category=get_category_from_path(scenario_path),
+                        reason=f"Transcript generation failed: {e}",
+                    )
+                )
+                print(f"  {scenario_path.stem}: ERROR ({e})")
     finally:
         provider.close()
 
@@ -253,7 +277,6 @@ def run_givecare_eval(
 
     givecare_run_id = str(uuid.uuid4())
 
-    results = []
     for transcript_path, scenario_path, scenario_data in transcript_data:
         try:
             score_result = orchestrator.score(
@@ -273,26 +296,15 @@ def run_givecare_eval(
             print(f"  {scenario_path.stem}: ERROR ({e})")
 
             results.append(
-                {
-                    "model": MODEL_NAME,
-                    "model_id": MODEL_ID,
-                    "provider": PROVIDER_NAME,
-                    "scenario": get_scenario_title(scenario_data, scenario_path),
-                    "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
-                    "category": get_category_from_path(scenario_path),
-                    "overall_score": 0.0,
-                    "hard_fail": True,
-                    "hard_fail_reasons": [str(e)],
-                    "failure_categories": {
-                        "categories": ["error"],
-                        "details": {},
-                        "primary_category": "error",
-                        "count": 1,
-                    },
-                    "dimensions": {},
-                    "status": "error",
-                    "error": str(e),
-                }
+                _make_harness_error_result(
+                    model_name=MODEL_NAME,
+                    model_id=MODEL_ID,
+                    provider=PROVIDER_NAME,
+                    scenario_name=get_scenario_title(scenario_data, scenario_path),
+                    scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
+                    category=get_category_from_path(scenario_path),
+                    reason=f"Scoring failed: {e}",
+                )
             )
 
     # Save results
@@ -421,15 +433,21 @@ def run_givecare_orchestrator_eval(
         output_dir = root / "results" / "givecare_orchestrator" / f"run_{timestamp}"
 
     scenario_paths: List[Dict[str, Any]] = []
-    for path in collect_scenario_paths(
-        root,
-        category_filter=category_filter,
-        include_confidential=include_confidential,
-    ):
-        category = path.parent.parent.name if path.parent.parent.name in CATEGORIES else path.parent.name
+    private_confidential_dir = get_private_confidential_dir(root)
+    try:
+        collected_paths = collect_scenario_paths(
+            root,
+            category_filter=category_filter,
+            include_confidential=include_confidential,
+        )
+    except RuntimeError as e:
+        print(str(e))
+        return 1
+
+    for path in collected_paths:
         scenario_paths.append(
             {
-                "category": category,
+                "category": _scenario_category(path, private_confidential_dir),
                 "path": str(path),
                 "name": path.stem.replace("_", " ").title(),
             }
@@ -494,16 +512,38 @@ def run_givecare_orchestrator_eval(
     write_manifest(manifest, output_dir)
 
     transcript_data: List[Tuple[str, Path, Dict[str, Any], str]] = []
+    results: List[Dict[str, Any]] = []
     for model_name in selected_models:
+        model_label = get_model_label(model_name)
+        model_id = get_model_id(model_name)
         for scenario in scenario_paths:
             scenario_path = Path(scenario["path"])
-            transcript_path, scenario_data = run_givecare_orchestrator_scenario(
-                model_name,
-                str(scenario_path),
-                output_dir / "transcripts",
-                verbose=verbose,
-            )
-            transcript_data.append((model_name, transcript_path, scenario_path, scenario_data))
+            try:
+                transcript_path, scenario_data = run_givecare_orchestrator_scenario(
+                    model_name,
+                    str(scenario_path),
+                    output_dir / "transcripts",
+                    verbose=verbose,
+                )
+                transcript_data.append((model_name, transcript_path, scenario_path, scenario_data))
+            except Exception as e:
+                scenario_data = _safe_load_scenario_data(scenario_path)
+                results.append(
+                    _make_harness_error_result(
+                        model_name=model_label,
+                        model_id=model_id,
+                        provider=PROVIDER_NAME,
+                        scenario_name=scenario_data.get("title", scenario_path.stem),
+                        scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
+                        category=scenario_data.get("category", scenario.get("category", "unknown")),
+                        reason=f"Transcript generation failed: {e}",
+                        extra={
+                            "harness_mode": "orchestrator",
+                            "orchestrator_model": model_name,
+                        },
+                    )
+                )
+                print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
 
     print(f"\nGenerated {len(transcript_data)} transcript(s)")
     print("\nScoring transcripts...")
@@ -519,7 +559,6 @@ def run_givecare_orchestrator_eval(
     )
 
     benchmark_run_id = str(uuid.uuid4())
-    results: List[Dict[str, Any]] = []
     for model_name, transcript_path, scenario_path, scenario_data in transcript_data:
         model_label = get_model_label(model_name)
         model_id = get_model_id(model_name)
@@ -571,33 +610,19 @@ def run_givecare_orchestrator_eval(
         except Exception as e:
             print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
             results.append(
-                {
-                    "model": model_label,
-                    "model_id": model_id,
-                    "provider": PROVIDER_NAME,
-                    "scenario": scenario_data.get("title", scenario_path.stem),
-                    "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
-                    "category": scenario_data.get("category", "unknown"),
-                    "overall_score": 0.0,
-                    "hard_fail": True,
-                    "hard_fail_reasons": [str(e)],
-                    "failure_categories": {
-                        "categories": ["error"],
-                        "details": {},
-                        "primary_category": "error",
-                        "count": 1,
+                _make_harness_error_result(
+                    model_name=model_label,
+                    model_id=model_id,
+                    provider=PROVIDER_NAME,
+                    scenario_name=scenario_data.get("title", scenario_path.stem),
+                    scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
+                    category=scenario_data.get("category", "unknown"),
+                    reason=f"Scoring failed: {e}",
+                    extra={
+                        "harness_mode": "orchestrator",
+                        "orchestrator_model": model_name,
                     },
-                    "gates": {
-                        "safety": {"passed": False, "reasons": [str(e)]},
-                        "compliance": {"passed": False, "reasons": []},
-                    },
-                    "dimensions": {"regard": 0.0, "coordination": 0.0},
-                    "dimension_scores": {},
-                    "status": "error",
-                    "error": str(e),
-                    "harness_mode": "orchestrator",
-                    "orchestrator_model": model_name,
-                }
+                )
             )
 
     run_timestamp = datetime.now().isoformat()
@@ -716,23 +741,40 @@ CATEGORY_TOKEN_MAP = {
 }
 
 
-def get_scenarios() -> List[Dict]:
-    """Get scenario configurations."""
+def _scenario_category(path: Path, private_confidential_dir: Optional[Path] = None) -> str:
+    """Infer the benchmark category for a scenario path."""
+    if private_confidential_dir and private_confidential_dir in path.parents:
+        return "confidential"
+    for category in CATEGORIES:
+        if category in path.parts:
+            return category
+    if "confidential" in path.parts:
+        return "confidential"
+    return path.parent.name
+
+
+def get_scenarios(
+    *,
+    category_filter: Optional[List[str]] = None,
+    include_confidential: bool = False,
+) -> List[Dict]:
+    """Get scenario configurations for the selected benchmark scope."""
     root = get_project_root()
-    scenarios_dir = root / "benchmark" / "scenarios"
+    private_confidential_dir = get_private_confidential_dir(root)
 
     scenarios = []
-
-    for category in CATEGORIES:
-        cat_dir = scenarios_dir / category
-        if not cat_dir.exists():
-            continue
-
-        # Collect all JSON files (may be in subdirs or flat)
-        for f in sorted(cat_dir.rglob("*.json")):
-            scenarios.append(
-                {"category": category, "path": str(f), "name": f.stem.replace("_", " ").title()}
-            )
+    for path in collect_scenario_paths(
+        root,
+        category_filter=category_filter,
+        include_confidential=include_confidential,
+    ):
+        scenarios.append(
+            {
+                "category": _scenario_category(path, private_confidential_dir),
+                "path": str(path),
+                "name": path.stem.replace("_", " ").title(),
+            }
+        )
 
     return scenarios
 
@@ -1382,6 +1424,60 @@ def _make_error_result(
     }
 
 
+def _make_harness_error_result(
+    *,
+    model_name: str,
+    model_id: str,
+    provider: str,
+    scenario_name: str,
+    scenario_id: str,
+    category: str,
+    reason: str,
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build a standardized error row for system-harness failures."""
+    result: Dict[str, Any] = {
+        "model": model_name,
+        "model_id": model_id,
+        "provider": provider,
+        "scenario": scenario_name,
+        "scenario_id": scenario_id,
+        "category": category,
+        "overall_score": 0.0,
+        "hard_fail": True,
+        "hard_fail_reasons": [reason],
+        "failure_categories": {
+            "categories": ["error"],
+            "details": {},
+            "primary_category": "error",
+            "count": 1,
+        },
+        "gates": {
+            "safety": {"passed": False, "reasons": [reason]},
+            "compliance": {"passed": False, "reasons": []},
+        },
+        "dimensions": {"regard": 0.0, "coordination": 0.0},
+        "dimension_scores": {},
+        "status": "error",
+        "error": reason,
+        "success": False,
+        "contract_version": "2.1.0",
+    }
+    if extra:
+        result.update(extra)
+    return result
+
+
+def _safe_load_scenario_data(path: Path) -> Dict[str, Any]:
+    """Best-effort scenario loader for error reporting paths."""
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
 def _run_single_scenario(
     model: Dict,
     scenario: Dict,
@@ -1630,11 +1726,22 @@ def run_benchmark(
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
     runs: int = 1,
+    include_confidential: bool = False,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
 
-    scenarios = get_scenarios()
+    try:
+        scenarios = get_scenarios(
+            category_filter=category_filter,
+            include_confidential=include_confidential,
+        )
+    except RuntimeError as e:
+        if console:
+            console.print(f"[red]{e}[/red]")
+        else:
+            print(str(e))
+        return 1
 
     # Apply category filter
     if category_filter:
@@ -1676,6 +1783,7 @@ def run_benchmark(
         model_ids=[m["id"] for m in models],
         harness="llm",
         mode="raw",
+        include_confidential=include_confidential,
     )
     write_manifest(manifest, output_dir)
     model_results_dir = output_dir / "model_results"
@@ -3571,6 +3679,7 @@ Examples:
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
         runs=getattr(args, "runs", 1),
+        include_confidential=args.confidential,
     )
 
 

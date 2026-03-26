@@ -5,13 +5,13 @@ import {
   buildGiveCareTurnInput,
   createGiveCarePiPackage,
   getModel,
-} from '../../../../../give-care-mono/packages/pi-orchestrator/src/index.ts'
-import type { GiveCarePolicyRuntime } from '../../../../../give-care-mono/packages/pi-orchestrator/src/givecare/extensions.ts'
+} from '../../../../give-care-mono/packages/pi-orchestrator/src/index.ts'
+import type { GiveCarePolicyRuntime } from '../../../../give-care-mono/packages/pi-orchestrator/src/givecare/extensions.ts'
 import type {
   DiagnosticEventInput,
   FilingProfile,
   GiveCareRuntime,
-} from '../../../../../give-care-mono/packages/pi-orchestrator/src/givecare/runtime.ts'
+} from '../../../../give-care-mono/packages/pi-orchestrator/src/givecare/runtime.ts'
 
 type RiskLevel = 'low' | 'medium' | 'high' | 'critical'
 

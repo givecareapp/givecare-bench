@@ -24,18 +24,16 @@ from invisiblebench.utils.dimension_aliases import (
 from invisiblebench.utils.dimension_aliases import (
     normalize_category as _normalize_category,
 )
-from invisiblebench.utils.dimension_aliases import (
-    normalize_dimension_scores as _normalize_dimension_scores,
-)
 
 
 def _normalize_annotation_scores(raw_scores: Dict[str, Any]) -> Dict[str, float]:
     """Normalize and coerce annotation scores to canonical v2 floats."""
     normalized: Dict[str, float] = {}
-    for key, value in _normalize_dimension_scores(raw_scores).items():
+    for key, value in raw_scores.items():
+        canonical = DIMENSION_ALIASES.get(key, key)
         score = extract_numeric_dimension_value(value)
-        if score is not None:
-            normalized[key] = score
+        if score is not None and canonical not in normalized:
+            normalized[canonical] = score
     return normalized
 
 

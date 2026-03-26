@@ -6,7 +6,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(__dirname, '..', '..', '..')
+const repoRoot = path.resolve(__dirname, '..', '..')
 const monoRoot = path.resolve(repoRoot, '..', 'give-care-mono')
 const entryPoint = path.join(__dirname, 'src', 'bridge.ts')
 const outDir = path.join(__dirname, 'dist')
