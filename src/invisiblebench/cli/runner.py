@@ -185,11 +185,16 @@ def run_givecare_eval(
         print(str(e))
         return 1
     if scenario_filter:
-        lowered = set(scenario_filter)
         scenario_paths = [
             path
             for path in scenario_paths
-            if path.stem.lower() in lowered or any(token in path.stem.lower() for token in lowered)
+            if any(
+                _scenario_matches_filter(
+                    {"path": str(path), "name": path.stem.replace("_", " "), "scenario_id": path.stem},
+                    pattern,
+                )
+                for pattern in scenario_filter
+            )
         ]
 
     if not scenario_paths:
@@ -454,12 +459,10 @@ def run_givecare_orchestrator_eval(
         )
 
     if scenario_filter:
-        lowered = set(scenario_filter)
         scenario_paths = [
             scenario
             for scenario in scenario_paths
-            if Path(str(scenario["path"])).stem.lower() in lowered
-            or any(token in Path(str(scenario["path"])).stem.lower() for token in lowered)
+            if any(_scenario_matches_filter(scenario, pattern) for pattern in scenario_filter)
         ]
 
     if not scenario_paths:
@@ -751,6 +754,32 @@ def _scenario_category(path: Path, private_confidential_dir: Optional[Path] = No
     if "confidential" in path.parts:
         return "confidential"
     return path.parent.name
+
+
+def _normalize_scenario_token(value: str) -> str:
+    return "".join(ch for ch in value.lower() if ch.isalnum())
+
+
+def _scenario_matches_filter(scenario: Dict[str, Any], pattern: str) -> bool:
+    pattern = pattern.strip().lower()
+    if not pattern:
+        return False
+
+    path_stem = Path(str(scenario["path"])).stem.lower()
+    scenario_id = str(scenario.get("scenario_id", "")).lower()
+    name = str(scenario.get("name", "")).lower()
+
+    targets = [scenario_id, path_stem, name]
+    normalized_pattern = _normalize_scenario_token(pattern)
+    normalized_targets = [_normalize_scenario_token(target) for target in targets]
+
+    if any(pattern == target or pattern in target for target in targets):
+        return True
+    if normalized_pattern and any(
+        normalized_pattern == target or normalized_pattern in target for target in normalized_targets
+    ):
+        return True
+    return False
 
 
 def get_scenarios(
@@ -1747,21 +1776,13 @@ def run_benchmark(
     if category_filter:
         scenarios = [s for s in scenarios if s["category"] in category_filter]
 
-    # Apply scenario filter (exact match on scenario_id/path stem, substring on name)
+    # Apply scenario filter (exact, normalized, or substring match on id/path/name)
     if scenario_filter:
-        filtered = []
-        for s in scenarios:
-            sid_lower = s.get("scenario_id", "").lower()
-            name_lower = s["name"].lower()
-            path_lower = Path(s["path"]).stem.lower()
-            for pattern in scenario_filter:
-                if pattern == sid_lower or pattern == path_lower:
-                    filtered.append(s)
-                    break
-                elif pattern in name_lower:
-                    filtered.append(s)
-                    break
-        scenarios = filtered
+        scenarios = [
+            scenario
+            for scenario in scenarios
+            if any(_scenario_matches_filter(scenario, pattern) for pattern in scenario_filter)
+        ]
 
     if not scenarios:
         if console:

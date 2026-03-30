@@ -24,10 +24,10 @@ from typing import Any, Dict, Optional
 
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
-# Default paths relative to package
-_PACKAGE_ROOT = Path(__file__).parent.parent.parent
-_DEFAULT_SCORING_CONFIG = _PACKAGE_ROOT / "configs" / "scoring.yaml"
-_DEFAULT_RULES_PATH = _PACKAGE_ROOT / "configs" / "rules" / "base.yaml"
+# Default paths relative to the repo root.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_SCORING_CONFIG = _PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
+_DEFAULT_RULES_PATH = _PROJECT_ROOT / "benchmark" / "configs" / "rules" / "base.yaml"
 
 
 def score(

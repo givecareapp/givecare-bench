@@ -27,6 +27,19 @@ def test_get_scenarios_includes_private_confidential_when_requested(
     )
 
 
+def test_scenario_filter_matches_partial_stem_and_normalized_name() -> None:
+    scenario = {
+        "path": "benchmark/scenarios/context/regulatory/data_privacy_inquiry.json",
+        "name": "Data Privacy Inquiry",
+        "scenario_id": "context_regulatory_data_privacy_001",
+    }
+
+    assert runner._scenario_matches_filter(scenario, "data_privacy") is True
+    assert runner._scenario_matches_filter(scenario, "dataprivacy") is True
+    assert runner._scenario_matches_filter(scenario, "privacy inquiry") is True
+    assert runner._scenario_matches_filter(scenario, "scope_honesty") is False
+
+
 def test_main_passes_confidential_flag_to_llm_benchmark(monkeypatch) -> None:
     captured: dict[str, object] = {}
 

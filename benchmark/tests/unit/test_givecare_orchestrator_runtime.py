@@ -58,6 +58,34 @@ def _seed_state() -> dict[str, object]:
     }
 
 
+def test_apply_bridge_effects_runtime_memories_override_existing_state() -> None:
+    state = _seed_state()
+    state["memory_state"] = {
+        "caregiver_name": {"key": "caregiver_name", "value": "Original", "confidence": 0.2},
+        "city": {"key": "city", "value": "Austin", "confidence": 0.5},
+    }
+
+    givecare_orchestrator._apply_bridge_effects(
+        state,
+        {
+            "runtimeEffects": {
+                "memories": [
+                    {"key": "caregiver_name", "value": "Updated", "confidence": 0.9},
+                    {"key": "care_recipient", "value": "Dad", "confidence": 0.8},
+                ],
+                "followups": [{"title": "Call PCP"}],
+            }
+        },
+    )
+
+    assert state["memory_state"] == {
+        "caregiver_name": {"key": "caregiver_name", "value": "Updated", "confidence": 0.9},
+        "city": {"key": "city", "value": "Austin", "confidence": 0.5},
+        "care_recipient": {"key": "care_recipient", "value": "Dad", "confidence": 0.8},
+    }
+    assert state["followups"] == [{"title": "Call PCP"}]
+
+
 def test_run_scenario_fails_closed_on_bridge_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
