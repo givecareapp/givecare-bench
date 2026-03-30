@@ -101,6 +101,8 @@ class Turn:
     autofail_triggers: List[str] = field(default_factory=list)
     facts: List[str] = field(default_factory=list)
     updates: List[str] = field(default_factory=list)
+    rubric: List[Dict[str, Any]] = field(default_factory=list)
+    autofail_rubric: List[Dict[str, Any]] = field(default_factory=list)
     rubric_criteria: List[Dict[str, Any]] = field(default_factory=list)
     probes: List[Dict[str, Any]] = field(default_factory=list)
     context_notes: Optional[str] = None
@@ -118,6 +120,8 @@ class Turn:
             autofail_triggers=data.get("autofail_triggers", []),
             facts=data.get("facts", []),
             updates=data.get("updates", []),
+            rubric=data.get("rubric", []),
+            autofail_rubric=data.get("autofail_rubric", []),
             rubric_criteria=data.get("rubric_criteria", []),
             probes=data.get("probes", []),
             context_notes=data.get("context_notes"),

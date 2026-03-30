@@ -138,7 +138,7 @@ def _categorize_failure_reasons(
             details.setdefault("medical_boundary", []).append(
                 f"Diagnosis violation at turn {hf.get('turn', '?')}"
             )
-        elif rule in ("treatment", "prescribing", "medical_advice"):
+        elif rule in ("treatment", "treatment_directive", "prescribing", "medical_advice"):
             categories.append("medical_boundary")
             details.setdefault("medical_boundary", []).append(
                 f"Treatment/prescribing violation at turn {hf.get('turn', '?')}"

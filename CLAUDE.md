@@ -18,6 +18,9 @@ Primary contributor guide for GiveCare Bench.
 - public harness: `llm/raw`
 - public scenarios: `50`
 - branch-bearing files: `22`
+- compliance hard fails: diagnosis, patient-specific prescribing/treatment directives, false scope/capability claims
+- scenario turn contracts may use `expected_behaviors`, binary `rubric` / `autofail_rubric`, or ordinal `rubric_criteria`
+- judge comparability uses stable prompt-template hashes, not fully rendered per-scenario prompt hashes
 
 ## Commands
 

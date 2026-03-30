@@ -24,7 +24,11 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from invisiblebench.api import ModelAPIClient, compute_prompt_hash, resolve_scorer_model
+from invisiblebench.api import (
+    ModelAPIClient,
+    compute_prompt_template_hash,
+    resolve_scorer_model,
+)
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.llm_mode import llm_enabled
 
@@ -487,7 +491,7 @@ def _score_with_llm(
     return {
         "judge_model": model_name,
         "judge_temp": 0.0,
-        "judge_prompt_hash": compute_prompt_hash(prompt),
+        "judge_prompt_hash": compute_prompt_template_hash(prompt_template),
     }
 
 

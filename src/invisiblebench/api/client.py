@@ -560,6 +560,18 @@ def compute_prompt_hash(prompt_text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def compute_prompt_template_hash(*template_parts: str) -> str:
+    """Return a stable hash for one or more prompt-template fragments.
+
+    This is intended for judge comparability metadata. Callers should pass only
+    template/static instruction text here, not fully rendered prompts containing
+    scenario-specific conversation content.
+    """
+    normalized_parts = [part.strip() for part in template_parts if part and part.strip()]
+    normalized = "\n\n".join(normalized_parts)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def resolve_scorer_model(
     api_client: ModelAPIClient,
     scorer_name: str,

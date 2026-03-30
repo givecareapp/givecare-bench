@@ -6,7 +6,7 @@ import hashlib
 
 import pytest
 
-from invisiblebench.api.client import compute_prompt_hash
+from invisiblebench.api.client import compute_prompt_hash, compute_prompt_template_hash
 from invisiblebench.evaluation.scorers import coordination, memory
 
 # ---------------------------------------------------------------------------
@@ -42,6 +42,18 @@ class TestComputePromptHash:
         text = "test"
         expected = hashlib.sha256(text.encode("utf-8")).hexdigest()
         assert compute_prompt_hash(text) == expected
+
+
+class TestComputePromptTemplateHash:
+    def test_joins_multiple_template_fragments_stably(self) -> None:
+        h1 = compute_prompt_template_hash("prompt a", "prompt b")
+        h2 = compute_prompt_template_hash(" prompt a ", "\n\nprompt b\n")
+        assert h1 == h2
+
+    def test_differs_when_template_fragment_changes(self) -> None:
+        h1 = compute_prompt_template_hash("prompt a", "prompt b")
+        h2 = compute_prompt_template_hash("prompt a", "prompt c")
+        assert h1 != h2
 
 
 # ---------------------------------------------------------------------------

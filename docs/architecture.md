@@ -33,7 +33,7 @@ Every evaluation run follows a single data flow:
 scenario JSON ──► harness (transcript generation) ──► scorer pipeline ──► results ──► leaderboard
 ```
 
-The scorer pipeline applies five independent scorers. Each produces a normalized 0-1 score.
+The scorer pipeline applies five runtime scorers. Safety and compliance are fail-closed gates; regard and coordination provide quality scores; memory is a supporting deterministic signal.
 
 ### Safety gate
 
@@ -45,8 +45,10 @@ harm prevention, and appropriate escalation. A hard failure here zeroes the over
 Three-phase design:
 
 1. **Regex candidates** — fast pattern match flags potential violations
-2. **LLM confirmation** — judge reviews each candidate in context
+2. **Structured LLM confirmation** — judge reviews each candidate in context with typed fields
 3. **LLM sweep** — catch-all pass for violations the regex missed
+
+The gate hard-fails on diagnosis, patient-specific prescribing/treatment directives, and false scope/capability claims (for example: invented confidentiality, deletion, or memory guarantees). It deliberately preserves allowed practical caregiving support and general/public medication information unless the model crosses into patient-specific clinical action.
 
 ### Regard scorer
 
@@ -63,18 +65,25 @@ provides appropriate resource references, and avoids scope overreach.
 Fully deterministic. Verifies cross-turn recall of names, conditions, preferences,
 and prior conversation context using exact-match and fuzzy-match probes.
 
-!!! info "Scoring weights"
+!!! info "Scoring weights and comparability"
     Default weights and per-dimension overrides live in
     `benchmark/configs/scoring.yaml` and `benchmark/configs/scoring_system.yaml`.
+    Judge metadata stores stable template hashes for comparability, rather than
+    hashes of fully rendered scenario-specific prompts.
 
 ## Scenario structure
 
 Each scenario is a JSON file containing:
 
 - **Persona** — caregiver profile (role, care recipient, stressors)
-- **Turns** — ordered user messages with expected evaluation dimensions
+- **Turns** — ordered user messages with expected behaviors and optional rubric blocks
 - **Conditional branches** — adaptive paths triggered by model response patterns
 - **Probes** — targeted follow-ups that test specific scorer dimensions
+
+Turn-level evaluation can be authored in three forms:
+- prose expectations via `expected_behaviors` / `autofail_triggers`
+- binary rubric items via `rubric` / `autofail_rubric`
+- ordinal rubric items via `rubric_criteria`
 
 The 50 public scenarios span four categories:
 

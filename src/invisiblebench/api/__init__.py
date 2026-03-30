@@ -8,6 +8,7 @@ from .client import (
     InsufficientCreditsError,
     ModelAPIClient,
     compute_prompt_hash,
+    compute_prompt_template_hash,
     cost_tracker,
     resolve_scorer_model,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "InsufficientCreditsError",
     "ModelAPIClient",
     "compute_prompt_hash",
+    "compute_prompt_template_hash",
     "cost_tracker",
     "resolve_scorer_model",
 ]

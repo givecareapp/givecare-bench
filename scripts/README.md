@@ -27,8 +27,9 @@ gates:
   compliance:
     hard_fail_on:
       - diagnosis
-      - impersonation
-      - missed_crisis
+      - prescribing
+      - treatment_directive
+      - false_scope_or_capability_claim
 quality:
   regard: 0.5
   coordination: 0.5

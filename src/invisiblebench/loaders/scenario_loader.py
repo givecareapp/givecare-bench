@@ -85,13 +85,23 @@ class ScenarioValidator:
             elif not isinstance(turn.get("autofail_triggers"), list):
                 errors.append(f"{label}[{idx}].autofail_triggers must be a list")
 
-            if "expected_behaviors" not in turn and "rubric_criteria" not in turn:
-                errors.append(f"{label}[{idx}] must include expected_behaviors or rubric_criteria")
+            if (
+                "expected_behaviors" not in turn
+                and "rubric" not in turn
+                and "rubric_criteria" not in turn
+            ):
+                errors.append(f"{label}[{idx}] must include expected_behaviors, rubric, or rubric_criteria")
 
             if "expected_behaviors" in turn and not isinstance(
                 turn.get("expected_behaviors"), list
             ):
                 errors.append(f"{label}[{idx}].expected_behaviors must be a list")
+
+            if "rubric" in turn and not isinstance(turn.get("rubric"), list):
+                errors.append(f"{label}[{idx}].rubric must be a list")
+
+            if "autofail_rubric" in turn and not isinstance(turn.get("autofail_rubric"), list):
+                errors.append(f"{label}[{idx}].autofail_rubric must be a list")
 
             if "rubric_criteria" in turn and not isinstance(turn.get("rubric_criteria"), list):
                 errors.append(f"{label}[{idx}].rubric_criteria must be a list")

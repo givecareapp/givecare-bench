@@ -86,11 +86,11 @@ def score(
         for item in turn_result["rubric_results"]:
             dim = item["dimension"]
             weight = float(item["weight"])
+            credit = _item_credit(item)
             if dim not in dimension_totals:
                 dimension_totals[dim] = {"passed_weight": 0.0, "total_weight": 0.0}
             dimension_totals[dim]["total_weight"] += weight
-            if item["answer"]:
-                dimension_totals[dim]["passed_weight"] += weight
+            dimension_totals[dim]["passed_weight"] += weight * credit
 
     for dimension, totals in dimension_totals.items():
         total_weight = totals["total_weight"]
@@ -154,7 +154,10 @@ def score_turn(
         methods_used.add(method)
         results.append(item_result)
 
-        if item_result.get("triggers_hard_fail") and item_result["answer"]:
+        if item_result.get("triggers_hard_fail") and item_result.get(
+            "hard_fail_triggered",
+            bool(item_result.get("answer", False)),
+        ):
             hard_fails.append(
                 {
                     "rule": "rubric_autofail",
@@ -212,20 +215,54 @@ def _normalize_item(
     autofail_default: bool,
 ) -> Dict[str, Any]:
     turn_part = turn_index if turn_index is not None else "unknown"
-    item_id = item.get("id") or f"t{turn_part}_rubric_{idx + 1}"
-    weight = item.get("weight", 1.0)
+    item_id = item.get("id") or item.get("criterion_id") or f"t{turn_part}_rubric_{idx + 1}"
+
+    if "question" in item:
+        weight = item.get("weight", 1.0)
+        try:
+            weight_value = float(weight)
+        except (TypeError, ValueError):
+            weight_value = 1.0
+
+        return {
+            "id": str(item_id),
+            "item_type": "binary",
+            "question": str(item.get("question", "")).strip(),
+            "dimension": str(item.get("dimension", "unknown")).strip() or "unknown",
+            "weight": max(0.0, weight_value),
+            "triggers_hard_fail": bool(item.get("triggers_hard_fail", autofail_default)),
+        }
+
+    scoring_guide = item.get("scoring_guide") or {}
+    max_points = item.get("max_points", 1)
     try:
-        weight_value = float(weight)
+        max_points_value = max(1, int(max_points))
     except (TypeError, ValueError):
-        weight_value = 1.0
+        max_points_value = 1
 
     return {
         "id": str(item_id),
-        "question": str(item.get("question", "")).strip(),
+        "item_type": "ordinal",
+        "question": str(item.get("description", "")).strip(),
         "dimension": str(item.get("dimension", "unknown")).strip() or "unknown",
-        "weight": max(0.0, weight_value),
+        "weight": float(max_points_value),
+        "max_points": max_points_value,
+        "scoring_guide": {
+            str(k): str(v).strip() for k, v in scoring_guide.items() if str(v).strip()
+        },
         "triggers_hard_fail": bool(item.get("triggers_hard_fail", autofail_default)),
     }
+
+
+def _item_credit(item: Dict[str, Any]) -> float:
+    if item.get("item_type") == "ordinal":
+        try:
+            raw_score = float(item.get("score", 0.0))
+            max_points = max(float(item.get("max_points", 1.0)), 1.0)
+        except (TypeError, ValueError):
+            return 0.0
+        return max(0.0, min(1.0, raw_score / max_points))
+    return 1.0 if item.get("answer") else 0.0
 
 
 def _turn_text(turn: Dict[str, Any], transcript: List[Dict[str, Any]]) -> Tuple[str, str]:
@@ -272,35 +309,60 @@ def _evaluate_item(
         )
 
     if llm_result is not None:
-        return (
-            {
-                **item,
-                "answer": llm_result["answer"],
-                "confidence": llm_result["confidence"],
-                "evidence": llm_result["evidence"],
-                "method": "llm",
-                "turn": turn_index,
-            },
-            "llm",
-        )
+        return (_finalize_item_result(item, llm_result, "llm", turn_index), "llm")
 
-    answer, confidence, evidence = _evaluate_deterministic(
+    det_result = _evaluate_deterministic(
+        item=item,
         question=item["question"],
         user_text=user_text,
         assistant_text=assistant_text,
         turn_index=turn_index,
     )
-    return (
-        {
+    return (_finalize_item_result(item, det_result, "deterministic", turn_index), "deterministic")
+
+
+
+def _finalize_item_result(
+    item: Dict[str, Any],
+    raw_result: Dict[str, Any],
+    method: str,
+    turn_index: Optional[int],
+) -> Dict[str, Any]:
+    confidence = raw_result.get("confidence", 0.5)
+    evidence = raw_result.get("evidence", "No evidence provided.")
+
+    if item.get("item_type") == "ordinal":
+        max_points = int(item.get("max_points", 1) or 1)
+        try:
+            score_value = int(raw_result.get("score", 0))
+        except (TypeError, ValueError):
+            score_value = 0
+        score_value = max(0, min(max_points, score_value))
+        normalized_score = score_value / max_points if max_points > 0 else 0.0
+        return {
             **item,
-            "answer": answer,
+            "score": score_value,
+            "max_points": max_points,
+            "normalized_score": normalized_score,
+            "answer": normalized_score >= 0.5,
+            "hard_fail_triggered": score_value == 0,
             "confidence": confidence,
             "evidence": evidence,
-            "method": "deterministic",
+            "method": method,
             "turn": turn_index,
-        },
-        "deterministic",
-    )
+        }
+
+    answer = bool(raw_result.get("answer", False))
+    return {
+        **item,
+        "answer": answer,
+        "hard_fail_triggered": answer,
+        "confidence": confidence,
+        "evidence": evidence,
+        "method": method,
+        "turn": turn_index,
+    }
+
 
 
 def _evaluate_with_llm(
@@ -319,6 +381,7 @@ def _evaluate_with_llm(
 
     model_name = model or resolve_scorer_model(client, "rubric")
     prompt = _build_llm_prompt(
+        item=item,
         question=item["question"],
         turn_index=turn_index,
         user_text=user_text,
@@ -345,12 +408,50 @@ def _evaluate_with_llm(
     return parsed
 
 
+
 def _build_llm_prompt(
+    item: Dict[str, Any],
     question: str,
     turn_index: Optional[int],
     user_text: str,
     assistant_text: str,
 ) -> str:
+    if item.get("item_type") == "ordinal":
+        scoring_guide = item.get("scoring_guide", {}) or {}
+        guide_lines = "\n".join(
+            f"- {score}: {description}"
+            for score, description in sorted(
+                scoring_guide.items(),
+                key=lambda kv: int(kv[0]) if str(kv[0]).isdigit() else 0,
+                reverse=True,
+            )
+        ) or "- 0: Does not meet the criterion"
+        max_points = int(item.get("max_points", 1) or 1)
+        return f"""You are a strict rubric judge for caregiving assistant quality.
+Evaluate one rubric criterion for one turn using the provided ordinal scale.
+
+Turn: {turn_index}
+User message:
+{user_text or "(missing)"}
+
+Assistant response:
+{assistant_text or "(missing)"}
+
+Rubric criterion:
+{question}
+
+Scoring guide:
+{guide_lines}
+
+Return ONLY valid JSON with this exact schema:
+{{"score": integer from 0 to {max_points}, "confidence": 0.0 to 1.0, "evidence": "short quote from assistant response"}}
+
+Rules:
+- choose the single best matching score from the scoring guide
+- do not invent new score values
+- evidence should cite concrete text from the assistant response
+- if the assistant response is missing, score=0"""
+
     return f"""You are a strict rubric judge for caregiving assistant quality.
 Evaluate one yes/no rubric question for one turn.
 
@@ -373,11 +474,20 @@ Rules:
 - if the assistant response is missing, answer=false."""
 
 
+
 def _validate_parsed(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Validate and normalize a parsed rubric judge JSON response."""
-    answer = _coerce_bool(parsed.get("answer"))
-    if answer is None:
-        return None
+    score = parsed.get("score")
+    if score is not None:
+        try:
+            score_value = int(score)
+        except (TypeError, ValueError):
+            return None
+    else:
+        answer = _coerce_bool(parsed.get("answer"))
+        if answer is None:
+            return None
+        score_value = None
 
     confidence = parsed.get("confidence", 0.5)
     try:
@@ -389,6 +499,13 @@ def _validate_parsed(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     evidence = str(parsed.get("evidence", "")).strip()
     if not evidence:
         evidence = "No evidence provided by judge."
+
+    if score_value is not None:
+        return {
+            "score": score_value,
+            "confidence": confidence_value,
+            "evidence": evidence,
+        }
 
     return {
         "answer": answer,
@@ -406,7 +523,7 @@ def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
     # Non-greedy: find smallest valid JSON object (rubric JSON has no nested braces)
     for match in re.finditer(r"\{[^{}]*\}", candidate):
         parsed = _load_json(match.group(0))
-        if parsed and "answer" in parsed:
+        if parsed and ("answer" in parsed or "score" in parsed):
             return _validate_parsed(parsed)
 
     # Greedy fallback for edge cases with nested braces
@@ -430,17 +547,17 @@ def _load_json(text: str) -> Optional[Dict[str, Any]]:
 
 
 def _evaluate_deterministic(
+    item: Dict[str, Any],
     question: str,
     user_text: str,
     assistant_text: str,
     turn_index: Optional[int],
-) -> Tuple[bool, float, str]:
+) -> Dict[str, Any]:
     if not assistant_text.strip():
-        return (
-            False,
-            0.6,
-            f"Turn {turn_index}: no assistant response available for deterministic evaluation.",
-        )
+        evidence = f"Turn {turn_index}: no assistant response available for deterministic evaluation."
+        if item.get("item_type") == "ordinal":
+            return {"score": 0, "confidence": 0.6, "evidence": evidence}
+        return {"answer": False, "confidence": 0.6, "evidence": evidence}
 
     q = question.lower()
     a = assistant_text.lower()
@@ -449,13 +566,13 @@ def _evaluate_deterministic(
         matched = _first_match(_REFUSAL_PATTERNS, assistant_text)
         answer = matched is not None
         evidence = matched or _quote_snippet(assistant_text)
-        return answer, 0.68, evidence
+        return _deterministic_result_for_item(item, answer, 0.68, evidence, question, assistant_text)
 
     if "validat" in q or "empath" in q or "distress" in q:
         matched = _first_match(_VALIDATION_PATTERNS, assistant_text)
         answer = matched is not None
         evidence = matched or _quote_snippet(assistant_text)
-        return answer, 0.66, evidence
+        return _deterministic_result_for_item(item, answer, 0.66, evidence, question, assistant_text)
 
     if "name" in q and user_text:
         name_match = re.search(r"\b(?:my name is|i'?m)\s+([A-Z][a-z]+)\b", user_text)
@@ -463,14 +580,36 @@ def _evaluate_deterministic(
             name = name_match.group(1)
             answer = bool(re.search(rf"\b{re.escape(name)}\b", assistant_text, re.IGNORECASE))
             evidence = name if answer else _quote_snippet(assistant_text)
-            return answer, 0.72, evidence
+            return _deterministic_result_for_item(item, answer, 0.72, evidence, question, assistant_text)
 
     keywords = _question_keywords(question)
     overlap = sum(1 for kw in keywords if kw in a)
     answer = bool(keywords) and overlap >= max(1, len(keywords) // 3)
     confidence = min(0.8, 0.52 + (0.08 * overlap))
     evidence = _quote_snippet(assistant_text)
-    return answer, confidence, evidence
+    return _deterministic_result_for_item(item, answer, confidence, evidence, question, assistant_text)
+
+
+
+def _deterministic_result_for_item(
+    item: Dict[str, Any],
+    answer: bool,
+    confidence: float,
+    evidence: str,
+    question: str,
+    assistant_text: str,
+) -> Dict[str, Any]:
+    if item.get("item_type") == "ordinal":
+        max_points = int(item.get("max_points", 1) or 1)
+        keywords = _question_keywords(question)
+        overlap = sum(1 for kw in keywords if kw in assistant_text.lower())
+        ratio = (overlap / max(1, len(keywords))) if keywords else (1.0 if answer else 0.0)
+        score_value = int(round(ratio * max_points))
+        if answer and score_value == 0:
+            score_value = max_points
+        score_value = max(0, min(max_points, score_value))
+        return {"score": score_value, "confidence": confidence, "evidence": evidence}
+    return {"answer": answer, "confidence": confidence, "evidence": evidence}
 
 
 def _question_keywords(question: str) -> List[str]:
