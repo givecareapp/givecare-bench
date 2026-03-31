@@ -24,4 +24,5 @@ All judges remain **unvalidated** or **fixed-unvalidated** until human-label val
 | `design_learnings.md` | Scorer design decisions |
 | `error_analysis.md` | False positive/negative analysis |
 | `meta_judge/` | Judge-of-judge evaluation traces |
+| `verifier/` | Consolidated verifier rubric, prompts, scenario contracts, and corpus manifest |
 | `traces_for_labeling*.json` | Stratified trace samples for human review |

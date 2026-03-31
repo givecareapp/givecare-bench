@@ -8,12 +8,14 @@ Active utility scripts for the public benchmark repo.
 - `scripts/lint_turn_indices.py`: enforce turn-index consistency before publish/rebuild
 - `scripts/run_bench.sh`: shell helper for benchmark runs
 - `scripts/setup_env.sh`: environment setup helper
+- `scripts/generate_verifier_corpus.py`: build the unified 15-model transcript manifest and corpus summaries for verifier work
 
 ## Common commands
 
 ```bash
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
+uv run python scripts/generate_verifier_corpus.py
 ```
 
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:
