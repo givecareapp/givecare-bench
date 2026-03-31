@@ -20,9 +20,20 @@ def read_text(path: Path) -> str:
     return path.read_text()
 
 
-def build_scenario_batch_rows(manifest: Sequence[Dict[str, Any]], scenario_id: str) -> List[Dict[str, Any]]:
+def build_scenario_batch_rows(
+    manifest: Sequence[Dict[str, Any]],
+    scenario_id: str,
+    *,
+    offset: int = 0,
+    limit: int | None = None,
+) -> List[Dict[str, Any]]:
     rows = [row for row in manifest if row.get("scenario_id") == scenario_id]
-    return sorted(rows, key=lambda row: row.get("model", ""))
+    rows = sorted(rows, key=lambda row: row.get("model", ""))
+    if offset:
+        rows = rows[offset:]
+    if limit is not None:
+        rows = rows[:limit]
+    return rows
 
 
 def build_trace_payload(project_root: Path, row: Dict[str, Any]) -> Dict[str, Any]:

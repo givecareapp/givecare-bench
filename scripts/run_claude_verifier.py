@@ -33,10 +33,16 @@ def _load_manifest(path: Path) -> list[dict]:
     return rows
 
 
-def build_scenario_run_bundle(project_root: Path, scenario_id: str) -> dict:
+def build_scenario_run_bundle(
+    project_root: Path,
+    scenario_id: str,
+    *,
+    offset: int = 0,
+    limit: int | None = None,
+) -> dict:
     verifier_dir = project_root / "internal/evals/verifier"
     manifest = _load_manifest(verifier_dir / "corpus_manifest.jsonl")
-    rows = build_scenario_batch_rows(manifest, scenario_id)
+    rows = build_scenario_batch_rows(manifest, scenario_id, offset=offset, limit=limit)
     if not rows:
         raise SystemExit(f"No manifest rows found for scenario_id={scenario_id}")
 
@@ -92,6 +98,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario-id", required=True)
     parser.add_argument("--model", default="opus")
+    parser.add_argument("--offset", type=int, default=0)
+    parser.add_argument("--limit", type=int)
     parser.add_argument(
         "--output-dir",
         default="internal/evals/verifier/results",
@@ -105,8 +113,16 @@ def main() -> int:
     args = parser.parse_args()
 
     project_root = get_project_root()
-    bundle = build_scenario_run_bundle(project_root, args.scenario_id)
-    output_dir = project_root / args.output_dir / args.scenario_id
+    bundle = build_scenario_run_bundle(
+        project_root,
+        args.scenario_id,
+        offset=args.offset,
+        limit=args.limit,
+    )
+    suffix = ""
+    if args.offset or args.limit is not None:
+        suffix = f"_offset{args.offset}_limit{args.limit if args.limit is not None else 'all'}"
+    output_dir = project_root / args.output_dir / f"{args.scenario_id}{suffix}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     prompt_path = output_dir / "prompt.md"
@@ -121,6 +137,8 @@ def main() -> int:
             "scenario_id": args.scenario_id,
             "prepared": True,
             "trace_count": len(bundle["trace_payloads"]),
+            "offset": args.offset,
+            "limit": args.limit,
             "output_dir": str(output_dir.relative_to(project_root)),
         }, indent=2))
         return 0
@@ -137,6 +155,8 @@ def main() -> int:
     print(json.dumps({
         "scenario_id": args.scenario_id,
         "trace_count": len(bundle["trace_payloads"]),
+        "offset": args.offset,
+        "limit": args.limit,
         "model": args.model,
         "output_dir": str(output_dir.relative_to(project_root)),
         "result_path": str(result_path.relative_to(project_root)),

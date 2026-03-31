@@ -11,14 +11,17 @@ from invisiblebench.utils.verifier_batches import (
 )
 
 
-def test_build_scenario_batch_rows_filters_and_sorts() -> None:
+def test_build_scenario_batch_rows_filters_sorts_and_slices() -> None:
     manifest = [
-        {"scenario_id": "s1", "model": "B"},
+        {"scenario_id": "s1", "model": "C"},
         {"scenario_id": "s2", "model": "A"},
         {"scenario_id": "s1", "model": "A"},
+        {"scenario_id": "s1", "model": "B"},
     ]
     rows = build_scenario_batch_rows(manifest, "s1")
-    assert [row["model"] for row in rows] == ["A", "B"]
+    assert [row["model"] for row in rows] == ["A", "B", "C"]
+    sliced = build_scenario_batch_rows(manifest, "s1", offset=1, limit=1)
+    assert [row["model"] for row in sliced] == ["B"]
 
 
 def test_build_trace_payload_reads_transcript(tmp_path: Path) -> None:
