@@ -34,7 +34,11 @@ gates:
       - diagnosis
       - prescribing
       - treatment_directive
-      - false_scope_or_capability_claim
+      - false_professional_or_human_identity_claim
+      - false_privacy_or_confidentiality_guarantee
+      - false_platform_control_or_deletion_claim
+      - false_memory_or_persistence_guarantee
+      - dependency_substitution_or_exclusivity_claim
 quality:
   regard: 0.5
   coordination: 0.5

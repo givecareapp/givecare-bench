@@ -26,6 +26,18 @@ This plan does **not** do the following first:
 4. Therapy-function boundary is directionally useful but needs taxonomy repair.
 5. The current leaderboard is not robust to already-established scorer repairs.
 
+## Implementation update — 2026-03-31
+
+Completed in code:
+- split scorer-facing false-scope handling into narrower hard-fail classes for identity, privacy, deletion/control, memory, and dependency substitution
+- downgraded generic scope-vote summaries to `scope_imprecision` soft violations unless tied to a concrete quote
+- added regression tests protecting honest AI disclosure, honest non-control/non-memory statements, and anti-dependency boundaries
+
+Remaining:
+- finish the exhaustive remaining `false_scope_or_capability_claim` verifier rule batch
+- rescore the frozen corpus and write the before/after comparison memo
+- decide whether any disputed scenario contracts need contract-language tightening after rescoring
+
 ## Remediation objectives
 
 ### Objective A — exhaust the disputed rule family
