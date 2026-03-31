@@ -4,6 +4,10 @@ Diátaxis: how-to
 
 This guide turns the 2026-03-31 audit into a concrete execution plan.
 
+Update after verifier adjudication:
+- `internal/evals/verifier/retrospective_2026-03-31.md` now establishes that `false_scope_or_capability_claim` is a leaderboard-shaping adjudication defect, not just a probable calibration issue.
+- `internal/evals/verifier/remediation_plan_2026-03-31.md` is the immediate scorer-fix plan on the frozen corpus.
+
 ## Goal
 
 Move from:

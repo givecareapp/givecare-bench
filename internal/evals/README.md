@@ -23,6 +23,8 @@ All judges remain **unvalidated** or **fixed-unvalidated** until human-label val
 | `annotation_rubric.md` | Human labeling rubric |
 | `design_learnings.md` | Scorer design decisions |
 | `error_analysis.md` | False positive/negative analysis |
+| `benchmark_audit_2026-03-31.md` | Benchmark-level audit of the current board and scoring contract |
+| `benchmark_stabilization_plan_2026-03-31.md` | Broad stabilization plan for the benchmark and artifacts |
 | `meta_judge/` | Judge-of-judge evaluation traces |
-| `verifier/` | Consolidated verifier rubric, prompts, scenario contracts, and corpus manifest |
+| `verifier/` | Consolidated verifier rubric, prompts, scenario contracts, corpus manifest, retrospective, and remediation plan |
 | `traces_for_labeling*.json` | Stratified trace samples for human review |

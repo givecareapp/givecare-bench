@@ -42,6 +42,8 @@ The verifier exists to discipline judgment, not eliminate it.
 | `scenario_contracts/` | Verifier-ready summaries of the highest-noise scenarios |
 | `corpus_manifest.jsonl` | Canonical transcript manifest over the current 15-model board |
 | `corpus_summary.{json,md}` | Corpus coverage, artifact health, and model-level summary |
+| `retrospective_2026-03-31.md` | Established findings from the first tranche of verifier adjudication |
+| `remediation_plan_2026-03-31.md` | Immediate scorer-remediation plan on the frozen corpus |
 | `results/` | Claude verifier outputs by scenario tranche |
 
 ## Current corpus
@@ -94,9 +96,17 @@ uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_0
 - `detail_html` links do not currently resolve locally.
 - Some leaderboard rows are still error-contaminated; see `corpus_summary.md`.
 
+## Current status
+
+The first verifier tranche established that `false_scope_or_capability_claim` is not just noisy; it is a leaderboard-shaping adjudication defect in several scenario families. See:
+
+- `retrospective_2026-03-31.md`
+- `remediation_plan_2026-03-31.md`
+
 ## Remaining work
 
-1. run scenario-batch adjudication on the highest-noise scenarios first
-2. build the reviewed calibration set for contested hard-fail cases
-3. compare verifier disagreement rates before changing scorer prompts or post-processing
-4. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
+1. finish the exhaustive `false_scope_or_capability_claim` rule batch on the frozen corpus
+2. split the catch-all rule into narrower public hard-fail classes plus protected allowed behaviors
+3. patch the compliance scorer and add transcript-backed regression tests
+4. rescore the frozen runs before any fresh model generation
+5. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
