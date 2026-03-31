@@ -9,6 +9,7 @@ Active utility scripts for the public benchmark repo.
 - `scripts/run_bench.sh`: shell helper for benchmark runs
 - `scripts/setup_env.sh`: environment setup helper
 - `scripts/generate_verifier_corpus.py`: build the unified 15-model transcript manifest and corpus summaries for verifier work
+- `scripts/run_claude_verifier.py`: package a scenario tranche and run Claude-based verifier adjudication
 
 ## Common commands
 
@@ -16,6 +17,8 @@ Active utility scripts for the public benchmark repo.
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
 uv run python scripts/generate_verifier_corpus.py
+uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --prepare-only
+uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
 ```
 
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:

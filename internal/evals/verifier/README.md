@@ -42,6 +42,7 @@ The verifier exists to discipline judgment, not eliminate it.
 | `scenario_contracts/` | Verifier-ready summaries of the highest-noise scenarios |
 | `corpus_manifest.jsonl` | Canonical transcript manifest over the current 15-model board |
 | `corpus_summary.{json,md}` | Corpus coverage, artifact health, and model-level summary |
+| `results/` | Claude verifier outputs by scenario tranche |
 
 ## Current corpus
 
@@ -78,6 +79,13 @@ The manifest and summary files are generated with:
 
 ```bash
 uv run python scripts/generate_verifier_corpus.py
+```
+
+Scenario-batch adjudication can then be prepared or run with:
+
+```bash
+uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --prepare-only
+uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
 ```
 
 ## Notes
