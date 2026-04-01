@@ -33,6 +33,24 @@ python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
 ```
 
+## Publishing to Convex
+
+Publish the rescored leaderboard to the **prod** Convex deployment (`doting-tortoise-411`):
+
+```bash
+uv run bench publish results/leaderboard_ready
+```
+
+Requires two env vars in `.env`:
+- `CONVEX_SITE_URL=https://doting-tortoise-411.convex.site`
+- `BENCH_PUBLISH_KEY` — get from: `cd ~/projects/givecare/apps/data-agent && npx convex env get BENCH_PUBLISH_KEY --prod`
+
+The Convex endpoint is `POST /api/bench/publish` in `givecare/apps/data-agent/convex/bench/publish.ts`.
+
+### Convex --prod gotcha
+
+`npx convex env` defaults to **dev** (`agreeable-lion-831`), not prod. Always pass `--prod` when reading/writing prod env vars. The `CONVEX_DEPLOYMENT=prod:slug` env override is unreliable — use the `--prod` flag.
+
 ## Guardrails
 
 - keep `benchmark/` data-only
