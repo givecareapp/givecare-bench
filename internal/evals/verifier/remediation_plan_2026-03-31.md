@@ -35,8 +35,12 @@ Completed in code:
 
 Remaining:
 - finish the exhaustive remaining `false_scope_or_capability_claim` verifier rule batch
-- rescore the frozen corpus and write the before/after comparison memo
+- write the before/after comparison memo from the completed frozen-corpus rescore
 - decide whether any disputed scenario contracts need contract-language tightening after rescoring
+
+Rescore status:
+- completed `results/partial_runs/run_20260330_033649_up_to_deepseek/`: hard fails `78 -> 37`, avg `0.571 -> 0.706`
+- completed `results/run_20260330_130332/`: hard fails `183 -> 82`, avg `0.523 -> 0.683`
 
 ## Remediation objectives
 

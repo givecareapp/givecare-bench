@@ -11,23 +11,107 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from invisiblebench.utils.benchmark_inventory import collect_scenario_paths, get_project_root
+from invisiblebench.models.results import SUCCESS_THRESHOLD
+from invisiblebench.utils.benchmark_inventory import (
+    collect_scenario_paths,
+    get_private_confidential_dir,
+    get_project_root,
+)
+from invisiblebench.utils.verifier_corpus import TRANSCRIPT_PREFIX_ALIASES
 
 logger = logging.getLogger(__name__)
 
 
 def _build_scenario_index(scenarios_dir: Path) -> Dict[str, Path]:
-    """Build scenario_id → scenario_path mapping from all scenario JSON files."""
+    """Build scenario_id → scenario_path mapping from available scenario JSON files."""
     index: Dict[str, Path] = {}
+    project_root = get_project_root()
+    include_confidential = get_private_confidential_dir(project_root) is not None
     del scenarios_dir
-    for f in collect_scenario_paths(get_project_root(), include_confidential=True):
+    for f in collect_scenario_paths(project_root, include_confidential=include_confidential):
         with open(f) as fh:
             data = json.load(fh)
         sid = data.get("scenario_id", f.stem)
         index[sid] = f
     return index
+
+
+def _transcript_key_candidates(model_id: str, scenario_id: str) -> List[str]:
+    base = model_id.replace("/", "_")
+    prefixes = [base, *TRANSCRIPT_PREFIX_ALIASES.get(base, ())]
+    return [f"{prefix}_{scenario_id}.jsonl" for prefix in prefixes]
+
+
+def _load_old_results_for_run(run_path: Path, project_root: Path) -> Tuple[List[Dict[str, Any]], bool]:
+    """Load prior per-scenario results for a run.
+
+    Returns `(rows, had_existing_all_results)`.
+    Falls back to synthesizing rows from `results/leaderboard_ready/*.json`
+    when the run only has frozen transcripts.
+    """
+    results_file = run_path / "all_results.json"
+    if results_file.exists():
+        with open(results_file) as f:
+            return json.load(f), True
+
+    leaderboard_dir = project_root / "results" / "leaderboard_ready"
+    transcript_names = {path.name for path in (run_path / "transcripts").glob("*.jsonl")}
+    synthesized: List[Dict[str, Any]] = []
+
+    if not leaderboard_dir.exists():
+        raise FileNotFoundError(
+            f"No all_results.json in {run_path} and no leaderboard_ready directory at {leaderboard_dir}"
+        )
+
+    for leaderboard_file in sorted(leaderboard_dir.glob("*.json")):
+        with open(leaderboard_file) as fh:
+            doc = json.load(fh)
+        model = doc.get("model", doc.get("model_name", "unknown"))
+        model_id = doc.get("model_id", model)
+        provider = doc.get("provider")
+
+        for scenario in doc.get("scenarios", []):
+            if not any(
+                key in transcript_names
+                for key in _transcript_key_candidates(model_id, scenario["scenario_id"])
+            ):
+                continue
+            synthesized.append(
+                {
+                    "model": model,
+                    "model_id": model_id,
+                    "provider": provider,
+                    "scenario": scenario.get("scenario"),
+                    "scenario_id": scenario.get("scenario_id"),
+                    "category": scenario.get("category", scenario.get("tier", "unknown")),
+                    "tier": scenario.get("tier", scenario.get("category", "unknown")),
+                    "overall_score": scenario.get("overall_score", 0.0),
+                    "dimension_scores": scenario.get("dimension_scores", {}),
+                    "status": scenario.get("status", "error"),
+                    "hard_fail": scenario.get("hard_fail", False),
+                    "hard_fail_reasons": scenario.get("hard_fail_reasons", []),
+                    "failure_categories": scenario.get("failure_categories", {}),
+                    "gates": scenario.get("gates", {}),
+                    "success": scenario.get("success"),
+                    "cost": scenario.get("cost", 0.0),
+                    "run_id": scenario.get("run_id"),
+                    "judge_model": scenario.get("judge_model"),
+                    "judge_prompt_hash": scenario.get("judge_prompt_hash"),
+                    "judge_temp": scenario.get("judge_temp"),
+                    "contract_version": scenario.get("contract_version", "2.1.0"),
+                    "detail_json": scenario.get("detail_json"),
+                    "detail_html": scenario.get("detail_html"),
+                }
+            )
+
+    if not synthesized:
+        raise FileNotFoundError(
+            f"No all_results.json in {run_path} and could not synthesize prior rows from leaderboard_ready"
+        )
+
+    return synthesized, False
 
 
 def run_rescore(
@@ -60,12 +144,11 @@ def run_rescore(
 
     # Load existing results to get model/scenario metadata
     results_file = run_path / "all_results.json"
-    if not results_file.exists():
-        print(f"Error: No all_results.json in {run_path}")
+    try:
+        old_results, had_existing_all_results = _load_old_results_for_run(run_path, project_root)
+    except FileNotFoundError as exc:
+        print(f"Error: {exc}")
         return 1
-
-    with open(results_file) as f:
-        old_results: List[Dict[str, Any]] = json.load(f)
 
     # Build transcript filename → old result mapping
     old_by_key: Dict[str, Dict[str, Any]] = {}
@@ -82,11 +165,14 @@ def run_rescore(
         print("Nothing to rescore.")
         return 0
 
-    # Back up old results
+    # Back up old results (or the synthesized pre-rescore baseline)
     backup_path = run_path / "all_results.pre_rescore.json"
     with open(backup_path, "w") as f:
         json.dump(old_results, f, indent=2)
-    print(f"Backed up old results to {backup_path.name}")
+    if had_existing_all_results:
+        print(f"Backed up old results to {backup_path.name}")
+    else:
+        print(f"Wrote synthesized pre-rescore baseline to {backup_path.name}")
 
     scoring_config = project_root / "benchmark" / "configs" / "scoring.yaml"
     orchestrator = ScoringOrchestrator(
@@ -202,7 +288,7 @@ def _compute_success(
     """Determine if this result is a 'success' for leaderboard purposes."""
     if hard_fail:
         return False
-    if score < 0.5:
+    if score < SUCCESS_THRESHOLD:
         return False
     for gate_info in gates.values():
         if isinstance(gate_info, dict) and not gate_info.get("passed", True):
