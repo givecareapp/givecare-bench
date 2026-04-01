@@ -11,6 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import tempfile
 from pathlib import Path
@@ -19,7 +20,7 @@ from typing import Dict, List, Optional
 from invisiblebench.results_io import write_model_results
 from invisiblebench.run_artifacts import load_result_rows
 from invisiblebench.run_audit import find_existing_audit_file
-from invisiblebench.utils.benchmark_inventory import PUBLIC_CATEGORIES
+from invisiblebench.utils.benchmark_inventory import PUBLIC_CATEGORIES, get_benchmark_version
 from invisiblebench.utils.turn_index import lint_turn_indices
 
 try:
@@ -55,7 +56,11 @@ def _prepare(input_path: Path, output_dir: Path) -> List[str]:
     rows = load_result_rows(input_path)
     if not rows:
         return []
-    written = write_model_results(rows, output_dir)
+    written = write_model_results(
+        rows,
+        output_dir,
+        benchmark_version=get_benchmark_version(get_project_root()),
+    )
     models = []
     for path in written:
         data = json.loads(path.read_text())
@@ -64,10 +69,14 @@ def _prepare(input_path: Path, output_dir: Path) -> List[str]:
 
 
 def _generate(input_dir: Path, output_dir: Path) -> None:
-    """Run generate_leaderboard.py."""
-    from scripts.generate_leaderboard import generate_leaderboard
-
-    generate_leaderboard(input_dir, output_dir)
+    """Run scripts/generate_leaderboard.py without requiring scripts/ to be a package."""
+    script_path = get_project_root() / "scripts" / "generate_leaderboard.py"
+    spec = importlib.util.spec_from_file_location("generate_leaderboard_script", script_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load leaderboard generator from {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.generate_leaderboard(input_dir, output_dir)
 
 
 def _load_run_manifest(source: Path) -> dict:

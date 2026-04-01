@@ -35,11 +35,15 @@ def get_project_root() -> Path:
 def load_leaderboard() -> Dict[str, Any]:
     """Load the current leaderboard."""
     root = get_project_root()
-    lb_path = root / "data" / "v2" / "leaderboard.json"
-    if not lb_path.exists():
-        raise FileNotFoundError(f"Leaderboard not found: {lb_path}")
-    with open(lb_path) as f:
-        return json.load(f)
+    candidates = [
+        root / "data" / "leaderboard" / "leaderboard.json",
+        root / "data" / "v2" / "leaderboard.json",
+    ]
+    for lb_path in candidates:
+        if lb_path.exists():
+            with open(lb_path) as f:
+                return json.load(f)
+    raise FileNotFoundError(f"Leaderboard not found: {candidates[0]}")
 
 
 def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:

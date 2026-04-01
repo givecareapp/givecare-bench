@@ -12,10 +12,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 LEADERBOARD_PATH = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
 
 
-# ── Disabled artifact shape ──────────────────────────────────────────
+# ── Published artifact shape ─────────────────────────────────────────
 
-class TestDisabledLeaderboardArtifact:
-    """Assert the public leaderboard artifact has the expected disabled shape."""
+class TestPublishedLeaderboardArtifact:
+    """Assert the public leaderboard artifact has the expected published shape."""
 
     @pytest.fixture()
     def leaderboard(self) -> dict:
@@ -24,16 +24,18 @@ class TestDisabledLeaderboardArtifact:
     def test_artifact_exists(self):
         assert LEADERBOARD_PATH.exists()
 
-    def test_metadata_has_publication_status(self, leaderboard):
+    def test_metadata_has_core_fields(self, leaderboard):
         meta = leaderboard["metadata"]
-        assert meta["publication_status"] == "disabled"
-        assert "reason" in meta
+        assert meta["benchmark_version"] == "2.1.0"
+        assert meta["total_models"] >= 1
+        assert meta["total_scenarios"] == 50
 
     def test_metadata_has_benchmark_version(self, leaderboard):
         assert leaderboard["metadata"]["benchmark_version"] == "2.1.0"
 
-    def test_overall_leaderboard_empty(self, leaderboard):
-        assert leaderboard["overall_leaderboard"] == []
+    def test_overall_leaderboard_populated(self, leaderboard):
+        assert len(leaderboard["overall_leaderboard"]) >= 1
+        assert leaderboard["overall_leaderboard"][0]["model"] == "GPT-5.4"
 
     def test_required_sections_present(self, leaderboard):
         required = {
