@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from invisiblebench._agent_cli import DoctorCheck, doctor_runner
+from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -88,6 +88,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Skip N runs before returning --list-runs results (default: 0).",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["json"],
+        default=None,
+        help=(
+            "Output format for --list-runs. 'json' emits an agent-friendly "
+            "{status, command, data:{total, limit, offset, runs}} envelope."
+        ),
     )
     parser.add_argument(
         "--runs-dir",
@@ -181,6 +190,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         offset = max(0, args.offset)
         limit = max(1, args.limit)
         runs = all_runs[offset : offset + limit]
+        if args.format == "json":
+            emit_json(
+                command="list-runs",
+                data={
+                    "total": total,
+                    "limit": limit,
+                    "offset": offset,
+                    "runs": runs,
+                },
+            )
+            return 0
         if not runs:
             print("No runs found." if total == 0 else f"No runs in range (total={total}).")
         else:

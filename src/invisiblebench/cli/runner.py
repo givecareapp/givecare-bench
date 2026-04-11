@@ -3403,6 +3403,72 @@ def _run_leaderboard_status_json() -> int:
     return 0
 
 
+def _read_leaderboard_json() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Return (leaderboard.json contents, error) for envelope payloads."""
+    from invisiblebench.cli.leaderboard import _leaderboard_output
+
+    lb_path = _leaderboard_output() / "leaderboard.json"
+    if not lb_path.exists():
+        return None, f"leaderboard.json not found at {lb_path}"
+    try:
+        return json.loads(lb_path.read_text()), None
+    except Exception as exc:
+        return None, str(exc)
+
+
+def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> int:
+    """Run leaderboard add/rebuild with stdout redirected, then emit JSON envelope.
+
+    Suppresses Rich table output on stdout so the `{status, command, data}`
+    envelope is the only line on stdout. Human-facing status messages are
+    redirected to stderr. The envelope payload always includes the current
+    leaderboard.json (when present) so agents see state on both success and
+    failure. A nonzero exit from the underlying call is surfaced as
+    `data.exit_code`; status=error is set only if the exit code is nonzero
+    or leaderboard.json cannot be read.
+    """
+    import contextlib
+
+    from invisiblebench.cli.leaderboard import run_leaderboard
+
+    rc: int
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            rc = run_leaderboard(
+                action=action,
+                results_path=results_path,
+                verbose=False,
+            )
+    except Exception as exc:
+        emit_json(status="error", command="leaderboard", error=f"{action}: {exc}")
+        return 1
+
+    data, err = _read_leaderboard_json()
+    payload: Dict[str, Any] = {
+        "action": action,
+        "exit_code": rc,
+        "leaderboard": data,
+    }
+    if err is not None:
+        emit_json(
+            status="error",
+            command="leaderboard",
+            data=payload,
+            error=f"{action}: {err}",
+        )
+        return rc or 1
+    if rc != 0:
+        emit_json(
+            status="error",
+            command="leaderboard",
+            data=payload,
+            error=f"{action} exited {rc}; see stderr for details",
+        )
+        return rc
+    emit_json(command="leaderboard", data=payload)
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -3459,7 +3525,7 @@ Examples:
         action="store_const",
         const="json",
         default=None,
-        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard/get)",
+        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard[add|rebuild|status]/get)",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -3761,8 +3827,11 @@ Examples:
         return run_publish(args.results, url=args.url)
 
     if args.command == "leaderboard":
-        if json_output and args.action == "status":
-            return _run_leaderboard_status_json()
+        if json_output:
+            if args.action == "status":
+                return _run_leaderboard_status_json()
+            if args.action in ("add", "rebuild"):
+                return _run_leaderboard_mutation_json(args.action, args.results)
         from invisiblebench.cli.leaderboard import run_leaderboard
 
         return run_leaderboard(
