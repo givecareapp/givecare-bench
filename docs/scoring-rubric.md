@@ -143,9 +143,13 @@ To maintain benchmark integrity, the following are kept private:
 Contributors with access to private scoring config can reproduce evaluations:
 
 ```bash
+uv run bench doctor                 # Validate env + runs dir
 uv run bench -m <model> -y          # Run benchmark
 uv run bench reliability <run_dir>  # Measure scorer consistency
 uv run bench stats <results_dir>    # Statistical analysis
+uv run bench runs --limit 25 --offset 0  # Paged run index
+uv run bench get <run-id>           # Read single run metadata
+uv run bench --json stats <results_dir>  # JSON envelope for agents
 ```
 
 See `benchmark/configs/prompts/README.md` for setup instructions.

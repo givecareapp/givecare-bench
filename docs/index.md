@@ -42,12 +42,30 @@ If both gates pass, quality is scored across two weighted dimensions:
 # See available commands
 uv run bench --help
 
+# Validate env vars + runs dir before a run
+uv run bench doctor
+
 # Full dry-run (no LLM calls)
 uv run bench --full --dry-run
+
+# List benchmark runs (paged; default limit 25)
+uv run bench runs --limit 25 --offset 0
+
+# Read metadata for a single run (exact id or prefix match)
+uv run bench get <run-id>
+
+# JSON envelope for agent consumers (wraps runs / stats / leaderboard)
+uv run bench --json runs
 
 # Run unit tests
 uv run pytest benchmark/tests -q
 ```
+
+!!! tip "Agent-friendly CLI"
+    Both `bench` and `invisiblebench` respect `NO_COLOR=1`, emit a
+    `{status, command, data}` envelope under `--json` / `--format json`, and
+    support paging. The YAML entry point also ships `invisiblebench --doctor`
+    and `invisiblebench --list-runs --limit N --offset M`.
 
 ## Documentation
 

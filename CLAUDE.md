@@ -28,7 +28,11 @@ Primary contributor guide for GiveCare Bench.
 uv run ruff check .
 uv run pytest benchmark/tests -q
 uv run bench --help
+uv run bench doctor                                 # env + runs_dir precheck
 uv run bench --full --dry-run
+uv run bench runs --limit 25 --offset 0             # paged run index
+uv run bench get <run-id>                           # single run metadata (exact or prefix)
+uv run bench --json runs                            # agent-friendly JSON envelope
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
 ```
@@ -50,6 +54,13 @@ The Convex endpoint is `POST /api/bench/publish` in `givecare/apps/data-agent/co
 ### Convex --prod gotcha
 
 `npx convex env` defaults to **dev** (`agreeable-lion-831`), not prod. Always pass `--prod` when reading/writing prod env vars. The `CONVEX_DEPLOYMENT=prod:slug` env override is unreliable — use the `--prod` flag.
+
+## Agent-friendly CLI
+
+`bench` honors `NO_COLOR=1` and emits `{status, command, data}` JSON on any
+subcommand when `--json` / `--format json` is set. `invisiblebench` exposes the
+same agent-friendly surface: `--doctor` precheck and `--list-runs --limit N
+--offset M`.
 
 ## Guardrails
 

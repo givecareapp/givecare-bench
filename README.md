@@ -67,7 +67,17 @@ givecare-bench/
 uv run pytest benchmark/tests -q
 uv run ruff check .
 uv run bench --help
+uv run bench doctor                                 # validate env vars + runs dir
 uv run bench --full --dry-run
+uv run bench runs --limit 25 --offset 0             # list runs (paged)
+uv run bench get <run-id>                           # read a single run's metadata
+uv run bench --json runs                            # JSON envelope for agents
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
 ```
+
+Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:
+`NO_COLOR=1` is respected, `bench --json` / `--format json` wraps `runs`,
+`stats`, and `leaderboard` output in a `{status, command, data}` envelope, and
+`invisiblebench --doctor` plus `invisiblebench --list-runs --limit N --offset M`
+mirror the paged run index.

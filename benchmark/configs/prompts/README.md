@@ -31,7 +31,10 @@ Each file is a plain-text prompt template. Variables use Python `str.format()` s
 The CLI still works for non-scoring operations:
 - `uv run bench --dry-run` (cost estimates)
 - `uv run bench --help`
+- `uv run bench doctor` (env + runs dir precheck)
 - `uv run bench health`
-- `uv run bench stats`
+- `uv run bench stats` (supports global `--json` / `--format json`)
+- `uv run bench runs --limit 25 --offset 0` (paged run index)
+- `uv run bench get <run-id>` (read a single run's metadata)
 
 Scoring will fail with a clear `FileNotFoundError` pointing to this README.
