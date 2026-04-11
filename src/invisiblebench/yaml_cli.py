@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import List, Optional
+
+from invisiblebench._agent_cli import DoctorCheck, doctor_runner
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="lb",
-        description="InvisibleBench scoring CLI (prototype).",
+        prog="invisiblebench",
+        description="InvisibleBench scoring CLI. Scores a model transcript against a scenario + rule pack.",
+    )
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run environment + state precheck and exit (nonzero on any failure).",
     )
     parser.add_argument(
         "--scenario",
@@ -67,7 +75,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--list-runs",
         action="store_true",
-        help="List all runs and exit.",
+        help="List runs (bounded by --limit) and exit.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=25,
+        help="Max runs returned by --list-runs (default: 25).",
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Skip N runs before returning --list-runs results (default: 0).",
     )
     parser.add_argument(
         "--runs-dir",
@@ -108,9 +128,40 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _doctor_checks(runs_dir: str) -> list[DoctorCheck]:
+    """Doctor checks: at least one LLM API key and a writable runs dir."""
+    return [
+        DoctorCheck(
+            name="LLM API key (OPENROUTER_API_KEY | OPENAI_API_KEY | ANTHROPIC_API_KEY)",
+            check=lambda: any(
+                os.environ.get(k)
+                for k in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+            ),
+            hint="export at least one provider key; LLM scoring is opt-in via --enable-llm",
+        ),
+        DoctorCheck(
+            name=f"runs_dir exists ({runs_dir})",
+            check=lambda: Path(runs_dir).exists() or Path(runs_dir).parent.exists(),
+            hint="directory will be created on first run if parent exists",
+        ),
+        DoctorCheck(
+            name="runs_dir writable",
+            check=lambda: os.access(
+                Path(runs_dir) if Path(runs_dir).exists() else Path(runs_dir).parent,
+                os.W_OK,
+            ),
+            hint="check directory permissions",
+        ),
+    ]
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    # Handle --doctor (precheck) before anything else
+    if args.doctor:
+        return doctor_runner(_doctor_checks(args.runs_dir), exit_on_fail=False)
 
     # Import run manager for utility commands
     from invisiblebench.evaluation.run_manager import RunManager
@@ -122,14 +173,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Deleted {deleted} run(s) for model '{args.reset}'")
         return 0
 
-    # Handle --list-runs command
+    # Handle --list-runs command (paged)
     if args.list_runs:
         run_manager = RunManager(runs_dir=args.runs_dir)
-        runs = run_manager.list_runs()
+        all_runs = run_manager.list_runs()
+        total = len(all_runs)
+        offset = max(0, args.offset)
+        limit = max(1, args.limit)
+        runs = all_runs[offset : offset + limit]
         if not runs:
-            print("No runs found.")
+            print("No runs found." if total == 0 else f"No runs in range (total={total}).")
         else:
-            print(f"Found {len(runs)} run(s):\n")
+            print(f"Showing {len(runs)} of {total} run(s) [offset={offset}, limit={limit}]:\n")
             for run in runs:
                 run_key = run.get("run_key", "unknown")
                 model = run.get("model_name", "unknown")

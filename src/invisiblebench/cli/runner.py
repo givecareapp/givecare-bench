@@ -87,13 +87,14 @@ from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
 )
+from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 # Rich imports for pretty terminal output
 try:
     import threading
 
-    from rich.console import Console
+    from rich.console import Console as _RichConsole
     from rich.live import Live
     from rich.progress import (
         BarColumn,
@@ -107,7 +108,23 @@ try:
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
-    Console = None  # type: ignore
+    _RichConsole = None  # type: ignore
+
+
+def _no_color() -> bool:
+    """Honor NO_COLOR env var and non-tty stdout."""
+    return bool(os.environ.get("NO_COLOR")) or not sys.stdout.isatty()
+
+
+def Console(*args, **kwargs):  # type: ignore[no-redef]
+    """Wrapper around rich.console.Console that honors NO_COLOR / isatty."""
+    if _RichConsole is None:
+        return None
+    kwargs.setdefault("no_color", _no_color())
+    kwargs.setdefault("force_terminal", not _no_color())
+    kwargs.setdefault("highlight", False)
+    return _RichConsole(*args, **kwargs)
+
 
 load_dotenv()
 
@@ -3175,6 +3192,217 @@ def diff_command(args) -> int:
     return 0
 
 
+# ---------- agent-friendly helpers ----------
+
+def _runs_dir() -> Path:
+    """Return the canonical runs directory (results/)."""
+    from invisiblebench.cli.archive import get_project_root
+
+    return get_project_root() / "results"
+
+
+def _run_doctor() -> int:
+    """Validate env vars + runs dir for the bench CLI."""
+    runs_dir = _runs_dir()
+
+    def _any_llm_key() -> bool:
+        return any(
+            os.environ.get(k)
+            for k in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+        )
+
+    def _runs_dir_writable() -> bool:
+        try:
+            runs_dir.mkdir(parents=True, exist_ok=True)
+            probe = runs_dir / ".doctor_probe"
+            probe.write_text("ok")
+            probe.unlink()
+            return True
+        except Exception:
+            return False
+
+    checks = [
+        DoctorCheck(
+            name="LLM API key (OPENROUTER_API_KEY | OPENAI_API_KEY | ANTHROPIC_API_KEY)",
+            check=_any_llm_key,
+            hint="set one of OPENROUTER_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY",
+        ),
+        DoctorCheck(
+            name=f"runs_dir exists ({runs_dir})",
+            check=lambda: runs_dir.exists() and runs_dir.is_dir(),
+            hint="mkdir -p results/",
+        ),
+        DoctorCheck(
+            name="runs_dir writable",
+            check=_runs_dir_writable,
+            hint="chmod +w on the runs directory",
+        ),
+    ]
+    return doctor_runner(checks, exit_on_fail=False)
+
+
+def _collect_runs() -> List[Dict[str, Any]]:
+    """Return run records sorted newest first, with narrow fields."""
+    from invisiblebench.cli.archive import list_runs
+
+    results_dir = _runs_dir()
+    if not results_dir.exists():
+        return []
+    runs = list_runs(results_dir)
+    runs.sort(key=lambda r: r.get("date") or datetime.min, reverse=True)
+    records: List[Dict[str, Any]] = []
+    for r in runs:
+        records.append(
+            {
+                "id": r["name"],
+                "date": r["date"].strftime("%Y-%m-%d") if r.get("date") else None,
+                "models": r.get("models", []),
+                "scenarios": r.get("scenarios", 0),
+                "size_mb": round(r.get("size_mb", 0.0), 2),
+                "has_results": r.get("has_results", False),
+            }
+        )
+    return records
+
+
+def _run_runs(*, limit: int, offset: int, json_output: bool) -> int:
+    """Handle `bench runs` with optional --limit/--offset/--json."""
+    records = _collect_runs()
+    total = len(records)
+    if offset < 0:
+        offset = 0
+    if limit is None or limit < 0:
+        limit = 25
+    sliced = records[offset : offset + limit]
+
+    if json_output:
+        emit_json(
+            command="runs",
+            data={
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "runs": sliced,
+            },
+        )
+        return 0
+
+    if not sliced:
+        print("No runs found.")
+        return 0
+
+    if RICH_AVAILABLE:
+        console = Console()
+        table = Table(title=f"Benchmark Runs ({offset + 1}-{offset + len(sliced)} of {total})")
+        table.add_column("Date", style="cyan")
+        table.add_column("Run ID")
+        table.add_column("Models")
+        table.add_column("Scenarios", justify="right")
+        table.add_column("Size", justify="right")
+        table.add_column("Results")
+        for r in sliced:
+            models = ", ".join(r["models"][:2])
+            if len(r["models"]) > 2:
+                models += f" +{len(r['models']) - 2}"
+            table.add_row(
+                r["date"] or "unknown",
+                r["id"],
+                models or "-",
+                str(r["scenarios"]) if r["scenarios"] else "-",
+                f"{r['size_mb']:.1f}MB",
+                "yes" if r["has_results"] else "no",
+            )
+        console.print(table)
+    else:
+        for r in sliced:
+            print(f"{r['date'] or 'unknown'} | {r['id']} | {r['size_mb']:.1f}MB")
+
+    return 0
+
+
+def _load_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
+    """Resolve a run by id (exact or prefix) and return its metadata."""
+    results_dir = _runs_dir()
+    if not results_dir.exists():
+        return None
+
+    candidates: List[Path] = []
+    direct = results_dir / run_id
+    if direct.is_dir():
+        candidates = [direct]
+    else:
+        for entry in sorted(results_dir.iterdir()):
+            if entry.is_dir() and entry.name.startswith(run_id):
+                candidates.append(entry)
+        # also check archive
+        archive = results_dir / "archive"
+        if archive.exists():
+            for entry in sorted(archive.iterdir()):
+                if entry.is_dir() and entry.name.startswith(run_id):
+                    candidates.append(entry)
+    if not candidates:
+        return None
+    # pick newest mtime when multiple
+    run_path = max(candidates, key=lambda p: p.stat().st_mtime)
+
+    manifest_path = run_path / "run_manifest.json"
+    manifest: Dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text())
+        except Exception as exc:
+            manifest = {"_manifest_error": str(exc)}
+
+    from invisiblebench.cli.archive import get_run_info
+
+    info = get_run_info(run_path)
+    return {
+        "id": run_path.name,
+        "path": str(run_path),
+        "date": info["date"].strftime("%Y-%m-%d") if info.get("date") else None,
+        "models": info.get("models", []),
+        "scenarios": info.get("scenarios", 0),
+        "size_mb": round(info.get("size_mb", 0.0), 2),
+        "has_results": info.get("has_results", False),
+        "manifest": manifest,
+    }
+
+
+def _run_get(run_id: str, *, json_output: bool) -> int:
+    """Handle `bench get <run-id>`."""
+    record = _load_run_metadata(run_id)
+    if record is None:
+        if json_output:
+            emit_json(status="error", command="get", error=f"run not found: {run_id}")
+        else:
+            print(f"Run not found: {run_id}", file=sys.stderr)
+        return 1
+    # get always emits JSON envelope (read-by-id, per cli.md)
+    emit_json(command="get", data=record)
+    return 0
+
+
+def _run_leaderboard_status_json() -> int:
+    """Emit the leaderboard.json contents as a JSON envelope."""
+    from invisiblebench.cli.leaderboard import _leaderboard_output
+
+    lb_path = _leaderboard_output() / "leaderboard.json"
+    if not lb_path.exists():
+        emit_json(
+            status="error",
+            command="leaderboard",
+            error=f"leaderboard.json not found at {lb_path}",
+        )
+        return 1
+    try:
+        data = json.loads(lb_path.read_text())
+    except Exception as exc:
+        emit_json(status="error", command="leaderboard", error=str(exc))
+        return 1
+    emit_json(command="leaderboard", data=data)
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -3224,7 +3452,24 @@ Examples:
         """,
     )
 
+    parser.add_argument(
+        "--json",
+        "--format",
+        dest="json_output",
+        action="store_const",
+        const="json",
+        default=None,
+        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard/get)",
+    )
+
     subparsers = parser.add_subparsers(dest="command")
+
+    # Doctor subcommand
+    subparsers.add_parser("doctor", help="Validate env vars and runs dir")
+
+    # Get subcommand (read single run by id)
+    get_parser = subparsers.add_parser("get", help="Read a single run's metadata by id")
+    get_parser.add_argument("run_id", type=str, help="Run directory name or prefix")
 
     # Report subcommand
     report_parser = subparsers.add_parser("report", help="Generate HTML report from results JSON")
@@ -3256,7 +3501,9 @@ Examples:
     clean_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
 
     # Runs subcommand (list runs)
-    subparsers.add_parser("runs", help="List all benchmark runs")
+    runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
+    runs_parser.add_argument("--limit", type=int, default=25, help="Max rows (default 25)")
+    runs_parser.add_argument("--offset", type=int, default=0, help="Skip N rows (default 0)")
 
     # Diff subcommand
     diff_parser = subparsers.add_parser("diff", help="Compare two benchmark runs")
@@ -3460,7 +3707,15 @@ Examples:
 
     args = parser.parse_args(argv)
 
+    json_output = bool(getattr(args, "json_output", None))
+
     # Handle subcommands
+    if args.command == "doctor":
+        return _run_doctor()
+
+    if args.command == "get":
+        return _run_get(args.run_id, json_output=json_output)
+
     if args.command == "report":
         return report_command(args)
 
@@ -3480,9 +3735,11 @@ Examples:
         return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
 
     if args.command == "runs":
-        from invisiblebench.cli.archive import run_list
-
-        return run_list()
+        return _run_runs(
+            limit=getattr(args, "limit", 25),
+            offset=getattr(args, "offset", 0),
+            json_output=json_output,
+        )
 
     if args.command == "diff":
         return diff_command(args)
@@ -3504,6 +3761,8 @@ Examples:
         return run_publish(args.results, url=args.url)
 
     if args.command == "leaderboard":
+        if json_output and args.action == "status":
+            return _run_leaderboard_status_json()
         from invisiblebench.cli.leaderboard import run_leaderboard
 
         return run_leaderboard(
@@ -3521,12 +3780,21 @@ Examples:
 
         stats = compute_stats(args.results, n_bootstrap=args.bootstrap)
         if "error" in stats:
-            print(f"Error: {stats['error']}")
+            if json_output:
+                emit_json(status="error", command="stats", error=stats["error"])
+            else:
+                print(f"Error: {stats['error']}")
             return 1
-        print(format_stats_report(stats))
+        if json_output:
+            emit_json(command="stats", data=stats)
+        else:
+            print(format_stats_report(stats))
         if args.output:
             Path(args.output).write_text(format_stats_markdown(stats))
-            print(f"\nMarkdown report written to {args.output}")
+            if not json_output:
+                print(f"\nMarkdown report written to {args.output}")
+            else:
+                print(f"wrote: {args.output}", file=sys.stderr)
         return 0
 
     if args.command == "reliability":
