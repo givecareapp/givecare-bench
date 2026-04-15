@@ -57,6 +57,9 @@ uv run bench get <run-id>
 # JSON envelope for agent consumers (wraps runs / stats / leaderboard)
 uv run bench --json runs
 
+# Write full payload to disk; stdout gets a summary envelope
+uv run bench --json runs --out /tmp/runs.json
+
 # Run unit tests
 uv run pytest benchmark/tests -q
 ```
@@ -65,10 +68,16 @@ uv run pytest benchmark/tests -q
     Both `bench` and `invisiblebench` respect `NO_COLOR=1`, emit a
     `{status, command, data}` envelope under `--json` / `--format json`, and
     support paging. The YAML entry point also ships `invisiblebench --doctor`
-    and `invisiblebench --list-runs --limit N --offset M`.
+    and `invisiblebench --list-runs --limit N --offset M`. `--out PATH` (on
+    `runs`, `get`, and `leaderboard status`) writes the full payload to disk
+    and emits a `{path, byte_count, record_count}` summary. Live writes
+    (`publish`, `leaderboard add/rebuild`, `archive`) refuse in
+    non-interactive shells unless `--yes` is passed.
 
 ## Documentation
 
+- [Install](install.md) — how to put `bench` and `invisiblebench` on PATH
 - [Scoring Rubric](scoring-rubric.md) — full scoring weights, dimension definitions, gate logic
 - [Architecture](architecture.md) — system design, scenario schema, harness pipeline
 - [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape
+- [Judge Validation](judge-validation.md) — judge template-hash manifest and validation status

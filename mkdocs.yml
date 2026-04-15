@@ -34,12 +34,18 @@ theme:
 
 nav:
   - Home: index.md
+  - Install: install.md
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
   - Methodology: methodology.md
+  - Judge Validation: judge-validation.md
 
 plugins:
   - search
+
+not_in_nav: |
+  /_solutions.md
+  /rescored-benchmark-summary-2026-03-31.md
 
 markdown_extensions:
   - admonition

@@ -33,6 +33,7 @@ uv run bench --full --dry-run
 uv run bench runs --limit 25 --offset 0             # paged run index
 uv run bench get <run-id>                           # single run metadata (exact or prefix)
 uv run bench --json runs                            # agent-friendly JSON envelope
+uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
 ```
@@ -62,9 +63,44 @@ subcommand when `--json` / `--format json` is set. `invisiblebench` exposes the
 same agent-friendly surface: `--doctor` precheck and `--list-runs --limit N
 --offset M`.
 
+**`--out PATH`** (on `runs`, `get`, and `leaderboard status`): writes the full
+JSON payload to `PATH` and emits a `{status, command, data: {path, byte_count,
+record_count}}` summary envelope on stdout. Use this for large payloads that
+would otherwise blow out agent context. Disk-write failures are reported as
+`{status:"error", ...}` envelopes, not tracebacks.
+
+**Write-approval gating**: `bench publish`, `bench leaderboard add`,
+`bench leaderboard rebuild`, and `bench archive`/`clean` refuse in
+non-interactive shells unless `--yes` is passed. Reads never prompt.
+
+## Public CI
+
+`.github/workflows/ci.yml` runs `uv run ruff check .`,
+`uv run pytest benchmark/tests -q`, and `uv run python
+scripts/lint_turn_indices.py --strict` on every push and PR to `main`. The
+CI install is `uv sync --extra dev --extra analytics` so any test that
+imports numpy/pandas/scipy runs the same as locally.
+
+## Scenario contract
+
+Scenario JSON uses a **`category`** field (not `tier`). Valid values:
+`safety`, `empathy`, `context`, `continuity`, `confidential`. The legacy
+`tier` field and `tier_0..tier_3` values are rejected by
+`ScenarioValidator`. The `ScenarioResult.tier` field persists as a
+deprecated read-only fallback for historical result artifacts only — see
+inline comment on the field.
+
 ## Guardrails
 
 - keep `benchmark/` data-only
 - keep runtime code in `src/invisiblebench/`
 - move historical docs, experiments, and artifacts into `archive/`
 - do not reintroduce public confidential scenario files
+
+## Contributor entry points
+
+- `CONTRIBUTING.md` — dev setup, scenario contract, PR checklist
+- `SECURITY.md` — private security-advisory channel and disclosure SLA
+- `CODE_OF_CONDUCT.md` — points to Contributor Covenant v2.1
+- `docs/install.md` — how to put `bench` on PATH from any folder
+- `docs/judge-validation.md` — public judge template-hash manifest

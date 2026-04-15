@@ -2,6 +2,33 @@
 
 Diátaxis: reference
 
+## Public-repo polish pass: version reconciled, community-health files added, mkdocs builds strict-clean
+
+**Date**: 2026-04-15  
+**Files**: `pyproject.toml`, `src/invisiblebench/__init__.py`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/install.md`, `docs/index.md`, `mkdocs.yml`, `.github/workflows/docs.yml`
+
+`pyproject.toml` said version `1.2.0` while `benchmark/benchmark_card.json` and all public docs said `2.1.0`; the drift would have compounded in any CHANGELOG work. README had no badges, no docs-site link, and no pointer to contributor material. No `CONTRIBUTING.md`, `SECURITY.md`, or `CODE_OF_CONDUCT.md` existed. `mkdocs build` emitted warnings: `docs/install.md` linked to `../CLAUDE.md` (not a docs page), and `docs/_solutions.md` + `docs/rescored-benchmark-summary-2026-03-31.md` were orphaned from nav. `.github/workflows/docs.yml` used raw `pip`, inconsistent with the rest of the repo's uv tooling.
+
+**Fix**: bumped `pyproject.toml` and `src/invisiblebench/__init__.py` to 2.1.0; added CI/License/Docs badges + docs-site link in README; wrote CONTRIBUTING (dev setup, scenario contract, PR checklist), SECURITY (private-advisory + ali@scty.org with 7-day SLA), and a short CODE_OF_CONDUCT pointing to Contributor Covenant v2.1; inlined the Convex `--prod` gotcha into `docs/install.md`; added `not_in_nav:` entries in `mkdocs.yml`; rewrote `docs.yml` to use uv + `mkdocs-material`. `mkdocs build --strict` now passes clean.
+
+## Scenario contract is now category-only; legacy `tier` field and `tier_0..tier_3` values are rejected
+
+**Date**: 2026-04-15  
+**Files**: `benchmark/scenarios/**/*.json` (50 files), `src/invisiblebench/loaders/scenario_loader.py`, `src/invisiblebench/models/scenario.py`, `src/invisiblebench/models/__init__.py`, `src/invisiblebench/models/results.py`, `src/invisiblebench/stats/analysis.py`, `src/invisiblebench/results_io.py`, `benchmark/tests/unit/test_contract_drift.py`, `benchmark/tests/unit/test_loaders.py`, `benchmark/tests/unit/test_scenario_validator.py`, `benchmark/tests/unit/test_scenario_models.py`, `benchmark/tests/unit/test_orchestrator_hard_fails.py`
+
+The scenario schema, the Pydantic `ScenarioModel`, and the legacy `Scenario` dataclass each encoded the `tier` → `category` migration differently: `tier` was marked deprecated in Pydantic, but the validator accepted either field and even accepted legacy `tier_0..tier_3` values. The legacy `Scenario` dataclass also had `category: Optional[DimensionType]`, which mistyped a category-level field as a sub-dimension. External reviewers flagged this as unfinished contract drift.
+
+**Fix**: migrated all 50 public scenario JSONs to `category` only, hardened `ScenarioValidator` to reject the `tier` field and `tier_N` values, made `category` a required field on `ScenarioModel` and the legacy `Scenario` dataclass, removed `tier_number` and `TierLevel`, renamed `load_by_tier` → `load_by_category`, and added `test_no_legacy_tier_field` to lock the corpus. `ScenarioResult.tier` remains as a deprecated read-only fallback for historical result artifacts written before the migration — inline comment on the field documents the retirement policy.
+
+## bench live writes gate on `confirm_or_abort`, and `--out PATH` exports large payloads to disk
+
+**Date**: 2026-04-15  
+**Files**: `src/invisiblebench/cli/runner.py`, `benchmark/tests/unit/test_cli_flags.py`
+
+The agent-friendly CLI guarantees in `~/agents/_rules/general/cli.md` require (a) that large payloads be writable to a file instead of blown inline, and (b) that live writes refuse in non-interactive shells unless explicitly approved. `bench runs`, `bench get`, and `bench --json leaderboard status` were inlining full payloads; `bench publish`, `bench leaderboard add/rebuild`, and `bench archive` had no interactive gate.
+
+**Fix**: added `--out PATH` (runs/get/leaderboard-status) writing the full payload and emitting a `{status, command, data:{path, byte_count, record_count}}` summary envelope, with `OSError` caught and reported via error envelope rather than traceback. Wired `confirm_or_abort` into the dispatch paths for publish / leaderboard add|rebuild / archive; `--yes` bypasses, reads never prompt. `archive` without `--before` or `--keep` now exits 2 with a clear error instead of prompting with `(before=None, keep=None)`. Coverage in `test_cli_flags.py` (9 tests).
+
 ## Scoring comparability now uses prompt-template hashes, and scenario rubric contracts are fully supported
 
 **Date**: 2026-03-29  

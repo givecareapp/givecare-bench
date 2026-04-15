@@ -1,6 +1,12 @@
 # GiveCare Bench
 
+[![CI](https://github.com/givecareapp/givecare-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/givecareapp/givecare-bench/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-mkdocs--material-blue)](https://givecareapp.github.io/givecare-bench)
+
 GiveCare Bench is a standalone public benchmark for multi-turn caregiver-support AI.
+
+Full docs: [givecareapp.github.io/givecare-bench](https://givecareapp.github.io/givecare-bench).
 
 The repo is organized around three buckets:
 - public benchmark surfaces
@@ -72,6 +78,7 @@ uv run bench --full --dry-run
 uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents
+uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
 ```
@@ -80,4 +87,15 @@ Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:
 `NO_COLOR=1` is respected, `bench --json` / `--format json` wraps `runs`,
 `stats`, and `leaderboard` output in a `{status, command, data}` envelope, and
 `invisiblebench --doctor` plus `invisiblebench --list-runs --limit N --offset M`
-mirror the paged run index.
+mirror the paged run index. `--out PATH` (on `runs`, `get`, and `leaderboard
+status`) writes the full payload to disk and emits a
+`{path, byte_count, record_count}` summary. Live writes (`publish`,
+`leaderboard add/rebuild`, `archive`) refuse in non-interactive shells unless
+`--yes` is passed.
+
+## Contributing and reporting
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, scenario contract, PR checklist
+- [SECURITY.md](SECURITY.md) — private security-advisory channel
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Contributor Covenant v2.1
+- Bugs and feature requests: [GitHub Issues](https://github.com/givecareapp/givecare-bench/issues)

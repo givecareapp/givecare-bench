@@ -16,8 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.12"
-      - run: pip install mkdocs-material
-      - run: mkdocs gh-deploy --force
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Deploy to GitHub Pages
+        run: uv run --with mkdocs-material mkdocs gh-deploy --force
