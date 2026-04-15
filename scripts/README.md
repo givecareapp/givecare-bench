@@ -10,6 +10,9 @@ Active utility scripts for the public benchmark repo.
 - `scripts/setup_env.sh`: environment setup helper
 - `scripts/generate_verifier_corpus.py`: build the unified 15-model transcript manifest and corpus summaries for verifier work
 - `scripts/run_claude_verifier.py`: package a scenario tranche and run Claude-based verifier adjudication
+- `scripts/export_false_scope_inventory.py`: dump false-scope board rows to CSV for remediation review
+- `scripts/rescore_compliance_only.py`: rescore the compliance path on existing transcripts without re-running scenarios
+- `scripts/write_rescore_comparison.py`: generate a markdown diff between two rescore runs
 
 ## Common commands
 
