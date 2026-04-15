@@ -24,6 +24,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
+from invisiblebench._agent_cli import (
+    DoctorCheck,
+    confirm_or_abort,
+    doctor_runner,
+    emit_json,
+)
 from invisiblebench.adapters.givecare_live import (
     MODEL_ID as GIVECARE_LIVE_MODEL_ID,
 )
@@ -87,7 +93,6 @@ from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
 )
-from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 # Rich imports for pretty terminal output
@@ -3265,8 +3270,54 @@ def _collect_runs() -> List[Dict[str, Any]]:
     return records
 
 
-def _run_runs(*, limit: int, offset: int, json_output: bool) -> int:
-    """Handle `bench runs` with optional --limit/--offset/--json."""
+def _emit_or_write_json(
+    *,
+    command: str,
+    data: Dict[str, Any],
+    record_count: int,
+    out_path: Optional[str],
+) -> int:
+    """Emit envelope on stdout, or write full payload to file and emit a summary.
+
+    When out_path is set, the full `data` dict is written to the path and the
+    stdout envelope is `{status, command, data: {path, byte_count, record_count}}`.
+    Otherwise the full data is inlined. Both cases write exactly one line to
+    stdout so agents can parse predictably.
+    """
+    if out_path:
+        try:
+            resolved = Path(out_path).expanduser().resolve()
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            payload = json.dumps(data, separators=(",", ":"), default=str)
+            resolved.write_text(payload)
+        except OSError as exc:
+            emit_json(
+                status="error",
+                command=command,
+                error=f"failed to write {out_path}: {exc}",
+            )
+            return 1
+        emit_json(
+            command=command,
+            data={
+                "path": str(resolved),
+                "byte_count": len(payload),
+                "record_count": record_count,
+            },
+        )
+        return 0
+    emit_json(command=command, data=data)
+    return 0
+
+
+def _run_runs(
+    *,
+    limit: int,
+    offset: int,
+    json_output: bool,
+    out_path: Optional[str] = None,
+) -> int:
+    """Handle `bench runs` with optional --limit/--offset/--json/--out."""
     records = _collect_runs()
     total = len(records)
     if offset < 0:
@@ -3275,17 +3326,19 @@ def _run_runs(*, limit: int, offset: int, json_output: bool) -> int:
         limit = 25
     sliced = records[offset : offset + limit]
 
-    if json_output:
-        emit_json(
+    if json_output or out_path:
+        payload = {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "runs": sliced,
+        }
+        return _emit_or_write_json(
             command="runs",
-            data={
-                "total": total,
-                "limit": limit,
-                "offset": offset,
-                "runs": sliced,
-            },
+            data=payload,
+            record_count=len(sliced),
+            out_path=out_path,
         )
-        return 0
 
     if not sliced:
         print("No runs found.")
@@ -3368,7 +3421,7 @@ def _load_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _run_get(run_id: str, *, json_output: bool) -> int:
+def _run_get(run_id: str, *, json_output: bool, out_path: Optional[str] = None) -> int:
     """Handle `bench get <run-id>`."""
     record = _load_run_metadata(run_id)
     if record is None:
@@ -3378,11 +3431,15 @@ def _run_get(run_id: str, *, json_output: bool) -> int:
             print(f"Run not found: {run_id}", file=sys.stderr)
         return 1
     # get always emits JSON envelope (read-by-id, per cli.md)
-    emit_json(command="get", data=record)
-    return 0
+    return _emit_or_write_json(
+        command="get",
+        data=record,
+        record_count=1,
+        out_path=out_path,
+    )
 
 
-def _run_leaderboard_status_json() -> int:
+def _run_leaderboard_status_json(out_path: Optional[str] = None) -> int:
     """Emit the leaderboard.json contents as a JSON envelope."""
     from invisiblebench.cli.leaderboard import _leaderboard_output
 
@@ -3399,8 +3456,14 @@ def _run_leaderboard_status_json() -> int:
     except Exception as exc:
         emit_json(status="error", command="leaderboard", error=str(exc))
         return 1
-    emit_json(command="leaderboard", data=data)
-    return 0
+    rows = data.get("overall_leaderboard") if isinstance(data, dict) else None
+    record_count = len(rows) if isinstance(rows, list) else 1
+    return _emit_or_write_json(
+        command="leaderboard",
+        data=data,
+        record_count=record_count,
+        out_path=out_path,
+    )
 
 
 def _read_leaderboard_json() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -3536,6 +3599,12 @@ Examples:
     # Get subcommand (read single run by id)
     get_parser = subparsers.add_parser("get", help="Read a single run's metadata by id")
     get_parser.add_argument("run_id", type=str, help="Run directory name or prefix")
+    get_parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
+    )
 
     # Report subcommand
     report_parser = subparsers.add_parser("report", help="Generate HTML report from results JSON")
@@ -3570,6 +3639,12 @@ Examples:
     runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
     runs_parser.add_argument("--limit", type=int, default=25, help="Max rows (default 25)")
     runs_parser.add_argument("--offset", type=int, default=0, help="Skip N rows (default 0)")
+    runs_parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
+    )
 
     # Diff subcommand
     diff_parser = subparsers.add_parser("diff", help="Compare two benchmark runs")
@@ -3619,6 +3694,12 @@ Examples:
         "results", nargs="?", default=None, help="Path to all_results.json (for 'add')"
     )
     lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+    lb_parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="For --json status: write full leaderboard to PATH; stdout gets summary envelope",
+    )
 
     # Stats subcommand
     stats_parser = subparsers.add_parser(
@@ -3780,7 +3861,11 @@ Examples:
         return _run_doctor()
 
     if args.command == "get":
-        return _run_get(args.run_id, json_output=json_output)
+        return _run_get(
+            args.run_id,
+            json_output=json_output,
+            out_path=getattr(args, "out", None),
+        )
 
     if args.command == "report":
         return report_command(args)
@@ -3798,6 +3883,20 @@ Examples:
 
         if args.list_runs:
             return run_list()
+        if args.before is None and args.keep is None:
+            print(
+                f"{args.command}: pass --before YYYYMMDD or --keep N",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.dry_run:
+            if args.before and args.keep is not None:
+                prompt = f"archive runs older than {args.before}, keeping {args.keep} most recent"
+            elif args.before:
+                prompt = f"archive runs older than {args.before}"
+            else:
+                prompt = f"archive runs keeping {args.keep} most recent"
+            confirm_or_abort(prompt, yes=bool(getattr(args, "yes", False)))
         return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
 
     if args.command == "runs":
@@ -3805,6 +3904,7 @@ Examples:
             limit=getattr(args, "limit", 25),
             offset=getattr(args, "offset", 0),
             json_output=json_output,
+            out_path=getattr(args, "out", None),
         )
 
     if args.command == "diff":
@@ -3824,12 +3924,23 @@ Examples:
     if args.command == "publish":
         from invisiblebench.cli.publish import run_publish
 
+        target_url = args.url or os.environ.get("CONVEX_SITE_URL", "<CONVEX_SITE_URL>")
+        confirm_or_abort(
+            f"publish {args.results} → {target_url}",
+            yes=bool(getattr(args, "yes", False)),
+        )
         return run_publish(args.results, url=args.url)
 
     if args.command == "leaderboard":
+        if args.action in ("add", "rebuild"):
+            confirm_or_abort(
+                f"leaderboard {args.action}"
+                + (f" {args.results}" if args.results else ""),
+                yes=bool(getattr(args, "yes", False)),
+            )
         if json_output:
             if args.action == "status":
-                return _run_leaderboard_status_json()
+                return _run_leaderboard_status_json(out_path=getattr(args, "out", None))
             if args.action in ("add", "rebuild"):
                 return _run_leaderboard_mutation_json(args.action, args.results)
         from invisiblebench.cli.leaderboard import run_leaderboard

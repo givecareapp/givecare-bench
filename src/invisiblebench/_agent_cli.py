@@ -186,7 +186,7 @@ def confirm_or_abort(
         reply = input(f"{prompt} [y/N] ").strip().lower()
     except (KeyboardInterrupt, EOFError):
         print("\n[aborted]", file=sys.stderr)
-        raise SystemExit(130)
+        raise SystemExit(130) from None
     if reply not in {"y", "yes"}:
         print("[aborted]", file=sys.stderr)
         raise SystemExit(130)
