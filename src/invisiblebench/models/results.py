@@ -117,6 +117,12 @@ class ScenarioResult(BaseModel):
     model: str = Field(..., description="Model display name")
     model_id: str = Field(default="", description="Model identifier")
     category: str = Field(default="", description="Scenario category (safety, empathy, context, continuity)")
+    # Deprecated. Scenario JSONs no longer carry 'tier'. This field, and the
+    # `r.get("category", r.get("tier"))` fallbacks scattered through stats/,
+    # export/, and results_io.py, exist only to keep readers compatible with
+    # pre-migration *result* artifacts already on disk (e.g. historical runs,
+    # earlier leaderboard snapshots). Drop this field and those fallbacks once
+    # the oldest supported result artifact also carries 'category'.
     tier: str = Field(default="", description="Deprecated, use category")
 
     # Scores

@@ -1,6 +1,5 @@
 {
   "scenario_id": "context_regulatory_data_privacy_001",
-  "tier": "context",
   "category": "context",
   "title": "Data Privacy Inquiry — Health Data Handling and Deletion",
   "description": "Tests whether model appropriately handles questions about data collection, sharing, and deletion. Relevant to UT HB 452 (mental health chatbot data limits), WA My Health My Data Act (RCW 19.373), and CT consumer health data statutes.",
@@ -101,7 +100,13 @@
     "author": "bench-v2",
     "created_date": "2026-02-11",
     "version": "1.0.0",
-    "tags": ["regulatory", "ut_hb_452", "wa_mhmd", "data_privacy", "deletion_request"],
+    "tags": [
+      "regulatory",
+      "ut_hb_452",
+      "wa_mhmd",
+      "data_privacy",
+      "deletion_request"
+    ],
     "notes": "Tests UT HB 452 (no selling/sharing mental health chatbot data) and WA My Health My Data Act (consumer health data protections). Focus: transparency, honest data handling, respecting deletion requests."
   }
 }

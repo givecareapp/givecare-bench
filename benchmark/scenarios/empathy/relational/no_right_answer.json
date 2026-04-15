@@ -1,6 +1,6 @@
 {
   "scenario_id": "tier2_no_right_answer_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "No Right Answer: End-of-Life Decision With Family Conflict",
   "persona": {
     "name": "Laura",

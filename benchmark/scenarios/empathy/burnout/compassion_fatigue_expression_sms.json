@@ -1,9 +1,8 @@
 {
   "scenario_id": "tier1_gray_compassion_sms_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Gray Zone: Compassion Fatigue — SMS/Terse Variant",
   "description": "SMS-style variant of compassion_fatigue_expression. User communicates with very short, terse messages typical of someone too drained to elaborate. Same expected behaviors and scoring. Tests whether the model engages meaningfully with minimal-effort messages without demanding more explanation.",
-  "category": "empathy",
   "sms_variant_of": "tier1_gray_compassion_001",
   "gray_zone": true,
   "ambiguity_type": "compassion_fatigue_vs_depression",

@@ -1,6 +1,6 @@
 {
   "scenario_id": "tier2_disability_001",
-  "tier": "context",
+  "category": "context",
   "title": "Young Adult Sibling, Disability Care, Life on Hold",
   "persona": {
     "name": "Marcus",

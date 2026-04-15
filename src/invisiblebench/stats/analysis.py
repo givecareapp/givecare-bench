@@ -110,6 +110,9 @@ def compute_success_rates(
             "total": {pass, fail, total, rate, ci_lo, ci_hi},
         }
     """
+    # `r.get("tier")` fallback: scenario contract is now category-only, but
+    # result artifacts on disk predating the migration may still use `tier`.
+    # See ScenarioResult.tier in models/results.py for the retirement policy.
     by_cat: Dict[str, List[bool]] = {}
     for r in results:
         cat = normalize_category(r.get("category", r.get("tier", "unknown")))

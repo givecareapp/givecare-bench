@@ -52,9 +52,8 @@ __all__ = [
     "ScenarioModel",
     "SessionModel",
     "TurnModel",
-    # Legacy dataclass models (backwards compatibility)
+    # Dataclass models
     "CategoryLevel",
-    "TierLevel",
     "DimensionType",
     "Turn",
     "Session",
@@ -70,10 +69,7 @@ class CategoryLevel(Enum):
     EMPATHY = "empathy"      # Burnout, belonging, grief, relational
     CONTEXT = "context"      # Cultural awareness, regulatory
     CONTINUITY = "continuity"  # Longitudinal trust, memory, consistency
-
-
-# Backward compatibility
-TierLevel = CategoryLevel
+    CONFIDENTIAL = "confidential"  # Private scenarios
 
 
 class DimensionType(Enum):
@@ -193,10 +189,9 @@ class Scenario:
     """A complete test scenario."""
 
     scenario_id: str
-    tier: TierLevel
+    category: CategoryLevel
     title: str
     persona: Persona
-    category: Optional[DimensionType] = None
     turns: List[Turn] = field(default_factory=list)
     sessions: List[Session] = field(default_factory=list)
     scoring_dimensions: Dict[DimensionType, int] = field(default_factory=dict)
@@ -207,7 +202,7 @@ class Scenario:
 
     @property
     def is_multi_session(self) -> bool:
-        """Check if scenario has multiple sessions (Tier 3)."""
+        """Check if scenario has multiple sessions (continuity category)."""
         return len(self.sessions) > 0
 
     @property
@@ -220,11 +215,12 @@ class Scenario:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Scenario":
         """Create Scenario from dictionary."""
-        tier = TierLevel(data["tier"])
+        if "tier" in data and "category" not in data:
+            raise ValueError(
+                "Scenario uses legacy 'tier' field. Migrate to 'category' before loading."
+            )
+        category = CategoryLevel(data["category"])
         persona = Persona.from_dict(data["persona"])
-        category = None
-        if "category" in data:
-            category = DimensionType(data["category"])
 
         # Parse turns or sessions based on structure
         turns = []
@@ -243,10 +239,9 @@ class Scenario:
 
         return cls(
             scenario_id=data["scenario_id"],
-            tier=tier,
+            category=category,
             title=data["title"],
             persona=persona,
-            category=category,
             turns=turns,
             sessions=sessions,
             scoring_dimensions=scoring_dimensions,

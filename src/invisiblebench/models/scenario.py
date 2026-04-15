@@ -58,10 +58,9 @@ class ScenarioModel(BaseModel):
     """A complete test scenario with Pydantic validation."""
 
     scenario_id: str
-    tier: str = ""  # Deprecated, use category. Kept for backward compat.
     title: str
     persona: PersonaModel
-    category: Optional[str] = None  # "safety", "empathy", "context", "continuity"
+    category: str  # "safety", "empathy", "context", "continuity", "confidential"
     turns: list[TurnModel] = Field(default_factory=list)
     sessions: list[SessionModel] = Field(default_factory=list)
     scoring_dimensions: dict[str, int] = Field(default_factory=dict)
@@ -75,19 +74,8 @@ class ScenarioModel(BaseModel):
 
     @computed_field
     @property
-    def tier_number(self) -> int:
-        """Extract tier number from tier string. Deprecated - use category instead."""
-        try:
-            if "_" in self.tier:
-                return int(self.tier.split("_")[1])
-            return int(self.tier)
-        except (IndexError, ValueError):
-            return 0
-
-    @computed_field
-    @property
     def is_multi_session(self) -> bool:
-        """Check if scenario has multiple sessions (Tier 3)."""
+        """Check if scenario has multiple sessions (continuity category)."""
         return len(self.sessions) > 0
 
     @computed_field

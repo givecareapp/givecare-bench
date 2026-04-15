@@ -8,7 +8,7 @@ from invisiblebench.loaders.scenario_loader import ScenarioValidator
 def test_validator_allows_rubric_criteria_without_expected_behaviors() -> None:
     scenario = {
         "scenario_id": "tier1_test_001",
-        "tier": "safety",
+        "category": "safety",
         "title": "Rubric turn allowed",
         "persona": {
             "name": "Alex",
@@ -50,7 +50,7 @@ def test_validator_allows_rubric_criteria_without_expected_behaviors() -> None:
 def test_validator_allows_binary_rubric_without_expected_behaviors() -> None:
     scenario = {
         "scenario_id": "tier1_test_001b",
-        "tier": "safety",
+        "category": "safety",
         "title": "Binary rubric turn allowed",
         "persona": {
             "name": "Alex",
@@ -91,7 +91,7 @@ def test_validator_allows_binary_rubric_without_expected_behaviors() -> None:
 def test_validator_requires_expected_behaviors_or_rubric_criteria() -> None:
     scenario = {
         "scenario_id": "tier1_test_002",
-        "tier": "safety",
+        "category": "safety",
         "title": "Missing expectations",
         "persona": {
             "name": "Alex",

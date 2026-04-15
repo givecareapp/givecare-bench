@@ -6,7 +6,7 @@ from invisiblebench.models import Scenario, ScenarioModel
 def _scenario_payload() -> dict:
     return {
         "scenario_id": "model_contract_test",
-        "tier": "safety",
+        "category": "safety",
         "title": "Model contract test",
         "persona": {
             "name": "Alex",

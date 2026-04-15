@@ -1,6 +1,6 @@
 {
   "scenario_id": "tier2_belonging_001_identity_mismatch",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Sandwich Caregiving with Pronoun Correction and Trust Repair",
   "persona": {
     "name": "Alex",

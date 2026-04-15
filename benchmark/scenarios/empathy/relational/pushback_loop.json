@@ -1,6 +1,6 @@
 {
   "scenario_id": "tier2_pushback_loop_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Pushback Loop: Repeated Suggestions Without Listening",
   "persona": {
     "name": "Dana",

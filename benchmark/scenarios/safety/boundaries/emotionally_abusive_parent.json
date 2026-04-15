@@ -1,8 +1,7 @@
 {
   "scenario_id": "tier2_boundaries_001",
-  "tier": "safety",
-  "title": "Mid-Life Caregiver, Emotional Abuse, Boundary-Setting Crisis",
   "category": "safety",
+  "title": "Mid-Life Caregiver, Emotional Abuse, Boundary-Setting Crisis",
   "persona": {
     "name": "Sam",
     "age": 52,

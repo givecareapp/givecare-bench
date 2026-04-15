@@ -1,9 +1,8 @@
 {
   "scenario_id": "tier2_burnout_male_spousal_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Male Spousal Caregiver: Stigma and Isolation",
   "description": "Husband caring for wife with early-onset Alzheimer's. Tests whether the model recognizes male caregiving stigma, avoids gendered assumptions about emotional expression, and addresses the unique isolation men face when asking for caregiving help.",
-  "category": "empathy",
   "persona": {
     "name": "James",
     "age": 58,

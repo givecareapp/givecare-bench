@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from invisiblebench.models import DimensionType, Scenario, TierLevel
+from invisiblebench.models import CategoryLevel, DimensionType, Scenario
 from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indices
 
 
@@ -127,24 +127,19 @@ class ScenarioValidator:
         """
         errors = []
 
-        # Required fields (tier is accepted as legacy, category is preferred)
-        required_fields = ["scenario_id", "title", "persona", "scoring_dimensions"]
+        if "tier" in data:
+            errors.append(
+                "Legacy 'tier' field is no longer accepted; use 'category' instead"
+            )
+
+        required_fields = ["scenario_id", "title", "persona", "scoring_dimensions", "category"]
         for field in required_fields:
             if field not in data:
                 errors.append(f"Missing required field: {field}")
 
-        # Must have either tier or category
-        if "tier" not in data and "category" not in data:
-            errors.append("Missing required field: tier or category")
-
-        # Validate category values (accept both old tier_N and new category names)
-        VALID_VALUES = {"safety", "empathy", "context", "continuity", "confidential",
-                       "tier_0", "tier_1", "tier_2", "tier_3"}
-        tier_val = data.get("tier", "")
+        VALID_CATEGORIES = {"safety", "empathy", "context", "continuity", "confidential"}
         cat_val = data.get("category", "")
-        if tier_val and tier_val not in VALID_VALUES:
-            errors.append(f"Invalid tier: {tier_val}")
-        if cat_val and cat_val not in VALID_VALUES:
+        if cat_val and cat_val not in VALID_CATEGORIES:
             errors.append(f"Invalid category: {cat_val}")
 
         # Validate persona structure
@@ -155,13 +150,11 @@ class ScenarioValidator:
                     errors.append(f"Missing persona field: {field}")
 
         # Validate turns or sessions
-        tier_or_cat = data.get("tier", data.get("category", ""))
-        if tier_or_cat == "continuity" or tier_or_cat == "tier_3":
+        if cat_val == "continuity":
             if "sessions" not in data or len(data["sessions"]) == 0:
-                # Multi-session scenarios may also use turns
                 if "turns" not in data or len(data["turns"]) == 0:
                     errors.append("Continuity scenarios must have sessions or turns")
-        elif tier_or_cat:
+        elif cat_val:
             if "turns" not in data or len(data["turns"]) == 0:
                 if "sessions" not in data or len(data["sessions"]) == 0:
                     errors.append("Scenarios must have turns or sessions")
@@ -253,10 +246,10 @@ class ScenarioLoader:
         scenario = Scenario.from_dict(data)
         return scenario
 
-    def load_by_tier(self, tier: TierLevel) -> List[Scenario]:
-        """Load scenarios filtered by tier."""
+    def load_by_category(self, category: CategoryLevel) -> List[Scenario]:
+        """Load scenarios filtered by category."""
         all_scenarios = self.load_all()
-        return [s for s in all_scenarios if s.tier == tier]
+        return [s for s in all_scenarios if s.category == category]
 
     def load_by_id(self, scenario_id: str) -> Scenario:
         """Load specific scenario by ID."""
@@ -269,16 +262,15 @@ class ScenarioLoader:
         return scenario
 
 
-def create_example_scenario(tier: TierLevel = TierLevel.SAFETY) -> Dict[str, Any]:
+def create_example_scenario(category: CategoryLevel = CategoryLevel.SAFETY) -> Dict[str, Any]:
     """
     Generate example scenario template for given category.
 
     Useful for creating new scenarios.
     """
-    if tier == TierLevel.SAFETY:
+    if category == CategoryLevel.SAFETY:
         return {
             "scenario_id": "safety_example_001",
-            "tier": "safety",
             "category": "safety",
             "title": "Example Safety Scenario",
             "persona": {
@@ -311,10 +303,9 @@ def create_example_scenario(tier: TierLevel = TierLevel.SAFETY) -> Dict[str, Any
             },
             "dif_variables": ["income", "race"],
         }
-    elif tier == TierLevel.CONTINUITY:
+    elif category == CategoryLevel.CONTINUITY:
         return {
             "scenario_id": "continuity_example_001",
-            "tier": "continuity",
             "category": "continuity",
             "title": "Example Continuity Multi-Session Scenario",
             "persona": {

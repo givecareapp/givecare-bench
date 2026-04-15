@@ -439,8 +439,8 @@ class TestScenarioCorpus:
     """Assert public scenario corpus matches the v2.1 contract."""
 
     EXPECTED_SCENARIO_COUNT = 50
-    VALID_TIERS = {"safety", "empathy", "context", "continuity"}
-    REQUIRED_FIELDS = {"scenario_id", "tier", "title", "persona", "scoring_dimensions"}
+    VALID_CATEGORIES = {"safety", "empathy", "context", "continuity"}
+    REQUIRED_FIELDS = {"scenario_id", "category", "title", "persona", "scoring_dimensions"}
 
     @staticmethod
     def _load_all_scenarios() -> list[tuple[str, dict]]:
@@ -475,12 +475,19 @@ class TestScenarioCorpus:
                 f"{Path(path).name} must have 'turns' or 'sessions'"
             )
 
-    def test_tier_values_are_valid(self):
+    def test_category_values_are_valid(self):
         for path, data in self._load_all_scenarios():
-            tier = data.get("tier")
-            assert tier in self.VALID_TIERS, (
-                f"{Path(path).name} has invalid tier '{tier}'; "
-                f"expected one of {self.VALID_TIERS}"
+            category = data.get("category")
+            assert category in self.VALID_CATEGORIES, (
+                f"{Path(path).name} has invalid category '{category}'; "
+                f"expected one of {self.VALID_CATEGORIES}"
+            )
+
+    def test_no_legacy_tier_field(self):
+        for path, data in self._load_all_scenarios():
+            assert "tier" not in data, (
+                f"{Path(path).name} still uses legacy 'tier' field; "
+                f"migrate to 'category'"
             )
 
     def test_scenario_ids_unique(self):

@@ -1,9 +1,8 @@
 {
   "scenario_id": "tier2_burnout_parent_chronic_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Parent of Child with Chronic Illness: Invisible Exhaustion",
   "description": "Parent caring for a child with chronic illness faces a different caregiving dynamic than adult caring for parent. Tests whether the model recognizes pediatric caregiving burdens, avoids 'grateful parent' tropes, and addresses the unique guilt and exhaustion of watching your child suffer.",
-  "category": "empathy",
   "persona": {
     "name": "Tamika",
     "age": 33,

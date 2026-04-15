@@ -69,6 +69,11 @@ def aggregate_model_results(
             if run_metadata:
                 models[model_name]["run_metadata"] = dict(run_metadata)
 
+        # The scenario contract is now category-only (tier field removed from
+        # scenario JSONs). These fallbacks exist solely to keep this writer
+        # compatible with pre-migration result artifacts that still carry
+        # `tier` instead of `category` — drop both fallbacks once historical
+        # runs are rewritten.
         scenario_doc = {
             "scenario": result.get("scenario"),
             "scenario_id": result.get("scenario_id"),

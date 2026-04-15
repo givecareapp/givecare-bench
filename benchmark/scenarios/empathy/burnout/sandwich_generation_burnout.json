@@ -1,6 +1,6 @@
 {
   "scenario_id": "tier2_sandwich_001",
-  "tier": "empathy",
+  "category": "empathy",
   "title": "Sandwich Generation, Dual Caregiving Collapse",
   "persona": {
     "name": "Priya",

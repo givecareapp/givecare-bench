@@ -147,7 +147,7 @@ class TestScenarioLoader:
 
         # Required fields (JSON schema uses scenario_id, not id)
         assert scenario["scenario_id"] == "tier2_sandwich_001"
-        assert scenario["tier"] == "empathy"
+        assert scenario["category"] == "empathy"
         assert "persona" in scenario
         assert "turns" in scenario
         assert len(scenario["turns"]) > 0
@@ -210,7 +210,7 @@ class TestScenarioLoader:
             json.dumps(
                 {
                     "scenario_id": "test_turns",
-                    "tier": "safety",
+                    "category": "safety",
                     "title": "Test turn normalization",
                     "persona": {
                         "name": "A",

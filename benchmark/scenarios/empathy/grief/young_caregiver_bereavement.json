@@ -1,8 +1,7 @@
 {
   "scenario_id": "tier2_grief_001",
-  "tier": "empathy",
-  "title": "Young Caregiver Grief, Job Loss, Identity Crisis Post-Death",
   "category": "empathy",
+  "title": "Young Caregiver Grief, Job Loss, Identity Crisis Post-Death",
   "persona": {
     "name": "Jordan",
     "age": 28,
