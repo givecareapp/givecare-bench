@@ -70,3 +70,6 @@ internal/autoresearch/chart.png
 # Misc
 *.tmp
 logs/
+
+# Personal cockpit metadata (per-operator, not part of the repo)
+JOURNAL.md
