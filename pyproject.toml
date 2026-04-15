@@ -1,6 +1,6 @@
 [project]
 name = "invisiblebench"
-version = "1.2.0"
+version = "2.1.0"
 description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -30,8 +30,8 @@ dependencies = [
     "tqdm>=4.66.0",
     "rich>=13.0.0",
     "requests>=2.0.0",
-    "anthropic>=0.23.0",
-    "openai>=1.12.0",
+    "anthropic>=0.60.0",
+    "openai>=1.50.0",
     "jsonlines>=4.0.0",
     "instructor>=1.14.5",
 ]
@@ -158,6 +158,17 @@ module = [
     "invisiblebench.*",
 ]
 ignore_errors = true
+
+# Scoring / evaluator core: treat as load-bearing and actually type-check it.
+# The review caller can rely on these modules being internally consistent even
+# if the rest of the package is still being migrated to strict typing.
+[[tool.mypy.overrides]]
+module = [
+    "invisiblebench.evaluation.*",
+]
+ignore_errors = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
 
 [tool.ruff]
 line-length = 100
