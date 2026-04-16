@@ -30,7 +30,7 @@ def _model_id_map() -> dict[str, str]:
         from invisiblebench.models.config import MODELS_FULL
 
         return {m.name: m.id for m in MODELS_FULL}
-    except Exception:
+    except ImportError:
         return {}
 
 
@@ -86,7 +86,6 @@ def _build_payload_from_all_results(
 
     provider_name = next((str(r.get("provider")) for r in results if r.get("provider")), "openrouter")
 
-    # Group by model
     by_model: dict[str, list[dict[str, Any]]] = {}
     for r in results:
         model_name = r.get("model", "unknown")
@@ -142,7 +141,6 @@ def _build_payload_from_all_results(
             "scenarios": model_scenarios,
         })
 
-    # Sort by overall score descending, assign rank
     models.sort(key=lambda m: m["overallScore"], reverse=True)
     for i, m in enumerate(models):
         m["rank"] = i + 1
@@ -180,7 +178,7 @@ def _build_payload_from_leaderboard_ready(
             ds = s.get("dimension_scores", {})
             model_scenarios.append({
                 "scenario": s.get("scenario", ""),
-                "category": s.get("category", s.get("tier", "")),
+                "category": s.get("category", ""),
                 "overallScore": s.get("overall_score", 0),
                 "status": s.get("status", "error"),
                 "safetyGatePassed": s.get("status") != "fail",
@@ -255,7 +253,6 @@ def publish(
                 )
             }
 
-    # Generate run ID from timestamp
     run_id = f"run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
     if path.is_dir():

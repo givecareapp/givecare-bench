@@ -84,11 +84,10 @@ imports numpy/pandas/scipy runs the same as locally.
 ## Scenario contract
 
 Scenario JSON uses a **`category`** field (not `tier`). Valid values:
-`safety`, `empathy`, `context`, `continuity`, `confidential`. The legacy
-`tier` field and `tier_0..tier_3` values are rejected by
-`ScenarioValidator`. The `ScenarioResult.tier` field persists as a
-deprecated read-only fallback for historical result artifacts only — see
-inline comment on the field.
+`safety`, `empathy`, `context`, `continuity`, `confidential`. The `tier`
+field and `tier_0..tier_3` values are rejected by `ScenarioValidator`.
+`ScenarioResult` no longer carries a `tier` field; `from_dict` normalizes
+legacy `tier` values in old result artifacts to `category` on load.
 
 ## Guardrails
 

@@ -32,22 +32,22 @@ from invisiblebench.api import (
     compute_prompt_template_hash,
     resolve_scorer_model,
 )
-from invisiblebench.utils.benchmark_inventory import get_project_root
+from invisiblebench.evaluation.scorers._prompt import load_prompt as _load_prompt
+from invisiblebench.evaluation.scorers._utils import (
+    STOPWORDS as _STOPWORDS,
+)
+from invisiblebench.evaluation.scorers._utils import (
+    format_conversation as _format_conversation,
+)
+from invisiblebench.evaluation.scorers._utils import (
+    parse_penalty_value as _parse_penalty_value,
+)
+from invisiblebench.evaluation.scorers._utils import (
+    parse_score_value as _parse_score_value,
+)
 from invisiblebench.utils.llm_mode import llm_enabled
 
 logger = logging.getLogger(__name__)
-
-_PROMPT_DIR = get_project_root() / "benchmark" / "configs" / "prompts"
-
-
-def _load_prompt(name: str) -> str:
-    path = _PROMPT_DIR / name
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Scoring prompt not found: {path}\n"
-            "See benchmark/configs/prompts/README.md for setup instructions."
-        )
-    return path.read_text()
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -229,12 +229,6 @@ def _detect_othering_deterministic(
 # Deterministic fallback (no LLM)
 # ---------------------------------------------------------------------------
 
-_STOPWORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "from",
-    "have", "has", "had", "i", "if", "in", "is", "it", "its", "me", "my",
-    "no", "not", "of", "on", "or", "our", "so", "that", "the", "their",
-    "they", "this", "to", "we", "with", "you", "your",
-}
 
 
 def _tokenize(text: str) -> set[str]:
@@ -304,33 +298,6 @@ def _score_deterministic(
 # LLM-based scoring (single call)
 # ---------------------------------------------------------------------------
 
-def _parse_score_value(line: str, default: float = 0.0) -> float:
-    """Parse score from 'DIMENSION: 8' (1-10 scale) or 'DIMENSION: 0.8' (0-1 scale).
-
-    Normalizes 1-10 integer scores to 0.0-1.0 range.
-    """
-    try:
-        raw = float(line.split(":")[1].strip())
-        if raw > 1.0:
-            # 1-10 scale → normalize to 0.0-1.0
-            return max(0.0, min(1.0, (raw - 1.0) / 9.0))
-        return raw
-    except (ValueError, IndexError):
-        return default
-
-
-def _parse_penalty_value(line: str) -> float:
-    """Parse penalty from '-0.3 x 2' or '-0.6'."""
-    try:
-        val_str = line.split(":")[1].strip()
-        if "x" in val_str:
-            parts = val_str.split("x")
-            return float(parts[0].strip()) * float(parts[1].strip())
-        return float(val_str)
-    except (ValueError, IndexError):
-        return 0.0
-
-
 def _score_with_llm(
     transcript: List[Dict[str, Any]],
     scenario: Dict[str, Any],
@@ -345,21 +312,19 @@ def _score_with_llm(
     Returns dict with judge_model, judge_temp, judge_prompt_hash.
     """
     if api_client is None:
-        try:
-            api_client = ModelAPIClient()
-        except ValueError:
-            raise
+        api_client = ModelAPIClient()
 
     model_name = model or resolve_scorer_model(api_client, "regard")
 
     assistant_msgs = [m for m in transcript if m["role"] == "assistant"]
     if not assistant_msgs:
-        return
+        return {
+            "judge_model": model_name,
+            "judge_temp": None,
+            "judge_prompt_hash": None,
+        }
 
-    conversation = "\n\n".join([
-        f"Turn {m['turn']} ({'User' if m['role'] == 'user' else 'AI'}):\n{m['content']}"
-        for m in sorted(transcript, key=lambda x: (x["turn"], 0 if x["role"] == "user" else 1))
-    ])
+    conversation = _format_conversation(transcript)
 
     prompt_template = _load_prompt("regard_eval.txt")
     prompt = prompt_template.format(conversation=conversation)
@@ -378,7 +343,6 @@ def _score_with_llm(
         evidence.append(f"ERROR: API call failed - {e}")
         raise
 
-    # Parse response
     for line in analysis.split("\n"):
         line = line.strip()
         if line.startswith("RECOGNITION:"):

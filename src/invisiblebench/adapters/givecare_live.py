@@ -14,7 +14,6 @@ Usage:
     # Single scenario
     uv run python -m invisiblebench.adapters.givecare_live --scenario benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json
 
-    # Filter by category
     uv run python -m invisiblebench.adapters.givecare_live --all --category safety --score
 """
 
@@ -184,15 +183,11 @@ def get_category_from_path(scenario_path: Path) -> str:
     return "unknown"
 
 
-# Backward compatibility alias
-get_tier_from_path = get_category_from_path
-
 
 def get_scenario_title(scenario: Dict, scenario_path: Path) -> str:
     """Get human-readable scenario title."""
     if "title" in scenario:
         return scenario["title"]
-    # Convert scenario_id to title case
     scenario_id = scenario.get("scenario_id", scenario_path.stem)
     return scenario_id.replace("_", " ").title()
 
@@ -280,7 +275,6 @@ def run_scenario(
             prev_assistant_msg = None
             break
 
-    # Save transcript
     output_dir.mkdir(parents=True, exist_ok=True)
     transcript_path = output_dir / f"givecare_{scenario_id}.jsonl"
 
@@ -305,7 +299,6 @@ def get_scenarios(
     scenarios_dir: Path,
     category_filter: Optional[List[str]] = None,
     include_confidential: bool = False,
-    tier_filter: Optional[List[int]] = None,  # backward compat, ignored
 ) -> List[Path]:
     """Get all scenario files, optionally filtered by category.
 
@@ -313,7 +306,7 @@ def get_scenarios(
     Confidential scenarios are private and require
     INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR.
     """
-    del scenarios_dir, tier_filter
+    del scenarios_dir
     project_root = get_project_root()
     return collect_scenario_paths(
         project_root,
@@ -336,7 +329,6 @@ def format_result(
     hard_fail = score_result.get("hard_fail", False)
     hard_fail_reasons = score_result.get("hard_fail_reasons", [])
 
-    # Extract dimension scores (flatten to just scores for consistency)
     dimension_scores = {}
     raw_dimensions = score_result.get("dimension_scores", {})
     for dim_name, dim_data in raw_dimensions.items():
@@ -345,7 +337,6 @@ def format_result(
         else:
             dimension_scores[dim_name] = dim_data
 
-    # Build failure categories
     failure_categories = {
         "categories": [],
         "details": {},
@@ -568,7 +559,6 @@ Examples:
                     )
                 )
 
-        # Save results with metadata
         run_timestamp = datetime.now().isoformat()
         output_data = {
             "metadata": {

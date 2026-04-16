@@ -6,6 +6,7 @@ valid and publishable without requiring manual inspection.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -15,6 +16,8 @@ from invisiblebench.failure_taxonomy import (
     compute_reliability_summary,
 )
 from invisiblebench.run_artifacts import detect_transcripts_dir, load_result_rows
+
+logger = logging.getLogger(__name__)
 
 STATUS_PASS = "PASS"
 STATUS_WARN = "WARN"
@@ -97,7 +100,8 @@ def _load_manifest(source: Path) -> Dict[str, Any]:
         with open(manifest_path) as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to read manifest %s: %s", manifest_path, e)
         return {}
 
 

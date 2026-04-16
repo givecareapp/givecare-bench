@@ -1,6 +1,4 @@
-"""
-API client for calling models via OpenRouter.
-"""
+"""OpenRouter API client."""
 
 import asyncio
 import hashlib
@@ -45,7 +43,7 @@ _MODEL_PRICING: Dict[str, tuple] = {
 
 
 class CostTracker:
-    """Thread-safe accumulator for actual OpenRouter API costs."""
+
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -54,7 +52,7 @@ class CostTracker:
         self._by_model: Dict[str, float] = {}
 
     def record(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
-        """Record a call's cost. Returns the cost for this call."""
+
         pricing = _MODEL_PRICING.get(model)
         if pricing is None:
             # Try to import config pricing at runtime
@@ -64,7 +62,7 @@ class CostTracker:
                 for m in MODELS_FULL:
                     _MODEL_PRICING[m.id] = (m.cost_per_m_input, m.cost_per_m_output)
                 pricing = _MODEL_PRICING.get(model)
-            except Exception:
+            except ImportError:
                 pass
         if pricing is None:
             return 0.0
@@ -89,7 +87,7 @@ class CostTracker:
             return self._calls
 
     def snapshot(self) -> Dict[str, Any]:
-        """Return a snapshot of cost data."""
+
         with self._lock:
             return {
                 "total": self._total,
@@ -120,7 +118,7 @@ def _load_scorer_cache_size(default: int = 256) -> int:
 
 
 class _LRUCache:
-    """Simple thread-safe LRU cache for scorer responses."""
+
 
     def __init__(self, max_entries: int):
         self.max_entries = max_entries
@@ -151,9 +149,7 @@ _SCORER_RESPONSE_CACHE = _LRUCache(_SCORER_CACHE_MAX_ENTRIES)
 
 
 class InsufficientCreditsError(RuntimeError):
-    """Raised when the OpenRouter account has insufficient credits (HTTP 402)."""
-
-    pass
+    """HTTP 402: insufficient credits."""
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"

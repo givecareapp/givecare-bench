@@ -12,14 +12,12 @@ import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from invisiblebench.models.results import SUCCESS_THRESHOLD
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_category,
     normalize_dimension_scores,
 )
-
-# Default threshold matching ScenarioResult.SUCCESS_THRESHOLD
-SUCCESS_THRESHOLD = 0.6
 
 
 def _bootstrap_ci(
@@ -110,12 +108,9 @@ def compute_success_rates(
             "total": {pass, fail, total, rate, ci_lo, ci_hi},
         }
     """
-    # `r.get("tier")` fallback: scenario contract is now category-only, but
-    # result artifacts on disk predating the migration may still use `tier`.
-    # See ScenarioResult.tier in models/results.py for the retirement policy.
     by_cat: Dict[str, List[bool]] = {}
     for r in results:
-        cat = normalize_category(r.get("category", r.get("tier", "unknown")))
+        cat = normalize_category(r.get("category", "unknown"))
         by_cat.setdefault(cat, []).append(_is_success(r))
 
     categories: Dict[str, Dict[str, Any]] = {}
@@ -240,7 +235,7 @@ def load_results(results_path: str) -> List[Dict[str, Any]]:
 
 def _get_category(result: Dict[str, Any]) -> str:
     """Extract category from a result dict."""
-    return normalize_category(result.get("category", result.get("tier")))
+    return normalize_category(result.get("category"))
 
 
 def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]:
@@ -257,7 +252,6 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     """
     path = Path(results_path)
 
-    # Load all results
     all_results: List[Dict[str, Any]] = []
     if path.is_dir():
         for f in sorted(path.glob("*.json")):
@@ -268,7 +262,6 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     if not all_results:
         return {"error": "No results loaded", "models": {}}
 
-    # Group by model
     by_model: Dict[str, List[Dict[str, Any]]] = {}
     for r in all_results:
         model = r.get("model", "Unknown")
@@ -391,7 +384,6 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
                 }
             )
 
-    # Sort pairwise by absolute difference (largest first)
     pairwise.sort(key=lambda x: abs(x["diff"]), reverse=True)
 
     # Check for ceiling/floor effects across models
@@ -461,7 +453,6 @@ def format_stats_report(stats: Dict[str, Any]) -> str:
     lines.append(header)
     lines.append("─" * len(header))
 
-    # Sort by overall score
     sorted_models = sorted(models.items(), key=lambda x: x[1]["overall_mean"], reverse=True)
 
     for model, ms in sorted_models:

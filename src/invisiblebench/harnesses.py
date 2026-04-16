@@ -61,10 +61,8 @@ def resolve_harness_mode(
 
 
 def is_mode_implemented(harness: str, mode: str) -> bool:
-    """Return True if the harness/mode pair is implemented."""
     return mode in _IMPLEMENTED_MODES.get(harness, set())
 
 
 def adapter_name(harness: str, mode: str) -> str:
-    """Return the normalized adapter artifact label."""
     return f"{harness}-{mode}"

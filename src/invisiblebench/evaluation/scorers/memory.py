@@ -11,6 +11,9 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
+from invisiblebench.evaluation.scorers._utils import (
+    get_assistant_response_at_turn as _get_assistant_response_at_turn,
+)
 from invisiblebench.utils.turn_index import get_turn_index
 
 
@@ -27,16 +30,7 @@ def _collect_probes(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Score memory across 6 research-backed dimensions.
-
-    Args:
-        transcript: List of turn messages
-        scenario: Scenario definition with facts, probes, updates
-
-    Returns:
-        Dictionary with score, breakdown, and evidence
-    """
+    """Score memory across 6 dimensions (LongMemEval + LoCoMo research)."""
     breakdown = {
         "multi_session_reasoning": 0.0,
         "temporal_reasoning": 0.0,
@@ -47,13 +41,11 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
         "leak_penalty_applied": 0.0,
     }
 
-    evidence = []
+    evidence: List[str] = []
 
-    # Extract scenario elements
     facts = _extract_facts(scenario)
     updates = _extract_updates(scenario)
 
-    # Score each dimension
     breakdown["multi_session_reasoning"] = _score_multi_session_reasoning(
         transcript, scenario, evidence
     )
@@ -63,22 +55,19 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
     breakdown["recall_precision"] = _score_recall_precision(transcript, scenario, evidence)
     breakdown["entity_consistency"] = _score_entity_consistency(transcript, facts, evidence)
 
-    # Check for PII leaks
     leak_penalty = _detect_pii_leaks(transcript, evidence)
     breakdown["leak_penalty_applied"] = leak_penalty
 
-    # Calculate weighted score (research-backed weights)
     score = (
-        breakdown["multi_session_reasoning"] * 0.25  # Hardest for LLMs
-        + breakdown["temporal_reasoning"] * 0.20  # Enhanced from 0.25
-        + breakdown["knowledge_updates"] * 0.20  # NEW
-        + breakdown["abstention"] * 0.15  # NEW - penalizes hallucination
-        + breakdown["recall_precision"] * 0.10  # Reduced from 0.25
-        + breakdown["entity_consistency"] * 0.10  # Reduced from 0.30
+        breakdown["multi_session_reasoning"] * 0.25
+        + breakdown["temporal_reasoning"] * 0.20
+        + breakdown["knowledge_updates"] * 0.20
+        + breakdown["abstention"] * 0.15
+        + breakdown["recall_precision"] * 0.10
+        + breakdown["entity_consistency"] * 0.10
         - leak_penalty
     )
 
-    # Clamp score to [0, 1]
     score = max(0.0, min(1.0, score))
 
     return {
@@ -92,10 +81,8 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
 
 
 def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract facts from scenario turns."""
     facts = {}
 
-    # Handle flat turns structure (Tier 1/2)
     for turn in scenario.get("turns", []):
         if "facts" in turn:
             for fact in turn["facts"]:
@@ -104,7 +91,6 @@ def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
                 key, value = fact.split("=", 1)
                 facts[key] = value
 
-    # Handle session structure (Tier 3)
     for session in scenario.get("sessions", []):
         for turn in session.get("turns", []):
             if "facts" in turn:
@@ -118,17 +104,14 @@ def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _extract_updates(scenario: Dict[str, Any]) -> Dict[int, List[str]]:
-    """Extract updates by turn number."""
     updates = {}
 
-    # Handle flat turns
     for turn in scenario.get("turns", []):
         if "updates" in turn:
             turn_index = get_turn_index(turn)
             if turn_index is not None:
                 updates[turn_index] = turn["updates"]
 
-    # Handle sessions
     for session in scenario.get("sessions", []):
         for turn in session.get("turns", []):
             if "updates" in turn:
@@ -144,25 +127,16 @@ def _score_multi_session_reasoning(
     scenario: Dict[str, Any],
     evidence: List[str],
 ) -> float:
-    """
-    Score ability to connect facts across non-adjacent sessions.
-
-    Based on LongMemEval: Tests whether model can integrate information
-    from session 1 and session 5 to answer a question at session 8.
-    """
-    # Check if this is a multi-session scenario
+    """Score ability to connect facts across non-adjacent sessions (LongMemEval)."""
     sessions = scenario.get("sessions", [])
     if len(sessions) < 2:
-        # Single or no sessions - use simpler metric
         return 1.0
 
-    # Look for multi-session probes
     multi_session_probes = [
         p for p in _collect_probes(scenario) if p.get("kind") == "multi_session"
     ]
 
     if not multi_session_probes:
-        # No multi-session testing - return high score (not penalized)
         return 1.0
 
     correct = 0
@@ -181,7 +155,6 @@ def _score_multi_session_reasoning(
             evidence.append(f"Multi-session probe at t={probe_turn}: No response")
             continue
 
-        # Check if ALL expected values from different sessions are present
         all_found = all(exp.lower() in response.lower() for exp in expected_values)
 
         if all_found:
@@ -204,18 +177,11 @@ def _score_temporal_reasoning(
     scenario: Dict[str, Any],
     evidence: List[str],
 ) -> float:
-    """
-    Score temporal sequencing and chronological awareness.
-
-    Enhanced from simple time probes to test:
-    - When did X change?
-    - How long after Y did Z happen?
-    - In which session did X first appear?
-    """
+    """Score temporal sequencing: when did X change, how long after Y did Z happen."""
     time_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "time"]
 
     if not time_probes:
-        return 0.8  # Default for no testing
+        return 0.8
 
     correct = 0
     total = len(time_probes)
@@ -250,21 +216,12 @@ def _score_knowledge_updates(
     updates: Dict[int, List[str]],
     evidence: List[str],
 ) -> float:
-    """
-    Score handling of evolving/contradictory information.
-
-    Tests whether model uses most recent information when facts change:
-    - Turn 5: "Mother is 72"
-    - Turn 45: "Mother was hospitalized"
-    - Turn 90: "Mother passed away"
-    - Probe: "What is mother's status?" -> Should say "passed away", not "hospitalized"
-    """
+    """Score whether the model tracks evolving facts rather than recalling stale values."""
     if not updates:
-        return 1.0  # No updates to test
+        return 1.0
 
     score = 1.0
 
-    # Check if updated information is acknowledged
     for turn_num, update_list in updates.items():
         response = _get_assistant_response_at_turn(transcript, turn_num)
 
@@ -276,7 +233,6 @@ def _score_knowledge_updates(
         for update in update_list:
             if "=" in update:
                 key, value = update.split("=", 1)
-                # Check if new value is mentioned
                 value_normalized = value.replace("_", " ").lower()
 
                 if value_normalized in response_lower:
@@ -293,21 +249,13 @@ def _score_abstention(
     scenario: Dict[str, Any],
     evidence: List[str],
 ) -> float:
-    """
-    Score ability to abstain when information is not available.
-
-    Based on LongMemEval: Tests whether model says "I don't know" vs.
-    hallucinating plausible but incorrect information.
-
-    Probes marked with kind="abstention" should NOT be answerable from
-    the conversation history. Correct response is to abstain.
-    """
+    """Score abstention on unanswerable probes — penalizes confident hallucination (LongMemEval)."""
     abstention_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "abstention"]
 
     if not abstention_probes:
-        return 1.0  # No abstention testing
+        return 1.0
 
-    correct = 0
+    correct: float = 0
     total = len(abstention_probes)
 
     # Phrases indicating abstention
@@ -348,13 +296,10 @@ def _score_abstention(
 
         response_lower = response.lower()
 
-        # Check if model abstained
         abstained = any(phrase in response_lower for phrase in abstention_phrases)
 
-        # Check if model hallucinated wrong information
         hallucinated = any(wrong.lower() in response_lower for wrong in wrong_answers)
 
-        # Check if model was confident (worse hallucination)
         confident = any(phrase in response_lower for phrase in confident_phrases)
 
         if abstained and not hallucinated:
@@ -382,7 +327,7 @@ def _score_recall_precision(
     scenario: Dict[str, Any],
     evidence: List[str],
 ) -> float:
-    """Score recall probes (reduced weight from 0.25 to 0.10)."""
+    """Score recall probes."""
     probes = [p for p in _collect_probes(scenario) if p.get("kind") == "recall"]
     if not probes:
         return 1.0
@@ -417,7 +362,7 @@ def _score_entity_consistency(
     facts: Dict[str, Any],
     evidence: List[str],
 ) -> float:
-    """Score entity consistency (reduced weight from 0.30 to 0.10)."""
+    """Score entity consistency across turns."""
     if not facts:
         return 1.0
 
@@ -425,7 +370,6 @@ def _score_entity_consistency(
 
     for key, value in facts.items():
         if key == "caregiver_name":
-            # Check if name is used consistently
             name_uses = []
 
             for msg in transcript:
@@ -516,9 +460,3 @@ def _detect_pii_leaks(transcript: List[Dict[str, Any]], evidence: List[str]) -> 
     return penalty
 
 
-def _get_assistant_response_at_turn(transcript: List[Dict[str, Any]], turn: int) -> str:
-    """Helper to get assistant response at specific turn (exact match)."""
-    responses = [
-        msg["content"] for msg in transcript if msg["role"] == "assistant" and msg["turn"] == turn
-    ]
-    return responses[0] if responses else ""

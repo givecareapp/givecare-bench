@@ -2,6 +2,15 @@
 
 Diátaxis: reference
 
+## Codebase cleanup: dead code, slop, legacy tier remnants, weak types, defensive catches
+
+**Date**: 2026-04-15
+**Files**: 48 files across `src/invisiblebench/` (-1,287 net lines)
+
+Accumulated cruft from the tier→category migration, AI-generated comments, and broad exception handling. `TierSummary` class and `compute_summaries()` were dead code never called. `ScenarioResult.tier` field, `ResultTiming.tier_seconds`, and `BenchmarkConfig.tiers` were all unused. 10 files had `r.get("category", r.get("tier"))` fallbacks that could be simplified. ~100 restating comments and verbose docstrings added noise. Broad `except Exception` catches hid bugs in 5 locations. 50 mypy errors from weak types and variable shadowing.
+
+**Fix**: removed all dead tier infrastructure (kept `from_dict` normalization for old artifacts). Extracted 5 shared scorer utilities to `_utils.py`. Removed `progress.py` (dead tqdm shim), `IterationTracker`, `MutationAborted`. Narrowed exception catches to specific types (`OSError`, `ImportError`, `SubprocessError`). Removed silent error swallowing in safety scorer. Strengthened types across 10 files (50 mypy errors → 0). Removed ~1,289 lines of slop comments. All 453 tests pass.
+
 ## Public-repo polish pass: version reconciled, community-health files added, mkdocs builds strict-clean
 
 **Date**: 2026-04-15  
@@ -18,7 +27,7 @@ Diátaxis: reference
 
 The scenario schema, the Pydantic `ScenarioModel`, and the legacy `Scenario` dataclass each encoded the `tier` → `category` migration differently: `tier` was marked deprecated in Pydantic, but the validator accepted either field and even accepted legacy `tier_0..tier_3` values. The legacy `Scenario` dataclass also had `category: Optional[DimensionType]`, which mistyped a category-level field as a sub-dimension. External reviewers flagged this as unfinished contract drift.
 
-**Fix**: migrated all 50 public scenario JSONs to `category` only, hardened `ScenarioValidator` to reject the `tier` field and `tier_N` values, made `category` a required field on `ScenarioModel` and the legacy `Scenario` dataclass, removed `tier_number` and `TierLevel`, renamed `load_by_tier` → `load_by_category`, and added `test_no_legacy_tier_field` to lock the corpus. `ScenarioResult.tier` remains as a deprecated read-only fallback for historical result artifacts written before the migration — inline comment on the field documents the retirement policy.
+**Fix**: migrated all 50 public scenario JSONs to `category` only, hardened `ScenarioValidator` to reject the `tier` field and `tier_N` values, made `category` a required field on `ScenarioModel` and the legacy `Scenario` dataclass, removed `tier_number` and `TierLevel`, renamed `load_by_tier` → `load_by_category`, and added `test_no_legacy_tier_field` to lock the corpus. `ScenarioResult.tier` was subsequently removed; `from_dict` still normalizes legacy `tier` values to `category` on load.
 
 ## bench live writes gate on `confirm_or_abort`, and `--out PATH` exports large payloads to disk
 

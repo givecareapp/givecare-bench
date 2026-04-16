@@ -57,7 +57,6 @@ def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # Use the most common scenario count as the baseline (not the max)
-    # This prevents a single model with more scenarios from flagging all others
     scenario_counts = [
         len(m.get("scenarios", [])) for m in data["overall_leaderboard"]
     ]

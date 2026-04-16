@@ -1,4 +1,4 @@
-"""Statistical analysis tools for InvisibleBench."""
+"""Statistical analysis."""
 
 from __future__ import annotations
 
@@ -30,7 +30,6 @@ def cohen_kappa_continuous(
     n = len(bins_a)
     categories = list(range(n_bins))
 
-    # Build confusion matrix
     matrix: Dict[Tuple[int, int], int] = {}
     for ca in categories:
         for cb in categories:

@@ -1,6 +1,4 @@
-"""
-Utilities for loading and validating scenarios.
-"""
+"""Scenario loading and validation."""
 
 import json
 from pathlib import Path
@@ -11,7 +9,7 @@ from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indic
 
 
 class ScenarioValidator:
-    """Validate scenario JSON structure and content."""
+
 
     @staticmethod
     def _validate_probe_list(probes: Any, errors: List[str], label: str) -> None:
@@ -137,19 +135,17 @@ class ScenarioValidator:
             if field not in data:
                 errors.append(f"Missing required field: {field}")
 
-        VALID_CATEGORIES = {"safety", "empathy", "context", "continuity", "confidential"}
+        valid_categories = {c.value for c in CategoryLevel}
         cat_val = data.get("category", "")
-        if cat_val and cat_val not in VALID_CATEGORIES:
+        if cat_val and cat_val not in valid_categories:
             errors.append(f"Invalid category: {cat_val}")
 
-        # Validate persona structure
         if "persona" in data:
             persona_required = ["name", "age", "care_recipient", "care_duration", "context"]
             for field in persona_required:
                 if field not in data["persona"]:
                     errors.append(f"Missing persona field: {field}")
 
-        # Validate turns or sessions
         if cat_val == "continuity":
             if "sessions" not in data or len(data["sessions"]) == 0:
                 if "turns" not in data or len(data["turns"]) == 0:
@@ -179,7 +175,6 @@ class ScenarioValidator:
                         session.get("turns"), errors, f"sessions[{idx}].turns"
                     )
 
-        # Validate scoring dimensions
         if "scoring_dimensions" in data:
             for dim_str, max_score in data["scoring_dimensions"].items():
                 try:
@@ -207,157 +202,36 @@ class ScenarioValidator:
 
 
 class ScenarioLoader:
-    """Load and manage scenarios."""
+
 
     def __init__(self, scenario_dir: str = "./scenarios"):
-        """Initialize with scenario directory."""
+
         self.scenario_dir = Path(scenario_dir)
         self.validator = ScenarioValidator()
 
     def load_all(self) -> List[Scenario]:
-        """Load all scenarios from directory."""
+
         scenarios = []
 
         if not self.scenario_dir.exists():
             raise FileNotFoundError(f"Scenario directory not found: {self.scenario_dir}")
 
         for json_file in sorted(self.scenario_dir.rglob("*.json")):
-            try:
-                scenario = self.load_scenario(json_file)
-                scenarios.append(scenario)
-            except Exception as e:
-                print(f"Error loading {json_file}: {e}")
+            scenario = self.load_scenario(json_file)
+            scenarios.append(scenario)
 
         return scenarios
 
     def load_scenario(self, file_path: Path) -> Scenario:
-        """Load single scenario from file."""
+
         with open(file_path, "r") as f:
             data = json.load(f)
 
         normalize_turn_indices(data)
 
-        # Validate
         errors = self.validator.validate_scenario(data)
         if errors:
             raise ValueError(f"Scenario validation errors in {file_path}:\n" + "\n".join(errors))
 
-        # Parse
         scenario = Scenario.from_dict(data)
         return scenario
-
-    def load_by_category(self, category: CategoryLevel) -> List[Scenario]:
-        """Load scenarios filtered by category."""
-        all_scenarios = self.load_all()
-        return [s for s in all_scenarios if s.category == category]
-
-    def load_by_id(self, scenario_id: str) -> Scenario:
-        """Load specific scenario by ID."""
-        all_scenarios = self.load_all()
-        scenario = next((s for s in all_scenarios if s.scenario_id == scenario_id), None)
-
-        if not scenario:
-            raise ValueError(f"Scenario not found: {scenario_id}")
-
-        return scenario
-
-
-def create_example_scenario(category: CategoryLevel = CategoryLevel.SAFETY) -> Dict[str, Any]:
-    """
-    Generate example scenario template for given category.
-
-    Useful for creating new scenarios.
-    """
-    if category == CategoryLevel.SAFETY:
-        return {
-            "scenario_id": "safety_example_001",
-            "category": "safety",
-            "title": "Example Safety Scenario",
-            "persona": {
-                "name": "Example User",
-                "age": 45,
-                "role": "Adult child caregiver",
-                "care_recipient": "Elderly parent",
-                "care_duration": "1 year",
-                "context": {
-                    "living_situation": "Parent lives with user",
-                    "employment": "Full-time employed",
-                    "support_system": "Limited family support",
-                },
-            },
-            "turns": [
-                {
-                    "turn_number": 1,
-                    "user_message": "Example user message",
-                    "expected_behaviors": ["Expected behavior 1", "Expected behavior 2"],
-                    "autofail_triggers": ["Autofail condition 1"],
-                }
-            ],
-            "scoring_dimensions": {
-                "crisis_safety": 3,
-                "regulatory_fitness": 3,
-                "trauma_informed_flow": 3,
-                "belonging_cultural_fitness": 2,
-                "relational_quality": 3,
-                "actionable_support": 3,
-            },
-            "dif_variables": ["income", "race"],
-        }
-    elif category == CategoryLevel.CONTINUITY:
-        return {
-            "scenario_id": "continuity_example_001",
-            "category": "continuity",
-            "title": "Example Continuity Multi-Session Scenario",
-            "persona": {
-                "name": "Example User",
-                "age": 45,
-                "role": "Adult child caregiver",
-                "care_recipient": "Elderly parent",
-                "care_duration": "2 years",
-                "context": {
-                    "living_situation": "Parent lives with user",
-                    "employment": "Full-time employed",
-                },
-            },
-            "sessions": [
-                {
-                    "session_number": 1,
-                    "time_elapsed": "Day 0",
-                    "session_context": "Initial interaction",
-                    "turns": [
-                        {
-                            "turn_number": 1,
-                            "user_message": "Example message",
-                            "expected_behaviors": ["Expected behavior"],
-                            "autofail_triggers": [],
-                        }
-                    ],
-                },
-                {
-                    "session_number": 2,
-                    "time_elapsed": "3 months later",
-                    "session_context": "Follow-up after time gap",
-                    "turns": [
-                        {
-                            "turn_number": 2,
-                            "user_message": "Example follow-up message",
-                            "expected_behaviors": ["Remember prior conversation"],
-                            "autofail_triggers": [],
-                        }
-                    ],
-                },
-            ],
-            "scoring_dimensions": {
-                "crisis_safety": 3,
-                "regulatory_fitness": 3,
-                "trauma_informed_flow": 3,
-                "belonging_cultural_fitness": 2,
-                "relational_quality": 3,
-                "actionable_support": 3,
-                "longitudinal_consistency": 2,
-                "memory_hygiene": 1,
-            },
-            "dif_variables": ["income", "race"],
-        }
-
-    return {}

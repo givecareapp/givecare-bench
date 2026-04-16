@@ -1,9 +1,4 @@
-"""
-State persistence and run tracking for InvisibleBench.
-
-This module provides RunManager for saving/loading benchmark run state,
-enabling resumption and preventing duplicate evaluations.
-"""
+"""Run state persistence and tracking."""
 
 from __future__ import annotations
 
@@ -15,50 +10,18 @@ from typing import Any, Dict, List, Optional
 
 
 class RunManager:
-    """
-    Manages benchmark run state persistence.
-
-    Handles:
-    - Generating unique run keys
-    - Saving/loading run state to JSON files
-    - Listing and filtering runs
-    - Detecting duplicate evaluations
-    - Deleting runs
-    """
+    """Benchmark run state: generate keys, save/load, detect duplicates."""
 
     def __init__(self, runs_dir: str = "runs"):
-        """
-        Initialize RunManager.
 
-        Args:
-            runs_dir: Directory to store run JSON files (default: "runs")
-        """
         self.runs_dir = Path(runs_dir)
         self.runs_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_run_key(self, model_name: str, run_id: Optional[str] = None) -> str:
-        """
-        Generate unique run key for a model evaluation.
-
-        Run key format: <8-char-id>_<sanitized-model-name>
-
-        Args:
-            model_name: Model identifier (e.g., "anthropic/claude-3.7-sonnet")
-            run_id: Optional custom prefix (default: generates UUID)
-
-        Returns:
-            Unique run key string
-
-        Examples:
-            >>> manager.generate_run_key("anthropic/claude-3.7-sonnet")
-            "a1b2c3d4_anthropic_claude-3.7-sonnet"
-            >>> manager.generate_run_key("openai/gpt-4o", run_id="test001")
-            "test001_openai_gpt-4o"
-        """
+        """Format: <8-char-id>_<sanitized-model-name>."""
         # Sanitize model name for filesystem
         sanitized = re.sub(r"[^a-zA-Z0-9_.-]+", "_", model_name)
 
-        # Generate or use provided run_id prefix
         # SECURITY: Sanitize run_id to prevent path traversal attacks
         if run_id:
             prefix = re.sub(r"[^a-zA-Z0-9_.-]+", "_", run_id)
@@ -68,24 +31,11 @@ class RunManager:
         return f"{prefix}_{sanitized}"
 
     def save_run(self, run_key: str, data: Dict[str, Any]) -> bool:
-        """
-        Save run data to JSON file atomically.
-
-        Uses atomic write pattern (write to temp, then rename) to prevent
-        partial writes from corrupting run state.
-
-        Args:
-            run_key: Unique run identifier
-            data: Run data dictionary
-
-        Returns:
-            True if save succeeded, False otherwise
-        """
+        """Atomic write to JSON file. Returns True on success."""
         file_path = self.runs_dir / f"{run_key}.json"
         temp_path = file_path.with_suffix(".json.tmp")
 
         try:
-            # Ensure run_key is in the data
             save_data = dict(data)
             if "run_key" not in save_data:
                 save_data["run_key"] = run_key
@@ -103,20 +53,12 @@ class RunManager:
             try:
                 if temp_path.exists():
                     temp_path.unlink()
-            except Exception:
+            except OSError:
                 pass
             return False
 
     def load_run(self, run_key: str) -> Optional[Dict[str, Any]]:
-        """
-        Load run data from JSON file.
 
-        Args:
-            run_key: Unique run identifier
-
-        Returns:
-            Run data dictionary, or None if not found/invalid
-        """
         file_path = self.runs_dir / f"{run_key}.json"
 
         if not file_path.exists():
@@ -124,20 +66,13 @@ class RunManager:
 
         try:
             with open(file_path, "r") as f:
-                return json.load(f)
+                data: Dict[str, Any] = json.load(f)
+                return data
         except (json.JSONDecodeError, IOError, OSError):
             return None
 
     def list_runs(self, model_name: Optional[str] = None) -> List[Dict[str, Any]]:
-        """
-        List all runs, optionally filtered by model name.
 
-        Args:
-            model_name: Optional model name to filter by
-
-        Returns:
-            List of run data dictionaries
-        """
         runs = []
 
         # Find all JSON files in runs directory
@@ -170,19 +105,7 @@ class RunManager:
         return runs
 
     def detect_duplicate(self, model_name: str, scenario_id: str) -> bool:
-        """
-        Check if a completed run exists for this model+scenario combination.
-
-        Only considers runs with status="completed". In-progress runs can be
-        resumed and are not considered duplicates.
-
-        Args:
-            model_name: Model identifier
-            scenario_id: Scenario identifier
-
-        Returns:
-            True if duplicate exists, False otherwise
-        """
+        """True if a completed run exists for this model+scenario."""
         runs = self.list_runs(model_name=model_name)
 
         for run in runs:
@@ -190,22 +113,13 @@ class RunManager:
             if run.get("status") != "completed":
                 continue
 
-            # Check if scenario matches
             if run.get("scenario_id") == scenario_id:
                 return True
 
         return False
 
     def delete_run(self, run_key: str) -> bool:
-        """
-        Delete a specific run by key.
 
-        Args:
-            run_key: Unique run identifier
-
-        Returns:
-            True if deletion succeeded, False if run not found
-        """
         file_path = self.runs_dir / f"{run_key}.json"
 
         if not file_path.exists():
@@ -218,15 +132,7 @@ class RunManager:
             return False
 
     def delete_runs_by_model(self, model_name: str) -> int:
-        """
-        Delete all runs for a specific model.
 
-        Args:
-            model_name: Model identifier
-
-        Returns:
-            Number of runs deleted
-        """
         runs = self.list_runs(model_name=model_name)
         deleted_count = 0
 

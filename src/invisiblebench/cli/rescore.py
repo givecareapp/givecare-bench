@@ -85,8 +85,7 @@ def _load_old_results_for_run(run_path: Path, project_root: Path) -> Tuple[List[
                     "provider": provider,
                     "scenario": scenario.get("scenario"),
                     "scenario_id": scenario.get("scenario_id"),
-                    "category": scenario.get("category", scenario.get("tier", "unknown")),
-                    "tier": scenario.get("tier", scenario.get("category", "unknown")),
+                    "category": scenario.get("category", "unknown"),
                     "overall_score": scenario.get("overall_score", 0.0),
                     "dimension_scores": scenario.get("dimension_scores", {}),
                     "status": scenario.get("status", "error"),
@@ -142,7 +141,6 @@ def run_rescore(
     scenario_index = _build_scenario_index(scenarios_dir)
     print(f"Indexed {len(scenario_index)} scenarios")
 
-    # Load existing results to get model/scenario metadata
     results_file = run_path / "all_results.json"
     try:
         old_results, had_existing_all_results = _load_old_results_for_run(run_path, project_root)
@@ -150,14 +148,12 @@ def run_rescore(
         print(f"Error: {exc}")
         return 1
 
-    # Build transcript filename → old result mapping
     old_by_key: Dict[str, Dict[str, Any]] = {}
     for r in old_results:
         model_part = r["model_id"].replace("/", "_")
         key = f"{model_part}_{r['scenario_id']}.jsonl"
         old_by_key[key] = r
 
-    # Collect transcript files
     transcript_files = sorted(transcripts_dir.glob("*.jsonl"))
     print(f"Found {len(transcript_files)} transcripts to rescore")
 

@@ -3,27 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-SUCCESS_THRESHOLD = 0.6
-
-
-def result_counts_as_quality_pass(result: Dict[str, Any], threshold: float = SUCCESS_THRESHOLD) -> bool:
-    """Return True when a scenario counts as a benchmark quality pass."""
-    success = result.get("success")
-    if isinstance(success, bool):
-        return success
-
-    if result.get("status") == "error":
-        return False
-    if result.get("hard_fail"):
-        return False
-
-    gates = result.get("gates") or {}
-    for gate in gates.values():
-        if isinstance(gate, dict) and not gate.get("passed", True):
-            return False
-
-    score = result.get("overall_score", 0.0)
-    return isinstance(score, (int, float)) and float(score) >= threshold
+from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
 
 
 def classify_reliability_issue(result: Dict[str, Any]) -> str | None:
@@ -60,7 +40,7 @@ def compute_quality_summary(
 ) -> Dict[str, Any]:
     """Compute benchmark quality summary separate from reliability errors."""
     total = len(results)
-    passes = sum(1 for r in results if result_counts_as_quality_pass(r, threshold=threshold))
+    passes = sum(1 for r in results if is_result_success(r, threshold=threshold))
     fails = total - passes
     return {
         "total": total,

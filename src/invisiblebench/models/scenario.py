@@ -1,4 +1,4 @@
-"""Pydantic scenario models for InvisibleBench."""
+"""Scenario models."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field, computed_field
 
 
 class PersonaModel(BaseModel):
-    """User persona with demographic and context information."""
 
     name: str
     age: int
@@ -29,7 +28,6 @@ class PersonaModel(BaseModel):
 
 
 class TurnModel(BaseModel):
-    """A single conversational turn in a scenario."""
 
     turn_number: int
     user_message: str
@@ -46,7 +44,6 @@ class TurnModel(BaseModel):
 
 
 class SessionModel(BaseModel):
-    """A session within a Tier 3 multi-session scenario."""
 
     session_number: int
     time_elapsed: str
@@ -55,7 +52,6 @@ class SessionModel(BaseModel):
 
 
 class ScenarioModel(BaseModel):
-    """A complete test scenario with Pydantic validation."""
 
     scenario_id: str
     title: str
@@ -75,13 +71,11 @@ class ScenarioModel(BaseModel):
     @computed_field
     @property
     def is_multi_session(self) -> bool:
-        """Check if scenario has multiple sessions (continuity category)."""
         return len(self.sessions) > 0
 
     @computed_field
     @property
     def total_turns(self) -> int:
-        """Get total number of turns across all sessions."""
         if self.is_multi_session:
             return sum(len(session.turns) for session in self.sessions)
         return len(self.turns)
@@ -89,7 +83,6 @@ class ScenarioModel(BaseModel):
     @computed_field
     @property
     def all_turns(self) -> list[TurnModel]:
-        """Get all turns from all sessions (for multi-session scenarios)."""
         if self.is_multi_session:
             result = []
             for session in self.sessions:
@@ -100,29 +93,24 @@ class ScenarioModel(BaseModel):
     @computed_field
     @property
     def display_name(self) -> str:
-        """Human-readable scenario name."""
         return self.title or self.scenario_id.replace("_", " ").title()
 
     def get_turn(self, turn_number: int) -> Optional[TurnModel]:
-        """Get a specific turn by number."""
         for turn in self.all_turns:
             if turn.turn_number == turn_number:
                 return turn
         return None
 
     def get_expected_behaviors(self, turn_number: int) -> list[str]:
-        """Get expected behaviors for a turn."""
         turn = self.get_turn(turn_number)
         return turn.expected_behaviors if turn else []
 
     def get_autofail_triggers(self, turn_number: int) -> list[str]:
-        """Get autofail triggers for a turn."""
         turn = self.get_turn(turn_number)
         return turn.autofail_triggers if turn else []
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ScenarioModel":
-        """Load scenario from JSON file."""
         path = Path(path)
         with open(path) as f:
             data = json.load(f)
@@ -131,7 +119,6 @@ class ScenarioModel(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], source_path: Optional[str] = None) -> "ScenarioModel":
-        """Load scenario from dictionary."""
         if source_path:
             data = {**data, "source_path": source_path}
         return cls.model_validate(data)

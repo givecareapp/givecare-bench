@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 import os
 import statistics
 import sys
@@ -20,7 +21,11 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from invisiblebench.api.client import ModelAPIClient
+    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
 from dotenv import load_dotenv
 
@@ -114,6 +119,8 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
     _RichConsole = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 def _no_color() -> bool:
@@ -334,7 +341,6 @@ def run_givecare_eval(
                 )
             )
 
-    # Save results
     run_timestamp = datetime.now().isoformat()
     output_data = {
         "metadata": {
@@ -393,7 +399,6 @@ def run_givecare_eval(
     print(f"{'='*50}")
     print(f"Saved: {results_path}")
 
-    # Generate diagnostic report if requested
     if generate_diagnostic:
         print("\nGenerating diagnostic report...")
         try:
@@ -922,7 +927,6 @@ class ScenarioDisplay:
         self._lock = threading.Lock()
         self._spin_idx = 0
 
-        # Group by category
         self.categories = sorted({s["category"] for s in scenarios})
         self.by_category = {c: [s for s in scenarios if s["category"] == c] for c in self.categories}
 
@@ -1120,7 +1124,7 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
 
 
-def generate_transcript(model_id: str, scenario: Dict, api_client: Any, output_path: Path) -> Path:
+def generate_transcript(model_id: str, scenario: Dict, api_client: "ModelAPIClient", output_path: Path) -> Path:
     """Generate model transcript from scenario.
 
     Raises:
@@ -1231,8 +1235,8 @@ def write_detailed_outputs(
 async def evaluate_scenario_async(
     model: Dict,
     scenario: Dict,
-    api_client: Any,
-    orchestrator: Any,
+    api_client: "ModelAPIClient",
+    orchestrator: "ScoringOrchestrator",
     output_dir: Path,
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
@@ -1267,7 +1271,6 @@ async def evaluate_scenario_async(
         transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
         transcript_path = output_dir / "transcripts" / transcript_name
 
-        # Generate transcript using async API
         try:
             import jsonlines
 
@@ -1536,8 +1539,8 @@ def _run_single_scenario(
     scenario_id: str,
     run_suffix: str,
     output_dir: Path,
-    api_client,
-    orchestrator,
+    api_client: "ModelAPIClient",
+    orchestrator: "ScoringOrchestrator",
     rules_path: Path,
     detailed_output: bool = False,
     run_id: Optional[str] = None,
@@ -1638,7 +1641,6 @@ def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
         score = result.get("overall_score", 0.0)
         return float(score) if isinstance(score, (int, float)) else 0.0
 
-    # Sort by overall_score to find median
     sorted_results = sorted(run_results, key=_score_value)
     median_idx = len(sorted_results) // 2
     final = sorted_results[median_idx].copy()
@@ -1893,7 +1895,6 @@ def run_benchmark(
             print("Cancelled")
             return 0
 
-    # Initialize API client
     try:
         from invisiblebench.api.client import ModelAPIClient
 
@@ -1902,7 +1903,6 @@ def run_benchmark(
         print(f"ERROR: Failed to initialize API client: {e}")
         return 1
 
-    # Initialize orchestrator
     try:
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
@@ -1918,7 +1918,6 @@ def run_benchmark(
         print(f"ERROR: Failed to initialize orchestrator: {e}")
         return 1
 
-    # Generate a unique run_id for this benchmark run (v2.1 contract)
     run_id = str(uuid.uuid4())
 
     results = []
@@ -2007,7 +2006,6 @@ def run_benchmark(
                     console=console,
                     transient=False,
                 ) as progress:
-                    # Create a progress bar for each model
                     model_tasks = {}
                     for model in models:
                         model_tasks[model["name"]] = progress.add_task(
@@ -2110,7 +2108,6 @@ def run_benchmark(
                     passed += 1
 
     elif RICH_AVAILABLE and console:
-        # Group scenarios by category
         cats = sorted({s["category"] for s in scenarios})
         scenarios_by_cat = {c: [s for s in scenarios if s["category"] == c] for c in cats}
 
@@ -2178,7 +2175,6 @@ def run_benchmark(
                         if credits_exhausted and not run_results:
                             break
 
-                        # Aggregate multi-run results
                         if not run_results:
                             final = _make_error_result(
                                 model,
@@ -2291,7 +2287,6 @@ def run_benchmark(
                 if credits_exhausted and not run_results:
                     break
 
-                # Aggregate multi-run results
                 if not run_results:
                     final = _make_error_result(
                         model, scenario["name"], scenario_id,
@@ -2354,7 +2349,6 @@ def run_benchmark(
     results_path = output_dir / "all_results.json"
     write_json(results_path, results)
 
-    # Generate HTML report
     report_path = output_dir / "report.html"
     try:
         from invisiblebench.export.reports import ReportGenerator
@@ -2450,8 +2444,8 @@ def run_benchmark(
                 for bucket, count in buckets.items():
                     label = bucket.replace("_", " ").title()
                     console.print(f"  [red]{label}:[/red]  {count}")
-        except Exception:
-            pass  # Non-critical
+        except Exception as _e:
+            logger.debug("Success rate table rendering failed: %s", _e)
 
         console.print()
         if credits_exhausted:
@@ -2645,8 +2639,8 @@ def run_benchmark(
                             else:
                                 reasons = "gate failure"
                             console.print(f"  [red]✗[/red] [bold]{q['model']}[/bold]  {reasons}")
-        except Exception:
-            pass  # Non-critical — don't break the run
+        except Exception as _e:
+            logger.debug("Safety report card rendering failed: %s", _e)
 
         console.print(f"\n[dim]{results_path}[/dim]")
         console.print(f"[dim]{report_path}[/dim]")
@@ -2670,7 +2664,6 @@ def run_benchmark(
     else:
         print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
 
-    # Update leaderboard if requested
     if update_leaderboard:
         if not audit.get("publishable", False):
             msg = (
@@ -3856,7 +3849,6 @@ Examples:
 
     json_output = bool(getattr(args, "json_output", None))
 
-    # Handle subcommands
     if args.command == "doctor":
         return _run_doctor()
 
@@ -4028,12 +4020,10 @@ Examples:
             print(format_agreement_report(result))
             return 0
 
-    # Parse category filter
     category_filter = None
     if args.category:
         category_filter = [c.strip().lower() for c in args.category.split(",")]
 
-    # Parse scenario filter
     scenario_filter = None
     if args.scenario:
         scenario_filter = [s.strip().lower() for s in args.scenario.split(",")]
@@ -4055,7 +4045,6 @@ Examples:
         )
         return 1
 
-    # Handle GiveCare eval harness
     if harness_name == "givecare":
         if harness_mode == "orchestrator":
             return run_givecare_orchestrator_eval(

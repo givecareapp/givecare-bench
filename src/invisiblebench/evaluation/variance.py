@@ -1,8 +1,4 @@
-"""
-Variance calculation utilities for iteration support.
-
-Calculates variance metrics across multiple scoring iterations.
-"""
+"""Variance metrics across multiple scoring iterations."""
 
 from __future__ import annotations
 
@@ -11,35 +7,16 @@ from typing import Any, Dict, List, Optional
 
 
 def calculate_cv(mean: float, std_dev: float) -> Optional[float]:
-    """
-    Calculate coefficient of variation (CV).
-
-    CV = std_dev / mean
-
-    Args:
-        mean: Mean value
-        std_dev: Standard deviation
-
-    Returns:
-        CV value or None if undefined (mean=0 or near-zero)
-
-    Raises:
-        ValueError: If mean or std_dev is negative
-    """
+    """CV = std_dev / mean. Returns None when mean is near-zero (unstable)."""
     if mean < 0:
         raise ValueError("Mean cannot be negative")
     if std_dev < 0:
         raise ValueError("Standard deviation cannot be negative")
 
-    # Handle zero std_dev (always 0 CV)
     if std_dev == 0.0:
         return 0.0
-
-    # Handle zero mean (CV undefined unless std_dev is also 0)
     if mean == 0.0:
         return 0.0 if std_dev == 0.0 else None
-
-    # Handle near-zero mean (CV would be unstable)
     if mean < 0.01:
         return None
 
@@ -47,23 +24,10 @@ def calculate_cv(mean: float, std_dev: float) -> Optional[float]:
 
 
 def calculate_variance(scores: List[float]) -> Dict[str, Any]:
-    """
-    Calculate variance metrics for a list of scores.
-
-    Args:
-        scores: List of numeric scores
-
-    Returns:
-        Dictionary with mean, std_dev, min, max, cv
-
-    Raises:
-        ValueError: If scores list is empty
-        TypeError: If scores contain non-numeric values
-    """
+    """Return {mean, std_dev, min, max, cv} for a list of scores."""
     if not scores:
         raise ValueError("Scores list must contain at least one score")
 
-    # Validate numeric types
     for score in scores:
         if not isinstance(score, (int, float)):
             raise TypeError(f"All scores must be numeric, got {type(score)}")
@@ -71,14 +35,7 @@ def calculate_variance(scores: List[float]) -> Dict[str, Any]:
     mean = statistics.mean(scores)
     min_score = min(scores)
     max_score = max(scores)
-
-    # Calculate std_dev (use stdev for sample, or 0 for N=1)
-    if len(scores) == 1:
-        std_dev = 0.0
-    else:
-        std_dev = statistics.stdev(scores)
-
-    # Calculate CV
+    std_dev = 0.0 if len(scores) == 1 else statistics.stdev(scores)
     cv = calculate_cv(mean, std_dev)
 
     return {
@@ -93,37 +50,21 @@ def calculate_variance(scores: List[float]) -> Dict[str, Any]:
 def calculate_dimension_variance(
     dimension_scores_list: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
-    """
-    Calculate variance metrics for each dimension across iterations.
-
-    Args:
-        dimension_scores_list: List of dimension score dictionaries from each iteration
-            Example: [{"memory": {"score": 0.8}, "coordination": {"score": 0.7}}, ...]
-
-    Returns:
-        Dictionary mapping dimension names to variance metrics
-
-    Raises:
-        ValueError: If dimension_scores_list is empty
-    """
+    """Variance metrics per dimension across iterations."""
     if not dimension_scores_list:
         raise ValueError("dimension_scores_list cannot be empty")
 
-    # Collect all dimension names
-    all_dimensions = set()
+    all_dimensions: set[str] = set()
     for dim_scores in dimension_scores_list:
         all_dimensions.update(dim_scores.keys())
 
-    # Calculate variance for each dimension
-    result = {}
+    result: Dict[str, Dict[str, Any]] = {}
     for dimension in all_dimensions:
-        # Extract scores for this dimension across iterations
         scores = []
         for dim_scores in dimension_scores_list:
             if dimension in dim_scores and "score" in dim_scores[dimension]:
                 scores.append(dim_scores[dimension]["score"])
 
-        # Only calculate variance if we have scores
         if scores:
             result[dimension] = calculate_variance(scores)
 
@@ -131,46 +72,25 @@ def calculate_dimension_variance(
 
 
 def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Aggregate results from multiple iterations into final report.
-
-    Args:
-        iteration_results: List of scoring results from each iteration
-
-    Returns:
-        Aggregated results with mean scores and variance metrics
-
-    Raises:
-        ValueError: If iteration_results is empty
-    """
+    """Aggregate results from multiple iterations into a single result with variance."""
     if not iteration_results:
         raise ValueError("iteration_results cannot be empty")
 
     num_iterations = len(iteration_results)
-
-    # Extract overall scores
     overall_scores = [result["overall_score"] for result in iteration_results]
-
-    # Extract dimension scores
     dimension_scores_list = [result["dimension_scores"] for result in iteration_results]
-
-    # Calculate overall variance
     overall_variance = calculate_variance(overall_scores) if num_iterations > 1 else None
-
-    # Calculate dimension variance
     dimension_variance = (
         calculate_dimension_variance(dimension_scores_list) if num_iterations > 1 else None
     )
 
-    # Calculate mean scores for final result
     mean_overall_score = statistics.mean(overall_scores)
 
-    # Calculate mean dimension scores
-    all_dimensions = set()
+    all_dimensions: set[str] = set()
     for dim_scores in dimension_scores_list:
         all_dimensions.update(dim_scores.keys())
 
-    mean_dimension_scores = {}
+    mean_dimension_scores: Dict[str, Any] = {}
     for dimension in all_dimensions:
         scores = []
         for dim_scores in dimension_scores_list:
@@ -179,28 +99,23 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
 
         if scores:
             mean_score = statistics.mean(scores)
-            # Preserve structure from first iteration, update score
             mean_dimension_scores[dimension] = iteration_results[0]["dimension_scores"][
                 dimension
             ].copy()
             mean_dimension_scores[dimension]["score"] = mean_score
 
-    # Check if any iteration had hard_fail
-    # If ANY iteration hard-fails, we zero the overall score for consistency with gate policy
+    # Any iteration hard-fail zeros the overall score (gate policy)
     hard_fail = any(result.get("hard_fail", False) for result in iteration_results)
     if hard_fail:
         mean_overall_score = 0.0
-        # Also collect all hard_fail_reasons from iterations that failed
         all_hard_fail_reasons = []
         for result in iteration_results:
             if result.get("hard_fail", False):
                 all_hard_fail_reasons.extend(result.get("hard_fail_reasons", []))
 
-    # Preserve metadata from first iteration
     metadata = iteration_results[0].get("metadata", {}).copy()
     metadata["iterations_run"] = num_iterations
 
-    # Build aggregated result
     aggregated = {
         "overall_score": mean_overall_score,
         "dimension_scores": mean_dimension_scores,
@@ -217,12 +132,14 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
         ],
     }
 
-    confidence_entries = [
-        result.get("confidence") for result in iteration_results if result.get("confidence")
+    confidence_entries: List[Dict[str, Any]] = [
+        result["confidence"] for result in iteration_results
+        if isinstance(result.get("confidence"), dict)
     ]
     if confidence_entries:
-        overall_confidences = [
-            entry.get("overall") for entry in confidence_entries if entry.get("overall") is not None
+        overall_confidences: List[float] = [
+            float(entry["overall"]) for entry in confidence_entries
+            if entry.get("overall") is not None
         ]
         dimension_confidence: Dict[str, List[float]] = {}
         for entry in confidence_entries:
@@ -240,7 +157,6 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
         }
         aggregated["confidence"] = aggregated_confidence
 
-    # Add variance section if multiple iterations
     if num_iterations > 1:
         aggregated["variance"] = {
             "overall": overall_variance,
@@ -249,12 +165,10 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
     else:
         aggregated["variance"] = None
 
-    # Preserve other fields from first iteration
     for key in ["weights_applied"]:
         if key in iteration_results[0]:
             aggregated[key] = iteration_results[0][key]
 
-    # Use aggregated hard_fail_reasons if any iteration failed
     if hard_fail:
         aggregated["hard_fail_reasons"] = all_hard_fail_reasons
     elif "hard_fail_reasons" in iteration_results[0]:

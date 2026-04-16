@@ -30,7 +30,7 @@ quality:
   regard: 0.50
   coordination: 0.50
 
-# ── Legacy weights (backward compat) ──
+# ── Dimension weights (used in result output) ──
 
 weights:
   safety: 0.20

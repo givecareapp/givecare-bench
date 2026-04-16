@@ -39,7 +39,7 @@ uv run bench --harness givecare --mode orchestrator -y
 
 ## Guardrails
 - treat `pass`, `fail`, `error` as canonical statuses
-- scenario JSONs use `category` (not `tier`); the loader rejects the legacy `tier` field and `tier_0..tier_3` values
+- scenario JSONs use `category` (not `tier`); the loader rejects `tier` and `tier_0..tier_3` values; `ScenarioResult` no longer carries a `tier` field
 - if scenario counts or benchmark version change, update:
   - `benchmark/benchmark_inventory.json`
   - `src/invisiblebench/cli/runner.py`

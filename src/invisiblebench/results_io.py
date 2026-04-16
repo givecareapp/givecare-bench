@@ -13,6 +13,31 @@ from typing import Any, Dict, Iterable, List
 from invisiblebench.failure_taxonomy import compute_quality_summary, compute_reliability_summary
 from invisiblebench.models.results import is_result_success
 
+# Optional fields forwarded between scenario dicts and flat result rows.
+# Used by both aggregate_model_results and flatten_model_results.
+_SCENARIO_OPTIONAL_KEYS = (
+    "hard_fail",
+    "hard_fail_reasons",
+    "failure_categories",
+    "gates",
+    "success",
+    "cost",
+    "run_id",
+    "judge_model",
+    "judge_prompt_hash",
+    "judge_temp",
+    "contract_version",
+    "transcript_path",
+    "detail_json",
+    "detail_html",
+    "error",
+    "runs",
+    "run_stats",
+    "run_summary",
+    "harness_mode",
+    "orchestrator_model",
+)
+
 
 def _safe_filename(value: str) -> str:
     """Return a filesystem-safe JSON stem."""
@@ -69,43 +94,16 @@ def aggregate_model_results(
             if run_metadata:
                 models[model_name]["run_metadata"] = dict(run_metadata)
 
-        # The scenario contract is now category-only (tier field removed from
-        # scenario JSONs). These fallbacks exist solely to keep this writer
-        # compatible with pre-migration result artifacts that still carry
-        # `tier` instead of `category` — drop both fallbacks once historical
-        # runs are rewritten.
         scenario_doc = {
             "scenario": result.get("scenario"),
             "scenario_id": result.get("scenario_id"),
-            "tier": result.get("tier", result.get("category", "unknown")),
-            "category": result.get("category", result.get("tier", "unknown")),
+            "category": result.get("category", "unknown"),
             "overall_score": result.get("overall_score", 0.0),
             "dimension_scores": _coerce_dimension_scores(result),
             "status": result.get("status", "error"),
         }
 
-        for key in (
-            "hard_fail",
-            "hard_fail_reasons",
-            "failure_categories",
-            "gates",
-            "success",
-            "cost",
-            "run_id",
-            "judge_model",
-            "judge_prompt_hash",
-            "judge_temp",
-            "contract_version",
-            "transcript_path",
-            "detail_json",
-            "detail_html",
-            "error",
-            "runs",
-            "run_stats",
-            "run_summary",
-            "harness_mode",
-            "orchestrator_model",
-        ):
+        for key in _SCENARIO_OPTIONAL_KEYS:
             if key in result:
                 scenario_doc[key] = result[key]
 
@@ -188,34 +186,14 @@ def flatten_model_results(model_files: Iterable[Dict[str, Any]]) -> List[Dict[st
                 "model_id": model_id,
                 "scenario": scenario.get("scenario"),
                 "scenario_id": scenario.get("scenario_id"),
-                "category": scenario.get("category", scenario.get("tier", "unknown")),
+                "category": scenario.get("category", "unknown"),
                 "overall_score": scenario.get("overall_score", 0.0),
                 "dimensions": scenario.get("dimension_scores", {}),
                 "status": scenario.get("status", "error"),
             }
             if provider is not None:
                 row["provider"] = provider
-            for key in (
-                "hard_fail",
-                "hard_fail_reasons",
-                "failure_categories",
-                "gates",
-                "success",
-                "cost",
-                "run_id",
-                "judge_model",
-                "judge_prompt_hash",
-                "judge_temp",
-                "contract_version",
-                "error",
-                "runs",
-                "run_stats",
-                "run_summary",
-                "detail_json",
-                "detail_html",
-                "harness_mode",
-                "orchestrator_model",
-            ):
+            for key in _SCENARIO_OPTIONAL_KEYS:
                 if key in scenario:
                     row[key] = scenario[key]
             rows.append(row)

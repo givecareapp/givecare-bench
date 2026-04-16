@@ -119,7 +119,7 @@ _PATTERN_FIXES = {
 
 
 class DiagnosticReport:
-    """Generates diagnostic reports for eval results."""
+
 
     def __init__(
         self,
@@ -146,14 +146,14 @@ class DiagnosticReport:
         self.transcripts: Dict[str, List[Dict]] = {}
 
     def _load_json(self, path: Path) -> Optional[Dict]:
-        """Load JSON file."""
+
         if not path or not path.exists():
             return None
         with open(path) as f:
             return json.load(f)
 
     def _load_transcript(self, scenario_id: str) -> List[Dict]:
-        """Load transcript for a scenario."""
+
         if scenario_id in self.transcripts:
             return self.transcripts[scenario_id]
 
@@ -182,7 +182,7 @@ class DiagnosticReport:
         return []
 
     def _get_results_list(self) -> List[Dict]:
-        """Extract results list from data structure."""
+
         if not self.results_data:
             return []
         if "results" in self.results_data:
@@ -192,7 +192,7 @@ class DiagnosticReport:
         return []
 
     def _is_failure(self, result: Dict) -> bool:
-        """Check if a result is a failure."""
+
         return (
             result.get("hard_fail", False)
             or result.get("status") in ("fail", "error")
@@ -200,7 +200,7 @@ class DiagnosticReport:
         )
 
     def _get_low_dimensions(self, result: Dict, threshold: float = 0.6) -> List[Tuple[str, float]]:
-        """Get dimensions below threshold."""
+
         dims = result.get("dimensions", {})
         low = []
         for dim, score in dims.items():
@@ -209,7 +209,7 @@ class DiagnosticReport:
         return sorted(low, key=lambda x: x[1])
 
     def _extract_violations(self, result: Dict) -> List[Dict]:
-        """Extract all violations from a result."""
+
         violations = []
         dims_detailed = result.get("dimensions_detailed", {})
 
@@ -244,7 +244,7 @@ class DiagnosticReport:
         return sorted(violations, key=lambda x: (x["type"] != "hard_fail", x["turn"]))
 
     def _get_turn_content(self, transcript: List[Dict], turn: int) -> Tuple[str, str]:
-        """Get user and assistant content for a turn."""
+
         user_content = ""
         assistant_content = ""
 
@@ -258,7 +258,7 @@ class DiagnosticReport:
         return user_content, assistant_content
 
     def _analyze_patterns(self, results: List[Dict]) -> Dict[str, Any]:
-        """Analyze failure patterns across results."""
+
         patterns = {
             "by_dimension": defaultdict(list),
             "by_rule": defaultdict(list),
@@ -267,7 +267,7 @@ class DiagnosticReport:
         }
 
         for r in results:
-            cat = r.get("category", r.get("tier", "unknown"))
+            cat = r.get("category", "unknown")
             patterns["by_category"][cat]["total"] += 1
             if self._is_failure(r):
                 patterns["by_category"][cat]["failed"] += 1
@@ -306,7 +306,7 @@ class DiagnosticReport:
         return patterns
 
     def _compare_with_previous(self, current: List[Dict]) -> Optional[Dict]:
-        """Compare current results with previous run."""
+
         if not self.previous_data:
             return None
 
@@ -314,7 +314,6 @@ class DiagnosticReport:
         if not isinstance(prev_results, list):
             return None
 
-        # Build lookup by scenario_id
         prev_by_id = {}
         for r in prev_results:
             sid = r.get("scenario_id", r.get("scenario", ""))
@@ -405,7 +404,6 @@ class DiagnosticReport:
         if n_total == 0:
             return []
 
-        # Collect per-scenario data: transcripts + dimension scores
         scenario_data: List[Dict[str, Any]] = []
         for r in results:
             sid = r.get("scenario_id", r.get("scenario", "unknown"))
@@ -436,7 +434,6 @@ class DiagnosticReport:
                 for phrase in _POWER_OVER_PHRASES:
                     if phrase in lower:
                         po_scenarios.append(sd["scenario_id"])
-                        # Extract surrounding context
                         idx = lower.index(phrase)
                         start = max(0, idx - 30)
                         end = min(len(msg["content"]), idx + len(phrase) + 60)
@@ -522,7 +519,6 @@ class DiagnosticReport:
                 lower = msg["content"].lower()
                 if any(p in lower for p in _GENERIC_VALIDATION_PHRASES):
                     has_generic = True
-                    # Check if there's also specific validation (user keywords reflected)
                     # A rough heuristic: look for scenario-specific terms
                 if any(
                     p in lower
@@ -669,7 +665,7 @@ class DiagnosticReport:
     def _render_cross_scenario_patterns(
         self, patterns: List[Dict[str, Any]]
     ) -> List[str]:
-        """Render cross-scenario patterns as markdown lines."""
+
         if not patterns:
             return [
                 "## Cross-Scenario Patterns",
@@ -724,7 +720,7 @@ class DiagnosticReport:
         return lines
 
     def _suggest_fix(self, violation: Dict, dimension: str) -> str:
-        """Suggest a fix based on violation type."""
+
         rule = violation.get("rule", "").lower()
         suggestions = {
             # Compliance
@@ -790,7 +786,6 @@ class DiagnosticReport:
         patterns = self._analyze_patterns(results)
         comparison = self._compare_with_previous(results)
 
-        # Build report
         lines = [
             "# Diagnostic Report",
             "",
@@ -912,7 +907,6 @@ class DiagnosticReport:
                 ]
             )
 
-            # Sort: hard fails first, then by score ascending
             sorted_failures = sorted(
                 failures, key=lambda x: (not x.get("hard_fail", False), x.get("overall_score", 0))
             )
@@ -921,7 +915,7 @@ class DiagnosticReport:
                 scenario_id = result.get("scenario_id", result.get("scenario", "unknown"))
                 scenario_name = result.get("scenario", scenario_id)
                 score = result.get("overall_score", 0) * 100
-                cat = result.get("category", result.get("tier", "?"))
+                cat = result.get("category", "?")
                 is_hard_fail = result.get("hard_fail", False)
 
                 lines.append(f"### {i}. {scenario_name}")

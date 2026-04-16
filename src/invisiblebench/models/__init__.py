@@ -1,6 +1,4 @@
-"""
-Data models for InvisibleBench scenarios and turns.
-"""
+"""Data models for scenarios and turns."""
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -22,7 +20,6 @@ from invisiblebench.models.results import (
     FailureCategory,
     ResultTiming,
     ScenarioResult,
-    TierSummary,
 )
 
 # Re-export Pydantic scenario models
@@ -46,7 +43,6 @@ __all__ = [
     "FailureCategory",
     "ResultTiming",
     "ScenarioResult",
-    "TierSummary",
     # Pydantic scenario models
     "PersonaModel",
     "ScenarioModel",
@@ -105,7 +101,6 @@ class Turn:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Turn":
-        """Create Turn from dictionary."""
         turn_number = data.get("turn_number", data.get("t"))
         if turn_number is None:
             raise KeyError("turn_number")
@@ -135,7 +130,6 @@ class Session:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Session":
-        """Create Session from dictionary."""
         return cls(
             session_number=data["session_number"],
             time_elapsed=data["time_elapsed"],
@@ -165,7 +159,6 @@ class Persona:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Persona":
-        """Create Persona from dictionary."""
         return cls(
             name=data["name"],
             age=data["age"],
@@ -202,27 +195,23 @@ class Scenario:
 
     @property
     def is_multi_session(self) -> bool:
-        """Check if scenario has multiple sessions (continuity category)."""
         return len(self.sessions) > 0
 
     @property
     def total_turns(self) -> int:
-        """Get total number of turns across all sessions."""
         if self.is_multi_session:
             return sum(len(session.turns) for session in self.sessions)
         return len(self.turns)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Scenario":
-        """Create Scenario from dictionary."""
         if "tier" in data and "category" not in data:
             raise ValueError(
-                "Scenario uses legacy 'tier' field. Migrate to 'category' before loading."
+                "Scenario uses 'tier' field. Use 'category' instead."
             )
         category = CategoryLevel(data["category"])
         persona = Persona.from_dict(data["persona"])
 
-        # Parse turns or sessions based on structure
         turns = []
         sessions = []
         if "sessions" in data:
@@ -230,7 +219,6 @@ class Scenario:
         elif "turns" in data:
             turns = [Turn.from_dict(t) for t in data["turns"]]
 
-        # Parse scoring dimensions
         scoring_dimensions = {}
         if "scoring_dimensions" in data:
             for dim_str, max_score in data["scoring_dimensions"].items():

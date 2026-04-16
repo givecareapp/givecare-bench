@@ -1,4 +1,4 @@
-"""API clients for model and judge inference."""
+"""API clients."""
 
 from .client import (
     DEFAULT_SAFETY_REFERENCE_MODEL,

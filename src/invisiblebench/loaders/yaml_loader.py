@@ -17,7 +17,7 @@ from invisiblebench.utils.turn_index import normalize_turn_indices
 
 
 class RuleLoader:
-    """Loads rule YAML files with inheritance resolution."""
+
 
     def __init__(self):
         self._loading_stack: List[str] = []
@@ -56,13 +56,11 @@ class RuleLoader:
             if rules is None:
                 rules = {}
 
-            # Handle inheritance
             if "extends" in rules:
                 parent_file = rules.pop("extends")
                 # Resolve parent path relative to current file
                 parent_path = path_obj.parent / parent_file
 
-                # Load parent rules recursively
                 parent_rules = self.load(str(parent_path))
 
                 # Deep merge: parent rules + current rules
@@ -98,7 +96,7 @@ class RuleLoader:
 
 
 class ScenarioLoader:
-    """Loads scenario YAML files."""
+
 
     def __init__(self, validate: bool = True) -> None:
         self.validator = ScenarioValidator()
@@ -138,7 +136,7 @@ class ScenarioLoader:
 
 
 class TranscriptLoader:
-    """Loads JSONL transcript files."""
+
 
     def load(self, path: str) -> List[Dict[str, Any]]:
         """
@@ -169,7 +167,7 @@ class TranscriptLoader:
 
 
 class ScoringConfigLoader:
-    """Loads scoring configuration YAML files."""
+
 
     def load(self, path: str) -> Dict[str, Any]:
         """

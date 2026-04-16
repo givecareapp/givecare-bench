@@ -36,17 +36,14 @@ def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]
         - 'scenario_names': scenario_id -> short display name
         - 'quality': per-model regard/coordination scores (gate-passers first)
     """
-    # Group results by model
     by_model: dict[str, list[dict]] = {}
     for r in results:
         model = r.get("model", "unknown")
         by_model.setdefault(model, []).append(r)
 
     model_reports = []
-    # Collect all scenario IDs across models (ordered by first appearance)
     all_scenario_ids: list[str] = []
     seen_ids: set[str] = set()
-    # Map scenario_id -> display name from results
     scenario_names: dict[str, str] = {}
 
     for model, model_results in by_model.items():
@@ -112,7 +109,6 @@ def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]
             "failures": failures,
         })
 
-    # Build scenario matrix: scenario_id -> {model: "PASS"/"FAIL"}
     scenario_matrix: dict[str, dict[str, str]] = {}
     for sid in all_scenario_ids:
         scenario_matrix[sid] = {}
@@ -125,7 +121,6 @@ def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]
             c_pass = gates.get("compliance", {}).get("passed", True)
             scenario_matrix[sid][model] = "PASS" if (s_pass and c_pass) else "FAIL"
 
-    # Build quality scores per model
     quality = _compute_quality(by_model, model_reports)
 
     return {

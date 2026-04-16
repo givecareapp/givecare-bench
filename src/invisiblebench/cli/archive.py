@@ -108,7 +108,6 @@ def archive_runs(
     to_keep = []
 
     if keep_recent is not None:
-        # Sort by date descending, keep N most recent
         sorted_runs = sorted(runs, key=lambda r: r["date"] or datetime.min, reverse=True)
         to_keep = sorted_runs[:keep_recent]
         to_archive = sorted_runs[keep_recent:]
@@ -127,7 +126,6 @@ def archive_runs(
             else:
                 to_keep.append(run)
 
-    # Perform archive
     archived_paths = []
     if not dry_run and to_archive:
         archive_dir.mkdir(parents=True, exist_ok=True)
@@ -135,7 +133,6 @@ def archive_runs(
             src = run["path"]
             dst = archive_dir / run["name"]
             if dst.exists():
-                # Add suffix if already exists
                 i = 1
                 while dst.exists():
                     dst = archive_dir / f"{run['name']}_{i}"

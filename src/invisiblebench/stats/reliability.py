@@ -8,6 +8,7 @@ scorer consistency.
 from __future__ import annotations
 
 import json
+import logging
 import random
 import statistics
 from pathlib import Path
@@ -19,6 +20,8 @@ from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_dimension_scores,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _pairwise_kappas(
@@ -136,7 +139,6 @@ def run_reliability(
     rules_path = str(root / "benchmark" / "configs" / "rules" / "base.yaml")
     scoring_config = str(root / "benchmark" / "configs" / "scoring.yaml")
 
-    # Map scenario IDs to scenario paths
     scenario_files = {}
     for f in scenarios_dir.rglob("*.json"):
         if "archive" in str(f) or "confidential" in str(f):
@@ -198,14 +200,14 @@ def run_reliability(
                 for dim in LLM_SCORERS:
                     value = extract_numeric_dimension_value(dim_scores.get(dim, 0.0))
                     run_scores[dim].append(float(value) if isinstance(value, (int, float)) else 0.0)
-            except Exception:
+            except Exception as e:
+                logger.warning("Scorer failed for %s: %s: %s", sid, type(e).__name__, e)
                 for dim in LLM_SCORERS:
                     run_scores[dim].append(0.0)
 
         for dim in LLM_SCORERS:
             dimension_runs[dim].append(run_scores[dim])
 
-    # Compute agreement metrics
     results: Dict[str, Any] = {"dimensions": {}, "n_runs": n_runs, "n_items": len(items)}
 
     for dim in LLM_SCORERS:
@@ -232,7 +234,6 @@ def run_reliability(
             "mean_abs_deviation": 0.0,
         }
 
-    # Save raw data if output_dir specified
     if output_dir:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)

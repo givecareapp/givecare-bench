@@ -1,21 +1,4 @@
-"""
-Public scoring API for InvisibleBench.
-
-This module provides a clean interface for external consumers (like givecare-tune)
-to score transcripts without needing to understand the internal orchestrator details.
-
-Usage:
-    from invisiblebench import score
-
-    result = score(
-        transcript_path="path/to/transcript.jsonl",
-        scenario_path="path/to/scenario.json",
-        rules_path="path/to/rules.yaml"
-    )
-
-    print(result["overall_percentage"])  # 0-100
-    print(result["dimension_scores"])    # Per-dimension breakdowns
-"""
+"""Public scoring API. External consumers (e.g. givecare-tune) use score() here."""
 
 from __future__ import annotations
 
@@ -72,13 +55,11 @@ def score(
         >>> else:
         ...     print(f"Score: {result['overall_percentage']:.1f}%")
     """
-    # Use defaults if not provided
     if rules_path is None:
         rules_path = str(_DEFAULT_RULES_PATH)
     if scoring_config_path is None:
         scoring_config_path = str(_DEFAULT_SCORING_CONFIG)
 
-    # Create orchestrator with state persistence disabled (for external use)
     orchestrator = ScoringOrchestrator(
         scoring_config_path=scoring_config_path,
         enable_state_persistence=False,
@@ -98,22 +79,7 @@ def score_with_rewards(
     rules_path: Optional[str] = None,
     scoring_config_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Score a transcript and return rewards suitable for RL training.
-
-    This is a convenience wrapper around score() that formats the output
-    for reinforcement learning training loops.
-
-    Args:
-        Same as score()
-
-    Returns:
-        Dict containing:
-            - rewards: Dict[str, float] with per-dimension rewards (0-1)
-            - hard_fail: bool
-            - hard_fail_reasons: List[str]
-            - raw_result: Full score() result for debugging
-    """
+    """Wrapper around score() returning per-dimension rewards for RL training."""
     result = score(
         transcript_path=transcript_path,
         scenario_path=scenario_path,
@@ -121,7 +87,6 @@ def score_with_rewards(
         scoring_config_path=scoring_config_path,
     )
 
-    # Extract per-dimension scores as rewards
     rewards = {}
     dimensions = ["safety", "compliance", "regard", "coordination", "false_refusal", "memory"]
 

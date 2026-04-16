@@ -34,10 +34,7 @@ __all__ = [
 
 def is_tty() -> bool:
     """True if stdout is a real terminal."""
-    try:
-        return sys.stdout.isatty()
-    except Exception:
-        return False
+    return sys.stdout.isatty()
 
 
 def no_color() -> bool:
@@ -58,7 +55,7 @@ def create_console():
             highlight=False,
             soft_wrap=True,
         )
-    except Exception:
+    except ImportError:
         class _Shim:
             def print(self, *args: Any, **kwargs: Any) -> None:  # noqa: A003
                 print(*args)
@@ -131,10 +128,6 @@ def read_stdin_or_file(arg: str) -> str:
 
 
 # ---------- mutation gate ----------
-
-class MutationAborted(SystemExit):
-    """Raised (via SystemExit) when the user declines a mutation prompt."""
-
 
 def confirm_or_abort(
     prompt: str,

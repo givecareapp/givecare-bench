@@ -1,16 +1,14 @@
-"""Pydantic configuration models for InvisibleBench."""
+"""Benchmark configuration models."""
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ModelConfig(BaseModel):
-    """Configuration for a model to evaluate."""
 
     id: str = Field(..., description="Model ID (e.g., 'deepseek/deepseek-chat')")
     name: str = Field(..., description="Display name (e.g., 'DeepSeek V3')")
@@ -22,12 +20,10 @@ class ModelConfig(BaseModel):
 
     @property
     def safe_id(self) -> str:
-        """Return filesystem-safe version of model ID."""
         return self.id.replace("/", "_")
 
 
 class ScoringConfig(BaseModel):
-    """Configuration for scoring dimensions and weights."""
 
     regard_weight: float = Field(default=0.40, ge=0, le=1)
     coordination_weight: float = Field(default=0.25, ge=0, le=1)
@@ -43,34 +39,8 @@ class ScoringConfig(BaseModel):
         default=0.5, ge=0, le=1, description="Threshold for 'low' dimension scores"
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _compat_legacy_weights(cls, data):
-        if not isinstance(data, dict):
-            return data
-
-        legacy_regard = data.get("attunement_weight", 0) + data.get("belonging_weight", 0)
-        if "regard_weight" not in data and legacy_regard:
-            warnings.warn(
-                "attunement_weight/belonging_weight are deprecated, use regard_weight.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            data["regard_weight"] = legacy_regard
-
-        if "memory_weight" not in data and "consistency_weight" in data:
-            warnings.warn(
-                "consistency_weight is deprecated, use memory_weight.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            data["memory_weight"] = data.get("consistency_weight", 0)
-
-        return data
-
     @property
     def weights(self) -> dict[str, float]:
-        """Return weights as a dictionary."""
         return {
             "memory": self.memory_weight,
             "regard": self.regard_weight,
@@ -82,7 +52,6 @@ class ScoringConfig(BaseModel):
 
 
 class BenchmarkConfig(BaseModel):
-    """Top-level benchmark configuration."""
 
     mode: Literal["full", "custom"] = Field(
         default="full", description="Benchmark mode"
@@ -97,7 +66,6 @@ class BenchmarkConfig(BaseModel):
     auto_confirm: bool = Field(default=False, description="Skip confirmation prompts")
     dry_run: bool = Field(default=False, description="Estimate costs only, don't run")
     parallel: bool = Field(default=False, description="Run evaluations in parallel")
-    tiers: Optional[list[int]] = Field(default=None, description="Filter to specific tiers")
     scenarios: Optional[list[str]] = Field(
         default=None, description="Filter to specific scenario IDs"
     )

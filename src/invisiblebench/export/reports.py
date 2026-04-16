@@ -1,50 +1,34 @@
-"""
-Report generators for InvisibleBench.
-
-Generates HTML and JSON reports from scoring results.
-"""
+"""HTML and JSON report generators."""
 
 from __future__ import annotations
 
 import html
 import json
+import logging
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerator:
-    """Generates scoring reports."""
+
 
     def generate_json(self, results: Dict[str, Any], output_path: str) -> None:
-        """
-        Generate JSON report.
-
-        Args:
-            results: Scoring results dictionary
-            output_path: Path to write JSON file
-        """
         with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
 
     def generate_html(self, results: Dict[str, Any], output_path: str) -> None:
-        """
-        Generate HTML report.
-
-        Args:
-            results: Scoring results dictionary
-            output_path: Path to write HTML file
-        """
         html = self._build_html(results)
         with open(output_path, "w") as f:
             f.write(html)
 
     def _build_html(self, results: Dict[str, Any]) -> str:
-        """Build HTML content from results."""
+
         overall_score = results.get("overall_score", 0.0)
         hard_fail = results.get("hard_fail", False)
         metadata = results.get("metadata", {})
         dimension_scores = results.get("dimension_scores", {})
 
-        # Build HTML
         html_parts = [
             "<!DOCTYPE html>",
             "<html>",
@@ -243,7 +227,6 @@ class ReportGenerator:
                 ]
             )
 
-            # Add dimension variance if available
             if dimension in dimension_variance:
                 dim_var = dimension_variance[dimension]
                 html_parts.append(
@@ -275,20 +258,12 @@ class ReportGenerator:
         return "\n".join(html_parts)
 
     def generate_batch_report(self, results: list, output_path: str, metadata: dict = None) -> None:
-        """
-        Generate batch HTML report summarizing all scenario results.
-
-        Args:
-            results: List of scenario result dictionaries
-            output_path: Path to write HTML file
-            metadata: Optional run metadata (model, mode, etc.)
-        """
         html_content = self._build_batch_html(results, metadata or {})
         with open(output_path, "w") as f:
             f.write(html_content)
 
     def _build_batch_html(self, results: list, metadata: dict) -> str:
-        """Build batch summary HTML."""
+
 
         def is_failure(result: dict) -> bool:
             status = result.get("status")
@@ -298,38 +273,23 @@ class ReportGenerator:
                 or result.get("overall_score", 1) < 0.5
             )
 
-        # Calculate stats
         total = len(results)
         failures = [r for r in results if is_failure(r)]
-        passed = total - len(failures)
-        failed = len(failures)
         avg_score = (
             sum(r.get("overall_score", 0) for r in results) / total if total else 0
         )
         total_cost = sum(r.get("cost", 0) for r in results)
 
         # Success-rate computation
-        try:
-            from invisiblebench.stats.analysis import (
-                compute_failure_buckets,
-                compute_success_rates,
-            )
+        from invisiblebench.stats.analysis import (
+            compute_failure_buckets,
+            compute_success_rates,
+        )
 
-            sr = compute_success_rates(results)
-            sr_total = sr["total"]
-            sr_categories = sr["categories"]
-            failure_buckets = compute_failure_buckets(results)
-        except Exception:
-            sr_total = {
-                "pass": passed,
-                "fail": failed,
-                "total": total,
-                "rate": passed / total if total else 0,
-                "ci_lo": 0,
-                "ci_hi": 1,
-            }
-            sr_categories = {}
-            failure_buckets = {}
+        sr = compute_success_rates(results)
+        sr_total = sr["total"]
+        sr_categories = sr["categories"]
+        failure_buckets = compute_failure_buckets(results)
 
         success_rate_pct = sr_total["rate"] * 100
         sr_color = (
@@ -340,7 +300,6 @@ class ReportGenerator:
             else "#dc3545"
         )
 
-        # Collect judge_model and contract_version from results
         judge_models = {
             r.get("judge_model") for r in results if r.get("judge_model")
         }
@@ -354,10 +313,9 @@ class ReportGenerator:
             ", ".join(sorted(contract_versions)) if contract_versions else None
         )
 
-        # Group by category
         by_cat = {}
         for r in results:
-            cat = r.get("category", r.get("tier", "unknown"))
+            cat = r.get("category", "unknown")
             if cat not in by_cat:
                 by_cat[cat] = []
             by_cat[cat].append(r)
@@ -505,7 +463,7 @@ class ReportGenerator:
                 score_pct = int(f.get("overall_score", 0) * 100)
                 html_parts.append(
                     f"            <div class='failure-item'>"
-                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', f.get('tier', '?'))))}) &mdash; {score_pct}%</div>"
+                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', '?')))}) &mdash; {score_pct}%</div>"
                 )
 
                 # Hard fail reasons

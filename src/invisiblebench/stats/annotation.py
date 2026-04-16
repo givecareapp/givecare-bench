@@ -27,7 +27,7 @@ from invisiblebench.utils.dimension_aliases import (
 
 
 def _normalize_annotation_scores(raw_scores: Dict[str, Any]) -> Dict[str, float]:
-    """Normalize and coerce annotation scores to canonical v2 floats."""
+
     normalized: Dict[str, float] = {}
     for key, value in raw_scores.items():
         canonical = DIMENSION_ALIASES.get(key, key)
@@ -57,7 +57,6 @@ def export_annotation_kit(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    # Load results to get scenario metadata
     if results_file.is_file():
         with open(results_file) as f:
             all_results = json.load(f)
@@ -96,14 +95,13 @@ def export_annotation_kit(
     rng = random.Random(42)
 
     if stratify and all_results:
-        # Group by category
         by_cat: Dict[str, List[Path]] = {}
         for tf in transcript_files:
             cat = "unknown"
             for r in all_results:
                 sid = r.get("scenario_id", "")
                 if sid and sid in tf.stem:
-                    cat = _normalize_category(r.get("category", r.get("tier")))
+                    cat = _normalize_category(r.get("category"))
                     break
             by_cat.setdefault(str(cat), []).append(tf)
 
@@ -154,7 +152,6 @@ def export_annotation_kit(
                 scenario = sdata
                 break
 
-        # Build markdown
         md = _build_annotation_form(tf.stem, turns, scenario, i + 1)
 
         form_path = out / f"{i+1:02d}_{tf.stem}.md"
@@ -199,12 +196,12 @@ def _build_annotation_form(
     scenario: Optional[Dict[str, Any]],
     index: int,
 ) -> str:
-    """Build a markdown annotation form for a single transcript."""
+
     lines = [f"# Scenario {index}: {scenario_id}", ""]
 
     if scenario:
         lines.append(f"**Title**: {scenario.get('title', 'N/A')}")
-        lines.append(f"**Category**: {scenario.get('category', scenario.get('tier', 'N/A'))}")
+        lines.append(f"**Category**: {scenario.get('category', 'N/A')}")
         persona = scenario.get("persona", {})
         if persona:
             lines.append(
@@ -259,7 +256,7 @@ def _build_annotation_form(
 
 
 def _build_instructions() -> str:
-    """Build rating instructions markdown."""
+
     return """# Annotation Instructions
 
 ## Overview
@@ -319,7 +316,6 @@ def import_annotations(
 
     Returns dict with agreement metrics.
     """
-    # Load human annotations
     annotations: Dict[str, Dict[str, Dict[str, float]]] = {}  # rater -> scenario -> dim -> score
     hard_fail_annotations: Dict[str, Dict[str, bool]] = {}  # rater -> scenario -> bool
 
@@ -359,7 +355,6 @@ def import_annotations(
     if not raters:
         return {"error": "No annotations found"}
 
-    # Load LLM scores
     llm_dim_scores: Dict[str, Dict[str, float]] = {}
     llm_hf: Dict[str, bool] = {}
     if llm_scores_path:
@@ -457,7 +452,7 @@ def import_annotations(
 
 
 def format_agreement_report(results: Dict[str, Any]) -> str:
-    """Format agreement results as a terminal-friendly report."""
+
     lines = []
     lines.append(
         f"Agreement Report ({results.get('n_raters', 0)} raters, "

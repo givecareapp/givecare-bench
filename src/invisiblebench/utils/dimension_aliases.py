@@ -1,9 +1,4 @@
-"""Shared dimension/categorization helpers for v2 reporting and scoring.
-
-# DEPRECATED — v1 compatibility only, do not use in new code.
-# Canonical v2 dimension names: regard, coordination, safety, compliance, memory, false_refusal.
-# Legacy names (attunement, belonging, consistency) are kept only for reading old result files.
-"""
+"""Shared dimension/categorization helpers for v2 reporting and scoring."""
 
 from __future__ import annotations
 
@@ -69,21 +64,9 @@ def extract_numeric_dimension_value(value: Any) -> Optional[float]:
 
 
 def normalize_category(value: Any) -> str:
-    """Normalize category values with legacy tier fallback."""
+    """Normalize category string values."""
     if isinstance(value, str) and value.strip():
-        normalized = value.strip().lower()
-        return {
-            "context": "context",
-            "continuity": "continuity",
-        }.get(normalized, normalized)
-
-    if isinstance(value, int):
-        return {
-            0: "safety",
-            1: "safety",
-            2: "empathy",
-            3: "continuity",
-        }.get(value, "unknown")
+        return value.strip().lower()
 
     return "unknown"
 
