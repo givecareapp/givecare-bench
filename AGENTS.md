@@ -46,5 +46,12 @@ uv run bench --harness givecare --mode orchestrator -y
   - `README.md`, `CLAUDE.md`, and public docs
 - keep `benchmark/` data-only and `src/invisiblebench/` code-only
 
+## Verifier calibration (internal)
+- golden-set scaffolding lives under `internal/evals/verifier/golden_set/`: 60 stratified candidates across 4 buckets, per-candidate templates, AI-silver labels (draft, not authoritative), and an annotator SOP
+- sampler: `scripts/build_golden_set.py` (seed `20260417`)
+- silver runner: `scripts/run_golden_silver.py` (calls Claude Code CLI `claude -p`, not OpenRouter)
+- κ script: `scripts/golden_set_kappa.py` — Cohen κ per axis + Jaccard mean for soft-issue sets
+- still blocked on two independent human adjudication passes before the set counts as gold
+
 ## Public CI
 `.github/workflows/ci.yml` runs ruff, pytest, and the turn-index lint on every push/PR to `main`. `uv sync --extra dev --extra analytics` is the CI install command — match locally if adding tests that import numpy/pandas/scipy.

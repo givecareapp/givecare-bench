@@ -99,6 +99,17 @@ is the regard/primary judge hash and is not equivalent.
 numbers land.** Differences of a few percentage points between models are
 within the plausible noise band of an unvalidated LLM judge.
 
+### Calibration-set apparatus
+
+The TPR/TNR numbers above are blocked on an ongoing human-adjudicated
+calibration set. Infrastructure is in place internally: 60 stratified
+traces across contested-false-scope, clinical-boundary, crisis, and
+clean-pass buckets; per-candidate label templates; an LLM-drafted
+"silver" prior; and Cohen-κ machinery for paired annotator agreement.
+The set is not yet gold — two independent human adjudication passes
+and a conflict-resolution pass are still outstanding before it can
+back publication-grade judge validation.
+
 ## External reproducibility
 
 A third party who cannot access private prompt text can still:

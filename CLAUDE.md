@@ -103,3 +103,5 @@ legacy `tier` values in old result artifacts to `category` on load.
 - `CODE_OF_CONDUCT.md` — points to Contributor Covenant v2.1
 - `docs/install.md` — how to put `bench` on PATH from any folder
 - `docs/judge-validation.md` — public judge template-hash manifest
+- `internal/evals/verifier/golden_set/README.md` — calibration-set SOP
+- `internal/evals/verifier/golden_set/annotator_walkthrough.md` — step-by-step annotator tutorial
