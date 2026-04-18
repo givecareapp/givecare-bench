@@ -18,6 +18,9 @@ This directory is the artifact that closes that gap.
   later validate against gold.
 - `labels/annotator_a/` and `labels/annotator_b/` — independent human
   annotations. These are the gold source of truth.
+- `annotator_a_rationale_with_citations.md`, `annotator_a_summary.csv`, and
+  `annotator_a_validation_summary.md` — imported sidecar artifacts from the
+  first completed human pass.
 - `labels/gold/` — resolved labels after conflict adjudication. Populated
   only after both annotators finish and kappa has been computed.
 
@@ -32,8 +35,8 @@ Do not cite `ai_silver` as evidence of calibration. It is a draft.
 
 ## Annotator workflow
 
-**New annotator?** Start with `annotator_walkthrough.md` — step-by-step
-tutorial for your first pass. The section below is reference material.
+**New annotator?** Start with `annotator_walkthrough.md` — the self-contained
+handbook for a full labeling pass. The section below is reference material.
 
 ### Before you start
 
@@ -115,6 +118,9 @@ After both annotator passes:
   verifier. Those are useful priors but are **not** gold.
 - `../retrospective_2026-03-31.md` and `../rescore_comparison_2026-03-31.md`
   are the audit memos this golden set is meant to put on a defensible footing.
+- `annotator_a_vs_ai_silver.md` is a provisional sanity check comparing the
+  first human pass to `labels/ai_silver/`. It is useful for verifier drift
+  inspection but does **not** replace the required human-vs-human κ pass.
 - Once gold labels exist, task #10 validates the AI verifier against them
   and produces `verifier_validation.md`.
 
@@ -132,6 +138,10 @@ golden_set/
 │   ├── annotator_b/           # human annotator B
 │   ├── conflict_resolution/   # third-pass labels on disagreements
 │   └── gold/                  # resolved final labels
+├── annotator_a_rationale_with_citations.md # imported annotator A sidecar
+├── annotator_a_summary.csv    # imported annotator A sidecar
+├── annotator_a_validation_summary.md # imported annotator A sidecar
+├── annotator_a_vs_ai_silver.md # provisional human-vs-silver sanity check
 ├── kappa_report.md            # produced by scripts/golden_set_kappa.py
 └── verifier_validation.md     # produced after gold is finalized
 ```
