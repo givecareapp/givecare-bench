@@ -90,6 +90,17 @@ uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_0
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
 ```
 
+Golden-set repeated verifier calibration can be run with:
+
+```bash
+uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against annotator_a
+```
+
+This uses the decomposed verifier prompt in
+`prompts/decomposed_single_trace.md`, writes aggregated labels to
+`internal/evals/verifier/golden_set/labels/<label-name>/`, and emits
+validation reports against the selected reference annotator folder.
+
 ## Notes
 
 - `detail_json` links resolve only partially for the current local corpus.

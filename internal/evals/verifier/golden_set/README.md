@@ -121,6 +121,11 @@ After both annotator passes:
 - `annotator_a_vs_ai_silver.md` is a provisional sanity check comparing the
   first human pass to `labels/ai_silver/`. It is useful for verifier drift
   inspection but does **not** replace the required human-vs-human κ pass.
+- `labels/ai_verifier_v2/`, `ai_verifier_v2_summary.csv`,
+  `ai_verifier_v2_vs_annotator_a.md`, `annotator_a_vs_ai_verifier_v2_kappa.md`,
+  and `ai_verifier_v2_audit.md` are the first repeated, decomposed
+  verifier-calibration artifacts for the golden set. They are development-time
+  validation artifacts, not gold.
 - Once gold labels exist, task #10 validates the AI verifier against them
   and produces `verifier_validation.md`.
 
@@ -134,6 +139,7 @@ golden_set/
 ├── labels/
 │   ├── template/              # empty label JSON, one per candidate
 │   ├── ai_silver/             # LLM-drafted labels (draft, non-authoritative)
+│   ├── ai_verifier_v2/        # repeated decomposed verifier outputs (dev)
 │   ├── annotator_a/           # human annotator A
 │   ├── annotator_b/           # human annotator B
 │   ├── conflict_resolution/   # third-pass labels on disagreements
@@ -142,6 +148,10 @@ golden_set/
 ├── annotator_a_summary.csv    # imported annotator A sidecar
 ├── annotator_a_validation_summary.md # imported annotator A sidecar
 ├── annotator_a_vs_ai_silver.md # provisional human-vs-silver sanity check
+├── ai_verifier_v2_summary.csv # machine-readable verifier summary
+├── ai_verifier_v2_vs_annotator_a.md # dev verifier validation summary
+├── annotator_a_vs_ai_verifier_v2_kappa.md # human-vs-verifier κ report
+├── ai_verifier_v2_audit.md    # audit of verifier performance + remaining gaps
 ├── kappa_report.md            # produced by scripts/golden_set_kappa.py
 └── verifier_validation.md     # produced after gold is finalized
 ```
