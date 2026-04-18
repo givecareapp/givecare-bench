@@ -31,6 +31,10 @@ uv run python scripts/golden_set_kappa.py
 uv run python scripts/audit_gold_scorer.py --mode llm
 ```
 
+`audit_gold_scorer.py` is the scorer regression gate for the resolved 60-trace
+calibration set. When it stays aligned with `labels/gold/`, the next operational
+step is to rescore frozen runs rather than recalibrate the scorer further.
+
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:
 
 ```yaml

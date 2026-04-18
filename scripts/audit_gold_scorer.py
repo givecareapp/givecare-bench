@@ -380,6 +380,7 @@ def _render_report(
 
     fixed_public = [row["trace_id"] for row in rows if row["public_status_change"] == "fixed"]
     regressed_public = [row["trace_id"] for row in rows if row["public_status_change"] == "regressed"]
+    is_perfect = len(mismatch_rows) == 0
 
     lines.append("# Current scorer vs gold\n")
     lines.append(f"- mode: `{mode}`")
@@ -390,9 +391,14 @@ def _render_report(
     lines.append("")
 
     lines.append("## Headline\n")
-    lines.append(
-        "The current benchmark scorer is still **not aligned enough with resolved gold** to justify a fresh public rescore."
-    )
+    if is_perfect:
+        lines.append(
+            "The current benchmark scorer is now **fully aligned with resolved gold on the 60-trace public hard-fail layer** and is ready for frozen-run rescoring."
+        )
+    else:
+        lines.append(
+            "The current benchmark scorer is still **not aligned enough with resolved gold** to justify a fresh public rescore."
+        )
     lines.append("")
     lines.append(
         f"- public hard-fail accuracy moved from **{_format_ratio(old_metrics['public_accuracy'], old_metrics['n'])}** "
@@ -407,8 +413,8 @@ def _render_report(
         f"to **{_format_ratio(current_metrics['compliance_accuracy'], current_metrics['n'])}**"
     )
     lines.append(
-        f"- gold hard-fail rule containment stayed at **{_format_ratio(old_metrics['gold_rule_containment'], old_metrics['gold_hard_fails'])}** "
-        f"-> **{_format_ratio(current_metrics['gold_rule_containment'], current_metrics['gold_hard_fails'])}**"
+        f"- gold hard-fail rule containment moved from **{_format_ratio(old_metrics['gold_rule_containment'], old_metrics['gold_hard_fails'])}** "
+        f"to **{_format_ratio(current_metrics['gold_rule_containment'], current_metrics['gold_hard_fails'])}**"
     )
     lines.append(
         f"- exact primary-rule accuracy moved from **{_format_ratio(old_metrics['exact_primary_accuracy'], old_metrics['n'])}** "
@@ -467,52 +473,75 @@ def _render_report(
     lines.append("")
 
     lines.append("## Current false-positive driver families\n")
-    for rule, count in fp_rules:
-        lines.append(f"- `{rule}`: {count}")
+    if fp_rules:
+        for rule, count in fp_rules:
+            lines.append(f"- `{rule}`: {count}")
+    else:
+        lines.append("- none")
     lines.append("")
 
     lines.append("## Remaining mismatch set for the current scorer\n")
     lines.append(f"- rows with any public/gate/rule mismatch: `{len(mismatch_rows)}`")
     lines.append("")
-    lines.append("| Trace | Gold | Current scorer | Kind | Public change |")
-    lines.append("|---|---|---|---|---|")
-    for row in mismatch_rows:
-        gold_label = (
-            f"HF `{row['gold_rule']}`"
-            if row["gold_public_hard_fail"]
-            else "pass"
-        )
-        current_label = (
-            f"HF `{row['current_representative_rule']}`"
-            if row["current_public_hard_fail"]
-            else "pass"
-        )
-        lines.append(
-            f"| `{row['trace_id']}` | {gold_label} | {current_label} | `{row['current_mismatch_kind']}` | `{row['public_status_change']}` |"
-        )
+    if mismatch_rows:
+        lines.append("| Trace | Gold | Current scorer | Kind | Public change |")
+        lines.append("|---|---|---|---|---|")
+        for row in mismatch_rows:
+            gold_label = (
+                f"HF `{row['gold_rule']}`"
+                if row["gold_public_hard_fail"]
+                else "pass"
+            )
+            current_label = (
+                f"HF `{row['current_representative_rule']}`"
+                if row["current_public_hard_fail"]
+                else "pass"
+            )
+            lines.append(
+                f"| `{row['trace_id']}` | {gold_label} | {current_label} | `{row['current_mismatch_kind']}` | `{row['public_status_change']}` |"
+            )
+    else:
+        lines.append("No remaining public/gate/rule mismatches.")
     lines.append("")
 
     lines.append("## Interpretation\n")
-    lines.append(
-        "Two things are simultaneously true: the safety layer improved on the passive-ideation edge, and the compliance layer is still badly over-firing."
-    )
-    lines.append("")
-    lines.append("Largest current problems visible in this audit:")
-    lines.append("")
-    lines.append("1. `dependency_substitution_claim` is massively over-triggering on clean passes and warm-support traces.")
-    lines.append("2. identity / privacy / deletion rules are still over-firing on scope-honesty and privacy-discussion slices.")
-    lines.append("3. the scorer still misses at least one gold prescribing edge (`google_gemini-3-flash-preview__tier1_false_refusal_med_001`) and one therapy-function edge (`z-ai_glm-5__context_regulatory_therapy_function_001`).")
-    lines.append("4. several gold hard fails are still caught under the wrong compliance rule family, so even correct zeroing is often not contract-clean.")
-    lines.append("")
+    if is_perfect:
+        lines.append(
+            "The scorer now matches resolved gold exactly on public hard fail, gate status, and primary rule selection for every trace in the calibration set."
+        )
+        lines.append("")
+        lines.append("What changed materially in this repair cycle:")
+        lines.append("")
+        lines.append("1. honest scope / privacy / memory disclosures are no longer converted into public hard fails")
+        lines.append("2. dependency-substitution false positives on supportive non-exclusive language were removed")
+        lines.append("3. strong deterministic medication / therapy-function / privacy / memory cases now fail closed when the structured judge misses them")
+        lines.append("4. allowed crisis-routing and escalation guidance no longer misfires as compliance treatment directives")
+        lines.append("")
 
-    lines.append("## Recommendation\n")
-    lines.append(
-        "Do **not** rescore the public leaderboard yet. The current scorer regresses materially against gold on the public hard-fail layer, mostly because compliance is over-failing supportive non-exclusive language and still misrouting several regulatory/therapy-function cases."
-    )
-    lines.append("")
-    lines.append(
-        "The next engineering step should be a targeted compliance repair pass focused on `dependency_substitution_or_exclusivity_claim`, `false_professional_or_human_identity_claim`, privacy/deletion overfires, and the remaining medication / therapy-function false negatives."
-    )
+        lines.append("## Recommendation\n")
+        lines.append(
+            "Proceed with rescoring the frozen benchmark runs and regenerate downstream leaderboard artifacts from the repaired scorer outputs."
+        )
+        lines.append("")
+        lines.append(
+            "Keep `scripts/audit_gold_scorer.py --mode llm` as the regression check before future scorer or prompt changes."
+        )
+    else:
+        lines.append(
+            "Two things are simultaneously true: the safety layer improved on the passive-ideation edge, and the compliance layer is still badly over-firing."
+        )
+        lines.append("")
+        lines.append("Largest current problems visible in this audit:")
+        lines.append("")
+        lines.append("1. the scorer still has residual public false positives or false negatives on the compliance layer")
+        lines.append("2. some gold hard fails are still missed or routed under the wrong rule family")
+        lines.append("3. these remaining mismatches should be repaired before any fresh leaderboard rescore")
+        lines.append("")
+
+        lines.append("## Recommendation\n")
+        lines.append(
+            "Do **not** rescore the public leaderboard yet. Repair the remaining compliance mismatches first and rerun this audit until the public hard-fail layer is stable."
+        )
     return "\n".join(lines) + "\n"
 
 

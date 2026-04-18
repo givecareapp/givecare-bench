@@ -146,6 +146,7 @@ Current status:
 - Current scorer audit now lives in:
   - `current_scorer_vs_gold.md`
   - `current_scorer_vs_gold.csv`
+  - current state: scorer is now aligned with resolved gold on the public hard-fail layer; use the audit as the regression check before future scorer changes
 
 ## File layout
 

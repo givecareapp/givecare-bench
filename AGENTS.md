@@ -60,6 +60,7 @@ uv run bench --harness givecare --mode orchestrator -y
 - silver runner: `scripts/run_golden_silver.py` (calls Claude Code CLI `claude -p`, not OpenRouter)
 - κ script: `scripts/golden_set_kappa.py` — Cohen κ per axis + Jaccard mean for soft-issue sets
 - final resolution + validation entry points: `internal/evals/verifier/golden_set/gold_resolution_summary.md` and `internal/evals/verifier/golden_set/verifier_validation.md`
+- scorer regression gate: `scripts/audit_gold_scorer.py --mode llm` -> `internal/evals/verifier/golden_set/current_scorer_vs_gold.{md,csv}`; current target state is exact public-layer agreement with `labels/gold/` before frozen-run rescoring
 
 ## AutoResearch (internal)
 - workflow docs: `internal/autoresearch/README.md`

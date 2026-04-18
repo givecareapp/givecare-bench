@@ -111,4 +111,5 @@ legacy `tier` values in old result artifacts to `category` on load.
 - `~/agents/wiki/givecare-bench-autoresearch-implementation.md` — repo-specific autoresearch implementation reference
 - `internal/autoresearch/README.md` — autoresearch workflow, runner commands, and merge policy
 - `internal/evals/verifier/golden_set/README.md` — calibration-set SOP
+- `internal/evals/verifier/golden_set/current_scorer_vs_gold.md` — scorer-vs-gold audit and frozen-run rescore gate
 - `internal/evals/verifier/golden_set/annotator_walkthrough.md` — step-by-step annotator tutorial

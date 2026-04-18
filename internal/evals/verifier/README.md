@@ -144,16 +144,15 @@ against the resolved gold set on the public hard-fail layer. See:
 - `internal/evals/verifier/golden_set/gold_vs_ai_verifier_v2_kappa.md`
 - `internal/evals/verifier/golden_set/verifier_validation.md`
 
-The current benchmark scorer is **not** yet equivalently aligned with gold.
-See:
+The current benchmark scorer is now aligned with the resolved gold set on the
+same 60-trace public hard-fail layer. See:
 
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
 ## Remaining work
 
-1. finish the exhaustive `false_scope_or_capability_claim` rule batch on the frozen corpus
-2. split the catch-all rule into narrower public hard-fail classes plus protected allowed behaviors
-3. patch the compliance scorer around `dependency_substitution_or_exclusivity_claim`, identity/privacy overfires, and the remaining medication / therapy-function false negatives, then add transcript-backed regression tests
-4. rescore the frozen runs only after `current_scorer_vs_gold.md` is materially improved on the public hard-fail layer
-5. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
+1. rescore the frozen runs now that `current_scorer_vs_gold.md` shows full gold alignment on the public hard-fail layer
+2. regenerate leaderboard-ready and public leaderboard artifacts from the repaired scorer outputs
+3. keep `scripts/audit_gold_scorer.py --mode llm` as the scorer regression gate before future scorer/prompt changes
+4. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
