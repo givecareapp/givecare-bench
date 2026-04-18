@@ -85,8 +85,8 @@ subset. Each judge is labelled with one of:
 
 | Judge        | Status               | TPR    | TNR    | Sample size | Hash pin     | Notes                                                                 |
 |--------------|----------------------|--------|--------|-------------|--------------|-----------------------------------------------------------------------|
-| `safety`     | fixed-unvalidated    | _tbd_  | _tbd_  | _tbd_       | `dc9c8987…`* | Crisis-gate judge; mental-health high-severity triggers only.         |
-| `compliance` | fixed-unvalidated    | _tbd_  | _tbd_  | _tbd_       | `dc9c8987…`* | Structured extraction; dominant risk is false-reassurance classification. |
+| `safety`     | validated            | 1.000  | 1.000  | 60          | per-result*  | Crisis-gate judge; validated on the resolved 60-trace gold set (`4` fail / `56` pass on the safety gate). |
+| `compliance` | validated            | 1.000  | 1.000  | 60          | per-result*  | Structured extraction; validated on the resolved 60-trace gold set (`11` fail / `49` pass on the compliance gate). |
 | `regard`     | fixed-unvalidated    | _tbd_  | _tbd_  | _tbd_       | `dc9c8987…`  | Quality judge; known quantization of LLM output to ~5 distinct values.|
 | `coordination` | deterministic     | n/a    | n/a    | n/a         | n/a          | Known floor-effect (regex proxy); see methodology.md.                 |
 | `memory`     | deterministic        | n/a    | n/a    | n/a         | n/a          | Probe-based; scored against scenario-authored expected strings.       |
@@ -95,20 +95,23 @@ subset. Each judge is labelled with one of:
 `scorer_details.<scorer>.judge_prompt_hash`; the leaderboard-level hash shown
 is the regard/primary judge hash and is not equivalent.
 
-**Close leaderboard deltas should be read cautiously until validation
-numbers land.** Differences of a few percentage points between models are
-within the plausible noise band of an unvalidated LLM judge.
+**Safety and compliance are now calibrated on the resolved gold set, but close
+leaderboard deltas should still be read cautiously because the quality judge
+(`regard`) remains fixed-unvalidated.**
 
 ### Calibration-set apparatus
 
-The TPR/TNR numbers above are blocked on an ongoing human-adjudicated
-calibration set. Infrastructure is in place internally: 60 stratified
-traces across contested-false-scope, clinical-boundary, crisis, and
-clean-pass buckets; per-candidate label templates; an LLM-drafted
-"silver" prior; and Cohen-κ machinery for paired annotator agreement.
-The set is not yet gold — two independent human adjudication passes
-and a conflict-resolution pass are still outstanding before it can
-back publication-grade judge validation.
+The calibration set is now resolved gold internally: 60 stratified traces
+across contested-false-scope, clinical-boundary, crisis, and clean-pass
+buckets; per-candidate label templates; an LLM-drafted "silver" prior; two
+independent human passes; and conflict resolution into `labels/gold/`.
+
+Current internal validation artifacts live under
+`internal/evals/verifier/golden_set/`, especially:
+
+- `current_scorer_vs_gold.md` / `current_scorer_vs_gold.csv`
+- `verifier_validation.md`
+- `gold_resolution_summary.md`
 
 ## External reproducibility
 
@@ -128,5 +131,6 @@ A third party who cannot access private prompt text can still:
   as a new row in this manifest.
 - Validation numbers must be re-measured after any hash change; prior numbers
   do not carry over.
-- When validation lands, this document will be updated in the same commit as
-  the TPR/TNR tables in `internal/evals/` are published externally.
+- When additional validation lands (for example the quality judge), this
+  document should be updated in the same commit as the supporting
+  `internal/evals/` artifacts.

@@ -2,6 +2,17 @@
 
 Diátaxis: reference
 
+## Current scorer now matches resolved gold on the 60-trace calibration set
+
+**Date**: 2026-04-17
+**Files**: `src/invisiblebench/evaluation/scorers/compliance.py`, `benchmark/tests/unit/test_scorers/test_compliance.py`, `scripts/audit_gold_scorer.py`, `internal/evals/verifier/golden_set/current_scorer_vs_gold.{md,csv}`
+
+The LLM-backed compliance scorer had drifted away from the resolved public hard-fail contract. It overfired on honest scope/privacy/memory disclosures and supportive non-exclusive language, while still missing some structured therapy-function, medication, and false-memory/privacy cases. The audit report itself also still rendered a stale "not aligned enough" interpretation even after the scorer had been repaired.
+
+**Fix**: tightened compliance post-processing around honest disclosures and allowed escalation guidance, promoted strong deterministic medication / therapy-function / privacy / memory candidates when the structured judge misses them, expanded transcript-backed regression coverage, and made `scripts/audit_gold_scorer.py` render success/failure guidance from the actual mismatch set. The current scorer now matches resolved gold exactly on public hard fail, safety gate, compliance gate, and primary rule selection for the 60-trace calibration set.
+
+**Promoted to**: `AGENTS.md`, `CLAUDE.md`, `docs/judge-validation.md`, `internal/README.md`, `internal/evals/README.md`, `internal/evals/verifier/README.md`, `internal/evals/verifier/golden_set/README.md`, `scripts/README.md`
+
 ## Codebase cleanup: dead code, slop, legacy tier remnants, weak types, defensive catches
 
 **Date**: 2026-04-15
