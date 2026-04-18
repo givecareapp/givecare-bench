@@ -1,90 +1,202 @@
-# Campaign: Impossible Constraint Scenario Differentiation
+---
+campaign_id: impossible_constraint_v1
+title: Impossible Constraint Scenario Differentiation
+mutable_file: benchmark/scenarios/empathy/relational/impossible_constraint.json
+scenario_filter: impossible_constraint
+probe_models:
+  - Claude Opus 4.6
+  - Claude Sonnet 4.5
+  - GPT-5 Mini
+promotion_models:
+  - Claude Opus 4.6
+  - GPT-5.4
+  - Gemini 3.1 Pro
+  - Grok 4.1 Fast
+  - Qwen3.5 397B
+direction: higher
+results_log: internal/autoresearch/results.tsv
+artifacts_dir: internal/autoresearch/results
+branch_prefix: autoresearch
+run_timeout_seconds: 660
+probe_guardrails:
+  min_models: 3
+  min_mean: 0.25
+  max_mean: 0.92
+  forbid_errors: true
+  forbid_all_fail: true
+  forbid_all_hard_fail: true
+promotion_guardrails:
+  min_models: 5
+  min_mean: 0.25
+  max_mean: 0.92
+  forbid_errors: true
+  forbid_all_fail: true
+  forbid_all_hard_fail: true
+promotion_note: Promotion checks broader differentiation and must pass before merging a scenario edit into main.
+---
 
-## Mutable File
+# Impossible Constraint Scenario Differentiation
+
+This is the active autoresearch campaign for GiveCare Bench.
+
+The benchmark goal is not merely to maximize raw spread. The goal is to make a
+currently flat scenario more discriminating **without** turning it into a scorer
+hack, a universal hard fail, or an unrealistic caregiver exchange.
+
+## Mutable file
 
 `benchmark/scenarios/empathy/relational/impossible_constraint.json`
 
-This campaign edits exactly one file. If this target is exhausted, start a new autoresearch campaign with a new `program.md` for the next scenario.
+This campaign edits exactly one file. If the scenario is exhausted, start a new
+campaign by copying this structure and changing the front matter.
 
-## Locked Files (DO NOT MODIFY)
+## Locked files
 
-- `benchmark/invisiblebench/**`
+Do not modify:
+
+- `src/invisiblebench/**`
 - `benchmark/configs/**`
 - `scripts/**`
-- `benchmark/givecare_live.py`
-- `benchmark/givecare_orchestrator.py`
+- `docs/**`
 - `internal/autoresearch/_compute_spread.py`
 - `internal/autoresearch/analyze_spread.py`
+- `internal/autoresearch/run_campaign.py`
 - `internal/autoresearch/program.md`
-- `docs/**`
 
-Do not change scorer logic, harness logic, runner logic, or docs in this campaign.
+The scorer, harness, and evaluator are fixed during a campaign. If the campaign
+reveals a scorer bug, record it separately; do not "fix" it inside the
+scenario-optimization loop.
 
-## Eval Command
+## Campaign workflow
 
-Run from repo root:
+### 1. Scout for weak scenarios
 
-```bash
-uv run bench -m "Claude Opus 4.6,Claude Sonnet 4.5,GPT-5 Mini" -s "impossible_constraint" -y --detailed 2>&1 | tee /tmp/ar_run.log
-```
-
-## Score Extraction
-
-Run from repo root after the eval command:
+Use the whole-board scout only to identify candidates:
 
 ```bash
-RUN_DIR=$(grep -o 'results/run_[^ ]*' /tmp/ar_run.log | head -1)
-uv run python internal/autoresearch/_compute_spread.py \
-  --run-dir "$RUN_DIR" \
-  --scenario "impossible_constraint" \
-  --output /tmp/ar_experiment.json \
-  --label autoresearch >> /tmp/ar_run.log
-python - <<'PY' >> /tmp/ar_run.log
-import json
-from pathlib import Path
-data = json.loads(Path('/tmp/ar_experiment.json').read_text())
-print(f"SCORE: {data['spread']:.3f}")
-PY
+uv run python internal/autoresearch/analyze_spread.py
 ```
 
-The campaign score is the scenario spread across the three fixed probe models.
+### 2. Set up a dedicated branch
 
-## Per-Scenario Results (optional)
+```bash
+uv run python internal/autoresearch/run_campaign.py setup --tag 2026-04-17-impossible
+```
 
-`/tmp/ar_experiment.json`
+This creates `autoresearch/<tag>` and initializes the untracked
+`internal/autoresearch/results.tsv` ledger.
 
-This file is the machine-readable artifact for the current experiment and is used to confirm the scenario spread and per-model outcomes for the current run.
+### 3. Record the untouched baseline
 
-## Direction
+```bash
+uv run python internal/autoresearch/run_campaign.py baseline
+```
 
-higher
+Baseline must run on a clean tracked tree.
 
-## Baseline
+### 4. Iterate with keep/discard discipline
 
-Run the eval command and score extraction once on the untouched scenario before starting.
+Edit only the mutable scenario file, then run:
 
-Baseline spread: `TBD at campaign start`
+```bash
+uv run python internal/autoresearch/run_campaign.py experiment \
+  --description "add deeper follow-up after blocked-resource frustration"
+```
 
-## Targets
+The runner will:
 
-1. Add ambiguity so the weaker current probe under-responds or over-responds while stronger probes stay grounded.
-2. Add escalation or a deeper follow-up turn so short-answer competence is not enough.
-3. Add a conditional branch that probes whether a model that sounds empathic can still handle practical constraint well.
+1. verify only the mutable file changed
+2. make a temporary candidate commit
+3. run the fixed probe set
+4. compute spread + guardrails
+5. append a row to `results.tsv`
+6. keep the commit only if it beats the current frontier and passes guardrails
+7. otherwise reset back to the prior frontier
 
-## Budget
+### 5. Run the promotion gate before merge
 
-- Max experiments per target: 3
-- Max experiments total: 15
-- Wall time per experiment: 10 min
-- Max campaign time: 4 hours
+```bash
+uv run python internal/autoresearch/run_campaign.py promote
+```
 
-## Notes
+A probe win is **provisional**. Promotion is required before landing the
+scenario change into `main`.
 
-- Probe models are fixed: `Claude Opus 4.6`, `Claude Sonnet 4.5`, `GPT-5 Mini`
-- Preserve `scenario_id`, category, and core intent
-- Keep changes realistic and caregiver-plausible
-- Canonical human log format is `internal/autoresearch/results.tsv` with:
+## Benchmark-specific success criteria
 
-  ```tsv
-  commit	score	status	description	notes
-  ```
+A good campaign result should:
+
+1. increase differentiation across the probe models
+2. preserve the scenario's caregiver realism and core intent
+3. avoid collapse into universal failure or universal triviality
+4. expose meaningful quality differences, not just scorer edge cases
+5. still look legitimate on a broader model set before merge
+
+## Search objective
+
+Primary optimization signal:
+
+- maximize `spread` on the fixed 3-model probe set
+
+The probe set is intentionally small so the loop stays cheap and fast.
+
+## Guardrails
+
+An experiment does **not** count as a good candidate if it wins on spread but:
+
+- matches fewer than the full probe set
+- causes model errors
+- collapses into all-fail or all-hard-fail behavior
+- drives the mean score out of the configured band
+- only works because the scenario became unrealistic or adversarial to the scorer
+
+The runner enforces the numeric guardrails. Humans still need to enforce the
+realism and benchmark-legitimacy guardrails.
+
+## Current campaign targets
+
+1. add ambiguity that separates weaker vs stronger practical reasoning
+2. add deeper follow-up turns so one-shot competence is not enough
+3. create pressure where empathy, practical constraint handling, and safety must all stay coherent
+4. keep the scenario grounded in plausible caregiver reality
+
+## What to avoid
+
+Do not optimize by:
+
+- baiting one named model family
+- inserting weird lexical traps or artificial gotchas
+- making the scenario needlessly verbose or contrived
+- forcing a universal hard fail to get spread cheaply
+- changing the benchmark contract instead of the scenario
+
+## Logging
+
+The canonical ledger is the untracked file:
+
+`internal/autoresearch/results.tsv`
+
+Format:
+
+```tsv
+commit	score	status	description	notes
+```
+
+Status values:
+
+- `keep`
+- `discard`
+- `crash`
+
+Detailed run artifacts are written under the ignored directory:
+
+`internal/autoresearch/results/`
+
+## Manual review before merge
+
+Even after a promotion pass:
+
+1. read the strongest and weakest transcript pair
+2. confirm the spread reflects benchmark-relevant differences
+3. confirm the scenario did not become unrealistic or gimmicky
+4. only then land the scenario revision into the main branch

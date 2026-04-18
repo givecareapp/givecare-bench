@@ -4,7 +4,7 @@ This directory holds active internal workflows that support the benchmark but ar
 
 ## Directories
 
-- `autoresearch/`: scenario optimization and spread-improvement campaigns
+- `autoresearch/`: scenario optimization campaigns, scout analysis, and autoresearch-style keep/discard loops for single-scenario benchmark tuning
 - `evals/`: scorer validation, error analysis, and labeling assets (validation **in progress**; all judges unvalidated or fixed-unvalidated)
 - `papers/`: paper source and research artifacts
 
