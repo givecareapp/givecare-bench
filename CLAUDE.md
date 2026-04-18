@@ -9,6 +9,7 @@ Primary contributor guide for GiveCare Bench.
 - `scripts/`: active utilities
 - `docs/`: active public docs
 - `data/leaderboard/`: generated public leaderboard
+- `internal/`: active internal workflows, eval tooling, and implementation reference wiki
 - `archive/`: historical/internal material
 
 ## Current public contract
@@ -107,5 +108,6 @@ legacy `tier` values in old result artifacts to `category` on load.
 - `internal/wiki/llm-as-a-verifier.md` — upstream verifier reference + local adaptation
 - `internal/wiki/autoresearch.md` — upstream autoresearch reference + local adaptation
 - `internal/wiki/design-md.md` — `DESIGN.md` reference, Stitch concept, and how it should pair with `AGENTS.md`
+- `internal/autoresearch/README.md` — autoresearch workflow, runner commands, and merge policy
 - `internal/evals/verifier/golden_set/README.md` — calibration-set SOP
 - `internal/evals/verifier/golden_set/annotator_walkthrough.md` — step-by-step annotator tutorial

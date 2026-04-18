@@ -7,6 +7,7 @@ Operational guide for contributors and coding agents.
 - `benchmark/` = benchmark data, configs, scenarios, tests
 - `src/invisiblebench/` = runtime package, CLI, scorers, adapters
 - `scripts/` = active utility scripts
+- `internal/` = active internal workflows, eval tooling, and implementation reference wiki
 - `archive/` = historical/internal material
 
 ## Current baseline
@@ -58,6 +59,13 @@ uv run bench --harness givecare --mode orchestrator -y
 - silver runner: `scripts/run_golden_silver.py` (calls Claude Code CLI `claude -p`, not OpenRouter)
 - κ script: `scripts/golden_set_kappa.py` — Cohen κ per axis + Jaccard mean for soft-issue sets
 - still blocked on two independent human adjudication passes before the set counts as gold
+
+## AutoResearch (internal)
+- workflow docs: `internal/autoresearch/README.md`
+- campaign spec: `internal/autoresearch/program.md`
+- scout mode: `uv run python internal/autoresearch/analyze_spread.py`
+- campaign runner: `uv run python internal/autoresearch/run_campaign.py {setup|status|baseline|experiment|promote}`
+- fixed evaluator for campaigns: `internal/autoresearch/_compute_spread.py`
 
 ## Public CI
 `.github/workflows/ci.yml` runs ruff, pytest, and the turn-index lint on every push/PR to `main`. `uv sync --extra dev --extra analytics` is the CI install command — match locally if adding tests that import numpy/pandas/scipy.

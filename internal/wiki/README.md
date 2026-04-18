@@ -1,7 +1,7 @@
 # Internal implementation wiki
 
-Reference notes for external repos and implementation patterns that GiveCare Bench
-adapts internally.
+Reference notes for external repos, standards, formats, and implementation
+patterns that this repo uses or adapts internally.
 
 These pages are intentionally practical:
 
@@ -15,7 +15,7 @@ These pages are intentionally practical:
 
 - `internal/wiki/llm-as-a-verifier.md` — upstream verifier framework and our single-trace transcript adaptation
 - `internal/wiki/autoresearch.md` — upstream autoresearch loop and our scenario-optimization adaptation
-- `internal/wiki/design-md.md` — Stitch / DESIGN.md concept, example-catalog reference, and how it should relate to `AGENTS.md`
+- `internal/wiki/design-md.md` — general `DESIGN.md` concept, Stitch reference, example-catalog usage, and how it should relate to `AGENTS.md`
 
 ## Scope
 
