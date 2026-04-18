@@ -143,6 +143,9 @@ Current status:
   - `ai_verifier_v2_vs_gold.md`
   - `gold_vs_ai_verifier_v2_kappa.md`
   - `verifier_validation.md`
+- Current scorer audit now lives in:
+  - `current_scorer_vs_gold.md`
+  - `current_scorer_vs_gold.csv`
 
 ## File layout
 
@@ -175,6 +178,8 @@ golden_set/
 ├── ai_verifier_v2_vs_gold.md  # final verifier-vs-gold summary
 ├── gold_vs_ai_verifier_v2_kappa.md # final verifier-vs-gold κ report
 ├── ai_verifier_v2_audit.md    # audit of verifier performance + remaining gaps
+├── current_scorer_vs_gold.md  # current benchmark scorer vs resolved gold audit
+├── current_scorer_vs_gold.csv # machine-readable scorer-vs-gold mismatch sheet
 ├── kappa_report.md            # produced by scripts/golden_set_kappa.py
 └── verifier_validation.md     # final gold-based verifier validation memo
 ```

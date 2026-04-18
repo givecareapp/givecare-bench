@@ -14,6 +14,7 @@ Active utility scripts for the public benchmark repo.
 - `scripts/run_golden_silver.py`: produce draft `ai_silver` labels for the golden set
 - `scripts/run_golden_verifier.py`: run the repeated decomposed verifier against the golden set
 - `scripts/golden_set_kappa.py`: compute annotator agreement and disagreement files for the golden set
+- `scripts/audit_gold_scorer.py`: rerun the current scorer on the golden set and compare it against resolved gold
 
 Historical one-off setup and 2026-03-31 remediation scripts now live in `archive/scripts/`.
 
@@ -27,6 +28,7 @@ uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_0
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
 uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against gold
 uv run python scripts/golden_set_kappa.py
+uv run python scripts/audit_gold_scorer.py --mode llm
 ```
 
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:

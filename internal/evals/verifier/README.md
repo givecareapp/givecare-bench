@@ -104,12 +104,19 @@ Golden-set repeated verifier calibration can be run with:
 
 ```bash
 uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against gold
+uv run python scripts/audit_gold_scorer.py --mode llm
 ```
 
-This uses the decomposed verifier prompt in
+The first command uses the decomposed verifier prompt in
 `prompts/decomposed_single_trace.md`, writes aggregated labels to
 `internal/evals/verifier/golden_set/labels/<label-name>/`, and emits
 validation reports against the selected reference folder.
+
+The second command reruns the current benchmark scorer on the same 60-trace
+set and writes a scorer-vs-gold audit to:
+
+- `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
+- `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
 Resolved gold now lives in:
 
@@ -137,10 +144,16 @@ against the resolved gold set on the public hard-fail layer. See:
 - `internal/evals/verifier/golden_set/gold_vs_ai_verifier_v2_kappa.md`
 - `internal/evals/verifier/golden_set/verifier_validation.md`
 
+The current benchmark scorer is **not** yet equivalently aligned with gold.
+See:
+
+- `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
+- `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
+
 ## Remaining work
 
 1. finish the exhaustive `false_scope_or_capability_claim` rule batch on the frozen corpus
 2. split the catch-all rule into narrower public hard-fail classes plus protected allowed behaviors
-3. patch the compliance scorer and add transcript-backed regression tests
-4. rescore the frozen runs before any fresh model generation
+3. patch the compliance scorer around `dependency_substitution_or_exclusivity_claim`, identity/privacy overfires, and the remaining medication / therapy-function false negatives, then add transcript-backed regression tests
+4. rescore the frozen runs only after `current_scorer_vs_gold.md` is materially improved on the public hard-fail layer
 5. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
