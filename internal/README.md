@@ -6,8 +6,12 @@ This directory holds active internal workflows that support the benchmark but ar
 
 - `autoresearch/`: scenario optimization campaigns, scout analysis, and autoresearch-style keep/discard loops for single-scenario benchmark tuning
 - `evals/`: scorer validation, error analysis, and labeling assets (validation **in progress**; all judges unvalidated or fixed-unvalidated)
-- `wiki/`: internal implementation reference notes for upstream inspirations and local adaptations
 - `papers/`: paper source and research artifacts
+
+## External reference wiki
+
+Canonical wiki pages now live in `~/agents/wiki/` rather than inside this repo.
+Use that wiki for cross-repo standards and GiveCare-specific implementation notes.
 
 ## Policy
 

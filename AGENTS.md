@@ -19,11 +19,10 @@ Operational guide for contributors and coding agents.
 - primary project guide: `CLAUDE.md`
 - benchmark counts/version: `benchmark/benchmark_inventory.json`
 
-## Implementation reference wiki (internal)
-- index: `internal/wiki/README.md`
-- verifier adaptation: `internal/wiki/llm-as-a-verifier.md`
-- autoresearch adaptation: `internal/wiki/autoresearch.md`
-- design system / `DESIGN.md` reference: `internal/wiki/design-md.md`
+## Canonical wiki references (`~/agents/wiki/`)
+- global standard: `~/agents/wiki/design-md.md`
+- repo-specific verifier implementation: `~/agents/wiki/givecare-bench-verifier-implementation.md`
+- repo-specific autoresearch implementation: `~/agents/wiki/givecare-bench-autoresearch-implementation.md`
 
 ## Core commands
 ```bash

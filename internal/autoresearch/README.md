@@ -2,7 +2,7 @@
 
 Repo-specific adaptation of `karpathy/autoresearch` for benchmark scenario work.
 
-Reference wiki: `internal/wiki/autoresearch.md`
+Reference wiki: `~/agents/wiki/givecare-bench-autoresearch-implementation.md`
 
 ## What this is
 

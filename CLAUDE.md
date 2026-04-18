@@ -104,10 +104,9 @@ legacy `tier` values in old result artifacts to `category` on load.
 - `CODE_OF_CONDUCT.md` — points to Contributor Covenant v2.1
 - `docs/install.md` — how to put `bench` on PATH from any folder
 - `docs/judge-validation.md` — public judge template-hash manifest
-- `internal/wiki/README.md` — internal implementation wiki index
-- `internal/wiki/llm-as-a-verifier.md` — upstream verifier reference + local adaptation
-- `internal/wiki/autoresearch.md` — upstream autoresearch reference + local adaptation
-- `internal/wiki/design-md.md` — `DESIGN.md` reference, Stitch concept, and how it should pair with `AGENTS.md`
+- `~/agents/wiki/design-md.md` — global `DESIGN.md` reference and how it should pair with `AGENTS.md`
+- `~/agents/wiki/givecare-bench-verifier-implementation.md` — repo-specific verifier implementation reference
+- `~/agents/wiki/givecare-bench-autoresearch-implementation.md` — repo-specific autoresearch implementation reference
 - `internal/autoresearch/README.md` — autoresearch workflow, runner commands, and merge policy
 - `internal/evals/verifier/golden_set/README.md` — calibration-set SOP
 - `internal/evals/verifier/golden_set/annotator_walkthrough.md` — step-by-step annotator tutorial

@@ -30,7 +30,7 @@ It is designed for:
 
 The verifier exists to discipline judgment, not eliminate it.
 
-Reference wiki: `internal/wiki/llm-as-a-verifier.md`
+Reference wiki: `~/agents/wiki/givecare-bench-verifier-implementation.md`
 
 ## Directory map
 
