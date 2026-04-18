@@ -5,7 +5,7 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 
 ## Repo layout
 
-The codebase separates four concerns:
+The codebase separates five concerns:
 
 ```
 givecare-bench/
@@ -14,16 +14,18 @@ givecare-bench/
 │   ├── configs/         # Scoring weights, prompts, jurisdiction rules
 │   └── tests/           # Unit tests for schema and scoring contracts
 ├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
-├── scripts/             # Leaderboard generation, lint utilities
-└── data/leaderboard/    # Generated public artifacts (JSON, HTML)
+├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
+├── data/leaderboard/    # Generated public artifacts (JSON, HTML)
+└── archive/             # Historical docs, scripts, and remediation bundles
 ```
 
 | Directory | Contents | Changes often? |
 |-----------|----------|---------------|
 | `benchmark/` | Scenario JSON, scoring config, judge prompts, jurisdiction rules, tests | Rarely — versioned contract |
 | `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, adapter bridges, statistical analysis | Yes — runtime logic |
-| `scripts/` | `generate_leaderboard.py`, `lint_turn_indices.py`, `setup_env.sh` | Occasionally |
+| `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
 | `data/leaderboard/` | Published leaderboard JSON consumed by the docs site | Generated — never hand-edited |
+| `archive/` | Superseded docs, one-off scripts, and historical internal remediation artifacts | Rarely |
 
 ## Scoring pipeline
 

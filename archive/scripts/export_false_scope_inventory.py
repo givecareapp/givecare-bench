@@ -11,9 +11,9 @@ from invisiblebench.evaluation.scorers.compliance import (
     _classify_false_scope_claim,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LEADERBOARD_READY = PROJECT_ROOT / "results" / "leaderboard_ready"
-OUTPUT_DIR = PROJECT_ROOT / "internal" / "evals"
+OUTPUT_DIR = PROJECT_ROOT / "archive" / "internal" / "evals" / "remediation_2026-03-31"
 INVENTORY_CSV = OUTPUT_DIR / "false_scope_inventory_2026-03-31.csv"
 EXAMPLES_MD = OUTPUT_DIR / "false_scope_examples_2026-03-31.md"
 INVERSION_MD = OUTPUT_DIR / "false_scope_contract_inversion_2026-03-31.md"

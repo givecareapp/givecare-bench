@@ -114,10 +114,12 @@ After both annotator passes:
 
 ## Relationship to existing artifacts
 
-- `../results/` holds scenario-tranche adjudications produced by the Claude
-  verifier. Those are useful priors but are **not** gold.
-- `../retrospective_2026-03-31.md` and `../rescore_comparison_2026-03-31.md`
-  are the audit memos this golden set is meant to put on a defensible footing.
+- `archive/internal/evals/verifier/tranche_results_2026-03-31/` holds the
+  archived scenario-tranche adjudications produced by the earlier Claude
+  verifier pass. Those are useful priors but are **not** gold.
+- `archive/internal/evals/verifier/retrospective_2026-03-31.md` and
+  `archive/internal/evals/verifier/rescore_comparison_2026-03-31.md` are the
+  audit memos this golden set is meant to put on a defensible footing.
 - `annotator_a_vs_ai_silver.md` is a provisional sanity check comparing the
   first human pass to `labels/ai_silver/`. It is useful for verifier drift
   inspection but does **not** replace the required human-vs-human κ pass.

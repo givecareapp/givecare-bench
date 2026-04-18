@@ -42,9 +42,14 @@ The verifier exists to discipline judgment, not eliminate it.
 | `scenario_contracts/` | Verifier-ready summaries of the highest-noise scenarios |
 | `corpus_manifest.jsonl` | Canonical transcript manifest over the current 15-model board |
 | `corpus_summary.{json,md}` | Corpus coverage, artifact health, and model-level summary |
-| `retrospective_2026-03-31.md` | Established findings from the first tranche of verifier adjudication |
-| `remediation_plan_2026-03-31.md` | Immediate scorer-remediation plan on the frozen corpus |
-| `results/` | Claude verifier outputs by scenario tranche |
+| `golden_set/` | Human calibration set, annotator handbook, and verifier validation artifacts |
+
+Historical 2026-03-31 verifier memos and tranche outputs were moved to:
+
+- `archive/internal/evals/verifier/retrospective_2026-03-31.md`
+- `archive/internal/evals/verifier/remediation_plan_2026-03-31.md`
+- `archive/internal/evals/verifier/rescore_comparison_2026-03-31.md`
+- `archive/internal/evals/verifier/tranche_results_2026-03-31/`
 
 ## Current corpus
 
@@ -90,6 +95,9 @@ uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_0
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
 ```
 
+Fresh scenario-batch runs still write to `internal/evals/verifier/results/` by
+default; only the old committed tranche bundle was moved to `archive/`.
+
 Golden-set repeated verifier calibration can be run with:
 
 ```bash
@@ -111,8 +119,8 @@ validation reports against the selected reference annotator folder.
 
 The first verifier tranche established that `false_scope_or_capability_claim` is not just noisy; it is a leaderboard-shaping adjudication defect in several scenario families. See:
 
-- `retrospective_2026-03-31.md`
-- `remediation_plan_2026-03-31.md`
+- `archive/internal/evals/verifier/retrospective_2026-03-31.md`
+- `archive/internal/evals/verifier/remediation_plan_2026-03-31.md`
 
 ## Remaining work
 

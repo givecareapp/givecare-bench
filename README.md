@@ -35,10 +35,8 @@ These are versioned in the repo, but they are not part of the public benchmark c
 ### Historical
 These are retained for provenance, not day-to-day use:
 - `archive/benchmark/`
-- `archive/data/`
 - `archive/docs/`
-- `archive/results/`
-- `archive/runs/`
+- `archive/internal/`
 - `archive/scenarios/`
 - `archive/scripts/`
 

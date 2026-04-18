@@ -4,8 +4,8 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_PATH = PROJECT_ROOT / "internal" / "evals" / "rescore_comparison_2026-03-31.md"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_PATH = PROJECT_ROOT / "archive" / "internal" / "evals" / "verifier" / "rescore_comparison_2026-03-31.md"
 RUN_DIRS = [
     PROJECT_ROOT / "results" / "run_20260330_021307",
     PROJECT_ROOT / "results" / "partial_runs" / "run_20260330_033649_up_to_deepseek",

@@ -7,12 +7,15 @@ Active utility scripts for the public benchmark repo.
 - `scripts/generate_leaderboard.py`: generate public leaderboard JSON from canonical benchmark-core model results
 - `scripts/lint_turn_indices.py`: enforce turn-index consistency before publish/rebuild
 - `scripts/run_bench.sh`: shell helper for benchmark runs
-- `scripts/setup_env.sh`: environment setup helper
 - `scripts/generate_verifier_corpus.py`: build the unified 15-model transcript manifest and corpus summaries for verifier work
 - `scripts/run_claude_verifier.py`: package a scenario tranche and run Claude-based verifier adjudication
-- `scripts/export_false_scope_inventory.py`: dump false-scope board rows to CSV for remediation review
-- `scripts/rescore_compliance_only.py`: rescore the compliance path on existing transcripts without re-running scenarios
-- `scripts/write_rescore_comparison.py`: generate a markdown diff between two rescore runs
+- `scripts/build_golden_set.py`: stratify and select the 60-trace golden-set candidate pool
+- `scripts/build_golden_set_templates.py`: generate blank per-trace JSON templates for annotators
+- `scripts/run_golden_silver.py`: produce draft `ai_silver` labels for the golden set
+- `scripts/run_golden_verifier.py`: run the repeated decomposed verifier against the golden set
+- `scripts/golden_set_kappa.py`: compute annotator agreement and disagreement files for the golden set
+
+Historical one-off setup and 2026-03-31 remediation scripts now live in `archive/scripts/`.
 
 ## Common commands
 
@@ -22,6 +25,8 @@ uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard
 uv run python scripts/generate_verifier_corpus.py
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --prepare-only
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
+uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against annotator_a
+uv run python scripts/golden_set_kappa.py
 ```
 
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:

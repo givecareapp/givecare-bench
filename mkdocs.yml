@@ -43,10 +43,6 @@ nav:
 plugins:
   - search
 
-not_in_nav: |
-  /_solutions.md
-  /rescored-benchmark-summary-2026-03-31.md
-
 markdown_extensions:
   - admonition
   - pymdownx.details
