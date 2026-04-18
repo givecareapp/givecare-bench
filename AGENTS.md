@@ -18,6 +18,11 @@ Operational guide for contributors and coding agents.
 - primary project guide: `CLAUDE.md`
 - benchmark counts/version: `benchmark/benchmark_inventory.json`
 
+## Implementation reference wiki (internal)
+- index: `internal/wiki/README.md`
+- verifier adaptation: `internal/wiki/llm-as-a-verifier.md`
+- autoresearch adaptation: `internal/wiki/autoresearch.md`
+
 ## Core commands
 ```bash
 uv run pytest benchmark/tests -q

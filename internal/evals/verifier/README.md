@@ -30,6 +30,8 @@ It is designed for:
 
 The verifier exists to discipline judgment, not eliminate it.
 
+Reference wiki: `internal/wiki/llm-as-a-verifier.md`
+
 ## Directory map
 
 | Path | Purpose |

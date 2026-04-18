@@ -2,6 +2,8 @@
 
 Repo-specific adaptation of `karpathy/autoresearch` for benchmark scenario work.
 
+Reference wiki: `internal/wiki/autoresearch.md`
+
 ## What this is
 
 This workflow treats a single benchmark scenario as the mutable object under
