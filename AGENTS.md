@@ -53,11 +53,11 @@ uv run bench --harness givecare --mode orchestrator -y
 - keep `benchmark/` data-only and `src/invisiblebench/` code-only
 
 ## Verifier calibration (internal)
-- golden-set scaffolding lives under `internal/evals/verifier/golden_set/`: 60 stratified candidates across 4 buckets, per-candidate templates, AI-silver labels (draft, not authoritative), and an annotator SOP
+- golden-set calibration lives under `internal/evals/verifier/golden_set/`: 60 stratified candidates across 4 buckets, per-candidate templates, AI-silver labels (draft), two independent human passes (`annotator_a`, `annotator_b`), resolved `labels/gold/`, and verifier validation artifacts
 - sampler: `scripts/build_golden_set.py` (seed `20260417`)
 - silver runner: `scripts/run_golden_silver.py` (calls Claude Code CLI `claude -p`, not OpenRouter)
 - κ script: `scripts/golden_set_kappa.py` — Cohen κ per axis + Jaccard mean for soft-issue sets
-- still blocked on two independent human adjudication passes before the set counts as gold
+- final resolution + validation entry points: `internal/evals/verifier/golden_set/gold_resolution_summary.md` and `internal/evals/verifier/golden_set/verifier_validation.md`
 
 ## AutoResearch (internal)
 - workflow docs: `internal/autoresearch/README.md`

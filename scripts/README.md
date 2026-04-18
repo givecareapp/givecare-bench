@@ -25,7 +25,7 @@ uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard
 uv run python scripts/generate_verifier_corpus.py
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --prepare-only
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
-uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against annotator_a
+uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against gold
 uv run python scripts/golden_set_kappa.py
 ```
 

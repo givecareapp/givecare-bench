@@ -3,6 +3,11 @@
 Audit of the new decomposed, repeated verifier run against the first completed
 human pass (`labels/annotator_a/`).
 
+> Historical note: this memo captures the development-time calibration state
+> before resolved gold existed. The final gold-based validation now lives in
+> `verifier_validation.md`, `ai_verifier_v2_vs_gold.md`, and
+> `gold_vs_ai_verifier_v2_kappa.md`.
+
 ## What was run
 
 - script: `scripts/run_golden_verifier.py`

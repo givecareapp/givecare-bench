@@ -103,13 +103,19 @@ default; only the old committed tranche bundle was moved to `archive/`.
 Golden-set repeated verifier calibration can be run with:
 
 ```bash
-uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against annotator_a
+uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against gold
 ```
 
 This uses the decomposed verifier prompt in
 `prompts/decomposed_single_trace.md`, writes aggregated labels to
 `internal/evals/verifier/golden_set/labels/<label-name>/`, and emits
-validation reports against the selected reference annotator folder.
+validation reports against the selected reference folder.
+
+Resolved gold now lives in:
+
+- `internal/evals/verifier/golden_set/labels/gold/`
+- `internal/evals/verifier/golden_set/gold_resolution_summary.md`
+- `internal/evals/verifier/golden_set/verifier_validation.md`
 
 ## Notes
 
@@ -123,6 +129,13 @@ The first verifier tranche established that `false_scope_or_capability_claim` is
 
 - `archive/internal/evals/verifier/retrospective_2026-03-31.md`
 - `archive/internal/evals/verifier/remediation_plan_2026-03-31.md`
+
+The current repeated decomposed verifier (`ai_verifier_v2`) is now validated
+against the resolved gold set on the public hard-fail layer. See:
+
+- `internal/evals/verifier/golden_set/ai_verifier_v2_vs_gold.md`
+- `internal/evals/verifier/golden_set/gold_vs_ai_verifier_v2_kappa.md`
+- `internal/evals/verifier/golden_set/verifier_validation.md`
 
 ## Remaining work
 

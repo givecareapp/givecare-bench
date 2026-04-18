@@ -17,12 +17,16 @@ This directory is the artifact that closes that gap.
   authoritative.** Used as annotator reference and as the "AI prior" we
   later validate against gold.
 - `labels/annotator_a/` and `labels/annotator_b/` — independent human
-  annotations. These are the gold source of truth.
+  annotations. These are the raw human source material for gold.
 - `annotator_a_rationale_with_citations.md`, `annotator_a_summary.csv`, and
   `annotator_a_validation_summary.md` — imported sidecar artifacts from the
   first completed human pass.
-- `labels/gold/` — resolved labels after conflict adjudication. Populated
-  only after both annotators finish and kappa has been computed.
+- `annotator_b_rationale_with_citations.md`, `annotator_b_summary.csv`, and
+  `annotator_b_validation_summary.md` — imported / generated sidecar artifacts
+  from the second completed human pass.
+- `labels/gold/` — resolved labels after conflict adjudication.
+- `gold_resolution_summary.md` — the resolver policy and manual public-rule
+  decisions used to finalize `labels/gold/`.
 
 Do not cite `ai_silver` as evidence of calibration. It is a draft.
 
@@ -112,6 +116,13 @@ After both annotator passes:
    disagreement and writes the resolved label into `labels/gold/<trace_id>.json`
 3. Gold labels are then the ground truth for downstream validation
 
+Current status:
+
+- both human passes are complete
+- `kappa_report.md` captures the raw A/B agreement before adjudication
+- `labels/conflict_resolution/` stores the resolved disagreement records
+- `labels/gold/` is now populated with the final resolved set
+
 ## Relationship to existing artifacts
 
 - `archive/internal/evals/verifier/tranche_results_2026-03-31/` holds the
@@ -128,8 +139,10 @@ After both annotator passes:
   and `ai_verifier_v2_audit.md` are the first repeated, decomposed
   verifier-calibration artifacts for the golden set. They are development-time
   validation artifacts, not gold.
-- Once gold labels exist, task #10 validates the AI verifier against them
-  and produces `verifier_validation.md`.
+- Gold-finalized verifier validation now lives in:
+  - `ai_verifier_v2_vs_gold.md`
+  - `gold_vs_ai_verifier_v2_kappa.md`
+  - `verifier_validation.md`
 
 ## File layout
 
@@ -149,13 +162,21 @@ golden_set/
 ├── annotator_a_rationale_with_citations.md # imported annotator A sidecar
 ├── annotator_a_summary.csv    # imported annotator A sidecar
 ├── annotator_a_validation_summary.md # imported annotator A sidecar
+├── annotator_b_rationale_with_citations.md # annotator B sidecar
+├── annotator_b_summary.csv    # annotator B sidecar
+├── annotator_b_validation_summary.md # annotator B sidecar
 ├── annotator_a_vs_ai_silver.md # provisional human-vs-silver sanity check
+├── gold_summary.csv           # machine-readable resolved gold summary
+├── gold_validation_summary.md # resolved gold counts / distribution
+├── gold_resolution_summary.md # resolution policy + manual conflict decisions
 ├── ai_verifier_v2_summary.csv # machine-readable verifier summary
 ├── ai_verifier_v2_vs_annotator_a.md # dev verifier validation summary
 ├── annotator_a_vs_ai_verifier_v2_kappa.md # human-vs-verifier κ report
+├── ai_verifier_v2_vs_gold.md  # final verifier-vs-gold summary
+├── gold_vs_ai_verifier_v2_kappa.md # final verifier-vs-gold κ report
 ├── ai_verifier_v2_audit.md    # audit of verifier performance + remaining gaps
 ├── kappa_report.md            # produced by scripts/golden_set_kappa.py
-└── verifier_validation.md     # produced after gold is finalized
+└── verifier_validation.md     # final gold-based verifier validation memo
 ```
 
 ## Change control
