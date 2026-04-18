@@ -106,5 +106,6 @@ legacy `tier` values in old result artifacts to `category` on load.
 - `internal/wiki/README.md` — internal implementation wiki index
 - `internal/wiki/llm-as-a-verifier.md` — upstream verifier reference + local adaptation
 - `internal/wiki/autoresearch.md` — upstream autoresearch reference + local adaptation
+- `internal/wiki/design-md.md` — `DESIGN.md` reference, Stitch concept, and how it should pair with `AGENTS.md`
 - `internal/evals/verifier/golden_set/README.md` — calibration-set SOP
 - `internal/evals/verifier/golden_set/annotator_walkthrough.md` — step-by-step annotator tutorial

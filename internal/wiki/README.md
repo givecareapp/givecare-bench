@@ -15,6 +15,7 @@ These pages are intentionally practical:
 
 - `internal/wiki/llm-as-a-verifier.md` — upstream verifier framework and our single-trace transcript adaptation
 - `internal/wiki/autoresearch.md` — upstream autoresearch loop and our scenario-optimization adaptation
+- `internal/wiki/design-md.md` — Stitch / DESIGN.md concept, example-catalog reference, and how it should relate to `AGENTS.md`
 
 ## Scope
 
@@ -31,4 +32,4 @@ Update these pages when any of the following change materially:
 - the evaluator / aggregation logic
 - the human-calibration workflow
 - the promotion / keep-discard criteria
-- the upstream repo we consider the main inspiration
+- the upstream repo or external format we consider the main inspiration

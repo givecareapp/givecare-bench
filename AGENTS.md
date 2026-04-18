@@ -22,6 +22,7 @@ Operational guide for contributors and coding agents.
 - index: `internal/wiki/README.md`
 - verifier adaptation: `internal/wiki/llm-as-a-verifier.md`
 - autoresearch adaptation: `internal/wiki/autoresearch.md`
+- design system / `DESIGN.md` reference: `internal/wiki/design-md.md`
 
 ## Core commands
 ```bash
