@@ -45,6 +45,7 @@ Reference wiki: `~/agents/wiki/givecare-bench-verifier-implementation.md`
 | `corpus_manifest.jsonl` | Canonical transcript manifest over the current 15-model board |
 | `corpus_summary.{json,md}` | Corpus coverage, artifact health, and model-level summary |
 | `golden_set/` | Human calibration set, annotator handbook, and verifier validation artifacts |
+| `rescore_refresh_2026-04-18.md` | Frozen-board rescoring, refreshed leaderboard deltas, and publish record |
 
 Historical 2026-03-31 verifier memos and tranche outputs were moved to:
 
@@ -150,9 +151,14 @@ same 60-trace public hard-fail layer. See:
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
+That scorer alignment has now been rolled into the frozen 15-model board,
+leaderboard artifacts, and Convex publish flow. See:
+
+- `internal/evals/verifier/rescore_refresh_2026-04-18.md`
+
 ## Remaining work
 
-1. rescore the frozen runs now that `current_scorer_vs_gold.md` shows full gold alignment on the public hard-fail layer
-2. regenerate leaderboard-ready and public leaderboard artifacts from the repaired scorer outputs
-3. keep `scripts/audit_gold_scorer.py --mode llm` as the scorer regression gate before future scorer/prompt changes
+1. keep `scripts/audit_gold_scorer.py --mode llm` as the scorer regression gate before future scorer/prompt changes
+2. validate the remaining quality layer (`regard`), which is still fixed-unvalidated
+3. expand gold coverage if broader claims are needed beyond the current 60-trace public hard-fail calibration set
 4. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs

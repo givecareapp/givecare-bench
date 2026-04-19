@@ -34,8 +34,10 @@ class TestPublishedLeaderboardArtifact:
         assert leaderboard["metadata"]["benchmark_version"] == "2.1.0"
 
     def test_overall_leaderboard_populated(self, leaderboard):
-        assert len(leaderboard["overall_leaderboard"]) >= 1
-        assert leaderboard["overall_leaderboard"][0]["model"] == "GPT-5.4"
+        rows = leaderboard["overall_leaderboard"]
+        assert len(rows) >= 1
+        assert rows[0]["rank"] == 1
+        assert all(rows[i]["overall_score"] >= rows[i + 1]["overall_score"] for i in range(len(rows) - 1))
 
     def test_required_sections_present(self, leaderboard):
         required = {
