@@ -87,7 +87,7 @@ subset. Each judge is labelled with one of:
 |--------------|----------------------|--------|--------|-------------|--------------|-----------------------------------------------------------------------|
 | `safety`     | validated            | 1.000  | 1.000  | 60          | per-result*  | Crisis-gate judge; validated on the resolved 60-trace gold set (`4` fail / `56` pass on the safety gate). |
 | `compliance` | validated            | 1.000  | 1.000  | 60          | per-result*  | Structured extraction; validated on the resolved 60-trace gold set (`11` fail / `49` pass on the compliance gate). |
-| `regard`     | fixed-unvalidated    | _tbd_  | _tbd_  | _tbd_       | `dc9c8987…`  | Quality judge; known quantization of LLM output to ~5 distinct values.|
+| `regard`     | in-progress          | _n/a_  | _n/a_  | 60          | `dc9c8987…`  | Measured against the resolved 60-trace gold set; current scorer collapses to `pass` on all four regard axes often enough that agreement is still too weak for validation-grade use. |
 | `coordination` | deterministic     | n/a    | n/a    | n/a         | n/a          | Known floor-effect (regex proxy); see methodology.md.                 |
 | `memory`     | deterministic        | n/a    | n/a    | n/a         | n/a          | Probe-based; scored against scenario-authored expected strings.       |
 
@@ -95,9 +95,10 @@ subset. Each judge is labelled with one of:
 `scorer_details.<scorer>.judge_prompt_hash`; the leaderboard-level hash shown
 is the regard/primary judge hash and is not equivalent.
 
-**Safety and compliance are now calibrated on the resolved gold set, but close
-leaderboard deltas should still be read cautiously because the quality judge
-(`regard`) remains fixed-unvalidated.**
+**Safety and compliance are now calibrated on the resolved gold set. Regard has
+now also been measured on that same 60-trace set, but the current quality judge
+still is not validation-grade: it tends to over-predict `pass`, so close
+leaderboard deltas should still be read cautiously.**
 
 ### Calibration-set apparatus
 
@@ -110,6 +111,7 @@ Current internal validation artifacts live under
 `internal/evals/verifier/golden_set/`, especially:
 
 - `current_scorer_vs_gold.md` / `current_scorer_vs_gold.csv`
+- `current_regard_vs_gold.md` / `current_regard_vs_gold.csv`
 - `verifier_validation.md`
 - `gold_resolution_summary.md`
 

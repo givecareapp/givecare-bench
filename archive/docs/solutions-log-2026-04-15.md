@@ -2,6 +2,15 @@
 
 Diátaxis: reference
 
+## Regard is no longer unmeasured; the new gold audit shows pass-saturation
+
+**Date**: 2026-04-19
+**Files**: `scripts/audit_gold_regard.py`, `benchmark/tests/unit/test_regard_validation.py`, `internal/evals/verifier/golden_set/current_regard_vs_gold.{md,csv}`, `docs/judge-validation.md`, `docs/methodology.md`
+
+The remaining quality-layer blocker was not just that regard lacked a validation artifact — it lacked a measurement artifact. That made it too easy to speak vaguely about `regard` being "still fixed-unvalidated" without knowing whether the current scorer was close or far.
+
+**Fix**: added a dedicated regard-vs-gold audit over the resolved 60-trace calibration set. The result is concrete: the current scorer predicts `pass` on all four regard axes for all 60 traces, which yields superficially decent exact accuracy on pass-heavy axes but near-zero weighted κ and no useful ranking correlation with the gold-derived regard mean. Regard is now measured, but not validated.
+
 ## Leaderboard artifacts now carry claim-surface metadata and sync cleanly into web-bench
 
 **Date**: 2026-04-19
@@ -9,7 +18,7 @@ Diátaxis: reference
 
 The public leaderboard artifact previously told consumers the scores, but not what claims the benchmark could actually defend. It also relied on a manual copy step into `apps/web-bench/public/bench/leaderboard.json`, which made stale-site drift too easy.
 
-**Fix**: added machine-readable `metadata.methodology` and `metadata.delivery` blocks to `leaderboard.json`, encoding the benchmark's current claim surface and validation state: safety/compliance/public hard-fail are the primary public claims, validated on the resolved 60-trace gold set; `overall_score` remains a secondary claim because `regard` is still fixed-unvalidated. Added `scripts/sync_web_bench_leaderboard.py` to copy or drift-check the static site payload by hash instead of relying on a manual mirror step.
+**Fix**: added machine-readable `metadata.methodology` and `metadata.delivery` blocks to `leaderboard.json`, encoding the benchmark's current claim surface and validation state: safety/compliance/public hard-fail are the primary public claims, validated on the resolved 60-trace gold set; `overall_score` remains a secondary claim because `regard` is still weaker than the calibrated hard-fail layer. Added `scripts/sync_web_bench_leaderboard.py` to copy or drift-check the static site payload by hash instead of relying on a manual mirror step.
 
 **Remaining work captured in docs**: `regard` still needs human validation, the gold set is still only 60 traces, and artifact-link hygiene remains unfinished.
 

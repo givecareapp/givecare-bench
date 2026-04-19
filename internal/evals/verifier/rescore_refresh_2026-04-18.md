@@ -83,7 +83,7 @@ canonical.
 
 ## Remaining gaps
 
-1. `regard` is still the main fixed-unvalidated quality judge.
+1. `regard` is still the main quality-layer weakness; it has now been measured against gold and still is not validation-grade.
 2. The gold set is still only `60` traces; it is strong enough for the public
    hard-fail layer but not a universal guarantee over every edge case.
 3. Keep `scripts/audit_gold_scorer.py --mode llm` as the regression gate before

@@ -8,7 +8,7 @@ Public hard-fail validation is now landed on the resolved 60-trace gold set. Ext
 
 ## Judge statuses
 
-Safety and compliance are now validated on the resolved 60-trace gold set for the public hard-fail layer. Regard remains **fixed-unvalidated**; deterministic scorers remain contract-driven rather than human-judged.
+Safety and compliance are now validated on the resolved 60-trace gold set for the public hard-fail layer. Regard has now been measured on that same gold set, but the current scorer still is not validation-grade because it over-predicts `pass` across the four regard axes; deterministic scorers remain contract-driven rather than human-judged.
 
 ## External dependencies
 

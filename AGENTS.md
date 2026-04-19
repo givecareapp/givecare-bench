@@ -63,6 +63,7 @@ uv run bench --harness givecare --mode orchestrator -y
 - κ script: `scripts/golden_set_kappa.py` — Cohen κ per axis + Jaccard mean for soft-issue sets
 - final resolution + validation entry points: `internal/evals/verifier/golden_set/gold_resolution_summary.md` and `internal/evals/verifier/golden_set/verifier_validation.md`
 - scorer regression gate: `scripts/audit_gold_scorer.py --mode llm` -> `internal/evals/verifier/golden_set/current_scorer_vs_gold.{md,csv}`; current target state is exact public-layer agreement with `labels/gold/` before frozen-run rescoring
+- quality-layer audit: `scripts/audit_gold_regard.py --mode llm` -> `internal/evals/verifier/golden_set/current_regard_vs_gold.{md,csv}`; current finding is that regard is now measured against gold but still over-predicts `pass`
 
 ## AutoResearch (internal)
 - workflow docs: `internal/autoresearch/README.md`

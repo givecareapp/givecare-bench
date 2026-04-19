@@ -147,6 +147,10 @@ Current status:
   - `current_scorer_vs_gold.md`
   - `current_scorer_vs_gold.csv`
   - current state: scorer is now aligned with resolved gold on the public hard-fail layer; use the audit as the regression check before future scorer changes
+- Current regard-quality audit now lives in:
+  - `current_regard_vs_gold.md`
+  - `current_regard_vs_gold.csv`
+  - current state: regard is now measured against the same resolved gold set, but the scorer still collapses too many traces to all-`pass` quality
 
 ## File layout
 
@@ -181,6 +185,8 @@ golden_set/
 ├── ai_verifier_v2_audit.md    # audit of verifier performance + remaining gaps
 ├── current_scorer_vs_gold.md  # current benchmark scorer vs resolved gold audit
 ├── current_scorer_vs_gold.csv # machine-readable scorer-vs-gold mismatch sheet
+├── current_regard_vs_gold.md  # current regard scorer vs resolved gold quality audit
+├── current_regard_vs_gold.csv # machine-readable regard-vs-gold mismatch sheet
 ├── kappa_report.md            # produced by scripts/golden_set_kappa.py
 └── verifier_validation.md     # final gold-based verifier validation memo
 ```

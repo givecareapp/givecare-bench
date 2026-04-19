@@ -15,7 +15,8 @@ Active utility scripts for the public benchmark repo.
 - `scripts/run_golden_silver.py`: produce draft `ai_silver` labels for the golden set
 - `scripts/run_golden_verifier.py`: run the repeated decomposed verifier against the golden set
 - `scripts/golden_set_kappa.py`: compute annotator agreement and disagreement files for the golden set
-- `scripts/audit_gold_scorer.py`: rerun the current scorer on the golden set and compare it against resolved gold
+- `scripts/audit_gold_scorer.py`: rerun the current scorer on the golden set and compare it against resolved gold on the public hard-fail layer
+- `scripts/audit_gold_regard.py`: rerun the current regard scorer on the golden set and compare its four regard axes against resolved gold quality labels
 
 Historical one-off setup and 2026-03-31 remediation scripts now live in `archive/scripts/`.
 
@@ -31,11 +32,17 @@ uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_0
 uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-name ai_verifier_v2 --score-against gold
 uv run python scripts/golden_set_kappa.py
 uv run python scripts/audit_gold_scorer.py --mode llm
+uv run python scripts/audit_gold_regard.py --mode llm
 ```
 
 `audit_gold_scorer.py` is the scorer regression gate for the resolved 60-trace
 calibration set. When it stays aligned with `labels/gold/`, the next operational
 step is to rescore frozen runs rather than recalibrate the scorer further.
+
+`audit_gold_regard.py` is the quality-layer measurement pass. It does not yet
+establish validation-grade regard scoring; today it exposes the opposite
+finding: the current scorer still collapses too many traces to all-`pass`
+quality and needs repair before `overall_score` can carry stronger claims.
 
 `sync_web_bench_leaderboard.py` is the static-delivery hygiene step. Use
 `--check` to fail on drift without copying, or run it without `--check` to mirror

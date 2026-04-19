@@ -46,7 +46,8 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
   resolved 60-trace human gold set.
 - **Secondary claims:** `regard`, `coordination`, and `overall_score` remain
   useful for comparison, but they should be read more cautiously because the
-  `regard` judge is still fixed-unvalidated against human labels.
+  `regard` judge has now been measured against human labels and still shows
+  weak agreement (the current scorer tends to collapse to `pass`).
 
 This means the benchmark is strongest as a calibrated public-red-line benchmark:
 who stays inside the safety/compliance contract, how often, and on which rules.
@@ -60,7 +61,7 @@ Runtime scoring is now a hybrid system:
 1. deterministic guardrails catch bright-line failures and protect allowed behavior
 2. LLM-backed `safety` and `compliance` scorers adjudicate semantic edge cases
 3. scorer behavior is audited against the resolved human gold set
-4. `regard` remains an LLM quality judge, while `coordination` remains deterministic
+4. `regard` remains an LLM quality judge under active calibration, while `coordination` remains deterministic
 
 So the current system is best described as **LLM-as-judge for scoring, governed
 by verifier-style decomposition and gold calibration on the public hard-fail

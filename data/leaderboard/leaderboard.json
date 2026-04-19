@@ -2,7 +2,7 @@
   "metadata": {
     "benchmark_version": "2.1.0",
     "code_version": "2.1.0",
-    "generated_at": "2026-04-19T03:10:24.541895+00:00",
+    "generated_at": "2026-04-19T04:03:30.056334+00:00",
     "total_models": 15,
     "total_scenarios": 50,
     "public_scope": "benchmark-core-only",
@@ -45,16 +45,20 @@
           }
         },
         "quality_layer": {
-          "status": "mixed",
+          "status": "in-progress",
           "components": {
             "regard": {
-              "status": "fixed-unvalidated"
+              "status": "in-progress",
+              "sample_size": 60,
+              "trace_exact_match": 0.5,
+              "trace_three_of_four_match": 0.733,
+              "note": "Measured against resolved gold, but the current scorer still saturates toward 'pass' across the four regard axes."
             },
             "coordination": {
               "status": "deterministic"
             }
           },
-          "note": "Regard remains fixed-unvalidated against human labels, so overall_score should be read as secondary to the calibrated hard-fail layer."
+          "note": "Regard has now been measured against the resolved 60-trace gold set, but the current scorer is not yet validation-grade: it tends to predict 'pass' across the four regard axes, so overall_score should still be read as secondary to the calibrated hard-fail layer."
         }
       },
       "runtime_adjudication": {

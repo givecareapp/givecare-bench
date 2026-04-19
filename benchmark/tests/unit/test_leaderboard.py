@@ -41,9 +41,11 @@ class TestPublishedLeaderboardArtifact:
         ]
         assert methodology["validation"]["public_hard_fail_layer"]["status"] == "validated"
         assert methodology["validation"]["public_hard_fail_layer"]["sample_size"] == 60
+        assert methodology["validation"]["quality_layer"]["status"] == "in-progress"
         assert methodology["validation"]["quality_layer"]["components"]["regard"]["status"] == (
-            "fixed-unvalidated"
+            "in-progress"
         )
+        assert methodology["validation"]["quality_layer"]["components"]["regard"]["sample_size"] == 60
         assert meta["delivery"]["format"] == "static_json"
 
     def test_metadata_has_benchmark_version(self, leaderboard):

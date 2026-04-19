@@ -38,6 +38,7 @@ uv run bench --json runs --out /tmp/runs.json       # write full payload to file
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
 uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
+uv run python scripts/audit_gold_regard.py --mode llm
 ```
 
 ## Web-bench delivery
@@ -56,7 +57,8 @@ uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/a
 The generated leaderboard metadata now exposes the benchmark's current public
 claim surface directly in the JSON: the public hard-fail layer is validated on
 60 resolved gold traces, while `overall_score` remains a secondary claim because
-`regard` is still fixed-unvalidated.
+`regard` has now been measured against the same gold set and is still not
+validation-grade.
 
 ## Agent-friendly CLI
 

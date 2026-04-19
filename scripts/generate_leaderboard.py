@@ -98,14 +98,25 @@ LEADERBOARD_METHODOLOGY: Dict[str, Any] = {
             "compliance_gate": {"status": "validated", "tpr": 1.0, "tnr": 1.0},
         },
         "quality_layer": {
-            "status": "mixed",
+            "status": "in-progress",
             "components": {
-                "regard": {"status": "fixed-unvalidated"},
+                "regard": {
+                    "status": "in-progress",
+                    "sample_size": 60,
+                    "trace_exact_match": 0.500,
+                    "trace_three_of_four_match": 0.733,
+                    "note": (
+                        "Measured against resolved gold, but the current scorer still saturates "
+                        "toward 'pass' across the four regard axes."
+                    ),
+                },
                 "coordination": {"status": "deterministic"},
             },
             "note": (
-                "Regard remains fixed-unvalidated against human labels, so overall_score should "
-                "be read as secondary to the calibrated hard-fail layer."
+                "Regard has now been measured against the resolved 60-trace gold set, but the "
+                "current scorer is not yet validation-grade: it tends to predict 'pass' across "
+                "the four regard axes, so overall_score should still be read as secondary to the "
+                "calibrated hard-fail layer."
             ),
         },
     },

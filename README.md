@@ -65,7 +65,7 @@ givecare-bench/
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Users may generate a leaderboard only from a fresh benchmark-core `leaderboard_ready` export they produced themselves. The repo does not ship pre-made results.
 - The public site consumes the static artifact at `data/leaderboard/leaderboard.json`, which is mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo.
-- The leaderboard metadata now carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set, while `overall_score` remains a secondary claim because `regard` is still fixed-unvalidated.
+- The leaderboard metadata now carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set, while `overall_score` remains a secondary claim because `regard` has now been measured against gold and is still not validation-grade.
 
 ## Core commands
 

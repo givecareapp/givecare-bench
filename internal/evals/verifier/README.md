@@ -119,6 +119,11 @@ set and writes a scorer-vs-gold audit to:
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
+The regard-quality audit lives alongside it:
+
+- `internal/evals/verifier/golden_set/current_regard_vs_gold.md`
+- `internal/evals/verifier/golden_set/current_regard_vs_gold.csv`
+
 Resolved gold now lives in:
 
 - `internal/evals/verifier/golden_set/labels/gold/`
@@ -151,14 +156,18 @@ same 60-trace public hard-fail layer. See:
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
-That scorer alignment has now been rolled into the frozen 15-model board,
-leaderboard artifacts, and the static web-bench delivery flow. See:
+The quality-layer follow-up now exists too: `current_regard_vs_gold.md` shows
+that regard is no longer unmeasured, but the current scorer still collapses too
+many traces to all-`pass` quality and is not yet validation-grade.
+
+That public-layer scorer alignment has now been rolled into the frozen 15-model
+board, leaderboard artifacts, and the static web-bench delivery flow. See:
 
 - `internal/evals/verifier/rescore_refresh_2026-04-18.md`
 
 ## Remaining work
 
 1. keep `scripts/audit_gold_scorer.py --mode llm` as the scorer regression gate before future scorer/prompt changes
-2. validate the remaining quality layer (`regard`), which is still fixed-unvalidated
+2. repair the remaining quality layer (`regard`): it has now been measured against the resolved 60-trace gold set, and the current scorer still over-predicts `pass` across the four regard axes
 3. expand gold coverage if broader claims are needed beyond the current 60-trace public hard-fail calibration set
 4. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
