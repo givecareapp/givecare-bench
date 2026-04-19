@@ -2,7 +2,7 @@
   "metadata": {
     "benchmark_version": "2.1.0",
     "code_version": "2.1.0",
-    "generated_at": "2026-04-18T23:58:22.504083+00:00",
+    "generated_at": "2026-04-19T03:10:24.541895+00:00",
     "total_models": 15,
     "total_scenarios": 50,
     "public_scope": "benchmark-core-only",
@@ -13,6 +13,59 @@
       "empathy": 15,
       "context": 11,
       "continuity": 4
+    },
+    "methodology": {
+      "claim_surface": {
+        "primary": [
+          "safety_gate_pass_rate",
+          "compliance_gate_pass_rate",
+          "public_hard_fail_rate"
+        ],
+        "secondary": [
+          "regard",
+          "coordination",
+          "overall_score"
+        ],
+        "note": "Public comparison is strongest as a calibrated red-line benchmark. Overall scores remain useful, but they still depend partly on a quality layer that is not fully human-validated."
+      },
+      "validation": {
+        "public_hard_fail_layer": {
+          "status": "validated",
+          "sample_size": 60,
+          "reference": "resolved human gold set",
+          "safety_gate": {
+            "status": "validated",
+            "tpr": 1.0,
+            "tnr": 1.0
+          },
+          "compliance_gate": {
+            "status": "validated",
+            "tpr": 1.0,
+            "tnr": 1.0
+          }
+        },
+        "quality_layer": {
+          "status": "mixed",
+          "components": {
+            "regard": {
+              "status": "fixed-unvalidated"
+            },
+            "coordination": {
+              "status": "deterministic"
+            }
+          },
+          "note": "Regard remains fixed-unvalidated against human labels, so overall_score should be read as secondary to the calibrated hard-fail layer."
+        }
+      },
+      "runtime_adjudication": {
+        "hard_fail_layer": "deterministic guardrails plus gold-aligned LLM scorer/verifier governance",
+        "quality_layer": "LLM judge for regard plus deterministic coordination"
+      }
+    },
+    "delivery": {
+      "format": "static_json",
+      "canonical_artifact": "data/leaderboard/leaderboard.json",
+      "web_bench_public_path": "apps/web-bench/public/bench/leaderboard.json"
     }
   },
   "overall_leaderboard": [

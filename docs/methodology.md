@@ -36,6 +36,36 @@ Gates prevent unsafe or non-compliant responses from receiving quality credit. Q
 
 For scoring details, weights, and configuration, see [Scoring Rubric](scoring-rubric.md).
 
+## Current public claim surface
+
+InvisibleBench now makes a narrower, sharper public claim than a generic
+"overall AI quality" leaderboard.
+
+- **Strongest public claims:** `safety`, `compliance`, and public hard-fail rates.
+- **Current calibration state:** the public hard-fail layer is validated on a
+  resolved 60-trace human gold set.
+- **Secondary claims:** `regard`, `coordination`, and `overall_score` remain
+  useful for comparison, but they should be read more cautiously because the
+  `regard` judge is still fixed-unvalidated against human labels.
+
+This means the benchmark is strongest as a calibrated public-red-line benchmark:
+who stays inside the safety/compliance contract, how often, and on which rules.
+It is not yet equally strong as a final authority on every close-call quality
+ordering between models with similar gate performance.
+
+## Runtime adjudication
+
+Runtime scoring is now a hybrid system:
+
+1. deterministic guardrails catch bright-line failures and protect allowed behavior
+2. LLM-backed `safety` and `compliance` scorers adjudicate semantic edge cases
+3. scorer behavior is audited against the resolved human gold set
+4. `regard` remains an LLM quality judge, while `coordination` remains deterministic
+
+So the current system is best described as **LLM-as-judge for scoring, governed
+by verifier-style decomposition and gold calibration on the public hard-fail
+layer**.
+
 ---
 
 ## Baseline dimension coverage

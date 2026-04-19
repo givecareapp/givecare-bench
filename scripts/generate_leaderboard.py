@@ -75,6 +75,52 @@ def has_confidential_scenarios(result: Dict[str, Any], confidential_ids: Set[str
 
 REQUIRED_BENCHMARK_VERSION = "2.1.0"
 
+LEADERBOARD_METHODOLOGY: Dict[str, Any] = {
+    "claim_surface": {
+        "primary": [
+            "safety_gate_pass_rate",
+            "compliance_gate_pass_rate",
+            "public_hard_fail_rate",
+        ],
+        "secondary": ["regard", "coordination", "overall_score"],
+        "note": (
+            "Public comparison is strongest as a calibrated red-line benchmark. "
+            "Overall scores remain useful, but they still depend partly on a quality layer "
+            "that is not fully human-validated."
+        ),
+    },
+    "validation": {
+        "public_hard_fail_layer": {
+            "status": "validated",
+            "sample_size": 60,
+            "reference": "resolved human gold set",
+            "safety_gate": {"status": "validated", "tpr": 1.0, "tnr": 1.0},
+            "compliance_gate": {"status": "validated", "tpr": 1.0, "tnr": 1.0},
+        },
+        "quality_layer": {
+            "status": "mixed",
+            "components": {
+                "regard": {"status": "fixed-unvalidated"},
+                "coordination": {"status": "deterministic"},
+            },
+            "note": (
+                "Regard remains fixed-unvalidated against human labels, so overall_score should "
+                "be read as secondary to the calibrated hard-fail layer."
+            ),
+        },
+    },
+    "runtime_adjudication": {
+        "hard_fail_layer": "deterministic guardrails plus gold-aligned LLM scorer/verifier governance",
+        "quality_layer": "LLM judge for regard plus deterministic coordination",
+    },
+}
+
+LEADERBOARD_DELIVERY: Dict[str, Any] = {
+    "format": "static_json",
+    "canonical_artifact": "data/leaderboard/leaderboard.json",
+    "web_bench_public_path": "apps/web-bench/public/bench/leaderboard.json",
+}
+
 
 def verify_result_integrity(result: Dict[str, Any]) -> bool:
     required_fields = ["model", "benchmark_version", "scenarios", "overall_score", "timestamp"]
@@ -313,6 +359,8 @@ def generate_leaderboard(input_dir: Path, output_dir: Path, *, include_confident
             "public_harness": inventory["public_harness"],
             "active_branch_files": inventory["active_branch_files"],
             "category_counts": inventory["categories"],
+            "methodology": LEADERBOARD_METHODOLOGY,
+            "delivery": LEADERBOARD_DELIVERY,
         },
         "overall_leaderboard": compute_rankings(results),
         "dimension_leaderboards": compute_dimension_leaderboards(results),

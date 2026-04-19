@@ -30,6 +30,22 @@ class TestPublishedLeaderboardArtifact:
         assert meta["total_models"] >= 1
         assert meta["total_scenarios"] == 50
 
+    def test_metadata_exposes_claim_surface_and_validation(self, leaderboard):
+        meta = leaderboard["metadata"]
+        methodology = meta["methodology"]
+
+        assert methodology["claim_surface"]["primary"] == [
+            "safety_gate_pass_rate",
+            "compliance_gate_pass_rate",
+            "public_hard_fail_rate",
+        ]
+        assert methodology["validation"]["public_hard_fail_layer"]["status"] == "validated"
+        assert methodology["validation"]["public_hard_fail_layer"]["sample_size"] == 60
+        assert methodology["validation"]["quality_layer"]["components"]["regard"]["status"] == (
+            "fixed-unvalidated"
+        )
+        assert meta["delivery"]["format"] == "static_json"
+
     def test_metadata_has_benchmark_version(self, leaderboard):
         assert leaderboard["metadata"]["benchmark_version"] == "2.1.0"
 
@@ -132,3 +148,54 @@ class TestGeneratorStrictness:
         assert rows[0]["scenario_count"] == 3  # recomputed, not 999
         assert rows[0]["passed"] == 2
         assert rows[0]["failed"] == 1
+
+
+class TestWebBenchSync:
+    def test_sync_status_detects_drift_and_syncs(self, tmp_path: Path):
+        from scripts.sync_web_bench_leaderboard import compute_sync_status, sync_leaderboard
+
+        source = tmp_path / "leaderboard.json"
+        target = tmp_path / "public" / "bench" / "leaderboard.json"
+
+        source.write_text(
+            json.dumps(
+                {
+                    "metadata": {
+                        "benchmark_version": "2.1.0",
+                        "generated_at": "2026-04-19T00:00:00+00:00",
+                    }
+                }
+            )
+        )
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(
+                {
+                    "metadata": {
+                        "benchmark_version": "2.1.0",
+                        "generated_at": "2026-04-01T00:00:00+00:00",
+                    }
+                }
+            )
+        )
+
+        status = compute_sync_status(source, target)
+        assert status.in_sync is False
+        assert status.source_generated_at == "2026-04-19T00:00:00+00:00"
+        assert status.target_generated_at == "2026-04-01T00:00:00+00:00"
+
+        synced = sync_leaderboard(source, target)
+        assert synced.in_sync is True
+        assert target.read_text() == source.read_text()
+
+    def test_sync_status_handles_missing_target(self, tmp_path: Path):
+        from scripts.sync_web_bench_leaderboard import compute_sync_status
+
+        source = tmp_path / "leaderboard.json"
+        target = tmp_path / "missing" / "leaderboard.json"
+        source.write_text(json.dumps({"metadata": {"generated_at": "2026-04-19T00:00:00+00:00"}}))
+
+        status = compute_sync_status(source, target)
+        assert status.in_sync is False
+        assert status.target_hash is None
+        assert status.target_generated_at is None

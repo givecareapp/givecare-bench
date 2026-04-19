@@ -4,7 +4,8 @@ Active utility scripts for the public benchmark repo.
 
 ## Scripts
 
-- `scripts/generate_leaderboard.py`: generate public leaderboard JSON from canonical benchmark-core model results
+- `scripts/generate_leaderboard.py`: generate public leaderboard JSON from canonical benchmark-core model results, including machine-readable claim-surface and validation metadata
+- `scripts/sync_web_bench_leaderboard.py`: copy the canonical leaderboard artifact into the static web-bench public path and detect drift
 - `scripts/lint_turn_indices.py`: enforce turn-index consistency before publish/rebuild
 - `scripts/run_bench.sh`: shell helper for benchmark runs
 - `scripts/generate_verifier_corpus.py`: build the unified 15-model transcript manifest and corpus summaries for verifier work
@@ -23,6 +24,7 @@ Historical one-off setup and 2026-03-31 remediation scripts now live in `archive
 ```bash
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
+uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
 uv run python scripts/generate_verifier_corpus.py
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --prepare-only
 uv run python scripts/run_claude_verifier.py --scenario-id tier1_scope_honesty_001 --model opus
@@ -34,6 +36,10 @@ uv run python scripts/audit_gold_scorer.py --mode llm
 `audit_gold_scorer.py` is the scorer regression gate for the resolved 60-trace
 calibration set. When it stays aligned with `labels/gold/`, the next operational
 step is to rescore frozen runs rather than recalibrate the scorer further.
+
+`sync_web_bench_leaderboard.py` is the static-delivery hygiene step. Use
+`--check` to fail on drift without copying, or run it without `--check` to mirror
+`data/leaderboard/leaderboard.json` into the web repo before deployment.
 
 The v2 gate+quality architecture is configured in `benchmark/configs/scoring.yaml`:
 

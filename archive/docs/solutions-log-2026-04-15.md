@@ -2,6 +2,17 @@
 
 Diátaxis: reference
 
+## Leaderboard artifacts now carry claim-surface metadata and sync cleanly into web-bench
+
+**Date**: 2026-04-19
+**Files**: `scripts/generate_leaderboard.py`, `scripts/sync_web_bench_leaderboard.py`, `benchmark/tests/unit/test_leaderboard.py`, `data/leaderboard/leaderboard.json`, `docs/methodology.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `scripts/README.md`
+
+The public leaderboard artifact previously told consumers the scores, but not what claims the benchmark could actually defend. It also relied on a manual copy step into `apps/web-bench/public/bench/leaderboard.json`, which made stale-site drift too easy.
+
+**Fix**: added machine-readable `metadata.methodology` and `metadata.delivery` blocks to `leaderboard.json`, encoding the benchmark's current claim surface and validation state: safety/compliance/public hard-fail are the primary public claims, validated on the resolved 60-trace gold set; `overall_score` remains a secondary claim because `regard` is still fixed-unvalidated. Added `scripts/sync_web_bench_leaderboard.py` to copy or drift-check the static site payload by hash instead of relying on a manual mirror step.
+
+**Remaining work captured in docs**: `regard` still needs human validation, the gold set is still only 60 traces, and artifact-link hygiene remains unfinished.
+
 ## Current scorer now matches resolved gold on the 60-trace calibration set
 
 **Date**: 2026-04-17

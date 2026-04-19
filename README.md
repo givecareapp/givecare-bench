@@ -65,6 +65,7 @@ givecare-bench/
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Users may generate a leaderboard only from a fresh benchmark-core `leaderboard_ready` export they produced themselves. The repo does not ship pre-made results.
 - The public site consumes the static artifact at `data/leaderboard/leaderboard.json`, which is mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo.
+- The leaderboard metadata now carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set, while `overall_score` remains a secondary claim because `regard` is still fixed-unvalidated.
 
 ## Core commands
 
@@ -80,6 +81,7 @@ uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
+uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
 ```
 
 Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:
