@@ -2692,24 +2692,6 @@ def run_benchmark(
                 if RICH_AVAILABLE and console:
                     console.print(f"[dim]Health check skipped: {he}[/dim]")
 
-            # Auto-publish to Convex if configured
-            try:
-                from invisiblebench.cli.publish import publish
-
-                pub_result = publish(str(results_path))
-                if "error" not in pub_result:
-                    pub_msg = f"Published to Convex: {pub_result.get('runId', '?')}"
-                    if RICH_AVAILABLE and console:
-                        console.print(f"[bold green]✓[/bold green] {pub_msg}")
-                    else:
-                        print(pub_msg)
-                elif "not set" not in pub_result.get("error", ""):
-                    # Only warn if it's a real error, not just missing config
-                    if RICH_AVAILABLE and console:
-                        console.print(f"[dim]Convex publish skipped: {pub_result['error']}[/dim]")
-            except Exception as pe:
-                if RICH_AVAILABLE and console:
-                    console.print(f"[dim]Convex publish skipped: {pe}[/dim]")
 
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
@@ -3725,17 +3707,6 @@ Examples:
         "--output", "-o", type=str, default=None, help="Output directory for raw data"
     )
 
-    # Publish subcommand
-    publish_parser = subparsers.add_parser(
-        "publish", help="Publish results to Convex for real-time dashboard"
-    )
-    publish_parser.add_argument(
-        "results", type=str, help="Path to all_results.json or leaderboard_ready/ directory"
-    )
-    publish_parser.add_argument(
-        "--url", type=str, default=None, help="Convex site URL (overrides CONVEX_BENCH_URL)"
-    )
-
     # Annotate subcommand
     annotate_parser = subparsers.add_parser(
         "annotate", help="Human annotation kit for human-LLM agreement"
@@ -3912,16 +3883,6 @@ Examples:
 
     if args.command == "diagnose":
         return diagnose_command(args)
-
-    if args.command == "publish":
-        from invisiblebench.cli.publish import run_publish
-
-        target_url = args.url or os.environ.get("CONVEX_SITE_URL", "<CONVEX_SITE_URL>")
-        confirm_or_abort(
-            f"publish {args.results} → {target_url}",
-            yes=bool(getattr(args, "yes", False)),
-        )
-        return run_publish(args.results, url=args.url)
 
     if args.command == "leaderboard":
         if args.action in ("add", "rebuild"):

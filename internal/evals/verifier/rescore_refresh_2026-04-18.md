@@ -18,7 +18,6 @@ benchmark board.
 uv run bench rescore results/run_20260330_130332 --update-leaderboard
 uv run bench rescore results/partial_runs/run_20260330_033649_up_to_deepseek --update-leaderboard
 uv run bench --yes leaderboard rebuild
-uv run bench --yes publish results/leaderboard_ready
 ```
 
 ## Rescore inputs
@@ -71,12 +70,16 @@ The frozen board still spans two transcript roots:
 14. `DeepSeek V3.2` — `0.665`
 15. `Claude Sonnet 4.5` — `0.652`
 
-## Publish
+## Delivery
 
-Published refreshed leaderboard-ready results to Convex:
+The current public delivery path is static JSON:
 
-- publish run id: `run_20260418_235827`
-- payload: `15` models / `750` scenarios
+- canonical artifact: `data/leaderboard/leaderboard.json`
+- site mirror target: `apps/web-bench/public/bench/leaderboard.json` in the web repo
+
+A legacy Convex publish was run during the first rollout on 2026-04-18, but it
+is no longer part of the benchmark delivery path and should not be treated as
+canonical.
 
 ## Remaining gaps
 

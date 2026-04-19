@@ -39,23 +39,17 @@ python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
 ```
 
-## Publishing to Convex
+## Web-bench delivery
 
-Publish the rescored leaderboard to the **prod** Convex deployment (`doting-tortoise-411`):
+The public benchmark site is now served from a static JSON payload, not a
+Convex publish path.
+
+Refresh flow:
 
 ```bash
-uv run bench publish results/leaderboard_ready
+uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard
+# then copy data/leaderboard/leaderboard.json into apps/web-bench/public/bench/leaderboard.json in the web repo and deploy web-bench
 ```
-
-Requires two env vars in `.env`:
-- `CONVEX_SITE_URL=https://doting-tortoise-411.convex.site`
-- `BENCH_PUBLISH_KEY` — get from: `cd ~/projects/givecare/apps/data-agent && npx convex env get BENCH_PUBLISH_KEY --prod`
-
-The Convex endpoint is `POST /api/bench/publish` in `givecare/apps/data-agent/convex/bench/publish.ts`.
-
-### Convex --prod gotcha
-
-`npx convex env` defaults to **dev** (`agreeable-lion-831`), not prod. Always pass `--prod` when reading/writing prod env vars. The `CONVEX_DEPLOYMENT=prod:slug` env override is unreliable — use the `--prod` flag.
 
 ## Agent-friendly CLI
 
@@ -70,9 +64,9 @@ record_count}}` summary envelope on stdout. Use this for large payloads that
 would otherwise blow out agent context. Disk-write failures are reported as
 `{status:"error", ...}` envelopes, not tracebacks.
 
-**Write-approval gating**: `bench publish`, `bench leaderboard add`,
-`bench leaderboard rebuild`, and `bench archive`/`clean` refuse in
-non-interactive shells unless `--yes` is passed. Reads never prompt.
+**Write-approval gating**: `bench leaderboard add`, `bench leaderboard rebuild`,
+and `bench archive`/`clean` refuse in non-interactive shells unless `--yes`
+is passed. Reads never prompt.
 
 ## Public CI
 

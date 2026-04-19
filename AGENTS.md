@@ -35,7 +35,7 @@ python scripts/lint_turn_indices.py --strict
 uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
 ```
 
-Live-write commands (`publish`, `leaderboard add`, `leaderboard rebuild`, `archive`) refuse in non-interactive shells unless `--yes` is passed.
+Live-write commands (`leaderboard add`, `leaderboard rebuild`, `archive`) refuse in non-interactive shells unless `--yes` is passed.
 
 ## Experimental/internal commands (system harnesses, not public contract)
 ```bash

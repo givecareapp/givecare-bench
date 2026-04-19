@@ -64,6 +64,7 @@ givecare-bench/
 - GiveCare live and orchestrator harnesses remain experimental/internal.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Users may generate a leaderboard only from a fresh benchmark-core `leaderboard_ready` export they produced themselves. The repo does not ship pre-made results.
+- The public site consumes the static artifact at `data/leaderboard/leaderboard.json`, which is mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo.
 
 ## Core commands
 
@@ -87,9 +88,9 @@ Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:
 `invisiblebench --doctor` plus `invisiblebench --list-runs --limit N --offset M`
 mirror the paged run index. `--out PATH` (on `runs`, `get`, and `leaderboard
 status`) writes the full payload to disk and emits a
-`{path, byte_count, record_count}` summary. Live writes (`publish`,
-`leaderboard add/rebuild`, `archive`) refuse in non-interactive shells unless
-`--yes` is passed.
+`{path, byte_count, record_count}` summary. Live writes (`leaderboard
+add/rebuild`, `archive`) refuse in non-interactive shells unless `--yes` is
+passed.
 
 ## Contributing and reporting
 

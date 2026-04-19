@@ -67,12 +67,7 @@ to remember and brittle to path changes.
 ```
 
 Copy `.env.example` to `.env` in the repo root and fill in at least one LLM
-provider key. `bench publish` also needs `BENCH_PUBLISH_KEY` and
-`CONVEX_SITE_URL`.
-
-**Convex `--prod` gotcha**: `npx convex env` defaults to the *dev*
-deployment. Always pass `--prod` when reading production env vars:
-`cd ~/projects/givecare/apps/data-agent && npx convex env get BENCH_PUBLISH_KEY --prod`.
+provider key.
 
 ## Cross-folder verification checklist
 

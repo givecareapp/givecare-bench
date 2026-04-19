@@ -71,8 +71,8 @@ uv run pytest benchmark/tests -q
     and `invisiblebench --list-runs --limit N --offset M`. `--out PATH` (on
     `runs`, `get`, and `leaderboard status`) writes the full payload to disk
     and emits a `{path, byte_count, record_count}` summary. Live writes
-    (`publish`, `leaderboard add/rebuild`, `archive`) refuse in
-    non-interactive shells unless `--yes` is passed.
+    (`leaderboard add/rebuild`, `archive`) refuse in non-interactive shells
+    unless `--yes` is passed.
 
 ## Documentation
 

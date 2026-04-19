@@ -3,12 +3,12 @@
 These cover the agent-friendly CLI guarantees added in the April 2026 pass:
 - `--out PATH` writes the full payload to disk and emits a summary envelope
 - Disk-write failures emit `{status:"error", ...}` rather than raising
-- Live writes (publish, leaderboard add/rebuild, archive) refuse in
+- Live writes (leaderboard add/rebuild, archive) refuse in
   non-interactive shells unless `--yes` is passed
 - Read commands never prompt
 - `archive` without `--before` or `--keep` exits 2
 
-Tests monkeypatch the expensive bits (run collection, publish, leaderboard)
+Tests monkeypatch the expensive bits (run collection, leaderboard)
 so they run in the same process with no subprocess overhead.
 """
 
@@ -116,15 +116,6 @@ def force_noninteractive(monkeypatch):
     monkeypatch.setattr(_agent_cli, "is_tty", lambda: False)
 
 
-def test_publish_refuses_noninteractive(force_noninteractive, capsys):
-    with pytest.raises(SystemExit) as exc:
-        runner_mod.main(["publish", "results/fake_does_not_exist"])
-    assert exc.value.code == 2
-    err = capsys.readouterr().err
-    assert "non-interactive shell" in err
-    assert "publish" in err
-
-
 def test_leaderboard_add_refuses_noninteractive(force_noninteractive, capsys):
     with pytest.raises(SystemExit) as exc:
         runner_mod.main(["leaderboard", "add", "results/fake_does_not_exist"])
@@ -136,24 +127,6 @@ def test_leaderboard_rebuild_refuses_noninteractive(force_noninteractive, capsys
     with pytest.raises(SystemExit) as exc:
         runner_mod.main(["leaderboard", "rebuild"])
     assert exc.value.code == 2
-
-
-def test_yes_bypasses_publish_gate(monkeypatch, force_noninteractive):
-    calls: dict[str, Any] = {}
-
-    def fake_run_publish(results: str, url: Any = None) -> int:
-        calls["results"] = results
-        calls["url"] = url
-        return 0
-
-    # monkeypatch the module path used by the dispatch import
-    from invisiblebench.cli import publish as publish_mod
-
-    monkeypatch.setattr(publish_mod, "run_publish", fake_run_publish)
-
-    rc = runner_mod.main(["--yes", "publish", "results/fake"])
-    assert rc == 0
-    assert calls["results"] == "results/fake"
 
 
 def test_leaderboard_status_does_not_prompt(
