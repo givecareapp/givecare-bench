@@ -16,7 +16,9 @@ Active utility scripts for the public benchmark repo.
 - `scripts/run_golden_verifier.py`: run the repeated decomposed verifier against the golden set
 - `scripts/golden_set_kappa.py`: compute annotator agreement and disagreement files for the golden set
 - `scripts/audit_gold_scorer.py`: rerun the current scorer on the golden set and compare it against resolved gold on the public hard-fail layer
-- `scripts/audit_gold_regard.py`: rerun the current regard scorer on the golden set and compare its four regard axes against resolved gold quality labels
+- `scripts/audit_gold_regard.py`: rerun the current regard scorer on the golden set, compare its four regard axes against resolved gold quality labels, and break out a pass-only slice for ranking diagnostics
+- `scripts/build_regard_quality_holdout.py`: build the pass-only regard holdout candidate set and blank label templates
+- `scripts/build_regard_pairwise_pilot.py`: build the same-scenario clean-output pairwise pilot groups for best-worst calibration
 
 Historical one-off setup and 2026-03-31 remediation scripts now live in `archive/scripts/`.
 
@@ -33,16 +35,25 @@ uv run python scripts/run_golden_verifier.py --model sonnet --repeat 2 --label-n
 uv run python scripts/golden_set_kappa.py
 uv run python scripts/audit_gold_scorer.py --mode llm
 uv run python scripts/audit_gold_regard.py --mode llm
+uv run python scripts/build_regard_quality_holdout.py
+uv run python scripts/build_regard_pairwise_pilot.py
 ```
 
 `audit_gold_scorer.py` is the scorer regression gate for the resolved 60-trace
 calibration set. When it stays aligned with `labels/gold/`, the next operational
 step is to rescore frozen runs rather than recalibrate the scorer further.
 
-`audit_gold_regard.py` is the quality-layer measurement pass. It does not yet
-establish validation-grade regard scoring; today it exposes the opposite
-finding: the current scorer still collapses too many traces to all-`pass`
-quality and needs repair before `overall_score` can carry stronger claims.
+`audit_gold_regard.py` is the quality-layer measurement pass. It now renders
+both the full 60-trace diagnostic view and a pass-only slice, which is the
+better proxy for whether the quality layer can rank already-clean traces.
+It still does not establish validation-grade regard scoring: the current scorer
+continues to collapse too many traces to all-`pass` quality and needs repair
+before `overall_score` can carry stronger claims.
+
+`build_regard_quality_holdout.py` and `build_regard_pairwise_pilot.py` are the
+scaffolding steps for the next validation phase: a held-out pass-only human set
+plus a same-scenario comparative calibration pilot. They set up the workflow;
+they do not, by themselves, validate regard.
 
 `sync_web_bench_leaderboard.py` is the static-delivery hygiene step. Use
 `--check` to fail on drift without copying, or run it without `--check` to mirror

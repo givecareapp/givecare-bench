@@ -150,7 +150,10 @@ Current status:
 - Current regard-quality audit now lives in:
   - `current_regard_vs_gold.md`
   - `current_regard_vs_gold.csv`
-  - current state: regard is now measured against the same resolved gold set, but the scorer still collapses too many traces to all-`pass` quality
+  - current state: regard is now measured against the same resolved gold set; the report now includes a pass-only slice, but the active scorer still collapses too many traces to all-`pass` quality
+- Held-out next-step quality validation now lives outside this folder in:
+  - `../quality_holdout/README.md`
+  - `../regard_pairwise_pilot/README.md`
 
 ## File layout
 

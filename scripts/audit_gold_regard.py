@@ -150,11 +150,28 @@ def _score_candidates(candidates: list[dict[str, Any]], mode: str) -> dict[str, 
         )
         regard = result.get("dimension_scores", {}).get("regard", {})
         breakdown = regard.get("breakdown", {}) or {}
+        raw_axis_labels = regard.get("axis_labels") or {}
+        raw_axis_reasons = regard.get("axis_reasons") or {}
+        raw_axis_evidence = regard.get("axis_evidence") or {}
+
         axis_scores = {axis: float(breakdown.get(axis, 0.0)) for axis in REGARD_AXES}
-        axis_labels = {axis: regard_score_to_label(score) for axis, score in axis_scores.items()}
+        axis_labels = {
+            axis: raw_axis_labels.get(axis) or regard_score_to_label(axis_scores[axis])
+            for axis in REGARD_AXES
+        }
+        axis_reasons = {
+            axis: list(raw_axis_reasons.get(axis) or [])
+            for axis in REGARD_AXES
+        }
+        axis_evidence = {
+            axis: raw_axis_evidence.get(axis) or {"turn": None, "quote": ""}
+            for axis in REGARD_AXES
+        }
         predictions[candidate["trace_id"]] = {
             "axis_scores": axis_scores,
             "axis_labels": axis_labels,
+            "axis_reasons": axis_reasons,
+            "axis_evidence": axis_evidence,
             "regard_score": float(regard.get("score", 0.0)),
             "regard_base": sum(axis_scores.values()) / len(REGARD_AXES),
             "judge_model": regard.get("judge_model"),
@@ -185,6 +202,8 @@ def _build_rows(
             "scenario_id": candidate["scenario_id"],
             "model": candidate["model"],
             "model_id": candidate["model_id"],
+            "transcript_path": candidate["transcript_path"],
+            "gold_public_hard_fail": bool(gold["verdict"]["public_hard_fail"]),
             "gold_regard_mean": gold_quality_to_regard_mean(gold_quality),
             "current_regard_base": pred["regard_base"],
             "current_regard_score": pred["regard_score"],
@@ -198,6 +217,9 @@ def _build_rows(
             row[f"gold_{axis}"] = gold_label
             row[f"current_{axis}_label"] = current_label
             row[f"current_{axis}_score"] = pred["axis_scores"][axis]
+            row[f"current_{axis}_reasons"] = ", ".join(pred["axis_reasons"][axis])
+            row[f"current_{axis}_evidence_turn"] = pred["axis_evidence"][axis].get("turn")
+            row[f"current_{axis}_evidence_quote"] = pred["axis_evidence"][axis].get("quote")
             row[f"{axis}_match"] = gold_label == current_label
             matches += int(gold_label == current_label)
         row["matched_axes"] = matches
@@ -246,6 +268,14 @@ def _top_mismatches(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def _mismatch_families(rows: list[dict[str, Any]], axis: str) -> Counter[str]:
+    return Counter(
+        row["scenario_id"]
+        for row in rows
+        if row[f"gold_{axis}"] != row[f"current_{axis}_label"]
+    )
+
+
 def _render_confusion(confusion: dict[str, dict[str, int]]) -> str:
     header = "| Gold \\ Pred | fail | mixed | pass |\n|---|---:|---:|---:|"
     rows = [header]
@@ -255,37 +285,27 @@ def _render_confusion(confusion: dict[str, dict[str, int]]) -> str:
     return "\n".join(rows)
 
 
-def _render_report(
-    axis_metrics: dict[str, dict[str, Any]],
-    overall: dict[str, Any],
-    mismatch_rows: list[dict[str, Any]],
-    mode: str,
-    elapsed: float,
-) -> str:
-    lines = [
-        "# Current regard scorer vs gold",
-        "",
-        f"- mode: `{mode}`",
-        f"- scorer command: `uv run python scripts/audit_gold_regard.py --mode {mode}`",
-        f"- traces: `{overall['n']}`",
-        f"- runtime: `{elapsed:.1f}s`",
-        f"- judge model(s): `{', '.join(overall['judge_models'])}`",
-        f"- judge hash(es): `{', '.join(overall['judge_hashes'])}`",
-        "",
-        "## Overall summary",
-        "",
-        f"- exact 4-axis trace match: **{_format_ratio(overall['trace_exact'], overall['n'])}**",
-        f"- trace match on at least 3/4 regard axes: **{_format_ratio(overall['trace_three_or_more'], overall['n'])}**",
-        f"- gold-derived regard mean vs current regard base MAE: **{_format_float(overall['base_mae'])}**",
-        f"- gold-derived regard mean vs current final regard score MAE: **{_format_float(overall['score_mae'])}**",
-        f"- gold-derived regard mean vs current regard base Pearson r: **{_format_float(overall['base_pearson'])}**",
-        f"- gold-derived regard mean vs current final regard score Pearson r: **{_format_float(overall['score_pearson'])}**",
-        "",
-        "## Per-axis agreement",
-        "",
-        "| Axis | Gold label distribution | Current label distribution | Exact accuracy | Weighted κ |",
-        "|---|---|---|---:|---:|",
-    ]
+def _subset_report_block(title: str, rows: list[dict[str, Any]]) -> list[str]:
+    axis_metrics = {axis: _axis_metrics(rows, axis) for axis in REGARD_AXES}
+    overall = _overall_metrics(rows)
+    mismatch_rows = _top_mismatches(rows)
+
+    lines = [f"## {title}", ""]
+    lines.extend(
+        [
+            f"- exact 4-axis trace match: **{_format_ratio(overall['trace_exact'], overall['n'])}**",
+            f"- trace match on at least 3/4 regard axes: **{_format_ratio(overall['trace_three_or_more'], overall['n'])}**",
+            f"- gold-derived regard mean vs current regard base MAE: **{_format_float(overall['base_mae'])}**",
+            f"- gold-derived regard mean vs current final regard score MAE: **{_format_float(overall['score_mae'])}**",
+            f"- gold-derived regard mean vs current regard base Pearson r: **{_format_float(overall['base_pearson'])}**",
+            f"- gold-derived regard mean vs current final regard score Pearson r: **{_format_float(overall['score_pearson'])}**",
+            "",
+            "### Per-axis agreement",
+            "",
+            "| Axis | Gold label distribution | Current label distribution | Exact accuracy | Weighted κ |",
+            "|---|---|---|---:|---:|",
+        ]
+    )
     for axis in REGARD_AXES:
         metrics = axis_metrics[axis]
         gold_dist = ", ".join(f"{k}={metrics['gold_counts'].get(k, 0)}" for k in ORDERED_LABELS)
@@ -294,23 +314,29 @@ def _render_report(
             f"| `{axis}` | {gold_dist} | {pred_dist} | {_format_ratio(metrics['exact'], metrics['n'])} | {_format_float(metrics['weighted_kappa'])} |"
         )
 
+    lines.extend(["", "### Top mismatch families", ""])
     for axis in REGARD_AXES:
-        lines.extend([
-            "",
-            f"### Confusion: `{axis}`",
-            "",
-            _render_confusion(axis_metrics[axis]["confusion"]),
-        ])
+        families = _mismatch_families(rows, axis)
+        if not families:
+            lines.append(f"- `{axis}`: none")
+            continue
+        top = ", ".join(f"`{scenario}` ({count})" for scenario, count in families.most_common(6))
+        lines.append(f"- `{axis}`: {top}")
+
+    for axis in REGARD_AXES:
+        lines.extend(["", f"### Confusion: `{axis}`", "", _render_confusion(axis_metrics[axis]["confusion"])])
 
     if mismatch_rows:
-        lines.extend([
-            "",
-            "## Largest mismatches",
-            "",
-            "| Trace | Matches | Gold mean | Current base | Notes |",
-            "|---|---:|---:|---:|---|",
-        ])
-        for row in mismatch_rows[:15]:
+        lines.extend(
+            [
+                "",
+                "### Largest mismatches",
+                "",
+                "| Trace | Matches | Gold mean | Current base | Notes |",
+                "|---|---:|---:|---:|---|",
+            ]
+        )
+        for row in mismatch_rows[:10]:
             notes = ", ".join(
                 f"{axis}:{row[f'gold_{axis}']}→{row[f'current_{axis}_label']}"
                 for axis in REGARD_AXES
@@ -320,13 +346,7 @@ def _render_report(
                 f"| `{row['trace_id']}` | {row['matched_axes']}/4 | {row['gold_regard_mean']:.3f} | {row['current_regard_base']:.3f} | {notes} |"
             )
 
-    lines.extend([
-        "",
-        "## Interpretation",
-        "",
-        "This report measures the current runtime regard scorer against the resolved gold quality labels already present in the 60-trace calibration set. It does not claim that the quality layer is automatically strong enough for headline leaderboard claims; it exists to replace `fixed-unvalidated` with an explicit measured state.",
-    ])
-    return "\n".join(lines) + "\n"
+    return lines
 
 
 def _write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
@@ -335,6 +355,8 @@ def _write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         "scenario_id",
         "model",
         "model_id",
+        "transcript_path",
+        "gold_public_hard_fail",
         "gold_regard_mean",
         "current_regard_base",
         "current_regard_score",
@@ -348,6 +370,9 @@ def _write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
                 f"gold_{axis}",
                 f"current_{axis}_label",
                 f"current_{axis}_score",
+                f"current_{axis}_reasons",
+                f"current_{axis}_evidence_turn",
+                f"current_{axis}_evidence_quote",
                 f"{axis}_match",
             ]
         )
@@ -358,6 +383,37 @@ def _write_csv(rows: list[dict[str, Any]], out_path: Path) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row.get(key) for key in fieldnames})
+
+
+def _render_report(rows: list[dict[str, Any]], mode: str, elapsed: float) -> str:
+    overall = _overall_metrics(rows)
+    lines = [
+        "# Current regard scorer vs gold",
+        "",
+        f"- mode: `{mode}`",
+        f"- scorer command: `uv run python scripts/audit_gold_regard.py --mode {mode}`",
+        f"- traces: `{overall['n']}`",
+        f"- runtime: `{elapsed:.1f}s`",
+        f"- judge model(s): `{', '.join(overall['judge_models'])}`",
+        f"- judge hash(es): `{', '.join(overall['judge_hashes'])}`",
+        "",
+    ]
+
+    lines.extend(_subset_report_block("Full-set summary", rows))
+
+    pass_only_rows = [row for row in rows if not row["gold_public_hard_fail"]]
+    if pass_only_rows:
+        lines.extend(["", *(_subset_report_block("Pass-only summary", pass_only_rows))])
+
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "This report measures the current runtime regard scorer against the resolved gold quality labels already present in the 60-trace calibration set. The full set remains useful for methodology diagnostics, while the pass-only slice is the tighter proxy for whether the quality layer can rank already-clean traces without collapsing to all-pass labels.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def main() -> None:
@@ -378,14 +434,15 @@ def main() -> None:
     elapsed = time.time() - started
 
     rows = _build_rows(candidates, gold_labels, predictions)
-    axis_metrics = {axis: _axis_metrics(rows, axis) for axis in REGARD_AXES}
-    overall = _overall_metrics(rows)
-    mismatch_rows = _top_mismatches(rows)
-    report = _render_report(axis_metrics, overall, mismatch_rows, args.mode, elapsed)
+    report = _render_report(rows, args.mode, elapsed)
 
     args.out_md.parent.mkdir(parents=True, exist_ok=True)
     args.out_md.write_text(report)
     _write_csv(rows, args.out_csv)
+
+    overall = _overall_metrics(rows)
+    pass_only_rows = [row for row in rows if not row["gold_public_hard_fail"]]
+    pass_only = _overall_metrics(pass_only_rows) if pass_only_rows else None
 
     print(f"wrote {args.out_md.relative_to(PROJECT_ROOT)}")
     print(f"wrote {args.out_csv.relative_to(PROJECT_ROOT)}")
@@ -396,6 +453,14 @@ def main() -> None:
             "trace_three_or_more": f"{overall['trace_three_or_more']}/{overall['n']}",
             "base_mae": round(overall['base_mae'], 3),
             "base_pearson": None if math.isnan(overall['base_pearson']) else round(overall['base_pearson'], 3),
+            "pass_only_trace_exact": (
+                None if pass_only is None else f"{pass_only['trace_exact']}/{pass_only['n']}"
+            ),
+            "pass_only_base_pearson": (
+                None
+                if pass_only is None or math.isnan(pass_only['base_pearson'])
+                else round(pass_only['base_pearson'], 3)
+            ),
         },
     )
 

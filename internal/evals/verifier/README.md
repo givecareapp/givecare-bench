@@ -124,6 +124,14 @@ The regard-quality audit lives alongside it:
 - `internal/evals/verifier/golden_set/current_regard_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_regard_vs_gold.csv`
 
+The next-stage quality calibration scaffolding now lives in:
+
+- `internal/evals/verifier/regard_v2_design.md`
+- `internal/evals/verifier/regard_v2_experiment_2026-04-17.md`
+- `internal/evals/verifier/quality_holdout/README.md`
+- `internal/evals/verifier/regard_pairwise_pilot/README.md`
+- `internal/evals/verifier/regard_pairwise_decision.md`
+
 Resolved gold now lives in:
 
 - `internal/evals/verifier/golden_set/labels/gold/`
@@ -156,9 +164,16 @@ same 60-trace public hard-fail layer. See:
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.md`
 - `internal/evals/verifier/golden_set/current_scorer_vs_gold.csv`
 
-The quality-layer follow-up now exists too: `current_regard_vs_gold.md` shows
-that regard is no longer unmeasured, but the current scorer still collapses too
-many traces to all-`pass` quality and is not yet validation-grade.
+The quality-layer follow-up now exists too: `current_regard_vs_gold.md` now
+shows both the full diagnostic view and a pass-only slice, so we can separate
+"is the scorer generally sane?" from "can it rank already-clean traces?" The
+active scorer is still not validation-grade: it continues to collapse too many
+traces to all-`pass` quality.
+
+A first structured Regard v2 prototype was tested on the same dev set and then
+reverted after it improved correlation but materially worsened exact agreement.
+That failed experiment is documented in `regard_v2_experiment_2026-04-17.md` so
+future work can reuse the lesson without shipping the regression.
 
 That public-layer scorer alignment has now been rolled into the frozen 15-model
 board, leaderboard artifacts, and the static web-bench delivery flow. See:
@@ -169,5 +184,7 @@ board, leaderboard artifacts, and the static web-bench delivery flow. See:
 
 1. keep `scripts/audit_gold_scorer.py --mode llm` as the scorer regression gate before future scorer/prompt changes
 2. repair the remaining quality layer (`regard`): it has now been measured against the resolved 60-trace gold set, and the current scorer still over-predicts `pass` across the four regard axes
-3. expand gold coverage if broader claims are needed beyond the current 60-trace public hard-fail calibration set
-4. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs
+3. run the new pass-only holdout workflow in `quality_holdout/` and adjudicate a held-out human set before promoting any new quality scorer
+4. run the pairwise / best-worst calibration pilot in `regard_pairwise_pilot/` to see where comparative judgments are more stable than absolute labels
+5. expand gold coverage further if broader claims are needed beyond the current 60-trace public hard-fail calibration set
+6. decide whether to repair leaderboard artifact links in-place or remove them from public-facing outputs

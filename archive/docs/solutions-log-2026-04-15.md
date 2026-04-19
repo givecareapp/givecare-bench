@@ -2,6 +2,15 @@
 
 Diátaxis: reference
 
+## Regard v2 should not ship just because it fixes pass-saturation on the dev set
+
+**Date**: 2026-04-17
+**Files**: `scripts/audit_gold_regard.py`, `scripts/build_regard_quality_holdout.py`, `scripts/build_regard_pairwise_pilot.py`, `internal/evals/verifier/regard_v2_design.md`, `internal/evals/verifier/regard_v2_experiment_2026-04-17.md`, `internal/evals/verifier/quality_holdout/`, `internal/evals/verifier/regard_pairwise_pilot/`
+
+A first structured Regard v2 prototype replaced the current scalar judge with discrete `pass|mixed|fail` labels, quote-backed evidence, and deterministic downgrade caps. It did fix the original all-pass saturation problem, but when measured on the existing 60-trace gold dev set it over-corrected badly: exact 4-axis agreement collapsed even though Pearson correlation improved.
+
+**Fix**: do not ship the regressing scorer. Revert the active scorer change, keep the stronger audit/reporting, and set up the next validation phase properly instead: a pass-only held-out human set plus a same-scenario pairwise / best-worst pilot for comparative calibration. This keeps the current benchmark honest while preserving the design work and the failed-prototype lesson.
+
 ## Regard is no longer unmeasured; the new gold audit shows pass-saturation
 
 **Date**: 2026-04-19
