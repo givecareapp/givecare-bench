@@ -126,6 +126,7 @@ The regard-quality audit lives alongside it:
 
 The next-stage quality calibration scaffolding now lives in:
 
+- `internal/evals/verifier/benchmark_status_memo_2026-04-17.md`
 - `internal/evals/verifier/regard_v2_design.md`
 - `internal/evals/verifier/regard_v2_experiment_2026-04-17.md`
 - `internal/evals/verifier/quality_holdout/README.md`
