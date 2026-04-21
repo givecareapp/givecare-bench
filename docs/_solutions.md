@@ -17,8 +17,8 @@ Fix:
   and `actions/deploy-pages@v5`
 - the docs workflow now requests `pages: write` and `id-token: write` instead
   of pushing to `gh-pages` directly
-- repo workflows were bumped to current major actions that target the modern
-  runner stack: `actions/checkout@v6` and `astral-sh/setup-uv@v8`
+- repo workflows were bumped to current actions that target the modern runner
+  stack: `actions/checkout@v6` and `astral-sh/setup-uv@v8.1.0`
 - the docs workflow path filter now includes its own workflow file so deploy
   changes are exercised on the next push
 - the repository Pages setting was switched from legacy branch builds to the
