@@ -5,7 +5,12 @@ from pathlib import Path
 
 from scripts.audit_gold_regard import _render_report
 from scripts.build_regard_pairwise_pilot import build_groups
-from scripts.build_regard_quality_holdout import TARGETS, build_candidates
+from scripts.build_regard_quality_holdout import (
+    RESULT_FILES,
+    TARGETS,
+    TRANSCRIPT_DIRS,
+    build_candidates,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -24,7 +29,36 @@ def test_build_regard_quality_holdout_has_expected_shape():
         for path in (REPO_ROOT / "internal/evals/verifier/golden_set/labels/gold").glob("*.json")
     }
     assert not (gold_trace_ids & {row["trace_id"] for row in candidates})
-    assert all((REPO_ROOT / row["transcript_path"]).exists() for row in candidates)
+
+    if all(path.exists() for path in RESULT_FILES) and all(path.exists() for path in TRANSCRIPT_DIRS):
+        assert all((REPO_ROOT / row["transcript_path"]).exists() for row in candidates)
+    else:
+        assert all(row["transcript_path"].startswith("results/") for row in candidates)
+
+
+
+def test_build_regard_quality_holdout_falls_back_to_frozen_candidates(
+    monkeypatch, tmp_path: Path
+):
+    frozen_candidates = tmp_path / "candidates.jsonl"
+    frozen_candidates.write_text(
+        '{"trace_id":"trace_a","scenario_id":"tier1_attachment_002","transcript_path":"results/example.jsonl","current_scorer":{"hard_fail":false}}\n'
+    )
+
+    monkeypatch.setattr("scripts.build_regard_quality_holdout.RESULT_FILES", [tmp_path / "missing.json"])
+    monkeypatch.setattr("scripts.build_regard_quality_holdout.TRANSCRIPT_DIRS", [tmp_path / "missing_dir"])
+    monkeypatch.setattr("scripts.build_regard_quality_holdout.CANDIDATES_OUT", frozen_candidates)
+
+    candidates = build_candidates()
+
+    assert candidates == [
+        {
+            "trace_id": "trace_a",
+            "scenario_id": "tier1_attachment_002",
+            "transcript_path": "results/example.jsonl",
+            "current_scorer": {"hard_fail": False},
+        }
+    ]
 
 
 def test_build_regard_pairwise_pilot_has_four_outputs_per_group():

@@ -137,6 +137,11 @@ def _score_candidates(candidates: list[dict[str, Any]], mode: str) -> dict[str, 
         enable_llm=(mode == "llm"),
     )
     scenario_index = _build_scenario_index()
+
+    missing = [c["scenario_id"] for c in candidates if c["scenario_id"] not in scenario_index]
+    if missing:
+        raise ValueError(f"Candidates reference unknown scenario IDs: {missing}")
+
     predictions: dict[str, dict[str, Any]] = {}
 
     for idx, candidate in enumerate(candidates, start=1):
@@ -191,6 +196,10 @@ def _build_rows(
     gold_labels: dict[str, dict[str, Any]],
     predictions: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    missing = [c["trace_id"] for c in candidates if c["trace_id"] not in gold_labels]
+    if missing:
+        raise ValueError(f"Candidates reference trace IDs not in gold labels: {missing}")
+
     rows: list[dict[str, Any]] = []
     for candidate in candidates:
         trace_id = candidate["trace_id"]

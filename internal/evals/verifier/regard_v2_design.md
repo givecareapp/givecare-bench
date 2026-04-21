@@ -36,7 +36,6 @@ Axes:
 Each axis judgment must carry:
 
 - one supporting assistant quote
-- turn number
 - zero or more downgrade reasons
 
 ## Downgrade taxonomy

@@ -39,6 +39,11 @@ Use it for:
 uv run python scripts/build_regard_quality_holdout.py
 ```
 
+If the original result snapshots are available locally, the script rebuilds the
+holdout from those runs. In CI or fresh checkouts without those large run
+artifacts, it falls back to the checked-in `candidates.jsonl` file so tests and
+follow-on tooling remain reproducible.
+
 ## Annotation policy
 
 Use the same full label schema as the main golden set so the holdout can still

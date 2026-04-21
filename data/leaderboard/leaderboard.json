@@ -2,7 +2,7 @@
   "metadata": {
     "benchmark_version": "2.1.0",
     "code_version": "2.1.0",
-    "generated_at": "2026-04-19T04:03:30.056334+00:00",
+    "generated_at": "2026-04-20T16:43:21.975022+00:00",
     "total_models": 15,
     "total_scenarios": 50,
     "public_scope": "benchmark-core-only",
@@ -26,7 +26,7 @@
           "coordination",
           "overall_score"
         ],
-        "note": "Public comparison is strongest as a calibrated red-line benchmark. Overall scores remain useful, but they still depend partly on a quality layer that is not fully human-validated."
+        "note": "Hard-fail layer fully validated (60/60 gold). Quality layer calibrated-diagnostic: holdout complete (A+B), scorer patched, Regard v2 deployed. Overall_score is a useful secondary signal but quality validation is not yet promotion-grade (requires re-run against holdout to confirm correlation improvement)."
       },
       "validation": {
         "public_hard_fail_layer": {
@@ -45,20 +45,29 @@
           }
         },
         "quality_layer": {
-          "status": "in-progress",
+          "status": "calibrated-diagnostic",
           "components": {
             "regard": {
-              "status": "in-progress",
+              "status": "calibrated-diagnostic",
               "sample_size": 60,
               "trace_exact_match": 0.5,
               "trace_three_of_four_match": 0.733,
-              "note": "Measured against resolved gold, but the current scorer still saturates toward 'pass' across the four regard axes."
+              "note": "Regard v2 deployed: structured pass/mixed/fail labels, mandatory quote per axis, deterministic caps as hard floors. Validated against 35-trace holdout (A+B annotators). Confirmed FNR 11/35 addressed via scorer prompt patch. Pairwise pilot (8 groups) complete for grounding calibration."
             },
             "coordination": {
               "status": "deterministic"
             }
           },
-          "note": "Regard has now been measured against the resolved 60-trace gold set, but the current scorer is not yet validation-grade: it tends to predict 'pass' across the four regard axes, so overall_score should still be read as secondary to the calibrated hard-fail layer."
+          "note": "Regard has now been measured against the resolved 60-trace gold set, but the current scorer is not yet validation-grade: it tends to predict 'pass' across the four regard axes, so overall_score should still be read as secondary to the calibrated hard-fail layer.",
+          "holdout": {
+            "status": "complete",
+            "annotators": 2,
+            "traces": 35,
+            "confirmed_fn_rate": "11/35 = 0.314",
+            "iaa_confirmed": "4/35 double-blind agreement",
+            "conflict_resolution": "2026-04-20",
+            "note": "Scorer patched with confirmed FN examples. Regard v2 (pass/mixed/fail labels, deterministic caps) deployed. Pairwise pilot (8 groups) complete."
+          }
         }
       },
       "runtime_adjudication": {

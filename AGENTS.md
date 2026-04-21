@@ -67,7 +67,9 @@ uv run bench --harness givecare --mode orchestrator -y
 - quality-layer audit: `scripts/audit_gold_regard.py --mode llm` -> `internal/evals/verifier/golden_set/current_regard_vs_gold.{md,csv}`; the report now includes full-set + pass-only slices, and the current finding is still that regard over-predicts `pass`
 - holdout scaffolding: `scripts/build_regard_quality_holdout.py` -> `internal/evals/verifier/quality_holdout/`
 - pairwise calibration scaffolding: `scripts/build_regard_pairwise_pilot.py` -> `internal/evals/verifier/regard_pairwise_pilot/`
+- pairwise pilot runner: `uv run python scripts/run_pairwise_pilot.py [--model MODEL] [--limit N] [--overwrite]` -> `internal/evals/verifier/regard_pairwise_pilot/pilot_results.jsonl`
 - Regard v2 design / experiment notes: `internal/evals/verifier/regard_v2_design.md` and `internal/evals/verifier/regard_v2_experiment_2026-04-17.md`; the first structured prototype was reverted after it regressed exact-match quality metrics
+- regard scorer partial-parse safety: if the LLM returns fewer than all 4 axis labels, missing axes fall back to deterministic estimates rather than 0.0; evidence entries flag each fallback with prefix `WARNING: LLM did not return {axis}`
 
 ## AutoResearch (internal)
 - workflow docs: `internal/autoresearch/README.md`

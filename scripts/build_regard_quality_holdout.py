@@ -61,6 +61,22 @@ def _load_rows() -> list[dict[str, Any]]:
     return list(deduped.values())
 
 
+
+def _load_frozen_candidates() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with open(CANDIDATES_OUT) as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
+
+def _source_artifacts_available() -> bool:
+    return all(path.exists() for path in RESULT_FILES) and all(path.exists() for path in TRANSCRIPT_DIRS)
+
+
 def _gold_trace_ids() -> set[str]:
     return {path.stem for path in GOLD_DIR.glob("*.json")}
 
@@ -142,6 +158,15 @@ def _template_payload(candidate: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_candidates() -> list[dict[str, Any]]:
+    if not _source_artifacts_available():
+        if CANDIDATES_OUT.exists():
+            return _load_frozen_candidates()
+        missing = [str(path.relative_to(ROOT)) for path in (*RESULT_FILES, *TRANSCRIPT_DIRS) if not path.exists()]
+        raise FileNotFoundError(
+            "Regard quality holdout source snapshots are unavailable and no frozen "
+            f"candidates file exists at {CANDIDATES_OUT.relative_to(ROOT)}. Missing: {missing}"
+        )
+
     rng = random.Random(SEED)
     gold_trace_ids = _gold_trace_ids()
     rows = _load_rows()

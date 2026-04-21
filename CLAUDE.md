@@ -41,6 +41,7 @@ uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/a
 uv run python scripts/audit_gold_regard.py --mode llm
 uv run python scripts/build_regard_quality_holdout.py
 uv run python scripts/build_regard_pairwise_pilot.py
+uv run python scripts/run_pairwise_pilot.py                  # annotate pilot groups via LLM best-worst judgment
 ```
 
 ## Web-bench delivery
