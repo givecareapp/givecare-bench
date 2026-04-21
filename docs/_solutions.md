@@ -23,6 +23,8 @@ Fix:
   changes are exercised on the next push
 - the repository Pages setting was switched from legacy branch builds to the
   GitHub Actions workflow deploy path
+- the docs workflow disables `setup-uv` cache uploads so it does not race the
+  main CI job for the same cache key and emit a warning-only annotation
 
 This removes the repo's dependence on the legacy GitHub Pages branch build and
 keeps Actions ahead of the Node 20 retirement without relying on forced runtime
