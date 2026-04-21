@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from invisiblebench.adapters.givecare_live import GiveCareProvider, run_scenario
+from invisiblebench.adapters.givecare_live import (
+    GiveCareProvider,
+    get_category_from_path,
+    run_scenario,
+)
 
 
 def test_send_message_raises_when_gc_returns_no_response(monkeypatch) -> None:
@@ -22,6 +26,19 @@ def test_send_message_raises_when_gc_returns_no_response(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="no response"):
         provider.send_message("hello")
+
+
+def test_get_category_from_path_uses_private_confidential_dir(tmp_path: Path, monkeypatch) -> None:
+    confidential_dir = tmp_path / "private_confidential"
+    confidential_dir.mkdir()
+    scenario_path = confidential_dir / "holdout.json"
+    monkeypatch.setenv(
+        "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR",
+        str(confidential_dir),
+    )
+
+    assert get_category_from_path(scenario_path) == "confidential"
+
 
 
 def test_run_scenario_fails_closed_on_transport_error(tmp_path: Path) -> None:

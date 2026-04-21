@@ -1,9 +1,4 @@
-"""Compatibility re-exports for loader utilities used in tests.
-
-This module provides the classes expected by tests under the
-`invisiblebench.evaluation.loaders` import path by re-exporting the
-implementations from `invisiblebench.loaders.yaml_loader`.
-"""
+"""Re-export loader classes under the historical evaluation.loaders path."""
 
 from invisiblebench.loaders.yaml_loader import (
     RuleLoader,

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.scenario import ScenarioModel
+from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.turn_index import get_turn_index
 
 DEFAULT_ORCHESTRATOR_MODEL = os.environ.get(
@@ -34,16 +35,8 @@ def get_model_id(model_name: str) -> str:
     return f"{MODEL_ID_PREFIX}:{model_name}"
 
 
-def _project_root() -> Path:
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    return Path.cwd()
-
-
 def _adapter_root() -> Path:
-    return _project_root() / "adapters" / "givecare-orchestrator"
+    return get_project_root() / "adapters" / "givecare-orchestrator"
 
 
 def _bridge_build_script() -> Path:
@@ -55,7 +48,7 @@ def _bridge_bundle() -> Path:
 
 
 def _mono_root() -> Path:
-    return _project_root().parent / "give-care-mono"
+    return get_project_root().parent / "give-care-mono"
 
 
 def _collect_source_paths() -> List[Path]:
@@ -90,7 +83,7 @@ def ensure_bridge_bundle() -> Path:
 
     result = subprocess.run(
         ["node", str(build_script)],
-        cwd=str(_project_root()),
+        cwd=str(get_project_root()),
         capture_output=True,
         text=True,
         timeout=120,
@@ -317,9 +310,8 @@ def _apply_bridge_effects(state: Dict[str, Any], bridge_output: Dict[str, Any]) 
     if not isinstance(effects, dict):
         return
 
-    state["memory_state"] = _memory_dict(effects.get("memories", [])) | state["memory_state"]
-    # Last write wins — update with most recent runtime memories.
-    state["memory_state"].update(_memory_dict(effects.get("memories", [])))
+    runtime_memories = _memory_dict(effects.get("memories", []))
+    state["memory_state"].update(runtime_memories)
 
     for key, target in (
         ("followups", "followups"),

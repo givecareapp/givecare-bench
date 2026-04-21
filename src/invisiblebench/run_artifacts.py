@@ -11,17 +11,19 @@ from typing import Any, Dict, List
 
 from invisiblebench.results_io import flatten_model_results, write_json
 
+JsonDocument = dict[str, Any] | list[Any]
+
 
 class ArtifactLoadError(ValueError):
     """Raised when a results source cannot be interpreted."""
 
 
-def _read_json(path: Path) -> Any:
+def _read_json(path: Path) -> JsonDocument:
     with open(path) as f:
         return json.load(f)
 
 
-def _is_model_result_doc(data: Any) -> bool:
+def _is_model_result_doc(data: JsonDocument) -> bool:
     return isinstance(data, dict) and isinstance(data.get("scenarios"), list) and "model" in data
 
 

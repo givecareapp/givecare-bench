@@ -36,7 +36,7 @@ except ImportError:
 # Thread-safe accumulator for actual API costs computed from token counts.
 
 # Known pricing per million tokens (input, output)
-_MODEL_PRICING: Dict[str, tuple] = {
+_MODEL_PRICING: Dict[str, tuple[float, float]] = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
 }
@@ -177,7 +177,7 @@ class APIConfig:
         return cls(openrouter_api_key=os.getenv("OPENROUTER_API_KEY"))
 
 
-def _resolve_api_backend() -> tuple:
+def _resolve_api_backend() -> tuple[str | None, str | None, dict[str, str]]:
     """Resolve API key and base URL from available env vars.
 
     Priority: INVISIBLEBENCH_API_BACKEND (explicit) > OPENROUTER_API_KEY > OPENAI_API_KEY.
@@ -503,44 +503,6 @@ class ModelAPIClient:
 
             raise RuntimeError(f"Failed to call model {model}") from last_error
 
-    def call_model_streaming(
-        self,
-        model: str,
-        messages: List[Dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: int = 2000,
-        **kwargs,
-    ):
-        """
-        Call a model with streaming response (for future implementation).
-
-        Args:
-            model: Model identifier
-            messages: List of message dicts
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional model parameters
-
-        Yields:
-            Response chunks as they arrive
-        """
-        payload = self._build_payload(
-            model, messages, temperature, max_tokens, stream=True, **kwargs
-        )
-
-        response = self.session.post(
-            f"{self.base_url}/chat/completions",
-            json=payload,
-            timeout=self.config.timeout,
-            stream=True,
-        )
-        response.raise_for_status()
-
-        for line in response.iter_lines():
-            if line:
-                yield line.decode("utf-8")
-
-
 # Default model for LLM-based scorers (safety, compliance, regard/coordination)
 # Resolve based on which backend will actually be used at runtime.
 # The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
@@ -584,18 +546,3 @@ def resolve_scorer_model(
 
     return default
 
-
-# Default reference models used in the public scripts/results
-# Top 10 models for benchmarking (via OpenRouter)
-DEFAULT_TEST_MODELS = [
-    "openai/gpt-5",  # Latest OpenAI
-    "openai/gpt-4o",  # OpenAI flagship
-    "anthropic/claude-sonnet-4.5",  # Top Anthropic
-    "anthropic/claude-sonnet-4",  # Strong reasoning
-    "google/gemini-2.5-pro",  # Top Google
-    "google/gemini-2.5-flash",  # Fast Google
-    "deepseek/deepseek-chat",  # Top open-source
-    "meta-llama/llama-3.1-70b-instruct",  # Best Llama
-    "qwen/qwen-2.5-72b-instruct",  # Top Chinese model
-    "x-ai/grok-4",  # xAI flagship
-]

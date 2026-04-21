@@ -1,9 +1,7 @@
 """Agent-friendly CLI helpers.
 
 Single-file reference implementation of the conventions in
-~/agents/_rules/general/cli.md. Copied from
-~/agents/_skills/agent-cli/python/agent_cli.py — keep in sync. No deps beyond
-stdlib; Rich is optional and only used if already installed.
+`~/agents/_rules/general/cli.md`.
 
 Usage:
     from invisiblebench._agent_cli import (
@@ -18,6 +16,8 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Optional
+
+from rich.console import Console
 
 __all__ = [
     "DoctorCheck",
@@ -42,24 +42,14 @@ def no_color() -> bool:
     return bool(os.environ.get("NO_COLOR")) or not is_tty()
 
 
-def create_console():
-    """Return a Rich Console that auto-disables ANSI on non-tty / NO_COLOR.
-
-    Falls back to a tiny stdlib shim if Rich isn't installed.
-    """
-    try:
-        from rich.console import Console  # type: ignore
-        return Console(
-            force_terminal=not no_color(),
-            no_color=no_color(),
-            highlight=False,
-            soft_wrap=True,
-        )
-    except ImportError:
-        class _Shim:
-            def print(self, *args: Any, **kwargs: Any) -> None:  # noqa: A003
-                print(*args)
-        return _Shim()
+def create_console() -> Console:
+    """Return a Rich Console that auto-disables ANSI on non-tty / NO_COLOR."""
+    return Console(
+        force_terminal=not no_color(),
+        no_color=no_color(),
+        highlight=False,
+        soft_wrap=True,
+    )
 
 
 # ---------- doctor ----------

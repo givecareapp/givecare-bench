@@ -32,7 +32,12 @@ from dotenv import load_dotenv
 from invisiblebench.models.results import is_result_success
 from invisiblebench.results_io import write_json, write_model_results
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
-from invisiblebench.utils.benchmark_inventory import collect_scenario_paths, get_project_root
+from invisiblebench.utils.benchmark_inventory import (
+    collect_scenario_paths,
+    get_private_confidential_dir,
+    get_project_root,
+    scenario_category_for_path,
+)
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 PROJECT_ROOT = get_project_root()
@@ -174,13 +179,10 @@ def load_scenario(scenario_path: str) -> Dict:
 
 def get_category_from_path(scenario_path: Path) -> str:
     """Extract category from scenario path."""
-    path_str = str(scenario_path)
-    for cat in ["safety", "empathy", "context", "continuity"]:
-        if f"/{cat}/" in path_str:
-            return cat
-    if "/confidential/" in path_str:
-        return "confidential"
-    return "unknown"
+    return scenario_category_for_path(
+        scenario_path,
+        get_private_confidential_dir(get_project_root()),
+    )
 
 
 
@@ -453,7 +455,6 @@ Examples:
     else:
         output_dir = project_root / "results" / "givecare" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-    # Get scenarios to run
     if args.scenario:
         scenario_paths = [Path(args.scenario)]
     else:

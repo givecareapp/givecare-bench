@@ -20,7 +20,11 @@ from typing import Dict, List, Optional
 from invisiblebench.results_io import write_model_results
 from invisiblebench.run_artifacts import load_result_rows
 from invisiblebench.run_audit import find_existing_audit_file
-from invisiblebench.utils.benchmark_inventory import PUBLIC_CATEGORIES, get_benchmark_version
+from invisiblebench.utils.benchmark_inventory import (
+    PUBLIC_CATEGORIES,
+    get_benchmark_version,
+    get_project_root,
+)
 from invisiblebench.utils.turn_index import lint_turn_indices
 
 try:
@@ -30,15 +34,6 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
     Console = None
-
-
-def get_project_root() -> Path:
-    """Find the project root (where pyproject.toml is)."""
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    return Path.cwd()
 
 
 def _canonical_dir() -> Path:

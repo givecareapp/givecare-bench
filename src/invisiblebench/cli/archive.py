@@ -17,6 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from invisiblebench.utils.benchmark_inventory import get_project_root
+
 try:
     from rich.console import Console
     from rich.table import Table
@@ -25,15 +27,6 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
     Console = None
-
-
-def get_project_root() -> Path:
-    """Find the project root (where pyproject.toml is)."""
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    return Path.cwd()
 
 
 def parse_run_date(run_name: str) -> Optional[datetime]:
@@ -118,7 +111,6 @@ def archive_runs(
             else:
                 to_keep.append(run)
     else:
-        # Default: archive everything before today
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         for run in runs:
             if run["date"] and run["date"] < today:
@@ -156,7 +148,7 @@ def print_archive_report(
     if console is None and RICH_AVAILABLE:
         console = Console()
 
-    def out(msg: str, style: str = None):
+    def out(msg: str, style: Optional[str] = None):
         if console and style:
             console.print(msg, style=style)
         elif console:

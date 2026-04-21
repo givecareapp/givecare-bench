@@ -11,6 +11,23 @@ PUBLIC_CATEGORIES = ("safety", "empathy", "context", "continuity")
 PRIVATE_CONFIDENTIAL_ENV = "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR"
 
 
+def scenario_category_for_path(
+    path: Path,
+    private_confidential_dir: Optional[Path] = None,
+) -> str:
+    """Infer the benchmark category for a scenario path."""
+    resolved_path = path.resolve()
+    if private_confidential_dir is not None:
+        private_root = private_confidential_dir.resolve()
+        if private_root == resolved_path or private_root in resolved_path.parents:
+            return "confidential"
+
+    for category in (*PUBLIC_CATEGORIES, "confidential"):
+        if category in resolved_path.parts:
+            return category
+    return resolved_path.parent.name
+
+
 def get_project_root(start: Optional[Path] = None) -> Path:
     """Find the project root (where pyproject.toml lives)."""
     current = (start or Path(__file__)).resolve()

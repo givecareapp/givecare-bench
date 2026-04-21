@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from invisiblebench.utils.benchmark_inventory import get_project_root
 
 try:
     from rich.console import Console
@@ -21,15 +22,6 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
     Console = None
-
-
-def get_project_root() -> Path:
-    """Find the project root (where pyproject.toml is)."""
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    return Path.cwd()
 
 
 def load_leaderboard() -> Dict[str, Any]:
@@ -127,7 +119,7 @@ def print_health_report(analysis: Dict[str, Any], verbose: bool = False) -> None
     """Print health report."""
     console = Console() if RICH_AVAILABLE else None
 
-    def out(msg: str, style: str = None):
+    def out(msg: str, style: Optional[str] = None):
         if console and style:
             console.print(msg, style=style)
         elif console:

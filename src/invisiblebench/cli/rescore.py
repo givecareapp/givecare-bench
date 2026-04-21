@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from invisiblebench.models.results import SUCCESS_THRESHOLD
+from invisiblebench.models.results import is_result_success
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
     get_private_confidential_dir,
@@ -282,11 +282,10 @@ def _compute_success(
     score: float, hard_fail: bool, gates: Dict[str, Any]
 ) -> bool:
     """Determine if this result is a 'success' for leaderboard purposes."""
-    if hard_fail:
-        return False
-    if score < SUCCESS_THRESHOLD:
-        return False
-    for gate_info in gates.values():
-        if isinstance(gate_info, dict) and not gate_info.get("passed", True):
-            return False
-    return True
+    return is_result_success(
+        {
+            "overall_score": score,
+            "hard_fail": hard_fail,
+            "gates": gates,
+        }
+    )
