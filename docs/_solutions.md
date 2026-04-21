@@ -4,6 +4,27 @@ Append-only. Newest first. Format: `## YYYY-MM-DD — title`.
 
 ---
 
+## 2026-04-21 — GitHub Pages deploy no longer depends on the legacy branch build
+
+GitHub Pages was still configured in legacy `gh-pages` branch mode, so every
+docs deploy triggered GitHub's managed `pages-build-deployment` workflow. That
+workflow emitted Node 20 deprecation warnings for its internal `checkout` and
+`upload-artifact` steps, even though our repo workflows were otherwise green.
+
+Fix:
+- `.github/workflows/docs.yml` now builds the MkDocs site directly and deploys
+  it with `actions/configure-pages`, `actions/upload-pages-artifact`, and
+  `actions/deploy-pages`
+- the docs workflow now requests `pages: write` and `id-token: write` instead
+  of pushing to `gh-pages` directly
+- both repo workflows opt into Node 24 for JavaScript actions via
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`
+- the docs workflow path filter now includes its own workflow file so deploy
+  changes are exercised on the next push
+
+This removes the repo's dependence on the legacy GitHub Pages branch build and
+keeps Actions ahead of the Node 20 retirement.
+
 ## 2026-04-21 — Quality holdout builder now works in CI without local run snapshots
 
 `build_regard_quality_holdout.py` originally assumed two local `results/run_*`
