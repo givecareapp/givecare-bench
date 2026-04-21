@@ -13,17 +13,20 @@ workflow emitted Node 20 deprecation warnings for its internal `checkout` and
 
 Fix:
 - `.github/workflows/docs.yml` now builds the MkDocs site directly and deploys
-  it with `actions/configure-pages`, `actions/upload-pages-artifact`, and
-  `actions/deploy-pages`
+  it with `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`,
+  and `actions/deploy-pages@v5`
 - the docs workflow now requests `pages: write` and `id-token: write` instead
   of pushing to `gh-pages` directly
-- both repo workflows opt into Node 24 for JavaScript actions via
-  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`
+- repo workflows were bumped to current major actions that target the modern
+  runner stack: `actions/checkout@v6` and `astral-sh/setup-uv@v8`
 - the docs workflow path filter now includes its own workflow file so deploy
   changes are exercised on the next push
+- the repository Pages setting was switched from legacy branch builds to the
+  GitHub Actions workflow deploy path
 
 This removes the repo's dependence on the legacy GitHub Pages branch build and
-keeps Actions ahead of the Node 20 retirement.
+keeps Actions ahead of the Node 20 retirement without relying on forced runtime
+compatibility flags.
 
 ## 2026-04-21 — Quality holdout builder now works in CI without local run snapshots
 
