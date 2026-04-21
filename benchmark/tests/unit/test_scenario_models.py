@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from invisiblebench.models import (
-    CategoryLevel,
-    DimensionType,
     Persona,
     Scenario,
-    ScenarioModel,
+    ScenarioCategory,
+    ScoringDimension,
     Turn,
 )
 
@@ -69,16 +68,7 @@ def _scenario_payload() -> dict:
     }
 
 
-def test_scenario_model_preserves_rubric_fields() -> None:
-    scenario = ScenarioModel.from_dict(_scenario_payload())
-    turn = scenario.turns[0]
-
-    assert len(turn.rubric) == 1
-    assert len(turn.autofail_rubric) == 1
-    assert len(turn.rubric_criteria) == 1
-
-
-def test_dataclass_scenario_preserves_rubric_fields() -> None:
+def test_scenario_preserves_rubric_fields() -> None:
     scenario = Scenario.from_dict(_scenario_payload())
     turn = scenario.turns[0]
 
@@ -87,20 +77,12 @@ def test_dataclass_scenario_preserves_rubric_fields() -> None:
     assert len(turn.rubric_criteria) == 1
 
 
-
-def test_scenario_models_share_enum_contract() -> None:
-    scenario = ScenarioModel.from_dict(_scenario_payload())
-
-    assert scenario.category is CategoryLevel.SAFETY
-    assert scenario.scoring_dimensions[DimensionType.CRISIS_SAFETY] == 1
-
-
-
-def test_scenario_compatibility_wrappers_preserve_public_types() -> None:
+def test_scenario_uses_canonical_enums_and_types() -> None:
     scenario = Scenario.from_dict(_scenario_payload())
 
     assert isinstance(scenario, Scenario)
     assert isinstance(scenario.persona, Persona)
     assert isinstance(scenario.turns[0], Turn)
-    assert scenario.category is CategoryLevel.SAFETY
+    assert scenario.category is ScenarioCategory.SAFETY
+    assert scenario.scoring_dimensions[ScoringDimension.CRISIS_SAFETY] == 1
     assert scenario.get_turn(1) is scenario.turns[0]

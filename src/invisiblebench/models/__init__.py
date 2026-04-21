@@ -1,8 +1,4 @@
-"""Data models for scenarios, results, and config."""
-
-from __future__ import annotations
-
-from pydantic import Field
+"""Data models for config, scenarios, and results."""
 
 from invisiblebench.models.config import (
     MODELS_FULL,
@@ -19,12 +15,12 @@ from invisiblebench.models.results import (
     ScenarioResult,
 )
 from invisiblebench.models.scenario import (
-    CategoryLevel,
-    DimensionType,
-    PersonaModel,
-    ScenarioModel,
-    SessionModel,
-    TurnModel,
+    Persona,
+    Scenario,
+    ScenarioCategory,
+    ScoringDimension,
+    Session,
+    Turn,
 )
 
 __all__ = [
@@ -38,40 +34,10 @@ __all__ = [
     "FailureCategory",
     "ResultTiming",
     "ScenarioResult",
-    "CategoryLevel",
-    "DimensionType",
-    "PersonaModel",
-    "ScenarioModel",
-    "SessionModel",
-    "TurnModel",
+    "Persona",
     "Turn",
     "Session",
-    "Persona",
     "Scenario",
+    "ScenarioCategory",
+    "ScoringDimension",
 ]
-
-
-class Turn(TurnModel):
-    """Compatibility wrapper around ``TurnModel``."""
-
-
-class Session(SessionModel):
-    """Compatibility wrapper around ``SessionModel``."""
-
-    turns: list[Turn] = Field(default_factory=list)
-
-
-class Persona(PersonaModel):
-    """Compatibility wrapper around ``PersonaModel``."""
-
-
-class Scenario(ScenarioModel):
-    """Compatibility wrapper around ``ScenarioModel``."""
-
-    persona: Persona
-    turns: list[Turn] = Field(default_factory=list)
-    sessions: list[Session] = Field(default_factory=list)
-
-
-Session.model_rebuild()
-Scenario.model_rebuild()

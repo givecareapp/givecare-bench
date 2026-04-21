@@ -1,4 +1,4 @@
-"""Scenario models and shared enums."""
+"""Canonical scenario models for the benchmark."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, computed_field
 
 
-class CategoryLevel(str, Enum):
-    """Benchmark scenario categories."""
+class ScenarioCategory(str, Enum):
+    """Top-level benchmark categories."""
 
     SAFETY = "safety"
     EMPATHY = "empathy"
@@ -20,8 +20,8 @@ class CategoryLevel(str, Enum):
     CONFIDENTIAL = "confidential"
 
 
-class DimensionType(str, Enum):
-    """Scenario sub-dimensions used for rubric metadata."""
+class ScoringDimension(str, Enum):
+    """Scenario-level scoring dimensions carried in scenario metadata."""
 
     CRISIS_SAFETY = "crisis_safety"
     REGULATORY_FITNESS = "regulatory_fitness"
@@ -72,7 +72,7 @@ def _normalize_scenario_data(
     return normalized
 
 
-class PersonaModel(BaseModel):
+class Persona(BaseModel):
     name: str
     age: int
     care_recipient: str
@@ -89,11 +89,11 @@ class PersonaModel(BaseModel):
     living_situation: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: JsonMap) -> "PersonaModel":
+    def from_dict(cls, data: JsonMap) -> "Persona":
         return cls.model_validate(data)
 
 
-class TurnModel(BaseModel):
+class Turn(BaseModel):
     turn_number: int
     user_message: str
     branches: list[dict[str, Any]] = Field(default_factory=list)
@@ -107,34 +107,30 @@ class TurnModel(BaseModel):
     probes: list[dict[str, Any]] = Field(default_factory=list)
     context_notes: Optional[str] = None
 
-    @property
-    def t(self) -> int:
-        return self.turn_number
-
     @classmethod
-    def from_dict(cls, data: JsonMap) -> "TurnModel":
+    def from_dict(cls, data: JsonMap) -> "Turn":
         return cls.model_validate(_normalize_turn_data(data))
 
 
-class SessionModel(BaseModel):
+class Session(BaseModel):
     session_number: int
     time_elapsed: str
-    turns: list[TurnModel]
+    turns: list[Turn]
     session_context: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: JsonMap) -> "SessionModel":
+    def from_dict(cls, data: JsonMap) -> "Session":
         return cls.model_validate(_normalize_session_data(data))
 
 
-class ScenarioModel(BaseModel):
+class Scenario(BaseModel):
     scenario_id: str
     title: str
-    persona: PersonaModel
-    category: CategoryLevel
-    turns: list[TurnModel] = Field(default_factory=list)
-    sessions: list[SessionModel] = Field(default_factory=list)
-    scoring_dimensions: dict[DimensionType, int] = Field(default_factory=dict)
+    persona: Persona
+    category: ScenarioCategory
+    turns: list[Turn] = Field(default_factory=list)
+    sessions: list[Session] = Field(default_factory=list)
+    scoring_dimensions: dict[ScoringDimension, int] = Field(default_factory=dict)
     dif_variables: list[str] = Field(default_factory=list)
     probes: list[dict[str, Any]] = Field(default_factory=list)
     risk_triggers: list[dict[str, Any]] = Field(default_factory=list)
@@ -144,7 +140,7 @@ class ScenarioModel(BaseModel):
     @computed_field
     @property
     def is_multi_session(self) -> bool:
-        return len(self.sessions) > 0
+        return bool(self.sessions)
 
     @computed_field
     @property
@@ -155,9 +151,9 @@ class ScenarioModel(BaseModel):
 
     @computed_field
     @property
-    def all_turns(self) -> list[TurnModel]:
+    def all_turns(self) -> list[Turn]:
         if self.is_multi_session:
-            turns: list[TurnModel] = []
+            turns: list[Turn] = []
             for session in self.sessions:
                 turns.extend(session.turns)
             return turns
@@ -168,7 +164,7 @@ class ScenarioModel(BaseModel):
     def display_name(self) -> str:
         return self.title or self.scenario_id.replace("_", " ").title()
 
-    def get_turn(self, turn_number: int) -> Optional[TurnModel]:
+    def get_turn(self, turn_number: int) -> Optional[Turn]:
         for turn in self.all_turns:
             if turn.turn_number == turn_number:
                 return turn
@@ -183,7 +179,7 @@ class ScenarioModel(BaseModel):
         return turn.autofail_triggers if turn else []
 
     @classmethod
-    def from_file(cls, path: str | Path) -> "ScenarioModel":
+    def from_file(cls, path: str | Path) -> "Scenario":
         scenario_path = Path(path)
         with open(scenario_path) as f:
             data = json.load(f)
@@ -194,5 +190,5 @@ class ScenarioModel(BaseModel):
         cls,
         data: JsonMap,
         source_path: Optional[str] = None,
-    ) -> "ScenarioModel":
+    ) -> "Scenario":
         return cls.model_validate(_normalize_scenario_data(data, source_path=source_path))

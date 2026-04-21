@@ -90,7 +90,7 @@ def test_run_scenario_fails_closed_on_bridge_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        givecare_orchestrator.ScenarioModel,
+        givecare_orchestrator.Scenario,
         "from_file",
         staticmethod(lambda _path: _DummyScenario()),
     )

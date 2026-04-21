@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from invisiblebench.models import CategoryLevel, DimensionType, Scenario
+from invisiblebench.models import Scenario, ScenarioCategory, ScoringDimension
 from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indices
 
 
@@ -135,7 +135,7 @@ class ScenarioValidator:
             if field not in data:
                 errors.append(f"Missing required field: {field}")
 
-        valid_categories = {c.value for c in CategoryLevel}
+        valid_categories = {category.value for category in ScenarioCategory}
         cat_val = data.get("category", "")
         if cat_val and cat_val not in valid_categories:
             errors.append(f"Invalid category: {cat_val}")
@@ -178,7 +178,7 @@ class ScenarioValidator:
         if "scoring_dimensions" in data:
             for dim_str, max_score in data["scoring_dimensions"].items():
                 try:
-                    DimensionType(dim_str)
+                    ScoringDimension(dim_str)
                 except ValueError:
                     errors.append(f"Invalid dimension: {dim_str}")
                 if not isinstance(max_score, int):

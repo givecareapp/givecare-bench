@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from invisiblebench.evaluation.branching import resolve_branch
-from invisiblebench.models.scenario import ScenarioModel
+from invisiblebench.models.scenario import Scenario
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.turn_index import get_turn_index
 
@@ -155,7 +155,7 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]+", "_", value)
 
 
-def _risk_level_for_turn(scenario: ScenarioModel, turn_number: int) -> str:
+def _risk_level_for_turn(scenario: Scenario, turn_number: int) -> str:
     severity_rank = {"low": 0, "medium": 1, "high": 2, "critical": 3}
     risk_level = "low"
     for trigger in scenario.risk_triggers:
@@ -169,7 +169,7 @@ def _risk_level_for_turn(scenario: ScenarioModel, turn_number: int) -> str:
     return risk_level
 
 
-def _turns_for_scenario(scenario: ScenarioModel) -> List[Dict[str, Any]]:
+def _turns_for_scenario(scenario: Scenario) -> List[Dict[str, Any]]:
     if scenario.sessions:
         turns: List[Dict[str, Any]] = []
         for session in scenario.sessions:
@@ -204,7 +204,7 @@ def _apply_fact_assignments(memory_state: Dict[str, Dict[str, Any]], assignments
         memory_state[key] = {"key": key, "value": value, "confidence": 1.0}
 
 
-def _conversation_seed(scenario: ScenarioModel) -> Dict[str, Any]:
+def _conversation_seed(scenario: Scenario) -> Dict[str, Any]:
     persona = scenario.persona
     memory_state: Dict[str, Dict[str, Any]] = {}
     for key, value in {
@@ -258,7 +258,7 @@ def _build_bridge_payload(
     state: Dict[str, Any],
     incoming_text: str,
     turn_number: int,
-    scenario: ScenarioModel,
+    scenario: Scenario,
 ) -> Dict[str, Any]:
     conv = state["conversation_state"]
     return {
@@ -359,7 +359,7 @@ def run_scenario(
     verbose: bool = False,
 ) -> Tuple[Path, Dict[str, Any]]:
     """Run a single scenario against the GiveCare orchestrator bridge."""
-    scenario = ScenarioModel.from_file(scenario_path)
+    scenario = Scenario.from_file(scenario_path)
     scenario_id = scenario.scenario_id
     turns = _turns_for_scenario(scenario)
     state = _conversation_seed(scenario)
