@@ -24,9 +24,20 @@ hardest quality distinctions among already-clean traces.
 uv run python scripts/build_regard_pairwise_pilot.py
 ```
 
+## Run
+
+```bash
+uv run python scripts/run_pairwise_pilot.py [--model MODEL] [--limit N] [--overwrite]
+```
+
+The committed `groups.jsonl` scaffold is reproducible in fresh checkouts, but
+actual pilot annotation still requires the transcript files referenced in each
+row under `results/`.
+
 ## Output
 
 - `groups.jsonl` — one same-scenario comparison group per line
+- `pilot_results.jsonl` — one LLM best-worst judgment record per completed group
 
 Each group contains:
 

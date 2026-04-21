@@ -133,6 +133,22 @@ The next-stage quality calibration scaffolding now lives in:
 - `internal/evals/verifier/regard_pairwise_pilot/README.md`
 - `internal/evals/verifier/regard_pairwise_decision.md`
 
+Key commands:
+
+```bash
+uv run python scripts/audit_gold_regard.py --mode llm
+uv run python scripts/build_regard_quality_holdout.py
+uv run python scripts/build_regard_pairwise_pilot.py
+uv run python scripts/run_pairwise_pilot.py [--model MODEL] [--limit N] [--overwrite]
+```
+
+`build_regard_quality_holdout.py` rebuilds from the frozen source snapshots when
+those local `results/run_*` artifacts exist, and otherwise falls back to the
+checked-in `quality_holdout/candidates.jsonl` so tests and follow-on tooling stay
+reproducible in CI. `run_pairwise_pilot.py` writes LLM best-worst judgments to
+`internal/evals/verifier/regard_pairwise_pilot/pilot_results.jsonl` and still
+requires the referenced transcript files to be present locally.
+
 Resolved gold now lives in:
 
 - `internal/evals/verifier/golden_set/labels/gold/`
