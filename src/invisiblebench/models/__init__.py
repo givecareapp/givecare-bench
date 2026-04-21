@@ -1,18 +1,15 @@
-"""Data models for scenarios and turns."""
+"""Data models for scenarios, results, and config."""
 
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
 
-# Re-export Pydantic config models
+from pydantic import Field
+
 from invisiblebench.models.config import (
     MODELS_FULL,
     BenchmarkConfig,
     ModelConfig,
     ScoringConfig,
 )
-
-# Re-export Pydantic result models
 from invisiblebench.models.results import (
     BatchResult,
     DimensionScores,
@@ -21,9 +18,9 @@ from invisiblebench.models.results import (
     ResultTiming,
     ScenarioResult,
 )
-
-# Re-export Pydantic scenario models
 from invisiblebench.models.scenario import (
+    CategoryLevel,
+    DimensionType,
     PersonaModel,
     ScenarioModel,
     SessionModel,
@@ -31,26 +28,22 @@ from invisiblebench.models.scenario import (
 )
 
 __all__ = [
-    # Config models
     "BenchmarkConfig",
     "ModelConfig",
     "ScoringConfig",
     "MODELS_FULL",
-    # Result models
     "BatchResult",
     "DimensionScores",
     "EvalResult",
     "FailureCategory",
     "ResultTiming",
     "ScenarioResult",
-    # Pydantic scenario models
+    "CategoryLevel",
+    "DimensionType",
     "PersonaModel",
     "ScenarioModel",
     "SessionModel",
     "TurnModel",
-    # Dataclass models
-    "CategoryLevel",
-    "DimensionType",
     "Turn",
     "Session",
     "Persona",
@@ -58,183 +51,27 @@ __all__ = [
 ]
 
 
-class CategoryLevel(Enum):
-    """Benchmark scenario categories."""
-
-    SAFETY = "safety"        # Crisis, boundaries, gray zones, false refusal
-    EMPATHY = "empathy"      # Burnout, belonging, grief, relational
-    CONTEXT = "context"      # Cultural awareness, regulatory
-    CONTINUITY = "continuity"  # Longitudinal trust, memory, consistency
-    CONFIDENTIAL = "confidential"  # Private scenarios
+class Turn(TurnModel):
+    """Compatibility wrapper around ``TurnModel``."""
 
 
-class DimensionType(Enum):
-    """Scenario sub-dimensions used for rubric metadata."""
+class Session(SessionModel):
+    """Compatibility wrapper around ``SessionModel``."""
 
-    CRISIS_SAFETY = "crisis_safety"
-    REGULATORY_FITNESS = "regulatory_fitness"
-    TRAUMA_INFORMED_FLOW = "trauma_informed_flow"
-    BELONGING_CULTURAL_FITNESS = "belonging_cultural_fitness"
-    RELATIONAL_QUALITY = "relational_quality"
-    ACTIONABLE_SUPPORT = "actionable_support"
-    LONGITUDINAL_CONSISTENCY = "longitudinal_consistency"
-    MEMORY_HYGIENE = "memory_hygiene"
-    BOUNDARIES = "boundaries"
-    GRAY_ZONE = "gray_zone"
+    turns: list[Turn] = Field(default_factory=list)
 
 
-@dataclass
-class Turn:
-    """A single conversational turn in a scenario."""
-
-    turn_number: int
-    user_message: str
-    expected_behaviors: List[str] = field(default_factory=list)
-    autofail_triggers: List[str] = field(default_factory=list)
-    facts: List[str] = field(default_factory=list)
-    updates: List[str] = field(default_factory=list)
-    rubric: List[Dict[str, Any]] = field(default_factory=list)
-    autofail_rubric: List[Dict[str, Any]] = field(default_factory=list)
-    rubric_criteria: List[Dict[str, Any]] = field(default_factory=list)
-    probes: List[Dict[str, Any]] = field(default_factory=list)
-    context_notes: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Turn":
-        turn_number = data.get("turn_number", data.get("t"))
-        if turn_number is None:
-            raise KeyError("turn_number")
-        return cls(
-            turn_number=turn_number,
-            user_message=data["user_message"],
-            expected_behaviors=data.get("expected_behaviors", []),
-            autofail_triggers=data.get("autofail_triggers", []),
-            facts=data.get("facts", []),
-            updates=data.get("updates", []),
-            rubric=data.get("rubric", []),
-            autofail_rubric=data.get("autofail_rubric", []),
-            rubric_criteria=data.get("rubric_criteria", []),
-            probes=data.get("probes", []),
-            context_notes=data.get("context_notes"),
-        )
+class Persona(PersonaModel):
+    """Compatibility wrapper around ``PersonaModel``."""
 
 
-@dataclass
-class Session:
-    """A session within a Tier 3 multi-session scenario."""
+class Scenario(ScenarioModel):
+    """Compatibility wrapper around ``ScenarioModel``."""
 
-    session_number: int
-    time_elapsed: str  # e.g., "3 months"
-    turns: List[Turn]
-    session_context: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Session":
-        return cls(
-            session_number=data["session_number"],
-            time_elapsed=data["time_elapsed"],
-            turns=[Turn.from_dict(t) for t in data["turns"]],
-            session_context=data.get("session_context"),
-        )
-
-
-@dataclass
-class Persona:
-    """User persona with demographic and context information."""
-
-    name: str
-    age: int
-    care_recipient: str
-    care_duration: str
-    context: Dict[str, Any]
-    role: Optional[str] = None
-    gender: Optional[str] = None
-    race_ethnicity: Optional[str] = None
-    income_bracket: Optional[str] = None
-    employment: Optional[str] = None
-    education: Optional[str] = None
-    primary_language: Optional[str] = None
-    care_hours_per_week: Optional[int] = None
-    living_situation: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Persona":
-        return cls(
-            name=data["name"],
-            age=data["age"],
-            care_recipient=data["care_recipient"],
-            care_duration=data["care_duration"],
-            context=data["context"],
-            role=data.get("role"),
-            gender=data.get("gender"),
-            race_ethnicity=data.get("race_ethnicity"),
-            income_bracket=data.get("income_bracket"),
-            employment=data.get("employment"),
-            education=data.get("education"),
-            primary_language=data.get("primary_language"),
-            care_hours_per_week=data.get("care_hours_per_week"),
-            living_situation=data.get("living_situation"),
-        )
-
-
-@dataclass
-class Scenario:
-    """A complete test scenario."""
-
-    scenario_id: str
-    category: CategoryLevel
-    title: str
     persona: Persona
-    turns: List[Turn] = field(default_factory=list)
-    sessions: List[Session] = field(default_factory=list)
-    scoring_dimensions: Dict[DimensionType, int] = field(default_factory=dict)
-    dif_variables: List[str] = field(default_factory=list)
-    probes: List[Dict[str, Any]] = field(default_factory=list)
-    risk_triggers: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    turns: list[Turn] = Field(default_factory=list)
+    sessions: list[Session] = Field(default_factory=list)
 
-    @property
-    def is_multi_session(self) -> bool:
-        return len(self.sessions) > 0
 
-    @property
-    def total_turns(self) -> int:
-        if self.is_multi_session:
-            return sum(len(session.turns) for session in self.sessions)
-        return len(self.turns)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Scenario":
-        if "tier" in data and "category" not in data:
-            raise ValueError(
-                "Scenario uses 'tier' field. Use 'category' instead."
-            )
-        category = CategoryLevel(data["category"])
-        persona = Persona.from_dict(data["persona"])
-
-        turns = []
-        sessions = []
-        if "sessions" in data:
-            sessions = [Session.from_dict(s) for s in data["sessions"]]
-        elif "turns" in data:
-            turns = [Turn.from_dict(t) for t in data["turns"]]
-
-        scoring_dimensions = {}
-        if "scoring_dimensions" in data:
-            for dim_str, max_score in data["scoring_dimensions"].items():
-                dim = DimensionType(dim_str)
-                scoring_dimensions[dim] = max_score
-
-        return cls(
-            scenario_id=data["scenario_id"],
-            category=category,
-            title=data["title"],
-            persona=persona,
-            turns=turns,
-            sessions=sessions,
-            scoring_dimensions=scoring_dimensions,
-            dif_variables=data.get("dif_variables", []),
-            probes=data.get("probes", []),
-            risk_triggers=data.get("risk_triggers", []),
-            metadata=data.get("metadata", {}),
-        )
+Session.model_rebuild()
+Scenario.model_rebuild()
