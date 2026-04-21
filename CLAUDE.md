@@ -97,6 +97,11 @@ field and `tier_0..tier_3` values are rejected by `ScenarioValidator`.
 `ScenarioResult` no longer carries a `tier` field; `from_dict` normalizes
 legacy `tier` values in old result artifacts to `category` on load.
 
+Canonical runtime scenario types live in
+`src/invisiblebench/models/scenario.py`: `Scenario`, `Session`, `Turn`,
+`Persona`, `ScenarioCategory`, and `ScoringDimension`. `invisiblebench.models`
+re-exports those names; do not add parallel `*Model` aliases or wrapper layers.
+
 ## Guardrails
 
 - keep `benchmark/` data-only

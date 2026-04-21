@@ -87,6 +87,12 @@ Turn-level evaluation can be authored in three forms:
 - binary rubric items via `rubric` / `autofail_rubric`
 - ordinal rubric items via `rubric_criteria`
 
+The runtime now uses a single canonical scenario model layer in
+`src/invisiblebench/models/scenario.py`: `Scenario`, `Session`, `Turn`,
+`Persona`, `ScenarioCategory`, and `ScoringDimension`. `invisiblebench.models`
+re-exports those names for callers; the repo no longer maintains parallel
+wrapper or `*Model` scenario types.
+
 The 50 public scenarios span four categories:
 
 | Category | Count | Focus |
