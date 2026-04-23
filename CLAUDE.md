@@ -98,8 +98,12 @@ The generated leaderboard metadata now exposes the benchmark's current public
 claim surface directly in the JSON: the public hard-fail layer is validated on
 60 resolved gold traces, while `overall_score` remains a secondary claim because
 `regard` has now been measured against the same gold set and is still not
-validation-grade. The internal regard audit now also breaks out a pass-only
-slice, and the next calibration phase is scaffolded via `quality_holdout/` and
+validation-grade. Freshness is now split explicitly: `generated_at` is the
+public results-snapshot timestamp, while `benchmark_updated_at` captures the
+benchmark-contract/methodology update time and `results_benchmark_version`
+records which benchmark version the ranked snapshot actually came from. The
+internal regard audit now also breaks out a pass-only slice, and the next
+calibration phase is scaffolded via `quality_holdout/` and
 `regard_pairwise_pilot/` rather than being treated as another prompt-only tweak.
 
 ## Agent-friendly CLI

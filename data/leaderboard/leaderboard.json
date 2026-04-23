@@ -3,6 +3,8 @@
     "benchmark_version": "3.0.0",
     "code_version": "3.0.0",
     "generated_at": "2026-04-20T16:43:21.975022+00:00",
+    "benchmark_updated_at": "2026-04-23T18:56:40+00:00",
+    "results_benchmark_version": "2.1.0",
     "total_models": 15,
     "total_scenarios": 50,
     "public_scope": "benchmark-core-only",

@@ -27,6 +27,8 @@ class TestPublishedLeaderboardArtifact:
     def test_metadata_has_core_fields(self, leaderboard):
         meta = leaderboard["metadata"]
         assert meta["benchmark_version"] == "3.0.0"
+        assert meta["benchmark_updated_at"]
+        assert meta["results_benchmark_version"]
         assert meta["total_models"] >= 1
         assert meta["total_scenarios"] == 50
 
@@ -47,6 +49,14 @@ class TestPublishedLeaderboardArtifact:
 
     def test_metadata_has_benchmark_version(self, leaderboard):
         assert leaderboard["metadata"]["benchmark_version"] == "3.0.0"
+
+    def test_metadata_tracks_benchmark_update_separately_from_results_snapshot(self, leaderboard):
+        meta = leaderboard["metadata"]
+        assert meta["generated_at"]
+        assert meta["benchmark_updated_at"]
+        assert meta["results_benchmark_version"]
+        if meta["results_benchmark_version"] != meta["benchmark_version"]:
+            assert meta["benchmark_updated_at"] != meta["generated_at"]
 
     def test_overall_leaderboard_populated(self, leaderboard):
         rows = leaderboard["overall_leaderboard"]
@@ -121,6 +131,23 @@ class TestGeneratorStrictness:
 
             with pytest.raises(ValueError, match="strict mode"):
                 load_canonical_results(tmp_path, False, set(), strict=True)
+
+    def test_generator_emits_benchmark_and_results_freshness_fields(self):
+        from scripts.generate_leaderboard import generate_leaderboard
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            input_dir = tmp_path / "leaderboard_ready"
+            output_dir = tmp_path / "out"
+            input_dir.mkdir()
+            self._write_result(input_dir, self._valid_v21_result())
+
+            out_path = generate_leaderboard(input_dir, output_dir)
+            payload = json.loads(out_path.read_text())
+            meta = payload["metadata"]
+
+            assert meta["benchmark_updated_at"] == meta["generated_at"]
+            assert meta["results_benchmark_version"] == "3.0.0"
 
     def test_recomputes_passed_failed(self):
         from scripts.generate_leaderboard import compute_rankings

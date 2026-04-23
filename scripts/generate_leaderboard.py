@@ -133,6 +133,15 @@ LEADERBOARD_DELIVERY: dict[str, Any] = {
 }
 
 
+def infer_results_benchmark_version(results: list[dict[str, Any]]) -> str | None:
+    versions = {str(result.get("benchmark_version")) for result in results if result.get("benchmark_version")}
+    if not versions:
+        return None
+    if len(versions) == 1:
+        return next(iter(versions))
+    raise ValueError(f"Mixed benchmark versions in leaderboard input: {sorted(versions)}")
+
+
 def verify_result_integrity(result: dict[str, Any]) -> bool:
     required_fields = ["model", "benchmark_version", "scenarios", "overall_score", "timestamp"]
     return all(field in result for field in required_fields)
@@ -359,11 +368,14 @@ def generate_leaderboard(input_dir: Path, output_dir: Path, *, include_confident
     if not results:
         raise ValueError(f"No leaderboard-ready benchmark-core results found in {input_dir}")
 
+    generated_at = datetime.now(timezone.utc).isoformat()
     payload = {
         "metadata": {
             "benchmark_version": get_benchmark_version(REPO_ROOT),
             "code_version": get_code_version(REPO_ROOT),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": generated_at,
+            "benchmark_updated_at": generated_at,
+            "results_benchmark_version": infer_results_benchmark_version(results),
             "total_models": len(results),
             "total_scenarios": inventory["standard_total"],
             "public_scope": inventory["public_scope"],
