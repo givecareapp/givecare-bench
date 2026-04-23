@@ -158,6 +158,7 @@ re-exports those plus result types (`ScenarioResult`, `DimensionScores`,
 
 ## Contributor entry points
 
+- `internal/checklists/release-sync.md` — canonical update flow for benchmark releases
 - `CONTRIBUTING.md` — dev setup, scenario contract, PR checklist
 - `SECURITY.md` — private security-advisory channel and disclosure SLA
 - `CODE_OF_CONDUCT.md` — points to Contributor Covenant v2.1

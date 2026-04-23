@@ -7,7 +7,7 @@ Public API:
     rewards = score_with_rewards("transcript.jsonl", "scenario.json")
 """
 
-__version__ = "2.1.0"
+__version__ = "3.0.0"
 
 
 def score(*args, **kwargs):
