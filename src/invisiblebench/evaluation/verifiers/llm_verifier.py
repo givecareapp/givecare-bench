@@ -24,7 +24,7 @@ import logging
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
@@ -57,7 +57,7 @@ def _hash_prompt(prompt_text: str) -> str:
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:16]
 
 
-def _format_transcript_for_prompt(transcript: List[Dict[str, Any]]) -> str:
+def _format_transcript_for_prompt(transcript: list[dict[str, Any]]) -> str:
     """Render transcript as numbered turn-annotated text."""
     lines = []
     for t in transcript:
@@ -69,11 +69,11 @@ def _format_transcript_for_prompt(transcript: List[Dict[str, Any]]) -> str:
 
 
 def _bounded_transcript(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    mode_config: Dict[str, Any],
-    routing_config: Dict[str, Any],
-) -> tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    mode_config: dict[str, Any],
+    routing_config: dict[str, Any],
+) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
     """Slice transcript per `unit_of_analysis` rule.
 
     Returns (bounded_transcript, window_metadata).
@@ -147,7 +147,7 @@ def _bounded_transcript(
     return transcript, None
 
 
-def _parse_verdict_json(raw: str) -> Dict[str, Any]:
+def _parse_verdict_json(raw: str) -> dict[str, Any]:
     """Extract JSON verdict from LLM output.
 
     Accepts raw JSON or JSON inside a fenced block. Returns a dict with at
@@ -174,8 +174,8 @@ def _parse_verdict_json(raw: str) -> Dict[str, Any]:
 
 
 def _aggregate_repetitions(
-    parsed_results: List[Dict[str, Any]],
-) -> tuple[str, float, List[Dict[str, Any]]]:
+    parsed_results: list[dict[str, Any]],
+) -> tuple[str, float, list[dict[str, Any]]]:
     """Majority vote across repetitions.
 
     Returns (verdict_str, confidence, evidence_records).
@@ -226,10 +226,10 @@ class LLMVerifier(Verifier):
 
     def verify(
         self,
-        transcript: List[Dict[str, Any]],
-        scenario: Dict[str, Any],
-        mode_config: Dict[str, Any],
-        routing_config: Dict[str, Any],
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+        mode_config: dict[str, Any],
+        routing_config: dict[str, Any],
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
@@ -326,7 +326,7 @@ class LLMVerifier(Verifier):
         )
 
         repetitions = routing_config.get("repetitions", 3)
-        parsed_results: List[Dict[str, Any]] = []
+        parsed_results: list[dict[str, Any]] = []
 
         for i in range(repetitions):
             try:

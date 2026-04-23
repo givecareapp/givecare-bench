@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Sequence
 
 
-def load_jsonl(path: Path) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     with open(path) as fh:
         for line in fh:
             line = line.strip()
@@ -21,12 +21,12 @@ def read_text(path: Path) -> str:
 
 
 def build_scenario_batch_rows(
-    manifest: Sequence[Dict[str, Any]],
+    manifest: Sequence[dict[str, Any]],
     scenario_id: str,
     *,
     offset: int = 0,
     limit: int | None = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     rows = [row for row in manifest if row.get("scenario_id") == scenario_id]
     rows = sorted(rows, key=lambda row: row.get("model", ""))
     if offset:
@@ -36,7 +36,7 @@ def build_scenario_batch_rows(
     return rows
 
 
-def build_trace_payload(project_root: Path, row: Dict[str, Any]) -> Dict[str, Any]:
+def build_trace_payload(project_root: Path, row: dict[str, Any]) -> dict[str, Any]:
     transcript_path = project_root / row["transcript_path"]
     transcript = load_jsonl(transcript_path)
     return {
@@ -69,7 +69,7 @@ def build_scenario_batch_prompt(
     output_schema: str,
     scenario_contract: str,
     batch_prompt: str,
-    trace_payloads: Sequence[Dict[str, Any]],
+    trace_payloads: Sequence[dict[str, Any]],
 ) -> str:
     sections = [
         "You are adjudicating a single InvisibleBench scenario batch.",
@@ -115,7 +115,7 @@ def build_scenario_batch_prompt(
     return "\n".join(sections)
 
 
-def build_batch_json_schema(single_result_schema: Dict[str, Any]) -> Dict[str, Any]:
+def build_batch_json_schema(single_result_schema: dict[str, Any]) -> dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,

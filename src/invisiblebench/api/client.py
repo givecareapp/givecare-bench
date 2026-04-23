@@ -10,7 +10,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -36,7 +36,7 @@ except ImportError:
 # Thread-safe accumulator for actual API costs computed from token counts.
 
 # Known pricing per million tokens (input, output)
-_MODEL_PRICING: Dict[str, tuple[float, float]] = {
+_MODEL_PRICING: dict[str, tuple[float, float]] = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
 }
@@ -49,7 +49,7 @@ class CostTracker:
         self._lock = threading.Lock()
         self._total: float = 0.0
         self._calls: int = 0
-        self._by_model: Dict[str, float] = {}
+        self._by_model: dict[str, float] = {}
 
     def record(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
 
@@ -86,7 +86,7 @@ class CostTracker:
         with self._lock:
             return self._calls
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
 
         with self._lock:
             return {
@@ -122,10 +122,10 @@ class _LRUCache:
 
     def __init__(self, max_entries: int):
         self.max_entries = max_entries
-        self._data: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._data: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._lock = threading.Lock()
 
-    def get(self, key: str) -> Optional[Dict[str, Any]]:
+    def get(self, key: str) -> Optional[dict[str, Any]]:
         if self.max_entries <= 0:
             return None
         with self._lock:
@@ -134,7 +134,7 @@ class _LRUCache:
             self._data.move_to_end(key)
             return deepcopy(self._data[key])
 
-    def set(self, key: str, value: Dict[str, Any]) -> None:
+    def set(self, key: str, value: dict[str, Any]) -> None:
         if self.max_entries <= 0:
             return
         with self._lock:
@@ -240,19 +240,19 @@ class ModelAPIClient:
                         text = text.decode("utf-8", errors="ignore")
                 if text:
                     detail += f" | Response: {text[:500]}"
-            except Exception:
+            except (OSError, UnicodeDecodeError, AttributeError):
                 pass
         return detail
 
     @staticmethod
     def _build_payload(
         model: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
         stream: bool = False,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         payload = {
             "model": model,
             "messages": messages,
@@ -265,7 +265,7 @@ class ModelAPIClient:
         return payload
 
     @staticmethod
-    def _is_cacheable(payload: Dict[str, Any]) -> bool:
+    def _is_cacheable(payload: dict[str, Any]) -> bool:
         if payload.get("stream"):
             return False
         temp = payload.get("temperature")
@@ -275,7 +275,7 @@ class ModelAPIClient:
             return False
 
     @staticmethod
-    def _cache_key(payload: Dict[str, Any]) -> Optional[str]:
+    def _cache_key(payload: dict[str, Any]) -> Optional[str]:
         normalized = dict(payload)
         if "temperature" in normalized:
             try:
@@ -294,7 +294,7 @@ class ModelAPIClient:
         return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _parse_response(data: Dict[str, Any], model: str, start_time: float) -> Dict[str, Any]:
+    def _parse_response(data: dict[str, Any], model: str, start_time: float) -> dict[str, Any]:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"No choices in response: {data}")
 
@@ -305,7 +305,6 @@ class ModelAPIClient:
         completion_tokens = usage.get("completion_tokens", 0)
         latency_ms = (time.time() - start_time) * 1000
 
-        # Record actual cost
         cost_tracker.record(model, prompt_tokens, completion_tokens)
 
         return {
@@ -321,25 +320,13 @@ class ModelAPIClient:
     def call_model(
         self,
         model: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
         use_cache: bool = False,
         **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Call a model via OpenRouter.
-
-        Args:
-            model: Model identifier (e.g., "anthropic/claude-3.7-sonnet")
-            messages: List of message dicts with "role" and "content"
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional model parameters
-
-        Returns:
-            Dictionary with response text, tokens used, and latency
-        """
+    ) -> dict[str, Any]:
+        """Call a model and return response text, token counts, and latency."""
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
         cache_key = None
@@ -385,29 +372,13 @@ class ModelAPIClient:
     def call_structured(
         self,
         model: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         response_model: type,
         temperature: float = 0.0,
         max_tokens: int = 2000,
         max_retries: int = 2,
     ) -> Any:
-        """Call a model and return a validated Pydantic model via instructor.
-
-        Uses instructor to patch the OpenAI-compatible client, ensuring
-        the LLM's response is forced into the provided Pydantic schema.
-        This eliminates free-text parsing failures.
-
-        Args:
-            model: Model identifier (e.g., "google/gemini-2.5-flash-lite")
-            messages: List of message dicts with "role" and "content"
-            response_model: Pydantic BaseModel class defining the expected output
-            temperature: Sampling temperature (default 0.0 for determinism)
-            max_tokens: Maximum tokens to generate
-            max_retries: Instructor retry attempts on validation failure
-
-        Returns:
-            Validated instance of response_model
-        """
+        """Call a model and return a validated Pydantic instance via instructor."""
         import instructor
         from openai import OpenAI
 
@@ -431,27 +402,13 @@ class ModelAPIClient:
     async def call_model_async(
         self,
         model: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2000,
         use_cache: bool = False,
         **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Call a model via OpenRouter asynchronously.
-
-        Requires httpx to be installed: pip install httpx
-
-        Args:
-            model: Model identifier (e.g., "anthropic/claude-3.7-sonnet")
-            messages: List of message dicts with "role" and "content"
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional model parameters
-
-        Returns:
-            Dictionary with response text, tokens used, and latency
-        """
+    ) -> dict[str, Any]:
+        """Async variant of call_model. Requires httpx."""
         if not HTTPX_AVAILABLE:
             raise ImportError("httpx is required for async API calls: pip install httpx")
 

@@ -27,48 +27,12 @@ def project_root():
 
 
 @pytest.fixture
-def fixtures_dir():
-    """Return fixtures directory."""
-    return FIXTURES_DIR
-
-
-@pytest.fixture
 def scenarios_dir():
-    """Return scenarios directory."""
     return SCENARIOS_DIR
 
 
 @pytest.fixture
 def configs_dir():
-    """Return configs directory."""
     return CONFIGS_DIR
 
 
-@pytest.fixture
-def v2_dimensions():
-    """Canonical v2 dimension set for contract assertions."""
-    return V2_DIMENSIONS
-
-
-@pytest.fixture
-def sample_transcript():
-    """Load sample transcript fixture."""
-    transcript_path = FIXTURES_DIR / "sample_transcript.jsonl"
-    if transcript_path.exists():
-        with open(transcript_path) as f:
-            import json
-
-            return [json.loads(line) for line in f]
-    return []
-
-
-@pytest.fixture
-def sample_scenario():
-    """Load sample scenario fixture."""
-    scenario_path = FIXTURES_DIR / "sample_scenario.yaml"
-    if scenario_path.exists():
-        import yaml
-
-        with open(scenario_path) as f:
-            return yaml.safe_load(f)
-    return {}

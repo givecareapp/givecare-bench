@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import statistics
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def calculate_cv(mean: float, std_dev: float) -> Optional[float]:
@@ -23,7 +23,7 @@ def calculate_cv(mean: float, std_dev: float) -> Optional[float]:
     return std_dev / mean
 
 
-def calculate_variance(scores: List[float]) -> Dict[str, Any]:
+def calculate_variance(scores: list[float]) -> dict[str, Any]:
     """Return {mean, std_dev, min, max, cv} for a list of scores."""
     if not scores:
         raise ValueError("Scores list must contain at least one score")
@@ -48,8 +48,8 @@ def calculate_variance(scores: List[float]) -> Dict[str, Any]:
 
 
 def calculate_dimension_variance(
-    dimension_scores_list: List[Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
+    dimension_scores_list: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     """Variance metrics per dimension across iterations."""
     if not dimension_scores_list:
         raise ValueError("dimension_scores_list cannot be empty")
@@ -58,7 +58,7 @@ def calculate_dimension_variance(
     for dim_scores in dimension_scores_list:
         all_dimensions.update(dim_scores.keys())
 
-    result: Dict[str, Dict[str, Any]] = {}
+    result: dict[str, dict[str, Any]] = {}
     for dimension in all_dimensions:
         scores = []
         for dim_scores in dimension_scores_list:
@@ -71,7 +71,7 @@ def calculate_dimension_variance(
     return result
 
 
-def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def aggregate_iteration_results(iteration_results: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate results from multiple iterations into a single result with variance."""
     if not iteration_results:
         raise ValueError("iteration_results cannot be empty")
@@ -90,7 +90,7 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
     for dim_scores in dimension_scores_list:
         all_dimensions.update(dim_scores.keys())
 
-    mean_dimension_scores: Dict[str, Any] = {}
+    mean_dimension_scores: dict[str, Any] = {}
     for dimension in all_dimensions:
         scores = []
         for dim_scores in dimension_scores_list:
@@ -132,16 +132,16 @@ def aggregate_iteration_results(iteration_results: List[Dict[str, Any]]) -> Dict
         ],
     }
 
-    confidence_entries: List[Dict[str, Any]] = [
+    confidence_entries: list[dict[str, Any]] = [
         result["confidence"] for result in iteration_results
         if isinstance(result.get("confidence"), dict)
     ]
     if confidence_entries:
-        overall_confidences: List[float] = [
+        overall_confidences: list[float] = [
             float(entry["overall"]) for entry in confidence_entries
             if entry.get("overall") is not None
         ]
-        dimension_confidence: Dict[str, List[float]] = {}
+        dimension_confidence: dict[str, list[float]] = {}
         for entry in confidence_entries:
             for dimension, value in entry.get("dimensions", {}).items():
                 if value is None:

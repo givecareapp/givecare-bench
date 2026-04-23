@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 try:
     from tqdm import tqdm  # type: ignore
@@ -40,7 +40,7 @@ class ProgressTracker:
             )
 
     def report_dimension(
-        self, dimension: str, score: float, details: Optional[Dict[str, Any]] = None
+        self, dimension: str, score: float, details: Optional[dict[str, Any]] = None
     ) -> None:
         self.completed += 1
 

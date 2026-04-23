@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
@@ -24,7 +24,7 @@ except ImportError:
     Console = None
 
 
-def load_leaderboard() -> Dict[str, Any]:
+def load_leaderboard() -> dict[str, Any]:
     """Load the current leaderboard."""
     root = get_project_root()
     candidates = [
@@ -38,7 +38,7 @@ def load_leaderboard() -> Dict[str, Any]:
     raise FileNotFoundError(f"Leaderboard not found: {candidates[0]}")
 
 
-def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
     """Analyze leaderboard for issues."""
     results = {
         "models": [],
@@ -115,7 +115,7 @@ def analyze_leaderboard(data: Dict[str, Any]) -> Dict[str, Any]:
     return results
 
 
-def print_health_report(analysis: Dict[str, Any], verbose: bool = False) -> None:
+def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None:
     """Print health report."""
     console = Console() if RICH_AVAILABLE else None
 
@@ -228,7 +228,7 @@ def run_health(verbose: bool = False) -> int:
         return 2
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     """CLI entry point for standalone usage."""
     import argparse
 

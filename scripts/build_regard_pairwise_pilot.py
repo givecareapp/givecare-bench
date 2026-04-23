@@ -31,13 +31,8 @@ SCENARIOS = [
 
 
 def _load_candidates() -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with open(HOLDOUT_CANDIDATES) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
+    from _audit_helpers import load_candidates
+    return load_candidates(HOLDOUT_CANDIDATES)
 
 
 def build_groups() -> list[dict[str, Any]]:

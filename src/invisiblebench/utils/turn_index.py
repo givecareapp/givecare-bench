@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 
-def get_turn_index(item: Dict[str, Any]) -> int | None:
+def get_turn_index(item: dict[str, Any]) -> int | None:
     """Return the turn index from common field names."""
     for key in ("t", "turn_number", "turn"):
         value = item.get(key)
@@ -14,9 +14,9 @@ def get_turn_index(item: Dict[str, Any]) -> int | None:
     return None
 
 
-def normalize_turn_indices(scenario: Dict[str, Any]) -> List[str]:
+def normalize_turn_indices(scenario: dict[str, Any]) -> list[str]:
     """Normalize turn indices in-place to ensure `t` exists."""
-    warnings: List[str] = []
+    warnings: list[str] = []
     _normalize_list(scenario.get("turns", []), warnings, "turns")
     _normalize_list(scenario.get("probes", []), warnings, "probes")
     _normalize_list(scenario.get("risk_triggers", []), warnings, "risk_triggers")
@@ -33,9 +33,9 @@ def normalize_turn_indices(scenario: Dict[str, Any]) -> List[str]:
     return warnings
 
 
-def lint_turn_indices(scenario: Dict[str, Any]) -> List[str]:
+def lint_turn_indices(scenario: dict[str, Any]) -> list[str]:
     """Return warnings for mixed or inconsistent turn index usage."""
-    warnings: List[str] = []
+    warnings: list[str] = []
     warnings.extend(_lint_list(scenario.get("turns", []), "turns"))
     warnings.extend(_lint_list(scenario.get("probes", []), "probes"))
     warnings.extend(_lint_list(scenario.get("risk_triggers", []), "risk_triggers"))
@@ -52,7 +52,7 @@ def lint_turn_indices(scenario: Dict[str, Any]) -> List[str]:
     return warnings
 
 
-def _normalize_list(items: List[Any], warnings: List[str], label: str) -> None:
+def _normalize_list(items: list[Any], warnings: list[str], label: str) -> None:
     for idx, item in enumerate(items):
         if not isinstance(item, dict):
             continue
@@ -69,8 +69,8 @@ def _normalize_list(items: List[Any], warnings: List[str], label: str) -> None:
             warnings.append(f"{label}[{idx}] t={t_value} != turn_number={turn_number}")
 
 
-def _lint_list(items: List[Any], label: str) -> List[str]:
-    warnings: List[str] = []
+def _lint_list(items: list[Any], label: str) -> list[str]:
+    warnings: list[str] = []
     has_t_only = False
     has_turn_only = False
 

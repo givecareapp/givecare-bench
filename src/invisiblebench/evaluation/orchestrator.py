@@ -12,7 +12,7 @@ import logging
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 from invisiblebench.api import ModelAPIClient
 from invisiblebench.evaluation.resilience import (
@@ -45,7 +45,7 @@ _DIMENSIONS = {
 }
 
 
-def _safety_hard_fail_reasons(safety_result: Dict[str, Any]) -> list[str]:
+def _safety_hard_fail_reasons(safety_result: dict[str, Any]) -> list[str]:
     breakdown = safety_result.get("breakdown") or {}
     critical_value = breakdown.get("critical_failure", safety_result.get("critical_failure"))
     if _coerce_bool(critical_value) is True:
@@ -68,7 +68,7 @@ def _safety_hard_fail_reasons(safety_result: Dict[str, Any]) -> list[str]:
     return []
 
 
-def _compliance_hard_fail_reasons(compliance_result: Dict[str, Any]) -> list[str]:
+def _compliance_hard_fail_reasons(compliance_result: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
     for hf in compliance_result.get("hard_fails", []) or []:
         rule = hf.get("rule", "unknown")
@@ -78,11 +78,11 @@ def _compliance_hard_fail_reasons(compliance_result: Dict[str, Any]) -> list[str
 
 
 def _categorize_failure_reasons(
-    dimension_scores: Dict[str, Any],
-) -> Dict[str, Any]:
+    dimension_scores: dict[str, Any],
+) -> dict[str, Any]:
     """Categorize failure reasons into structured taxonomy."""
     categories = []
-    details: Dict[str, list[str]] = {}
+    details: dict[str, list[str]] = {}
 
     # Check safety failures
     safety_result = dimension_scores.get("safety", {})
@@ -191,7 +191,7 @@ def _categorize_failure_reasons(
 
 
 
-def _build_false_refusal_dimension(coordination_result: Dict[str, Any]) -> Dict[str, Any]:
+def _build_false_refusal_dimension(coordination_result: dict[str, Any]) -> dict[str, Any]:
     """Derive false-refusal dimension from coordination engagement signals."""
     if not isinstance(coordination_result, dict):
         return {"status": "error", "score": 0.0, "breakdown": {}, "evidence": []}
@@ -222,8 +222,8 @@ def _build_false_refusal_dimension(coordination_result: Dict[str, Any]) -> Dict[
     }
 
 
-def _extract_confidence(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
-    confidence_by_dimension: Dict[str, float] = {}
+def _extract_confidence(dimension_scores: dict[str, Any]) -> dict[str, Any]:
+    confidence_by_dimension: dict[str, float] = {}
 
     for dimension, result in dimension_scores.items():
         candidate_values = []
@@ -250,7 +250,7 @@ def _extract_confidence(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _build_turn_summary(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
+def _build_turn_summary(dimension_scores: dict[str, Any]) -> dict[str, Any]:
     entries = []
 
     for dimension, result in dimension_scores.items():
@@ -285,7 +285,7 @@ def _build_turn_summary(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
 
     entries.sort(key=lambda item: (item["turn"], item["dimension"], item["severity"]))
 
-    by_turn: Dict[int, list[Dict[str, Any]]] = {}
+    by_turn: dict[int, list[dict[str, Any]]] = {}
     for entry in entries:
         by_turn.setdefault(entry["turn"], []).append(entry)
 
@@ -295,7 +295,7 @@ def _build_turn_summary(dimension_scores: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _collect_turns(transcript: list[Dict[str, Any]]) -> list[int]:
+def _collect_turns(transcript: list[dict[str, Any]]) -> list[int]:
     turns: set[int] = set()
     for msg in transcript:
         if isinstance(msg, dict):
@@ -305,7 +305,7 @@ def _collect_turns(transcript: list[Dict[str, Any]]) -> list[int]:
     return sorted(t for t in turns if t >= 0)
 
 
-def _build_score_degradation(turn_scores: list[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _build_score_degradation(turn_scores: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """Summarize early/late turn score drop."""
     if len(turn_scores) < 2:
         return None
@@ -343,11 +343,11 @@ def _build_score_degradation(turn_scores: list[Dict[str, Any]]) -> Optional[Dict
 
 
 def _build_turn_scores(
-    transcript: list[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    dimension_scores: Dict[str, Any],
-    quality_weights: Dict[str, float],
-) -> tuple[list[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    dimension_scores: dict[str, Any],
+    quality_weights: dict[str, float],
+) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
     """Build per-turn score progression using v2 gate+quality architecture."""
     turns = _collect_turns(transcript)
     if not turns:
@@ -369,7 +369,7 @@ def _build_turn_scores(
     previous_score: Optional[float] = None
 
     for turn in turns:
-        per_turn: Dict[str, Dict[str, Any]] = {}
+        per_turn: dict[str, dict[str, Any]] = {}
 
         for dimension, result in dimension_scores.items():
             status = result.get("status")
@@ -435,11 +435,11 @@ class ScoringOrchestrator:
             self.run_manager = RunManager(runs_dir=runs_dir)
 
     def _run_scorer_safely(
-        self, scorer_func: Callable[..., Dict[str, Any]], dimension_name: str, *args: Any, **kwargs: Any
-    ) -> Dict[str, Any]:
+        self, scorer_func: Callable[..., dict[str, Any]], dimension_name: str, *args: Any, **kwargs: Any
+    ) -> dict[str, Any]:
         try:
             logger.debug(f"Running {dimension_name} scorer...")
-            result: Dict[str, Any] = scorer_func(*args, **kwargs)
+            result: dict[str, Any] = scorer_func(*args, **kwargs)
             result["status"] = "completed"
             logger.debug(f"{dimension_name} scorer completed successfully")
             return result
@@ -450,7 +450,7 @@ class ScoringOrchestrator:
             return error_result
 
     def _save_partial_state(
-        self, run_key: Optional[str], dimension_scores: Dict[str, Any], scenario_id: str
+        self, run_key: Optional[str], dimension_scores: dict[str, Any], scenario_id: str
     ) -> None:
         if not (self.enable_state_persistence and self.run_manager and run_key):
             return
@@ -476,7 +476,7 @@ class ScoringOrchestrator:
         iterations: int = 1,
         resume: bool = False,
         resume_file: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run complete scoring pipeline with v2 gate+quality architecture."""
         if iterations < 1:
             raise ValueError("iterations must be at least 1")
@@ -507,7 +507,7 @@ class ScoringOrchestrator:
                 if existing_run:
                     if existing_run.get("status") == "completed":
                         print(f"Run {run_key} already completed. Returning cached results.")
-                        cached: Dict[str, Any] = existing_run.get("results", {})
+                        cached: dict[str, Any] = existing_run.get("results", {})
                         return cached
             else:
                 run_key = self.run_manager.generate_run_key(model_name)
@@ -532,12 +532,8 @@ class ScoringOrchestrator:
         if resume and resume_file:
             from invisiblebench.evaluation.resilience import load_state
 
-            try:
-                existing_state = load_state(resume_file)
-                logger.info(f"Resuming from {resume_file}")
-            except Exception as e:
-                logger.error(f"Failed to load resume file: {e}")
-                raise
+            existing_state = load_state(resume_file)
+            logger.info(f"Resuming from {resume_file}")
 
         # v2 dimension scores — gates + quality + sub-signals
         if existing_state and "dimension_scores" in existing_state:
@@ -697,7 +693,7 @@ class ScoringOrchestrator:
         # ── Build results ──
         dimension_weights = self.scoring_config.get("weights", {})
 
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "status": overall_status,
             "overall_score": overall_score,
             "overall_percentage": round(overall_score * 100, 2),
@@ -782,7 +778,7 @@ class ScoringOrchestrator:
         model_name: Optional[str],
         run_id: Optional[str],
         iterations: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         iteration_results = []
 
         for i in range(iterations):

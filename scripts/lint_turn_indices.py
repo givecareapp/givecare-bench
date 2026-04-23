@@ -9,7 +9,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -17,7 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from invisiblebench.utils.turn_index import lint_turn_indices
 
 
-def _collect_warnings(path: Path) -> List[str]:
+def _collect_warnings(path: Path) -> list[str]:
     with open(path) as f:
         scenario = json.load(f)
     warnings = lint_turn_indices(scenario)
@@ -43,7 +42,7 @@ def main() -> int:
     if not scenario_dir.exists():
         raise SystemExit(f"Scenario directory not found: {scenario_dir}")
 
-    all_warnings: List[str] = []
+    all_warnings: list[str] = []
     for json_file in sorted(scenario_dir.rglob("*.json")):
         all_warnings.extend(_collect_warnings(json_file))
 

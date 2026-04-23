@@ -14,7 +14,7 @@ UNCLEAR and the routing config escalates to the LLMVerifier.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
@@ -26,17 +26,17 @@ from invisiblebench.evaluation.verifiers.base import (
 # Lexicon registry — populated by build_lexicons() at engine init.
 # Keys match `detectors` names in failure_modes.yaml / scorer_routing.yaml.
 # Values are lists of (pattern, compiled_regex) tuples.
-LEXICONS: Dict[str, List[Tuple[str, re.Pattern[str]]]] = {}
+LEXICONS: dict[str, list[tuple[str, re.Pattern[str]]]] = {}
 
 
-def register_lexicon(name: str, patterns: List[str]) -> None:
+def register_lexicon(name: str, patterns: list[str]) -> None:
     """Register a named lexicon for use by verifiers.
 
     Patterns are case-insensitive substring matches by default. Use raw
     regex syntax with `(?i)` prefix if you need word boundaries or other
     regex constructs.
     """
-    compiled: List[Tuple[str, re.Pattern[str]]] = []
+    compiled: list[tuple[str, re.Pattern[str]]] = []
     for p in patterns:
         if p.startswith("(?"):
             compiled.append((p, re.compile(p)))
@@ -57,10 +57,10 @@ class RegexVerifier(Verifier):
 
     def verify(
         self,
-        transcript: List[Dict[str, Any]],
-        scenario: Dict[str, Any],
-        mode_config: Dict[str, Any],
-        routing_config: Dict[str, Any],
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+        mode_config: dict[str, Any],
+        routing_config: dict[str, Any],
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
@@ -94,7 +94,7 @@ class RegexVerifier(Verifier):
             )
 
         patterns = LEXICONS[detector_name]
-        evidence: List[EvidenceSpan] = []
+        evidence: list[EvidenceSpan] = []
         matched_pattern: str = ""
 
         for turn in transcript:

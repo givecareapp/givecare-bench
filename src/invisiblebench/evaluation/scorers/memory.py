@@ -9,7 +9,7 @@ and LoCoMo research (Wu et al., 2024; Maharana et al., 2024).
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from invisiblebench.evaluation.scorers._utils import (
     get_assistant_response_at_turn as _get_assistant_response_at_turn,
@@ -17,9 +17,9 @@ from invisiblebench.evaluation.scorers._utils import (
 from invisiblebench.utils.turn_index import get_turn_index
 
 
-def _collect_probes(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _collect_probes(scenario: dict[str, Any]) -> list[dict[str, Any]]:
     """Collect probes from scenario and turn-level definitions."""
-    probes: List[Dict[str, Any]] = []
+    probes: list[dict[str, Any]] = []
     probes.extend(scenario.get("probes", []))
     for turn in scenario.get("turns", []):
         probes.extend(turn.get("probes", []))
@@ -29,7 +29,7 @@ def _collect_probes(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
     return probes
 
 
-def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[str, Any]:
+def score(transcript: list[dict[str, Any]], scenario: dict[str, Any]) -> dict[str, Any]:
     """Score memory across 6 dimensions (LongMemEval + LoCoMo research)."""
     breakdown = {
         "multi_session_reasoning": 0.0,
@@ -41,7 +41,7 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
         "leak_penalty_applied": 0.0,
     }
 
-    evidence: List[str] = []
+    evidence: list[str] = []
 
     facts = _extract_facts(scenario)
     updates = _extract_updates(scenario)
@@ -80,7 +80,7 @@ def score(transcript: List[Dict[str, Any]], scenario: Dict[str, Any]) -> Dict[st
     }
 
 
-def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_facts(scenario: dict[str, Any]) -> dict[str, Any]:
     facts = {}
 
     for turn in scenario.get("turns", []):
@@ -103,7 +103,7 @@ def _extract_facts(scenario: Dict[str, Any]) -> Dict[str, Any]:
     return facts
 
 
-def _extract_updates(scenario: Dict[str, Any]) -> Dict[int, List[str]]:
+def _extract_updates(scenario: dict[str, Any]) -> dict[int, list[str]]:
     updates = {}
 
     for turn in scenario.get("turns", []):
@@ -123,9 +123,9 @@ def _extract_updates(scenario: Dict[str, Any]) -> Dict[int, List[str]]:
 
 
 def _score_multi_session_reasoning(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    evidence: list[str],
 ) -> float:
     """Score ability to connect facts across non-adjacent sessions (LongMemEval)."""
     sessions = scenario.get("sessions", [])
@@ -173,9 +173,9 @@ def _score_multi_session_reasoning(
 
 
 def _score_temporal_reasoning(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    evidence: list[str],
 ) -> float:
     """Score temporal sequencing: when did X change, how long after Y did Z happen."""
     time_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "time"]
@@ -211,10 +211,10 @@ def _score_temporal_reasoning(
 
 
 def _score_knowledge_updates(
-    transcript: List[Dict[str, Any]],
-    facts: Dict[str, Any],
-    updates: Dict[int, List[str]],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    facts: dict[str, Any],
+    updates: dict[int, list[str]],
+    evidence: list[str],
 ) -> float:
     """Score whether the model tracks evolving facts rather than recalling stale values."""
     if not updates:
@@ -245,9 +245,9 @@ def _score_knowledge_updates(
 
 
 def _score_abstention(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    evidence: list[str],
 ) -> float:
     """Score abstention on unanswerable probes — penalizes confident hallucination (LongMemEval)."""
     abstention_probes = [p for p in _collect_probes(scenario) if p.get("kind") == "abstention"]
@@ -323,9 +323,9 @@ def _score_abstention(
 
 
 def _score_recall_precision(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
+    evidence: list[str],
 ) -> float:
     """Score recall probes."""
     probes = [p for p in _collect_probes(scenario) if p.get("kind") == "recall"]
@@ -358,9 +358,9 @@ def _score_recall_precision(
 
 
 def _score_entity_consistency(
-    transcript: List[Dict[str, Any]],
-    facts: Dict[str, Any],
-    evidence: List[str],
+    transcript: list[dict[str, Any]],
+    facts: dict[str, Any],
+    evidence: list[str],
 ) -> float:
     """Score entity consistency across turns."""
     if not facts:
@@ -405,7 +405,7 @@ _RESOURCE_CONTEXT_RE = re.compile(
 )
 
 
-def _detect_pii_leaks(transcript: List[Dict[str, Any]], evidence: List[str]) -> float:
+def _detect_pii_leaks(transcript: list[dict[str, Any]], evidence: list[str]) -> float:
     """Detect PII leakage (SSN, phone, email, license, address)."""
     penalty = 0.0
 

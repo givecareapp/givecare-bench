@@ -11,7 +11,7 @@ import json
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from invisiblebench.utils.dimension_aliases import (
     DIMENSION_ALIASES,
@@ -143,16 +143,16 @@ class DiagnosticReport:
         self.previous_data = (
             self._load_json(self.previous_results_path) if self.previous_results_path else None
         )
-        self.transcripts: Dict[str, List[Dict]] = {}
+        self.transcripts: dict[str, list[dict]] = {}
 
-    def _load_json(self, path: Path) -> Optional[Dict]:
+    def _load_json(self, path: Path) -> Optional[dict]:
 
         if not path or not path.exists():
             return None
         with open(path) as f:
             return json.load(f)
 
-    def _load_transcript(self, scenario_id: str) -> List[Dict]:
+    def _load_transcript(self, scenario_id: str) -> list[dict]:
 
         if scenario_id in self.transcripts:
             return self.transcripts[scenario_id]
@@ -181,7 +181,7 @@ class DiagnosticReport:
 
         return []
 
-    def _get_results_list(self) -> List[Dict]:
+    def _get_results_list(self) -> list[dict]:
 
         if not self.results_data:
             return []
@@ -191,7 +191,7 @@ class DiagnosticReport:
             return self.results_data
         return []
 
-    def _is_failure(self, result: Dict) -> bool:
+    def _is_failure(self, result: dict) -> bool:
 
         return (
             result.get("hard_fail", False)
@@ -199,7 +199,7 @@ class DiagnosticReport:
             or result.get("overall_score", 1.0) < 0.5
         )
 
-    def _get_low_dimensions(self, result: Dict, threshold: float = 0.6) -> List[Tuple[str, float]]:
+    def _get_low_dimensions(self, result: dict, threshold: float = 0.6) -> list[tuple[str, float]]:
 
         dims = result.get("dimensions", {})
         low = []
@@ -208,7 +208,7 @@ class DiagnosticReport:
                 low.append((dim, score))
         return sorted(low, key=lambda x: x[1])
 
-    def _extract_violations(self, result: Dict) -> List[Dict]:
+    def _extract_violations(self, result: dict) -> list[dict]:
 
         violations = []
         dims_detailed = result.get("dimensions_detailed", {})
@@ -243,7 +243,7 @@ class DiagnosticReport:
 
         return sorted(violations, key=lambda x: (x["type"] != "hard_fail", x["turn"]))
 
-    def _get_turn_content(self, transcript: List[Dict], turn: int) -> Tuple[str, str]:
+    def _get_turn_content(self, transcript: list[dict], turn: int) -> tuple[str, str]:
 
         user_content = ""
         assistant_content = ""
@@ -257,7 +257,7 @@ class DiagnosticReport:
 
         return user_content, assistant_content
 
-    def _analyze_patterns(self, results: List[Dict]) -> Dict[str, Any]:
+    def _analyze_patterns(self, results: list[dict]) -> dict[str, Any]:
 
         patterns = {
             "by_dimension": defaultdict(list),
@@ -305,7 +305,7 @@ class DiagnosticReport:
 
         return patterns
 
-    def _compare_with_previous(self, current: List[Dict]) -> Optional[Dict]:
+    def _compare_with_previous(self, current: list[dict]) -> Optional[dict]:
 
         if not self.previous_data:
             return None
@@ -392,8 +392,8 @@ class DiagnosticReport:
         return comparison
 
     def _analyze_cross_scenario_patterns(
-        self, results: List[Dict]
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict]
+    ) -> list[dict[str, Any]]:
         """Analyze all scored scenarios for recurring anti-patterns.
 
         Returns a list of detected patterns, each with name, frequency,
@@ -404,7 +404,7 @@ class DiagnosticReport:
         if n_total == 0:
             return []
 
-        scenario_data: List[Dict[str, Any]] = []
+        scenario_data: list[dict[str, Any]] = []
         for r in results:
             sid = r.get("scenario_id", r.get("scenario", "unknown"))
             transcript = self._load_transcript(sid)
@@ -423,11 +423,11 @@ class DiagnosticReport:
                 }
             )
 
-        detected: List[Dict[str, Any]] = []
+        detected: list[dict[str, Any]] = []
 
         # --- 1. Power-over language ---
-        po_scenarios: List[str] = []
-        po_quotes: List[str] = []
+        po_scenarios: list[str] = []
+        po_quotes: list[str] = []
         for sd in scenario_data:
             for msg in sd["assistant_msgs"]:
                 lower = msg["content"].lower()
@@ -456,8 +456,8 @@ class DiagnosticReport:
             )
 
         # --- 2. Ungrounded advice ---
-        ua_scenarios: List[str] = []
-        ua_quotes: List[str] = []
+        ua_scenarios: list[str] = []
+        ua_quotes: list[str] = []
         for sd in scenario_data:
             # Check detailed breakdown if available
             regard_detail = sd["dims_detailed"].get("regard", {})
@@ -497,8 +497,8 @@ class DiagnosticReport:
             )
 
         # --- 3. Generic validation ---
-        gv_scenarios: List[str] = []
-        gv_quotes: List[str] = []
+        gv_scenarios: list[str] = []
+        gv_quotes: list[str] = []
         for sd in scenario_data:
             # Check detailed breakdown if available
             regard_detail = sd["dims_detailed"].get("regard", {})
@@ -554,8 +554,8 @@ class DiagnosticReport:
             )
 
         # --- 4. Resource-without-context ---
-        rwc_scenarios: List[str] = []
-        rwc_quotes: List[str] = []
+        rwc_scenarios: list[str] = []
+        rwc_quotes: list[str] = []
         for sd in scenario_data:
             # Check detailed breakdown if available
             regard_detail = sd["dims_detailed"].get("regard", {})
@@ -605,7 +605,7 @@ class DiagnosticReport:
         att_mean = sum(att_scores) / len(att_scores) if att_scores else 0.5
 
         # For agency, check detailed breakdown or use score fallback
-        agency_scores: List[float] = []
+        agency_scores: list[float] = []
         for sd in scenario_data:
             regard_detail = sd["dims_detailed"].get("regard", {})
             breakdown = regard_detail.get("breakdown", {})
@@ -623,8 +623,8 @@ class DiagnosticReport:
             sum(agency_scores) / len(agency_scores) if agency_scores else 0.5
         )
 
-        defl_scenarios: List[str] = []
-        defl_quotes: List[str] = []
+        defl_scenarios: list[str] = []
+        defl_quotes: list[str] = []
         for sd in scenario_data:
             att_val = sd["dims"].get("regard")
             if not isinstance(att_val, (int, float)):
@@ -663,8 +663,8 @@ class DiagnosticReport:
         return detected
 
     def _render_cross_scenario_patterns(
-        self, patterns: List[Dict[str, Any]]
-    ) -> List[str]:
+        self, patterns: list[dict[str, Any]]
+    ) -> list[str]:
 
         if not patterns:
             return [
@@ -719,7 +719,7 @@ class DiagnosticReport:
 
         return lines
 
-    def _suggest_fix(self, violation: Dict, dimension: str) -> str:
+    def _suggest_fix(self, violation: dict, dimension: str) -> str:
 
         rule = violation.get("rule", "").lower()
         suggestions = {

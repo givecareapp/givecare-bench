@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
@@ -31,7 +31,7 @@ from invisiblebench.evaluation.verifiers.base import (
 
 logger = logging.getLogger(__name__)
 
-CORPUS_REGISTRY: Dict[str, "BenefitsCorpus"] = {}
+CORPUS_REGISTRY: dict[str, "BenefitsCorpus"] = {}
 
 
 class BenefitsCorpus:
@@ -41,20 +41,20 @@ class BenefitsCorpus:
     internal benefits CLI data. Sync pipeline is a separate task.
     """
 
-    def __init__(self, name: str, data: Dict[str, Any]) -> None:
+    def __init__(self, name: str, data: dict[str, Any]) -> None:
         self.name = name
         self.version = data.get("version", "unknown")
         # Canonical map: lowercased_program_name -> record
-        self.programs: Dict[str, Dict[str, Any]] = {}
+        self.programs: dict[str, dict[str, Any]] = {}
         # Alias map: lowercased_alias -> canonical_name
-        self.aliases: Dict[str, str] = {}
+        self.aliases: dict[str, str] = {}
         for program in data.get("programs", []):
             canonical = program["name"].lower()
             self.programs[canonical] = program
             for alias in program.get("aliases", []) or []:
                 self.aliases[alias.lower()] = canonical
 
-    def lookup(self, name: str) -> Optional[Dict[str, Any]]:
+    def lookup(self, name: str) -> Optional[dict[str, Any]]:
         """Find a program by name or alias (case-insensitive)."""
         key = name.lower().strip()
         if key in self.programs:
@@ -67,7 +67,7 @@ class BenefitsCorpus:
                 return record
         return None
 
-    def in_jurisdiction(self, program: Dict[str, Any], jurisdiction: str) -> bool:
+    def in_jurisdiction(self, program: dict[str, Any], jurisdiction: str) -> bool:
         """True if the program applies in the given state/jurisdiction."""
         juris_list = program.get("jurisdictions") or []
         if not juris_list:
@@ -76,7 +76,7 @@ class BenefitsCorpus:
         return jurisdiction.upper() in [j.upper() for j in juris_list]
 
 
-def register_corpus(name: str, data: Dict[str, Any]) -> None:
+def register_corpus(name: str, data: dict[str, Any]) -> None:
     """Register a corpus by name for use by CorpusVerifier."""
     CORPUS_REGISTRY[name] = BenefitsCorpus(name, data)
 
@@ -138,14 +138,14 @@ _load_default_corpus()
 # Claim extractor (LLM-assisted — LLM extracts, corpus decides truth)
 # ---------------------------------------------------------------------------
 
-def _extract_claims_heuristic(text: str) -> List[Dict[str, Any]]:
+def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
     """Heuristic claim extraction for v0.
 
     Pulls program-name-shaped tokens and adjacent hedge/verification markers.
     This is a placeholder — production should use an LLM extractor via
     llm_verifier with a dedicated extraction prompt.
     """
-    claims: List[Dict[str, Any]] = []
+    claims: list[dict[str, Any]] = []
     # Known program tokens (mirror corpus aliases for now)
     known_tokens = [
         "NFCSP",
@@ -206,10 +206,10 @@ class CorpusVerifier(Verifier):
 
     def verify(
         self,
-        transcript: List[Dict[str, Any]],
-        scenario: Dict[str, Any],
-        mode_config: Dict[str, Any],
-        routing_config: Dict[str, Any],
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+        mode_config: dict[str, Any],
+        routing_config: dict[str, Any],
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
@@ -255,7 +255,7 @@ class CorpusVerifier(Verifier):
         jurisdiction = scenario.get("persona", {}).get("state") or scenario.get("jurisdiction")
 
         # Evaluate by mode — each E mode asks a different question of the claims
-        evidence: List[EvidenceSpan] = []
+        evidence: list[EvidenceSpan] = []
         verdict = Verdict.PASS
         rationale_code: Optional[str] = None
 
@@ -330,7 +330,7 @@ class CorpusVerifier(Verifier):
         )
 
 
-def _claim_evidence(claim: Dict[str, Any]) -> EvidenceSpan:
+def _claim_evidence(claim: dict[str, Any]) -> EvidenceSpan:
     return EvidenceSpan(
         role="assistant",
         turn=-1,  # corpus verifier operates on concatenated assistant text

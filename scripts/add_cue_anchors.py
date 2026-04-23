@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 REPO = pathlib.Path("/home/deploy/gc-repos/givecare-bench")
 SCEN = REPO / "benchmark/scenarios"
@@ -48,9 +48,9 @@ CUE_PATTERNS = [
 ]
 
 
-def find_cues_in_scenario(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+def find_cues_in_scenario(scenario: dict[str, Any]) -> list[dict[str, Any]]:
     """Scan user/caregiver turns for cue matches; return cue_anchors."""
-    anchors: List[Dict[str, Any]] = []
+    anchors: list[dict[str, Any]] = []
     turns = scenario.get("turns") or []
 
     for t in turns:
@@ -136,7 +136,7 @@ def main():
         with open(p) as f:
             try:
                 scenario = json.load(f)
-            except Exception:
+            except json.JSONDecodeError:
                 continue
 
         if scenario.get("cue_anchors"):

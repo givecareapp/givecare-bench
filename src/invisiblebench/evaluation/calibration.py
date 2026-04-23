@@ -23,7 +23,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.evaluation.verifiers.base import (
     FAILURE_VERDICTS,
@@ -47,8 +47,8 @@ class GoldExample:
     mode_id: str
     bucket: str  # "clear_pass" | "clear_fail" | "ambiguous" | "adversarial"
     expected: Verdict
-    transcript: List[Dict[str, Any]]
-    scenario: Dict[str, Any]
+    transcript: list[dict[str, Any]]
+    scenario: dict[str, Any]
     author: Optional[str] = None
     adjudication_notes: Optional[str] = None
 
@@ -67,8 +67,8 @@ class CalibrationMetrics:
     unclear_rate: float
     inter_run_stability: Optional[float]  # K>1 repetitions agreement
     human_verifier_kappa: Optional[float]
-    per_bucket_accuracy: Dict[str, float] = field(default_factory=dict)
-    confusion_matrix: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    per_bucket_accuracy: dict[str, float] = field(default_factory=dict)
+    confusion_matrix: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def tier(self) -> str:
         """Classify mode by Tier 1/2/3/4 per taxonomy_v0."""
@@ -80,7 +80,7 @@ class CalibrationMetrics:
             return "Tier_1_validation_grade"
         return "Tier_2_calibrated_secondary"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "mode_id": self.mode_id,
             "n_examples": self.n_examples,
@@ -104,13 +104,13 @@ class CalibrationHarness:
     def __init__(self, gold_sets_dir: Optional[Path] = None) -> None:
         self.gold_sets_dir = gold_sets_dir or GOLD_SETS_DIR
 
-    def load_gold_set(self, mode_id: str) -> List[GoldExample]:
+    def load_gold_set(self, mode_id: str) -> list[GoldExample]:
         """Gold sets live at internal/calibration/gold_sets/<MODE_ID>.jsonl."""
         path = self.gold_sets_dir / f"{mode_id}.jsonl"
         if not path.exists():
             logger.warning("No gold set for %s at %s", mode_id, path)
             return []
-        examples: List[GoldExample] = []
+        examples: list[GoldExample] = []
         with open(path, encoding="utf-8") as f:
             for i, line in enumerate(f):
                 line = line.strip()
@@ -135,8 +135,8 @@ class CalibrationHarness:
         self,
         mode_id: str,
         verifier: Verifier,
-        mode_config: Dict[str, Any],
-        routing_config: Dict[str, Any],
+        mode_config: dict[str, Any],
+        routing_config: dict[str, Any],
         repetitions_per_example: int = 3,
     ) -> CalibrationMetrics:
         """Run the verifier against every gold example for this mode."""
@@ -155,12 +155,12 @@ class CalibrationHarness:
                 human_verifier_kappa=None,
             )
 
-        per_example_verdicts: List[tuple[Verdict, Verdict, str]] = []
-        stability_per_example: List[float] = []
+        per_example_verdicts: list[tuple[Verdict, Verdict, str]] = []
+        stability_per_example: list[float] = []
 
         for ex in gold:
             # Run K times per example for stability
-            runs: List[Verdict] = []
+            runs: list[Verdict] = []
             for _ in range(repetitions_per_example):
                 try:
                     result = verifier.verify(
@@ -196,8 +196,8 @@ class CalibrationHarness:
     def _compute_metrics(
         self,
         mode_id: str,
-        verdicts: List[tuple[Verdict, Verdict, str]],
-        stability: List[float],
+        verdicts: list[tuple[Verdict, Verdict, str]],
+        stability: list[float],
     ) -> CalibrationMetrics:
         n = len(verdicts)
         if n == 0:
@@ -215,8 +215,8 @@ class CalibrationHarness:
             )
 
         tp = fp = tn = fn = unclear = 0
-        per_bucket: Dict[str, List[bool]] = {}
-        confusion: Dict[str, Dict[str, int]] = {}
+        per_bucket: dict[str, list[bool]] = {}
+        confusion: dict[str, dict[str, int]] = {}
 
         for expected, actual, bucket in verdicts:
             correct = expected == actual
@@ -274,7 +274,7 @@ class CalibrationHarness:
         )
 
     def _cohens_kappa(
-        self, verdicts: List[tuple[Verdict, Verdict, str]]
+        self, verdicts: list[tuple[Verdict, Verdict, str]]
     ) -> Optional[float]:
         """Cohen's kappa between expected (human gold) and actual (verifier)."""
         n = len(verdicts)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -20,27 +20,14 @@ class RuleLoader:
 
 
     def __init__(self):
-        self._loading_stack: List[str] = []
+        self._loading_stack: list[str] = []
 
-    def load(self, path: str) -> Dict[str, Any]:
-        """
-        Load a rule file and resolve inheritance.
-
-        Args:
-            path: Path to the rule YAML file
-
-        Returns:
-            Dictionary with resolved rules
-
-        Raises:
-            FileNotFoundError: If the file doesn't exist
-            ValueError: If circular inheritance is detected
-        """
+    def load(self, path: str) -> dict[str, Any]:
+        """Load a rule file, resolving any `extends` inheritance chain."""
         path_obj = Path(path)
         if not path_obj.exists():
             raise FileNotFoundError(f"Rule file not found: {path}")
 
-        # Check for circular inheritance
         abs_path = str(path_obj.resolve())
         if abs_path in self._loading_stack:
             raise ValueError(
@@ -58,12 +45,10 @@ class RuleLoader:
 
             if "extends" in rules:
                 parent_file = rules.pop("extends")
-                # Resolve parent path relative to current file
                 parent_path = path_obj.parent / parent_file
 
                 parent_rules = self.load(str(parent_path))
 
-                # Deep merge: parent rules + current rules
                 merged = self._deep_merge(parent_rules, rules)
                 return merged
 
@@ -71,25 +56,14 @@ class RuleLoader:
         finally:
             self._loading_stack.pop()
 
-    def _deep_merge(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Deep merge two dictionaries.
-
-        Args:
-            base: Base dictionary
-            override: Dictionary with overrides
-
-        Returns:
-            Merged dictionary
-        """
+    def _deep_merge(self, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Deep merge two dictionaries; override wins on conflicts."""
         result = base.copy()
 
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                # Recursively merge nested dicts
                 result[key] = self._deep_merge(result[key], value)
             else:
-                # Override value
                 result[key] = value
 
         return result
@@ -102,20 +76,8 @@ class ScenarioLoader:
         self.validator = ScenarioValidator()
         self.validate = validate
 
-    def load(self, path: str) -> Dict[str, Any]:
-        """
-        Load a scenario file.
-
-        Args:
-            path: Path to the scenario YAML file
-
-        Returns:
-            Dictionary with scenario data
-
-        Raises:
-            FileNotFoundError: If the file doesn't exist
-            ValueError: If the scenario fails validation
-        """
+    def load(self, path: str) -> dict[str, Any]:
+        """Load and validate a scenario YAML file."""
         path_obj = Path(path)
         if not path_obj.exists():
             raise FileNotFoundError(f"Scenario file not found: {path}")
@@ -138,20 +100,8 @@ class ScenarioLoader:
 class TranscriptLoader:
 
 
-    def load(self, path: str) -> List[Dict[str, Any]]:
-        """
-        Load a transcript JSONL file.
-
-        Args:
-            path: Path to the transcript JSONL file
-
-        Returns:
-            List of message dictionaries
-
-        Raises:
-            FileNotFoundError: If the file doesn't exist
-            json.JSONDecodeError: If JSONL is malformed
-        """
+    def load(self, path: str) -> list[dict[str, Any]]:
+        """Load a transcript JSONL file into a list of message dicts."""
         path_obj = Path(path)
         if not path_obj.exists():
             raise FileNotFoundError(f"Transcript file not found: {path}")
@@ -160,7 +110,7 @@ class TranscriptLoader:
         with open(path_obj) as f:
             for line in f:
                 line = line.strip()
-                if line:  # Skip empty lines
+                if line:
                     messages.append(json.loads(line))
 
         return messages
@@ -169,19 +119,8 @@ class TranscriptLoader:
 class ScoringConfigLoader:
 
 
-    def load(self, path: str) -> Dict[str, Any]:
-        """
-        Load a scoring configuration file.
-
-        Args:
-            path: Path to the scoring YAML file
-
-        Returns:
-            Dictionary with scoring configuration
-
-        Raises:
-            FileNotFoundError: If the file doesn't exist
-        """
+    def load(self, path: str) -> dict[str, Any]:
+        """Load a scoring configuration YAML file."""
         path_obj = Path(path)
         if not path_obj.exists():
             raise FileNotFoundError(f"Scoring config file not found: {path}")

@@ -1,12 +1,12 @@
 """Quality vs reliability classification helpers for benchmark results."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
 
 
-def classify_reliability_issue(result: Dict[str, Any]) -> str | None:
+def classify_reliability_issue(result: dict[str, Any]) -> str | None:
     """Classify operational reliability failures for a scenario row."""
     if result.get("status") != "error":
         return None
@@ -36,8 +36,8 @@ def classify_reliability_issue(result: Dict[str, Any]) -> str | None:
 
 
 def compute_quality_summary(
-    results: List[Dict[str, Any]], threshold: float = SUCCESS_THRESHOLD
-) -> Dict[str, Any]:
+    results: list[dict[str, Any]], threshold: float = SUCCESS_THRESHOLD
+) -> dict[str, Any]:
     """Compute benchmark quality summary separate from reliability errors."""
     total = len(results)
     passes = sum(1 for r in results if is_result_success(r, threshold=threshold))
@@ -51,11 +51,11 @@ def compute_quality_summary(
     }
 
 
-def compute_reliability_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def compute_reliability_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute operational reliability summary for a result set."""
     total = len(results)
     error_results = [r for r in results if r.get("status") == "error"]
-    buckets: Dict[str, int] = {}
+    buckets: dict[str, int] = {}
     for result in error_results:
         bucket = classify_reliability_issue(result) or "runtime"
         buckets[bucket] = buckets.get(bucket, 0) + 1

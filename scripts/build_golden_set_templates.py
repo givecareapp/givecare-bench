@@ -54,13 +54,8 @@ TEMPLATE_SHAPE = {
 
 
 def _load_candidates() -> list[dict]:
-    rows = []
-    with open(CANDIDATES) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
+    from _audit_helpers import load_candidates
+    return load_candidates(CANDIDATES)
 
 
 def main() -> None:

@@ -16,16 +16,18 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from _audit_helpers import build_scenario_index as _build_scenario_index_impl
+from _audit_helpers import cohen_kappa as _cohen_kappa
+from _audit_helpers import format_kappa, format_ratio
+from _audit_helpers import load_candidates as _load_candidates_impl
+
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 from invisiblebench.utils.benchmark_inventory import (
-    collect_scenario_paths,
-    get_private_confidential_dir,
     get_project_root,
 )
 
@@ -54,13 +56,7 @@ RULE_MAP = {
 
 
 def _load_candidates() -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with open(CANDIDATES_PATH) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
+    return _load_candidates_impl(CANDIDATES_PATH)
 
 
 def _load_gold_summary() -> dict[str, dict[str, Any]]:
@@ -72,15 +68,7 @@ def _load_gold_summary() -> dict[str, dict[str, Any]]:
 
 
 def _build_scenario_index() -> dict[str, Path]:
-    index: dict[str, Path] = {}
-    include_confidential = get_private_confidential_dir(PROJECT_ROOT) is not None
-    for path in collect_scenario_paths(PROJECT_ROOT, include_confidential=include_confidential):
-        scenario_path = Path(path)
-        with open(scenario_path) as fh:
-            scenario = json.load(fh)
-        scenario_id = scenario.get("scenario_id", scenario_path.stem)
-        index[scenario_id] = scenario_path
-    return index
+    return _build_scenario_index_impl(PROJECT_ROOT)
 
 
 def _parse_bool(value: Any) -> bool:
@@ -159,25 +147,6 @@ def _normalize_current_prediction(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _cohen_kappa(labels_a: list[Any], labels_b: list[Any]) -> float:
-    assert len(labels_a) == len(labels_b)
-    n = len(labels_a)
-    if n == 0:
-        return float("nan")
-
-    classes = sorted({str(x) for x in labels_a} | {str(x) for x in labels_b})
-    if len(classes) <= 1:
-        return 1.0 if labels_a == labels_b else float("nan")
-
-    agree = sum(1 for a, b in zip(labels_a, labels_b) if a == b)
-    p_o = agree / n
-    count_a = Counter(str(x) for x in labels_a)
-    count_b = Counter(str(x) for x in labels_b)
-    p_e = sum((count_a[c] / n) * (count_b[c] / n) for c in classes)
-    if 1 - p_e == 0:
-        return 1.0 if p_o == 1.0 else float("nan")
-    return (p_o - p_e) / (1 - p_e)
-
 
 def _public_confusion(rows: list[dict[str, Any]], prefix: str) -> dict[str, int]:
     tp = fp = fn = tn = 0
@@ -239,12 +208,8 @@ def _metric_bundle(rows: list[dict[str, Any]], prefix: str) -> dict[str, Any]:
     }
 
 
-def _format_ratio(numerator: int, denominator: int) -> str:
-    return f"{numerator}/{denominator} = {(numerator / denominator):.3f}" if denominator else "n/a"
-
-
-def _format_kappa(value: float) -> str:
-    return "n/a" if value != value else f"{value:.3f}"
+_format_ratio = format_ratio
+_format_kappa = format_kappa
 
 
 def _row_mismatch_kind(row: dict[str, Any], prefix: str) -> str:

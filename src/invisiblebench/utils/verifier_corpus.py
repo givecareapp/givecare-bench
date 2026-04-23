@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Iterable, Optional, Sequence
 
 CURRENT_BOARD_LEADERBOARD_DIR = Path("results/leaderboard_ready")
 CURRENT_BOARD_TRANSCRIPT_DIRS = (
@@ -21,7 +21,7 @@ def _relative_to_project(path: Path, project_root: Path) -> str:
     return str(path.relative_to(project_root))
 
 
-def _model_prefix_candidates(model_id: str) -> List[str]:
+def _model_prefix_candidates(model_id: str) -> list[str]:
     base = model_id.replace("/", "_")
     candidates = [base]
     candidates.extend(TRANSCRIPT_PREFIX_ALIASES.get(base, ()))
@@ -64,7 +64,7 @@ def _resolve_detail_path(project_root: Path, raw_path: Optional[str]) -> Optiona
     return None
 
 
-def _iter_leaderboard_documents(leaderboard_dir: Path) -> Iterable[Tuple[Path, Dict[str, Any]]]:
+def _iter_leaderboard_documents(leaderboard_dir: Path) -> Iterable[tuple[Path, dict[str, Any]]]:
     for path in sorted(leaderboard_dir.glob("*.json")):
         with open(path) as fh:
             yield path, json.load(fh)
@@ -75,14 +75,14 @@ def build_verifier_corpus_manifest(
     *,
     leaderboard_dir: Path = CURRENT_BOARD_LEADERBOARD_DIR,
     transcript_dirs: Sequence[Path] = CURRENT_BOARD_TRANSCRIPT_DIRS,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Build a manifest over the current 15-model leaderboard corpus.
 
     The manifest unifies leaderboard rows, transcript locations, and resolved detail
     artifact paths without copying any raw result files.
     """
 
-    manifest: List[Dict[str, Any]] = []
+    manifest: list[dict[str, Any]] = []
     leaderboard_root = project_root / leaderboard_dir
 
     for leaderboard_file, doc in _iter_leaderboard_documents(leaderboard_root):
@@ -144,8 +144,8 @@ def build_verifier_corpus_manifest(
     return manifest
 
 
-def build_verifier_corpus_summary(manifest: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
-    by_model: Dict[str, Dict[str, Any]] = {}
+def build_verifier_corpus_summary(manifest: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    by_model: dict[str, dict[str, Any]] = {}
     for row in manifest:
         stats = by_model.setdefault(
             row["model"],
@@ -201,7 +201,7 @@ def write_verifier_corpus_manifest(
     *,
     leaderboard_dir: Path = CURRENT_BOARD_LEADERBOARD_DIR,
     transcript_dirs: Sequence[Path] = CURRENT_BOARD_TRANSCRIPT_DIRS,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     manifest = build_verifier_corpus_manifest(
         project_root,
         leaderboard_dir=leaderboard_dir,
@@ -214,7 +214,7 @@ def write_verifier_corpus_manifest(
     return manifest
 
 
-def write_verifier_corpus_summary(summary: Dict[str, Any], output_path: Path) -> None:
+def write_verifier_corpus_summary(summary: dict[str, Any], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as fh:
         json.dump(summary, fh, indent=2, sort_keys=True)

@@ -15,7 +15,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
@@ -40,7 +40,7 @@ def parse_run_date(run_name: str) -> Optional[datetime]:
     return None
 
 
-def get_run_info(run_path: Path) -> Dict[str, Any]:
+def get_run_info(run_path: Path) -> dict[str, Any]:
     """Get info about a run directory."""
     info = {
         "path": run_path,
@@ -53,7 +53,6 @@ def get_run_info(run_path: Path) -> Dict[str, Any]:
         "scenarios": 0,
     }
 
-    # Try to get model info from results
     results_file = run_path / "all_results.json"
     if results_file.exists():
         try:
@@ -68,7 +67,7 @@ def get_run_info(run_path: Path) -> Dict[str, Any]:
     return info
 
 
-def list_runs(results_dir: Path) -> List[Dict[str, Any]]:
+def list_runs(results_dir: Path) -> list[dict[str, Any]]:
     """List all run directories with info."""
     runs = []
     for d in sorted(results_dir.iterdir()):
@@ -81,7 +80,7 @@ def archive_runs(
     before_date: Optional[datetime] = None,
     keep_recent: Optional[int] = None,
     dry_run: bool = False,
-) -> Tuple[List[Path], List[Path]]:
+) -> tuple[list[Path], list[Path]]:
     """
     Archive run directories.
 
@@ -96,7 +95,6 @@ def archive_runs(
 
     runs = list_runs(results_dir)
 
-    # Determine what to archive
     to_archive = []
     to_keep = []
 
@@ -139,8 +137,8 @@ def archive_runs(
 
 
 def print_archive_report(
-    to_archive: List[Path],
-    to_keep: List[Path],
+    to_archive: list[Path],
+    to_keep: list[Path],
     dry_run: bool = False,
     console: Optional[Any] = None,
 ) -> None:
@@ -246,7 +244,6 @@ def run_list() -> int:
             date_str = run["date"].strftime("%Y-%m-%d") if run["date"] else "unknown"
             print(f"{date_str} | {run['name']} | {run['size_mb']:.1f}MB")
 
-    # Also check archive
     archive_dir = results_dir / "archive"
     if archive_dir.exists():
         archived = list(archive_dir.iterdir())
@@ -256,7 +253,7 @@ def run_list() -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     """CLI entry point."""
     import argparse
 

@@ -10,7 +10,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.scenario import Scenario
@@ -51,21 +51,21 @@ def _mono_root() -> Path:
     return get_project_root().parent / "give-care-mono"
 
 
-def _required_mono_source_paths() -> List[Path]:
+def _required_mono_source_paths() -> list[Path]:
     return [
         _mono_root() / "packages" / "pi-orchestrator" / "src",
         _mono_root() / "packages" / "care-domain" / "src",
     ]
 
 
-def _collect_source_paths() -> List[Path]:
+def _collect_source_paths() -> list[Path]:
     paths = [
         _bridge_build_script(),
         _adapter_root() / "src" / "bridge.ts",
         _mono_root() / "packages" / "pi-orchestrator" / "src",
         _mono_root() / "packages" / "care-domain" / "src",
     ]
-    collected: List[Path] = []
+    collected: list[Path] = []
     for path in paths:
         if not path.exists():
             continue
@@ -116,7 +116,7 @@ def ensure_bridge_bundle() -> Path:
     return bundle
 
 
-def bridge_healthcheck() -> Dict[str, Any]:
+def bridge_healthcheck() -> dict[str, Any]:
     """Run a no-op healthcheck against the bridge bundle."""
     bundle = ensure_bridge_bundle()
     result = subprocess.run(
@@ -131,7 +131,7 @@ def bridge_healthcheck() -> Dict[str, Any]:
     return json.loads(result.stdout.strip() or "{}")
 
 
-def bridge_diagnostics() -> Dict[str, Any]:
+def bridge_diagnostics() -> dict[str, Any]:
     """Return dependency diagnostics without building or executing the bridge."""
     mono_root = _mono_root()
     build_script = _bridge_build_script()
@@ -186,9 +186,9 @@ def _risk_level_for_turn(scenario: Scenario, turn_number: int) -> str:
     return risk_level
 
 
-def _turns_for_scenario(scenario: Scenario) -> List[Dict[str, Any]]:
+def _turns_for_scenario(scenario: Scenario) -> list[dict[str, Any]]:
     if scenario.sessions:
-        turns: List[Dict[str, Any]] = []
+        turns: list[dict[str, Any]] = []
         for session in scenario.sessions:
             for turn in session.turns:
                 turns.append(turn.model_dump())
@@ -196,8 +196,8 @@ def _turns_for_scenario(scenario: Scenario) -> List[Dict[str, Any]]:
     return [turn.model_dump() for turn in scenario.turns]
 
 
-def _memory_dict(memories: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    out: Dict[str, Dict[str, Any]] = {}
+def _memory_dict(memories: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
     for memory in memories:
         key = str(memory.get("key", ""))
         if key:
@@ -209,7 +209,7 @@ def _memory_dict(memories: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _apply_fact_assignments(memory_state: Dict[str, Dict[str, Any]], assignments: List[str]) -> None:
+def _apply_fact_assignments(memory_state: dict[str, dict[str, Any]], assignments: list[str]) -> None:
     for item in assignments:
         if "=" not in item:
             continue
@@ -221,9 +221,9 @@ def _apply_fact_assignments(memory_state: Dict[str, Dict[str, Any]], assignments
         memory_state[key] = {"key": key, "value": value, "confidence": 1.0}
 
 
-def _conversation_seed(scenario: Scenario) -> Dict[str, Any]:
+def _conversation_seed(scenario: Scenario) -> dict[str, Any]:
     persona = scenario.persona
-    memory_state: Dict[str, Dict[str, Any]] = {}
+    memory_state: dict[str, dict[str, Any]] = {}
     for key, value in {
         "caregiver_name": persona.name,
         "caregiver_role": persona.role or "caregiver",
@@ -272,11 +272,11 @@ def _conversation_seed(scenario: Scenario) -> Dict[str, Any]:
 def _build_bridge_payload(
     *,
     model_name: str,
-    state: Dict[str, Any],
+    state: dict[str, Any],
     incoming_text: str,
     turn_number: int,
     scenario: Scenario,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     conv = state["conversation_state"]
     return {
         "command": "run_turn",
@@ -322,7 +322,7 @@ def _build_bridge_payload(
     }
 
 
-def _apply_bridge_effects(state: Dict[str, Any], bridge_output: Dict[str, Any]) -> None:
+def _apply_bridge_effects(state: dict[str, Any], bridge_output: dict[str, Any]) -> None:
     effects = bridge_output.get("runtimeEffects", {}) if isinstance(bridge_output, dict) else {}
     if not isinstance(effects, dict):
         return
@@ -348,7 +348,7 @@ def _apply_bridge_effects(state: Dict[str, Any], bridge_output: Dict[str, Any]) 
             state[target].extend(values)
 
 
-def _call_bridge(payload: Dict[str, Any]) -> Dict[str, Any]:
+def _call_bridge(payload: dict[str, Any]) -> dict[str, Any]:
     bundle = ensure_bridge_bundle()
     result = subprocess.run(
         ["node", str(bundle)],
@@ -374,16 +374,16 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
-) -> Tuple[Path, Dict[str, Any]]:
+) -> tuple[Path, dict[str, Any]]:
     """Run a single scenario against the GiveCare orchestrator bridge."""
     scenario = Scenario.from_file(scenario_path)
     scenario_id = scenario.scenario_id
     turns = _turns_for_scenario(scenario)
     state = _conversation_seed(scenario)
 
-    transcript: List[Dict[str, Any]] = []
+    transcript: list[dict[str, Any]] = []
     prev_assistant_msg: Optional[str] = None
-    errors: List[str] = []
+    errors: list[str] = []
 
     for turn in turns:
         turn_number = int(turn.get("turn_number", turn.get("t", 0)))
@@ -395,7 +395,7 @@ def run_scenario(
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
             print(f"[{turn_number}] User{branch_label}: {user_msg}")
 
-        user_entry: Dict[str, Any] = {"turn": turn_number, "role": "user", "content": user_msg}
+        user_entry: dict[str, Any] = {"turn": turn_number, "role": "user", "content": user_msg}
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
         transcript.append(user_entry)

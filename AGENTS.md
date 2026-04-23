@@ -52,7 +52,7 @@ bridge still requires `packages/pi-orchestrator/src` and
 ## Guardrails
 - treat `pass`, `fail`, `error` as canonical statuses
 - scenario JSONs use `category` (not `tier`); the loader rejects `tier` and `tier_0..tier_3` values; `ScenarioResult` no longer carries a `tier` field
-- canonical scenario runtime types live in `src/invisiblebench/models/scenario.py` as `Scenario`, `Session`, `Turn`, `Persona`, `ScenarioCategory`, and `ScoringDimension`; `invisiblebench.models` only re-exports those names
+- canonical scenario runtime types live in `src/invisiblebench/models/scenario.py` as `Scenario`, `Session`, `Turn`, `Persona`, `ScenarioCategory`, and `ScoringDimension`; `invisiblebench.models` re-exports those names plus `GateResult`, `SUCCESS_THRESHOLD`, `is_result_success`, `DimensionScores`, `FailureCategory`, `ResultTiming`, `ScenarioResult`, `ModelConfig`, and `MODELS_FULL`
 - if scenario counts or benchmark version change, update:
   - `benchmark/benchmark_inventory.json`
   - `src/invisiblebench/cli/runner.py`

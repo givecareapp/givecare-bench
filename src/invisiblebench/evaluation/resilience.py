@@ -5,43 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def atomic_json_write(data: Dict[str, Any], target_path: "Path | str") -> None:
-    """Write JSON atomically via temp file + rename."""
-    target_path = Path(target_path)
 
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write to temporary file in same directory
-    temp_path = target_path.with_suffix(target_path.suffix + ".tmp")
-
-    try:
-        # Write to temp file
-        with open(temp_path, "w") as f:
-            json.dump(data, f, indent=2)
-
-        # Atomic rename
-        temp_path.replace(target_path)
-
-        logger.debug(f"Atomically wrote {target_path}")
-
-    except Exception as e:
-        # Clean up temp file if it exists
-        if temp_path.exists():
-            try:
-                temp_path.unlink()
-            except OSError:
-                pass
-
-        logger.error(f"Failed to write {target_path}: {e}")
-        raise
-
-
-def load_state(state_path: "Path | str") -> Dict[str, Any]:
+def load_state(state_path: "Path | str") -> dict[str, Any]:
     """Load and validate state from JSON file."""
     state_path = Path(state_path)
 
@@ -57,7 +27,6 @@ def load_state(state_path: "Path | str") -> Dict[str, Any]:
         if not isinstance(state, dict):
             raise ValueError("State must be a dictionary")
 
-        # Basic schema validation
         required_fields = ["status", "dimension_scores"]
         missing = [f for f in required_fields if f not in state]
         if missing:
@@ -76,37 +45,33 @@ def load_state(state_path: "Path | str") -> Dict[str, Any]:
 
 
 
-def create_error_result(error: Exception, dimension: str) -> Dict[str, Any]:
+def create_error_result(error: Exception, dimension: str) -> dict[str, Any]:
     """Standardized error result for a failed scorer."""
     return {
         "status": "error",
         "error": f"{type(error).__name__}: {str(error)}",
-        "score": 0.0,  # Default score for errors
+        "score": 0.0,
         "breakdown": {},
         "evidence": [],
     }
 
 
-def determine_overall_status(dimension_scores: Dict[str, Any]) -> str:
+def determine_overall_status(dimension_scores: dict[str, Any]) -> str:
     """Overall status from dimension statuses."""
     statuses = [dim.get("status") for dim in dimension_scores.values()]
 
-    # Count different status types
     error_count = statuses.count("error")
     total_count = len(statuses)
 
     if error_count == total_count:
-        # All scorers failed
         return "error"
     elif error_count > 0:
-        # Some scorers failed
         return "completed_with_errors"
     else:
-        # All scorers succeeded
         return "completed"
 
 
-def format_error_summary(dimension_scores: Dict[str, Any]) -> str:
+def format_error_summary(dimension_scores: dict[str, Any]) -> str:
     """Format error summary for logging."""
     errors = []
     for dim, dim_data in dimension_scores.items():

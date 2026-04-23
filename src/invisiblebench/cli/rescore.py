@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from invisiblebench.models.results import is_result_success
 from invisiblebench.utils.benchmark_inventory import (
@@ -24,9 +24,9 @@ from invisiblebench.utils.verifier_corpus import TRANSCRIPT_PREFIX_ALIASES
 logger = logging.getLogger(__name__)
 
 
-def _build_scenario_index(scenarios_dir: Path) -> Dict[str, Path]:
+def _build_scenario_index(scenarios_dir: Path) -> dict[str, Path]:
     """Build scenario_id → scenario_path mapping from available scenario JSON files."""
-    index: Dict[str, Path] = {}
+    index: dict[str, Path] = {}
     project_root = get_project_root()
     include_confidential = get_private_confidential_dir(project_root) is not None
     del scenarios_dir
@@ -38,13 +38,13 @@ def _build_scenario_index(scenarios_dir: Path) -> Dict[str, Path]:
     return index
 
 
-def _transcript_key_candidates(model_id: str, scenario_id: str) -> List[str]:
+def _transcript_key_candidates(model_id: str, scenario_id: str) -> list[str]:
     base = model_id.replace("/", "_")
     prefixes = [base, *TRANSCRIPT_PREFIX_ALIASES.get(base, ())]
     return [f"{prefix}_{scenario_id}.jsonl" for prefix in prefixes]
 
 
-def _load_old_results_for_run(run_path: Path, project_root: Path) -> Tuple[List[Dict[str, Any]], bool]:
+def _load_old_results_for_run(run_path: Path, project_root: Path) -> tuple[list[dict[str, Any]], bool]:
     """Load prior per-scenario results for a run.
 
     Returns `(rows, had_existing_all_results)`.
@@ -58,7 +58,7 @@ def _load_old_results_for_run(run_path: Path, project_root: Path) -> Tuple[List[
 
     leaderboard_dir = project_root / "results" / "leaderboard_ready"
     transcript_names = {path.name for path in (run_path / "transcripts").glob("*.jsonl")}
-    synthesized: List[Dict[str, Any]] = []
+    synthesized: list[dict[str, Any]] = []
 
     if not leaderboard_dir.exists():
         raise FileNotFoundError(
@@ -148,7 +148,7 @@ def run_rescore(
         print(f"Error: {exc}")
         return 1
 
-    old_by_key: Dict[str, Dict[str, Any]] = {}
+    old_by_key: dict[str, dict[str, Any]] = {}
     for r in old_results:
         model_part = r["model_id"].replace("/", "_")
         key = f"{model_part}_{r['scenario_id']}.jsonl"
@@ -176,7 +176,7 @@ def run_rescore(
         enable_state_persistence=False,
         enable_llm=True,
     )
-    new_results: List[Dict[str, Any]] = []
+    new_results: list[dict[str, Any]] = []
     errors = 0
     start_time = time.time()
 
@@ -279,7 +279,7 @@ def run_rescore(
 
 
 def _compute_success(
-    score: float, hard_fail: bool, gates: Dict[str, Any]
+    score: float, hard_fail: bool, gates: dict[str, Any]
 ) -> bool:
     """Determine if this result is a 'success' for leaderboard purposes."""
     return is_result_success(

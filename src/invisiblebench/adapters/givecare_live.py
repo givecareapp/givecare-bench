@@ -24,7 +24,7 @@ import string
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import requests
 from dotenv import load_dotenv
@@ -80,7 +80,7 @@ class GiveCareProvider:
         suffix = "".join(random.choices(string.digits, k=7))
         return f"+1555{suffix}"
 
-    def _run_gc(self, args: List[str]) -> str:
+    def _run_gc(self, args: list[str]) -> str:
         """Run gc CLI command and return output."""
         import subprocess
 
@@ -171,7 +171,7 @@ class GiveCareProvider:
         pass
 
 
-def load_scenario(scenario_path: str) -> Dict:
+def load_scenario(scenario_path: str) -> dict:
     """Load a scenario JSON file."""
     with open(scenario_path) as f:
         return json.load(f)
@@ -186,7 +186,7 @@ def get_category_from_path(scenario_path: Path) -> str:
 
 
 
-def get_scenario_title(scenario: Dict, scenario_path: Path) -> str:
+def get_scenario_title(scenario: dict, scenario_path: Path) -> str:
     """Get human-readable scenario title."""
     if "title" in scenario:
         return scenario["title"]
@@ -194,7 +194,7 @@ def get_scenario_title(scenario: Dict, scenario_path: Path) -> str:
     return scenario_id.replace("_", " ").title()
 
 
-def get_turns_from_scenario(scenario: Dict) -> List[Dict]:
+def get_turns_from_scenario(scenario: dict) -> list[dict]:
     """Extract turns from a scenario (handles both single and multi-session)."""
     if "sessions" in scenario:
         all_turns = []
@@ -209,7 +209,7 @@ def run_scenario(
     scenario_path: str,
     output_dir: Path,
     verbose: bool = False,
-) -> tuple[Path, Dict]:
+) -> tuple[Path, dict]:
     """Run a single scenario and generate transcript. Returns (transcript_path, scenario_data)."""
     scenario = load_scenario(scenario_path)
     scenario_id = scenario.get("scenario_id", Path(scenario_path).stem)
@@ -226,7 +226,7 @@ def run_scenario(
 
     transcript = []
     prev_assistant_msg: Optional[str] = None
-    errors: List[str] = []
+    errors: list[str] = []
 
     for turn in turns:
         turn_num = turn["turn_number"]
@@ -238,7 +238,7 @@ def run_scenario(
             branch_label = f" [branch:{branch_id}]" if branch_id else ""
             print(f"[{turn_num}] User{branch_label}: {user_msg}")
 
-        user_entry: Dict = {
+        user_entry: dict = {
             "turn": turn_num,
             "role": "user",
             "content": user_msg,
@@ -299,9 +299,9 @@ def run_scenario(
 
 def get_scenarios(
     scenarios_dir: Path,
-    category_filter: Optional[List[str]] = None,
+    category_filter: Optional[list[str]] = None,
     include_confidential: bool = False,
-) -> List[Path]:
+) -> list[Path]:
     """Get all scenario files, optionally filtered by category.
 
     By default, returns the public 50-scenario benchmark core.
@@ -319,9 +319,9 @@ def get_scenarios(
 
 def format_result(
     scenario_path: Path,
-    scenario_data: Dict,
-    score_result: Dict,
-) -> Dict:
+    scenario_data: dict,
+    score_result: dict,
+) -> dict:
     """Format a single result to match InvisibleBench standard format."""
     scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
     category = get_category_from_path(scenario_path)
@@ -375,7 +375,7 @@ def format_result(
     }
 
 
-def format_error_result(scenario_path: Path, scenario_data: Dict, reason: str) -> Dict:
+def format_error_result(scenario_path: Path, scenario_data: dict, reason: str) -> dict:
     """Format a system-harness transport/runtime failure as an error result."""
     return {
         "model": MODEL_NAME,

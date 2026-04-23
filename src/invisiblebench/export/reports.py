@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 class ReportGenerator:
 
 
-    def generate_json(self, results: Dict[str, Any], output_path: str) -> None:
+    def generate_json(self, results: dict[str, Any], output_path: str) -> None:
         with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
 
-    def generate_html(self, results: Dict[str, Any], output_path: str) -> None:
+    def generate_html(self, results: dict[str, Any], output_path: str) -> None:
         html = self._build_html(results)
         with open(output_path, "w") as f:
             f.write(html)
 
-    def _build_html(self, results: Dict[str, Any]) -> str:
+    def _build_html(self, results: dict[str, Any]) -> str:
 
         overall_score = results.get("overall_score", 0.0)
         hard_fail = results.get("hard_fail", False)
@@ -57,11 +57,9 @@ class ReportGenerator:
             "    <h1>InvisibleBench Scoring Report</h1>",
         ]
 
-        # v2.1 judge metadata (top-level fields)
         judge_model = results.get("judge_model", "N/A")
         contract_version = results.get("contract_version", metadata.get("scoring_contract_version", "N/A"))
 
-        # Metadata section - escape user content to prevent XSS
         html_parts.extend(
             [
                 "    <div class='metadata'>",
@@ -75,7 +73,6 @@ class ReportGenerator:
             ]
         )
 
-        # Hard fail banner
         if hard_fail:
             html_parts.extend(
                 [
@@ -89,7 +86,6 @@ class ReportGenerator:
                 html_parts.append(f"            <li>{html.escape(str(reason))}</li>")
             html_parts.extend(["        </ul>", "    </div>"])
 
-        # Overall score
         score_class = "fail" if overall_score < 0.5 else "pass"
         html_parts.extend(
             [
@@ -157,7 +153,6 @@ class ReportGenerator:
                 ]
             )
 
-        # Variance section (if multiple iterations)
         variance = results.get("variance")
         if variance and variance.get("overall"):
             overall_var = variance["overall"]
@@ -176,7 +171,6 @@ class ReportGenerator:
                 )
             html_parts.append("    </div>")
 
-        # Iterations detail
         iterations = results.get("iterations", [])
         if len(iterations) > 1:
             html_parts.extend(
@@ -207,10 +201,8 @@ class ReportGenerator:
                 ]
             )
 
-        # Dimension scores
         html_parts.append("    <h2>Dimension Scores</h2>")
 
-        # Get dimension variance if available
         dimension_variance = {}
         if variance and variance.get("dimensions"):
             dimension_variance = variance["dimensions"]
@@ -234,7 +226,6 @@ class ReportGenerator:
                     f"σ={dim_var['std_dev']:.4f}, range=[{dim_var['min']:.2f}, {dim_var['max']:.2f}]</div>"
                 )
 
-            # Breakdown
             if "breakdown" in dim_result:
                 html_parts.append("        <div class='breakdown'>")
                 for key, value in dim_result["breakdown"].items():
@@ -242,7 +233,6 @@ class ReportGenerator:
                         html_parts.append(f"            <div>{key}: {value:.2f}</div>")
                 html_parts.append("        </div>")
 
-            # Violations - escape content to prevent XSS
             if "violations" in dim_result and dim_result["violations"]:
                 html_parts.append("        <h4>Violations:</h4>")
                 for violation in dim_result["violations"]:
@@ -252,7 +242,6 @@ class ReportGenerator:
 
             html_parts.append("    </div>")
 
-        # Close HTML
         html_parts.extend(["</body>", "</html>"])
 
         return "\n".join(html_parts)
@@ -280,7 +269,6 @@ class ReportGenerator:
         )
         total_cost = sum(r.get("cost", 0) for r in results)
 
-        # Success-rate computation
         from invisiblebench.stats.analysis import (
             compute_failure_buckets,
             compute_success_rates,
@@ -381,7 +369,6 @@ class ReportGenerator:
             "        </div>",
         ]
 
-        # Success rate by category table
         if sr_categories:
             html_parts.extend(
                 [
@@ -412,7 +399,6 @@ class ReportGenerator:
                 ]
             )
 
-        # Failure buckets
         if failure_buckets:
             html_parts.append("        <h3>Failure Buckets</h3>")
             html_parts.append("        <div>")
@@ -423,7 +409,6 @@ class ReportGenerator:
                 )
             html_parts.append("        </div>")
 
-        # Results by category
         for cat in sorted(by_cat.keys()):
             cat_results = by_cat[cat]
             cat_avg = (
@@ -451,7 +436,6 @@ class ReportGenerator:
                 )
             html_parts.append("        </div>")
 
-        # Failures section
         if failures:
             html_parts.extend(
                 [
@@ -466,13 +450,11 @@ class ReportGenerator:
                     f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', '?')))}) &mdash; {score_pct}%</div>"
                 )
 
-                # Hard fail reasons
                 for reason in f.get("hard_fail_reasons", []):
                     html_parts.append(
                         f"                <div class='failure-reason'>→ {html.escape(str(reason))}</div>"
                     )
 
-                # Failure categories
                 categories = f.get("failure_categories", {})
                 for cat, details in categories.get("details", {}).items():
                     cat_display = cat.replace("_", " ").title()
@@ -484,7 +466,6 @@ class ReportGenerator:
                             f"                <div class='failure-detail' style='margin-left: 25px;'>{html.escape(str(detail))}</div>"
                         )
 
-                # Low dimensions
                 dims = f.get("dimensions", {})
                 low_dims = [
                     (k, v) for k, v in dims.items() if isinstance(v, (int, float)) and v < 0.5

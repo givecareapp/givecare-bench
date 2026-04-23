@@ -10,7 +10,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -23,7 +23,7 @@ from invisiblebench.utils.benchmark_inventory import (
 )
 
 
-def is_result_success(result: Dict[str, Any], *, threshold: float = 0.6) -> bool:
+def is_result_success(result: dict[str, Any], *, threshold: float = 0.6) -> bool:
     """Compute pass/fail from a flattened result payload."""
     explicit = result.get("success")
     if explicit is not None:
@@ -47,13 +47,13 @@ def is_result_success(result: Dict[str, Any], *, threshold: float = 0.6) -> bool
     return score >= threshold
 
 
-def load_confidential_ids(base_dir: Path) -> Set[str]:
+def load_confidential_ids(base_dir: Path) -> set[str]:
     """Load private confidential scenario IDs when available."""
     confidential_dir = get_private_confidential_dir(base_dir)
     if confidential_dir is None or not confidential_dir.exists():
         return set()
 
-    ids: Set[str] = set()
+    ids: set[str] = set()
     for scenario_file in confidential_dir.rglob("*.json"):
         data = json.loads(scenario_file.read_text())
         scenario_id = data.get("scenario_id")
@@ -62,7 +62,7 @@ def load_confidential_ids(base_dir: Path) -> Set[str]:
     return ids
 
 
-def has_confidential_scenarios(result: Dict[str, Any], confidential_ids: Set[str]) -> bool:
+def has_confidential_scenarios(result: dict[str, Any], confidential_ids: set[str]) -> bool:
     """Return True if a result document includes any confidential scenarios."""
     for scenario in result.get("scenarios", []):
         if scenario.get("confidential") is True:
@@ -75,7 +75,7 @@ def has_confidential_scenarios(result: Dict[str, Any], confidential_ids: Set[str
 
 REQUIRED_BENCHMARK_VERSION = "2.1.0"
 
-LEADERBOARD_METHODOLOGY: Dict[str, Any] = {
+LEADERBOARD_METHODOLOGY: dict[str, Any] = {
     "claim_surface": {
         "primary": [
             "safety_gate_pass_rate",
@@ -126,21 +126,21 @@ LEADERBOARD_METHODOLOGY: Dict[str, Any] = {
     },
 }
 
-LEADERBOARD_DELIVERY: Dict[str, Any] = {
+LEADERBOARD_DELIVERY: dict[str, Any] = {
     "format": "static_json",
     "canonical_artifact": "data/leaderboard/leaderboard.json",
     "web_bench_public_path": "apps/web-bench/public/bench/leaderboard.json",
 }
 
 
-def verify_result_integrity(result: Dict[str, Any]) -> bool:
+def verify_result_integrity(result: dict[str, Any]) -> bool:
     required_fields = ["model", "benchmark_version", "scenarios", "overall_score", "timestamp"]
     return all(field in result for field in required_fields)
 
 
-def verify_v21_compatible(result: Dict[str, Any], filename: str) -> List[str]:
+def verify_v21_compatible(result: dict[str, Any], filename: str) -> list[str]:
     """Return list of rejection reasons if result is not v2.1-compatible."""
-    errors: List[str] = []
+    errors: list[str] = []
     bv = result.get("benchmark_version", "")
     if bv != REQUIRED_BENCHMARK_VERSION:
         errors.append(f"{filename}: benchmark_version '{bv}' != '{REQUIRED_BENCHMARK_VERSION}'")
@@ -151,7 +151,7 @@ def verify_v21_compatible(result: Dict[str, Any], filename: str) -> List[str]:
     return errors
 
 
-def _is_public_benchmark_doc(result: Dict[str, Any]) -> bool:
+def _is_public_benchmark_doc(result: dict[str, Any]) -> bool:
     mode = result.get("mode")
     run_metadata = result.get("run_metadata", {}) or {}
     provider = result.get("provider") or run_metadata.get("provider")
@@ -168,12 +168,12 @@ def _is_public_benchmark_doc(result: Dict[str, Any]) -> bool:
 def load_canonical_results(
     results_dir: Path,
     include_confidential: bool,
-    confidential_ids: Set[str],
+    confidential_ids: set[str],
     *,
     strict: bool = True,
-) -> List[Dict[str, Any]]:
-    results: List[Dict[str, Any]] = []
-    all_errors: List[str] = []
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    all_errors: list[str] = []
 
     for result_file in sorted(results_dir.glob("*.json")):
         if result_file.name.startswith("."):
@@ -210,12 +210,12 @@ def load_canonical_results(
     return results
 
 
-def compute_rankings(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def compute_rankings(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ranked = sorted(
         results,
         key=lambda r: (-float(r.get("overall_score", 0.0)), float(r.get("total_cost", 0.0))),
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for index, result in enumerate(ranked, start=1):
         scenarios = result.get("scenarios", [])
         # Recompute from scenario payloads — never trust top-level fields
@@ -241,9 +241,9 @@ def compute_rankings(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return rows
 
 
-def compute_dimension_leaderboards(results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+def compute_dimension_leaderboards(results: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     dimensions = ["regard", "coordination"]
-    boards: Dict[str, List[Dict[str, Any]]] = {}
+    boards: dict[str, list[dict[str, Any]]] = {}
     for dimension in dimensions:
         rows = []
         for result in results:
@@ -254,7 +254,7 @@ def compute_dimension_leaderboards(results: List[Dict[str, Any]]) -> Dict[str, L
     return boards
 
 
-def compute_cost_efficiency(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def compute_cost_efficiency(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for result in results:
         overall = float(result.get("overall_score", 0.0))
@@ -271,9 +271,9 @@ def compute_cost_efficiency(results: List[Dict[str, Any]]) -> List[Dict[str, Any
     return sorted(rows, key=lambda row: row["cost_per_point"])
 
 
-def compute_safety_report_card(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def compute_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]:
     model_reports = []
-    scenario_matrix: Dict[str, Dict[str, str]] = {}
+    scenario_matrix: dict[str, dict[str, str]] = {}
 
     for result in results:
         model = result["model"]
@@ -333,7 +333,7 @@ def compute_safety_report_card(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"models": model_reports, "scenario_matrix": scenario_matrix}
 
 
-def compute_quality_leaderboard(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def compute_quality_leaderboard(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for result in results:
         scenarios = result.get("scenarios", [])

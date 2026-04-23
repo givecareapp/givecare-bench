@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
-# Default paths relative to the repo root.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _DEFAULT_SCORING_CONFIG = _PROJECT_ROOT / "benchmark" / "configs" / "scoring.yaml"
 _DEFAULT_RULES_PATH = _PROJECT_ROOT / "benchmark" / "configs" / "rules" / "base.yaml"
@@ -19,7 +18,7 @@ def score(
     rules_path: Optional[str] = None,
     scoring_config_path: Optional[str] = None,
     enable_llm: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Score a transcript against a scenario.
 
@@ -78,7 +77,7 @@ def score_with_rewards(
     scenario_path: str,
     rules_path: Optional[str] = None,
     scoring_config_path: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Wrapper around score() returning per-dimension rewards for RL training."""
     result = score(
         transcript_path=transcript_path,
@@ -95,7 +94,7 @@ def score_with_rewards(
         if dim_result.get("status") == "completed":
             rewards[dim] = dim_result.get("score", 0.0)
         else:
-            rewards[dim] = 0.0  # Default to 0 if scorer failed
+            rewards[dim] = 0.0
 
     return {
         "rewards": rewards,

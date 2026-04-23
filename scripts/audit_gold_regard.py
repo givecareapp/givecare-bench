@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import math
 import time
 from collections import Counter
@@ -14,8 +13,6 @@ from typing import Any
 
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 from invisiblebench.utils.benchmark_inventory import (
-    collect_scenario_paths,
-    get_private_confidential_dir,
     get_project_root,
 )
 
@@ -46,88 +43,66 @@ def gold_quality_to_regard_mean(quality: dict[str, str]) -> float:
     return sum(LABEL_TO_NUMERIC[quality[axis]] for axis in REGARD_AXES) / len(REGARD_AXES)
 
 
-def ordered_weighted_kappa(labels_a: list[str], labels_b: list[str]) -> float:
-    if len(labels_a) != len(labels_b):
-        raise ValueError("Label lists must have the same length")
-    n = len(labels_a)
-    if n == 0:
-        return float("nan")
-
-    index = {label: idx for idx, label in enumerate(ORDERED_LABELS)}
-    k = len(ORDERED_LABELS)
-
-    observed = [[0 for _ in range(k)] for _ in range(k)]
-    count_a = [0 for _ in range(k)]
-    count_b = [0 for _ in range(k)]
-    for a, b in zip(labels_a, labels_b):
-        i = index[a]
-        j = index[b]
-        observed[i][j] += 1
-        count_a[i] += 1
-        count_b[j] += 1
-
-    def weight(i: int, j: int) -> float:
-        return 1.0 - (abs(i - j) / (k - 1))
-
-    p_o = sum(weight(i, j) * observed[i][j] for i in range(k) for j in range(k)) / n
-    p_e = sum(
-        weight(i, j) * (count_a[i] / n) * (count_b[j] / n)
-        for i in range(k)
-        for j in range(k)
+try:
+    from _audit_helpers import (
+        build_scenario_index as _build_scenario_index_impl,
     )
-    if math.isclose(1.0 - p_e, 0.0):
-        return 1.0 if math.isclose(p_o, 1.0) else float("nan")
-    return (p_o - p_e) / (1.0 - p_e)
-
-
-def _pearson(xs: list[float], ys: list[float]) -> float:
-    if len(xs) != len(ys) or not xs:
-        return float("nan")
-    mean_x = sum(xs) / len(xs)
-    mean_y = sum(ys) / len(ys)
-    cov = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
-    var_x = sum((x - mean_x) ** 2 for x in xs)
-    var_y = sum((y - mean_y) ** 2 for y in ys)
-    if math.isclose(var_x, 0.0) or math.isclose(var_y, 0.0):
-        return float("nan")
-    return cov / math.sqrt(var_x * var_y)
-
-
-def _format_ratio(numerator: int, denominator: int) -> str:
-    return f"{numerator}/{denominator} = {(numerator / denominator):.3f}" if denominator else "n/a"
-
-
-def _format_float(value: float) -> str:
-    return "n/a" if math.isnan(value) else f"{value:.3f}"
+    from _audit_helpers import (
+        format_float as _format_float,
+    )
+    from _audit_helpers import (
+        format_ratio as _format_ratio,
+    )
+    from _audit_helpers import (
+        load_candidates as _load_candidates_impl,
+    )
+    from _audit_helpers import (
+        load_gold_labels as _load_gold_labels_impl,
+    )
+    from _audit_helpers import (
+        ordered_weighted_kappa,
+    )
+    from _audit_helpers import (
+        pearson as _pearson,
+    )
+except ImportError:
+    # When imported as `from scripts.audit_gold_regard import ...` by tests,
+    # the bare `_audit_helpers` module isn't on sys.path.
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _audit_helpers import (
+        build_scenario_index as _build_scenario_index_impl,
+    )
+    from _audit_helpers import (
+        format_float as _format_float,
+    )
+    from _audit_helpers import (
+        format_ratio as _format_ratio,
+    )
+    from _audit_helpers import (
+        load_candidates as _load_candidates_impl,
+    )
+    from _audit_helpers import (
+        load_gold_labels as _load_gold_labels_impl,
+    )
+    from _audit_helpers import (
+        ordered_weighted_kappa,
+    )
+    from _audit_helpers import (
+        pearson as _pearson,
+    )
 
 
 def _load_candidates() -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with open(CANDIDATES_PATH) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
+    return _load_candidates_impl(CANDIDATES_PATH)
 
 
 def _load_gold_labels() -> dict[str, dict[str, Any]]:
-    labels: dict[str, dict[str, Any]] = {}
-    for path in sorted(GOLD_LABELS_DIR.glob("*.json")):
-        labels[path.stem] = json.loads(path.read_text())
-    return labels
+    return _load_gold_labels_impl(GOLD_LABELS_DIR)
 
 
 def _build_scenario_index() -> dict[str, Path]:
-    index: dict[str, Path] = {}
-    include_confidential = get_private_confidential_dir(PROJECT_ROOT) is not None
-    for path in collect_scenario_paths(PROJECT_ROOT, include_confidential=include_confidential):
-        scenario_path = Path(path)
-        with open(scenario_path) as fh:
-            scenario = json.load(fh)
-        scenario_id = scenario.get("scenario_id", scenario_path.stem)
-        index[scenario_id] = scenario_path
-    return index
+    return _build_scenario_index_impl(PROJECT_ROOT)
 
 
 def _score_candidates(candidates: list[dict[str, Any]], mode: str) -> dict[str, dict[str, Any]]:

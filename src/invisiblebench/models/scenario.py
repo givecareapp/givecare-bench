@@ -40,7 +40,7 @@ JsonMap = dict[str, Any]
 
 def _normalize_turn_data(data: JsonMap) -> JsonMap:
     normalized = dict(data)
-    turn_number = normalized.get("turn_number", normalized.get("t"))
+    turn_number = normalized.get("turn_number")
     if turn_number is None:
         raise KeyError("turn_number")
     normalized["turn_number"] = turn_number

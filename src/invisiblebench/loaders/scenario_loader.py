@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from invisiblebench.models import Scenario, ScenarioCategory, ScoringDimension
 from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indices
@@ -12,7 +12,7 @@ class ScenarioValidator:
 
 
     @staticmethod
-    def _validate_probe_list(probes: Any, errors: List[str], label: str) -> None:
+    def _validate_probe_list(probes: Any, errors: list[str], label: str) -> None:
         if not isinstance(probes, list):
             errors.append(f"{label} must be a list")
             return
@@ -40,7 +40,7 @@ class ScenarioValidator:
                 errors.append(f"{label}[{idx}].from_sessions must be a list")
 
     @staticmethod
-    def _validate_risk_triggers(triggers: Any, errors: List[str], label: str) -> None:
+    def _validate_risk_triggers(triggers: Any, errors: list[str], label: str) -> None:
         if not isinstance(triggers, list):
             errors.append(f"{label} must be a list")
             return
@@ -62,7 +62,7 @@ class ScenarioValidator:
                 errors.append(f"{label}[{idx}] missing severity")
 
     @staticmethod
-    def _validate_turn_list(turns: Any, errors: List[str], label: str) -> None:
+    def _validate_turn_list(turns: Any, errors: list[str], label: str) -> None:
         if not isinstance(turns, list):
             errors.append(f"{label} must be a list")
             return
@@ -116,7 +116,7 @@ class ScenarioValidator:
                 )
 
     @staticmethod
-    def validate_scenario(data: Dict[str, Any]) -> List[str]:
+    def validate_scenario(data: dict[str, Any]) -> list[str]:
         """
         Validate scenario data structure.
 
@@ -209,7 +209,7 @@ class ScenarioLoader:
         self.scenario_dir = Path(scenario_dir)
         self.validator = ScenarioValidator()
 
-    def load_all(self) -> List[Scenario]:
+    def load_all(self) -> list[Scenario]:
 
         scenarios = []
 

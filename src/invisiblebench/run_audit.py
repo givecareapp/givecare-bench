@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, Optional
 
 from invisiblebench.failure_taxonomy import (
     classify_reliability_issue,
@@ -62,7 +62,7 @@ OWNER_BY_CHECK = {
 }
 
 
-def _check(status: str, summary: str, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _check(status: str, summary: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"status": status, "summary": summary, "details": details or {}}
 
 
@@ -89,7 +89,7 @@ def find_existing_audit_file(source: Path) -> Optional[Path]:
     return audit_path if audit_path.exists() else None
 
 
-def _load_manifest(source: Path) -> Dict[str, Any]:
+def _load_manifest(source: Path) -> dict[str, Any]:
     run_dir = _infer_run_dir(source)
     if run_dir is None:
         return {}
@@ -105,7 +105,7 @@ def _load_manifest(source: Path) -> Dict[str, Any]:
         return {}
 
 
-def _result_key(row: Dict[str, Any]) -> Tuple[str, str]:
+def _result_key(row: dict[str, Any]) -> tuple[str, str]:
     return (
         str(row.get("model") or row.get("model_id") or "unknown"),
         str(row.get("scenario_id") or row.get("scenario") or "unknown"),
@@ -119,14 +119,14 @@ def _iter_transcript_files(transcripts_dir: Optional[Path]) -> Iterable[Path]:
 
 
 def _audit_run_integrity(
-    rows: List[Dict[str, Any]],
-    manifest: Dict[str, Any],
+    rows: list[dict[str, Any]],
+    manifest: dict[str, Any],
     expected_scenario_count: Optional[int],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not rows:
         return _check(STATUS_BLOCK, "No result rows found", {"row_count": 0})
 
-    by_model: Dict[str, int] = {}
+    by_model: dict[str, int] = {}
     for row in rows:
         model = str(row.get("model") or row.get("model_id") or "unknown")
         by_model[model] = by_model.get(model, 0) + 1
@@ -153,15 +153,15 @@ def _audit_run_integrity(
 
 
 def _audit_comparability(
-    rows: List[Dict[str, Any]],
-    manifest: Dict[str, Any],
+    rows: list[dict[str, Any]],
+    manifest: dict[str, Any],
     harness: Optional[str],
     mode: Optional[str],
-    previous_manifest: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    previous_manifest: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     contract_versions = sorted({str(r.get("contract_version")) for r in rows if r.get("contract_version")})
     judge_prompt_hashes = sorted({str(r.get("judge_prompt_hash")) for r in rows if r.get("judge_prompt_hash")})
-    details: Dict[str, Any] = {
+    details: dict[str, Any] = {
         "contract_versions": contract_versions,
         "judge_prompt_hashes": judge_prompt_hashes,
         "manifest_harness": manifest.get("harness"),
@@ -198,7 +198,7 @@ def _audit_comparability(
     return _check(STATUS_PASS, "Run is comparable under current contract/config", details)
 
 
-def _audit_state_isolation(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_state_isolation(rows: list[dict[str, Any]]) -> dict[str, Any]:
     seen = set()
     duplicates = []
     run_ids = sorted({str(r.get("run_id")) for r in rows if r.get("run_id")})
@@ -216,7 +216,7 @@ def _audit_state_isolation(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _check(STATUS_PASS, "No obvious cross-scenario state contamination detected", details)
 
 
-def _audit_provider_health(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_provider_health(rows: list[dict[str, Any]]) -> dict[str, Any]:
     summary = compute_reliability_summary(rows)
     error_rate = summary["error_rate"]
     if summary["error"] == 0:
@@ -226,7 +226,7 @@ def _audit_provider_health(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _check(STATUS_WARN, "Provider/runtime errors detected", summary)
 
 
-def _audit_transcript_integrity(rows: List[Dict[str, Any]], transcripts_dir: Optional[Path]) -> Dict[str, Any]:
+def _audit_transcript_integrity(rows: list[dict[str, Any]], transcripts_dir: Optional[Path]) -> dict[str, Any]:
     if transcripts_dir is None or not transcripts_dir.exists():
         return _check(STATUS_WARN, "No transcripts directory found", {"transcripts_dir": None})
 
@@ -262,7 +262,7 @@ def _audit_transcript_integrity(rows: List[Dict[str, Any]], transcripts_dir: Opt
     return _check(STATUS_PASS, "Transcript files appear structurally valid", details)
 
 
-def _audit_judge_health(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_judge_health(rows: list[dict[str, Any]]) -> dict[str, Any]:
     judge_models = sorted({str(r.get("judge_model")) for r in rows if r.get("judge_model")})
     prompt_hashes = sorted({str(r.get("judge_prompt_hash")) for r in rows if r.get("judge_prompt_hash")})
     scoring_error_count = sum(
@@ -284,7 +284,7 @@ def _audit_judge_health(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _check(STATUS_PASS, "Judge metadata is consistent", details)
 
 
-def _audit_scoring_integrity(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_scoring_integrity(rows: list[dict[str, Any]]) -> dict[str, Any]:
     invalid_rows = []
     for idx, row in enumerate(rows):
         score = row.get("overall_score")
@@ -304,11 +304,11 @@ def _audit_scoring_integrity(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _audit_target_config(
-    rows: List[Dict[str, Any]],
-    manifest: Dict[str, Any],
+    rows: list[dict[str, Any]],
+    manifest: dict[str, Any],
     harness: Optional[str],
     mode: Optional[str],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     providers = sorted({str(r.get("provider")) for r in rows if r.get("provider")})
     model_ids = sorted({str(r.get("model_id")) for r in rows if r.get("model_id")})
     details = {
@@ -326,7 +326,7 @@ def _audit_target_config(
     return _check(STATUS_PASS, "Target configuration metadata is present", details)
 
 
-def _audit_model_behavior(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_model_behavior(rows: list[dict[str, Any]]) -> dict[str, Any]:
     from invisiblebench.stats.analysis import compute_failure_buckets
 
     quality = compute_quality_summary(rows)
@@ -338,7 +338,7 @@ def _audit_model_behavior(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _check(status, summary, details)
 
 
-def _audit_statistical_stability(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _audit_statistical_stability(rows: list[dict[str, Any]]) -> dict[str, Any]:
     run_stats = [r.get("run_stats") for r in rows if isinstance(r.get("run_stats"), dict)]
     if not run_stats:
         return _check(STATUS_PASS, "Single-run benchmark; no stability estimate available", {})
@@ -355,7 +355,7 @@ def _audit_statistical_stability(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _check(STATUS_PASS, "Repeated-run variance is within expected range", details)
 
 
-def _derive_gate(checks: Dict[str, Dict[str, Any]]) -> Tuple[bool, bool, str, str]:
+def _derive_gate(checks: dict[str, dict[str, Any]]) -> tuple[bool, bool, str, str]:
     critical_statuses = [checks[name]["status"] for name in CRITICAL_CHECKS]
     if STATUS_BLOCK in critical_statuses:
         summary_status = STATUS_BLOCK
@@ -403,7 +403,7 @@ def audit_results_source(
     harness: Optional[str] = None,
     mode: Optional[str] = None,
     previous_source: str | Path | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Audit a benchmark run/results source and classify failure modes."""
     source_path = Path(source)
     rows = load_result_rows(source_path)
@@ -444,7 +444,7 @@ def audit_results_source(
     }
 
 
-def render_audit_markdown(audit: Dict[str, Any]) -> str:
+def render_audit_markdown(audit: dict[str, Any]) -> str:
     """Render a human-readable markdown summary for a run audit."""
     lines = [
         "# Run Audit",

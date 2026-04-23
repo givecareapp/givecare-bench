@@ -10,9 +10,9 @@ import json
 import random
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-from invisiblebench.models.results import SUCCESS_THRESHOLD
+from invisiblebench.models.results import is_result_success
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_category,
@@ -21,11 +21,11 @@ from invisiblebench.utils.dimension_aliases import (
 
 
 def _bootstrap_ci(
-    scores: List[float],
+    scores: list[float],
     n_bootstrap: int = 10000,
     ci: float = 0.95,
     seed: int = 42,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Compute bootstrap confidence interval for the mean.
 
     Returns (mean, lower, upper).
@@ -56,7 +56,7 @@ def _bootstrap_proportion_ci(
     n_bootstrap: int = 10000,
     ci: float = 0.95,
     seed: int = 42,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Bootstrap CI for a proportion (success rate).
 
     Returns (rate, lower, upper).
@@ -69,7 +69,7 @@ def _bootstrap_proportion_ci(
 
     outcomes = [1] * successes + [0] * (total - successes)
     rng = random.Random(seed)
-    rates: List[float] = []
+    rates: list[float] = []
     for _ in range(n_bootstrap):
         sample = [rng.choice(outcomes) for _ in range(total)]
         rates.append(sum(sample) / total)
@@ -82,24 +82,14 @@ def _bootstrap_proportion_ci(
     return (rate, rates[lo_idx], rates[hi_idx])
 
 
-def _is_success(result: Dict[str, Any]) -> bool:
-    """Determine success from a result dict, using pre-computed field or fallback."""
-    if "success" in result and result["success"] is not None:
-        return bool(result["success"])
-    # Fallback: gates passed + score >= threshold
-    if result.get("hard_fail"):
-        return False
-    gates = result.get("gates", {})
-    for gate in gates.values():
-        if isinstance(gate, dict) and not gate.get("passed", True):
-            return False
-    return result.get("overall_score", 0.0) >= SUCCESS_THRESHOLD
+def _is_success(result: dict[str, Any]) -> bool:
+    return is_result_success(result)
 
 
 def compute_success_rates(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     n_bootstrap: int = 10000,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute success rates by category with bootstrap CIs.
 
     Returns:
@@ -108,12 +98,12 @@ def compute_success_rates(
             "total": {pass, fail, total, rate, ci_lo, ci_hi},
         }
     """
-    by_cat: Dict[str, List[bool]] = {}
+    by_cat: dict[str, list[bool]] = {}
     for r in results:
         cat = normalize_category(r.get("category", "unknown"))
         by_cat.setdefault(cat, []).append(_is_success(r))
 
-    categories: Dict[str, Dict[str, Any]] = {}
+    categories: dict[str, dict[str, Any]] = {}
     all_successes = 0
     all_total = 0
     for cat in sorted(by_cat.keys()):
@@ -150,12 +140,12 @@ def compute_success_rates(
     }
 
 
-def compute_failure_buckets(results: List[Dict[str, Any]]) -> Dict[str, int]:
+def compute_failure_buckets(results: list[dict[str, Any]]) -> dict[str, int]:
     """Count failures by bucket (from failure_categories.primary_category).
 
     Only counts results where success=False.
     """
-    buckets: Dict[str, int] = {}
+    buckets: dict[str, int] = {}
     for r in results:
         if _is_success(r):
             continue
@@ -178,12 +168,12 @@ def compute_failure_buckets(results: List[Dict[str, Any]]) -> Dict[str, int]:
 
 
 def _bootstrap_diff_ci(
-    scores_a: List[float],
-    scores_b: List[float],
+    scores_a: list[float],
+    scores_b: list[float],
     n_bootstrap: int = 10000,
     ci: float = 0.95,
     seed: int = 42,
-) -> Tuple[float, float, float, bool]:
+) -> tuple[float, float, float, bool]:
     """Bootstrap CI for the difference in means (A - B).
 
     Returns (mean_diff, lower, upper, significant).
@@ -213,7 +203,7 @@ def _bootstrap_diff_ci(
     return (mean_diff, lo, hi, significant)
 
 
-def load_results(results_path: str) -> List[Dict[str, Any]]:
+def load_results(results_path: str) -> list[dict[str, Any]]:
     """Load results from a JSON file.
 
     Handles both formats:
@@ -233,12 +223,12 @@ def load_results(results_path: str) -> List[Dict[str, Any]]:
     return []
 
 
-def _get_category(result: Dict[str, Any]) -> str:
+def _get_category(result: dict[str, Any]) -> str:
     """Extract category from a result dict."""
     return normalize_category(result.get("category"))
 
 
-def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]:
+def compute_stats(results_path: str, n_bootstrap: int = 10000) -> dict[str, Any]:
     """Compute full statistical analysis from results.
 
     Args:
@@ -252,7 +242,7 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     """
     path = Path(results_path)
 
-    all_results: List[Dict[str, Any]] = []
+    all_results: list[dict[str, Any]] = []
     if path.is_dir():
         for f in sorted(path.glob("*.json")):
             all_results.extend(load_results(str(f)))
@@ -262,13 +252,13 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     if not all_results:
         return {"error": "No results loaded", "models": {}}
 
-    by_model: Dict[str, List[Dict[str, Any]]] = {}
+    by_model: dict[str, list[dict[str, Any]]] = {}
     for r in all_results:
         model = r.get("model", "Unknown")
         by_model.setdefault(model, []).append(r)
 
     # Per-model stats
-    model_stats: Dict[str, Dict[str, Any]] = {}
+    model_stats: dict[str, dict[str, Any]] = {}
     for model, scenarios in by_model.items():
         scores = [s.get("overall_score", 0.0) for s in scenarios]
         hard_fails = [s for s in scenarios if s.get("hard_fail", False)]
@@ -277,9 +267,9 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
         mean, ci_lo, ci_hi = _bootstrap_ci(scores, n_bootstrap)
 
         # By category
-        by_cat: Dict[str, List[float]] = {}
-        hf_by_cat: Dict[str, int] = {}
-        total_by_cat: Dict[str, int] = {}
+        by_cat: dict[str, list[float]] = {}
+        hf_by_cat: dict[str, int] = {}
+        total_by_cat: dict[str, int] = {}
         for s in scenarios:
             cat = _get_category(s)
             by_cat.setdefault(cat, []).append(s.get("overall_score", 0.0))
@@ -303,7 +293,7 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
             }
 
         # Dimension score averages
-        dim_avgs: Dict[str, float] = {}
+        dim_avgs: dict[str, float] = {}
         dim_keys = set()
         for s in scenarios:
             dims = normalize_dimension_scores(s.get("dimensions", s.get("dimension_scores", {})))
@@ -360,7 +350,7 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
 
     # Pairwise comparisons
     model_names = sorted(by_model.keys())
-    pairwise: List[Dict[str, Any]] = []
+    pairwise: list[dict[str, Any]] = []
 
     for i, model_a in enumerate(model_names):
         for j, model_b in enumerate(model_names):
@@ -387,7 +377,7 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     pairwise.sort(key=lambda x: abs(x["diff"]), reverse=True)
 
     # Check for ceiling/floor effects across models
-    warnings: List[str] = []
+    warnings: list[str] = []
     all_categories = set()
     for ms in model_stats.values():
         all_categories.update(ms.get("categories", {}).keys())
@@ -419,9 +409,9 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> Dict[str, Any]
     }
 
 
-def format_stats_report(stats: Dict[str, Any]) -> str:
+def format_stats_report(stats: dict[str, Any]) -> str:
     """Format stats as a terminal-friendly report."""
-    lines: List[str] = []
+    lines: list[str] = []
     models = stats.get("models", {})
     pairwise = stats.get("pairwise", [])
     warnings = stats.get("warnings", [])
@@ -542,9 +532,9 @@ def format_stats_report(stats: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_stats_markdown(stats: Dict[str, Any]) -> str:
+def format_stats_markdown(stats: dict[str, Any]) -> str:
     """Format stats as markdown for file output."""
-    lines: List[str] = []
+    lines: list[str] = []
     models = stats.get("models", {})
     pairwise = stats.get("pairwise", [])
     warnings = stats.get("warnings", [])

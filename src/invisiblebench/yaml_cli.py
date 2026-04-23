@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 
@@ -58,7 +58,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force offline scoring (deterministic).",
     )
 
-    # Run tracking options
     parser.add_argument(
         "--model",
         help="Model name for run tracking (enables state persistence).",
@@ -121,7 +120,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Save state after every N scorers (default: 1).",
     )
 
-    # Verbosity options
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         "--quiet",
@@ -164,25 +162,21 @@ def _doctor_checks(runs_dir: str) -> list[DoctorCheck]:
     ]
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Handle --doctor (precheck) before anything else
     if args.doctor:
         return doctor_runner(_doctor_checks(args.runs_dir), exit_on_fail=False)
 
-    # Import run manager for utility commands
     from invisiblebench.evaluation.run_manager import RunManager
 
-    # Handle --reset command
     if args.reset:
         run_manager = RunManager(runs_dir=args.runs_dir)
         deleted = run_manager.delete_runs_by_model(args.reset)
         print(f"Deleted {deleted} run(s) for model '{args.reset}'")
         return 0
 
-    # Handle --list-runs command (paged)
     if args.list_runs:
         run_manager = RunManager(runs_dir=args.runs_dir)
         all_runs = run_manager.list_runs()
@@ -219,11 +213,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print()
         return 0
 
-    # Validate required arguments for scoring
     if not args.scenario or not args.transcript or not args.rules:
         parser.error("--scenario, --transcript, and --rules are required for scoring")
 
-    # Validate iterations
     if args.iterations < 1:
         parser.error("--iterations must be at least 1")
 
@@ -253,27 +245,22 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.json_out:
             print(f" json report -> {Path(args.json_out).resolve()}")
 
-        # Import scoring components
         from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
         from invisiblebench.export.reports import ReportGenerator
-
-        # Find scoring config in configs directory
         from invisiblebench.utils.benchmark_inventory import get_project_root
         from invisiblebench.utils.progress import ProgressTracker
 
         scoring_config = get_project_root() / "benchmark" / "configs" / "scoring.yaml"
 
-        # Create progress tracker
         quiet = getattr(args, "quiet", False)
         verbose = getattr(args, "verbose", False)
         progress_tracker = ProgressTracker(
-            callback=None,  # We'll use the tracker directly
+            callback=None,
             verbose=verbose,
             quiet=quiet,
             use_tqdm=True,
         )
 
-        # Run scoring pipeline with iterations and run tracking
         orchestrator = ScoringOrchestrator(
             str(scoring_config),
             runs_dir=args.runs_dir,
@@ -293,7 +280,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             resume_file=args.resume_file,
         )
 
-        # Generate reports
         report_gen = ReportGenerator()
 
         if args.json_out:
@@ -304,12 +290,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             report_gen.generate_html(results, args.out)
             print(f"HTML report written to {args.out}")
 
-        # Print summary
         print("\n=== Scoring Summary ===")
         print(f"Overall Score: {results['overall_score']:.2f}")
         print(f"Hard Fail: {results['hard_fail']}")
 
-        # Show variance if multiple iterations
         if args.iterations > 1 and results.get("variance"):
             variance = results["variance"]["overall"]
             print(f"  Mean: {variance['mean']:.2f}")
@@ -319,7 +303,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             if variance.get("cv") is not None:
                 print(f"  CV: {variance['cv']:.4f}")
 
-        # Print dimension scores
         for dimension, dim_result in results["dimension_scores"].items():
             print(f"  {dimension.title()}: {dim_result['score']:.2f}")
 

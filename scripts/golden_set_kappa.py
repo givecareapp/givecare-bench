@@ -27,13 +27,8 @@ CANDIDATES_PATH = GOLDEN_DIR / "candidates.jsonl"
 
 
 def _load_candidates() -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with open(CANDIDATES_PATH) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
+    from _audit_helpers import load_candidates
+    return load_candidates(CANDIDATES_PATH)
 
 
 def _load_labels(label_dir: Path) -> dict[str, dict[str, Any]]:

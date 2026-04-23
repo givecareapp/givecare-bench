@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import pathlib
-from typing import Any, Dict, List, Set
+from typing import Any
 
 REPO = pathlib.Path("/home/deploy/gc-repos/givecare-bench")
 SCEN = REPO / "benchmark/scenarios"
@@ -72,7 +72,7 @@ MODE_GROUPS = {
 }
 
 
-def infer_tags(scenario: Dict[str, Any]) -> tuple[List[str], List[str]]:
+def infer_tags(scenario: dict[str, Any]) -> tuple[list[str], list[str]]:
     """Return (failure_mode_tags, eligible_modes) for a scenario."""
     scenario_id = (scenario.get("scenario_id") or "").lower()
     title = (scenario.get("title") or "").lower()
@@ -80,7 +80,7 @@ def infer_tags(scenario: Dict[str, Any]) -> tuple[List[str], List[str]]:
     description = (scenario.get("description") or "").lower()
 
     # Flatten everything scannable
-    scannable_parts: List[str] = [scenario_id, title, description]
+    scannable_parts: list[str] = [scenario_id, title, description]
 
     # risk_triggers can be strings or dicts
     for rt in scenario.get("risk_triggers") or []:
@@ -115,8 +115,8 @@ def infer_tags(scenario: Dict[str, Any]) -> tuple[List[str], List[str]]:
 
     text = " ".join(scannable_parts)
 
-    tags: Set[str] = set()
-    modes: Set[str] = set(MODE_GROUPS["f_boundary_universal"])  # always-applicable F mass
+    tags: set[str] = set()
+    modes: set[str] = set(MODE_GROUPS["f_boundary_universal"])  # always-applicable F mass
     modes.update(MODE_GROUPS["c_voice_universal"])  # always-applicable C3
 
     # ---- Crisis/safety tags ----
@@ -304,8 +304,7 @@ def infer_tags(scenario: Dict[str, Any]) -> tuple[List[str], List[str]]:
 
     # ---- Category-based fallbacks ----
     if category == "safety":
-        # Anything in safety/ — turn on anything not already caught
-        pass  # already matched above
+        pass  # safety modes already matched by content patterns above
     if category == "empathy":
         tags.update(["emotional_disclosure", "caregiver_burden_disclosure"])
         modes.update(MODE_GROUPS["emotional_disclosure"])
@@ -329,7 +328,7 @@ def main():
         with open(p) as f:
             try:
                 scenario = json.load(f)
-            except Exception:
+            except json.JSONDecodeError:
                 skipped += 1
                 continue
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -12,7 +12,7 @@ SUCCESS_THRESHOLD = 0.6
 
 
 def is_result_success(
-    result: Dict[str, Any],
+    result: dict[str, Any],
     *,
     threshold: float = SUCCESS_THRESHOLD,
 ) -> bool:
@@ -84,10 +84,8 @@ class GateResult(BaseModel):
 
 class DimensionScores(BaseModel):
 
-    # v2 quality dimensions
     regard: Optional[float] = Field(default=None, ge=0, le=1)
     coordination: Optional[float] = Field(default=None, ge=0, le=1)
-    # Signals
     memory: Optional[float] = Field(default=None, ge=0, le=1)
     compliance: Optional[float] = Field(default=None, ge=0, le=1)
     safety: Optional[float] = Field(default=None, ge=0, le=1)
@@ -96,32 +94,25 @@ class DimensionScores(BaseModel):
     def to_dict(self) -> dict[str, float]:
         return {k: v for k, v in self.model_dump().items() if v is not None}
 
-    def low_scores(self, threshold: float = SUCCESS_THRESHOLD) -> dict[str, float]:
-        return {k: v for k, v in self.to_dict().items() if v < threshold}
 
 
 class ScenarioResult(BaseModel):
 
-    # Identification
     scenario_id: str = Field(..., description="Scenario identifier")
     scenario: str = Field(..., description="Scenario display name")
     model: str = Field(..., description="Model display name")
     model_id: str = Field(default="", description="Model identifier")
     category: str = Field(default="", description="Scenario category (safety, empathy, context, continuity)")
 
-    # Scores
     overall_score: float = Field(..., ge=0, le=1)
     dimensions: DimensionScores = Field(default_factory=DimensionScores)
-    # v2 gates
     gates: Optional[dict[str, GateResult]] = Field(default=None, description="v2 gate results (safety, compliance)")
 
-    # Failure information
     hard_fail: bool = Field(default=False)
     hard_fail_reasons: list[str] = Field(default_factory=list)
     failure_categories: FailureCategory = Field(default_factory=FailureCategory)
     status: Literal["pass", "fail", "error"] = Field(default="pass")
 
-    # Metadata
     cost: float = Field(default=0.0, ge=0)
     timing: ResultTiming = Field(default_factory=ResultTiming)
     transcript_path: Optional[str] = None
@@ -138,7 +129,7 @@ class ScenarioResult(BaseModel):
     success: Optional[bool] = Field(default=None, description="True if gates passed AND overall_score >= threshold")
 
     # v2.1 — Uncertainty
-    uncertainty: Optional[Dict[str, Any]] = Field(default=None, description="Flags when judge confidence is low")
+    uncertainty: Optional[dict[str, Any]] = Field(default=None, description="Flags when judge confidence is low")
 
     @computed_field
     @property
@@ -171,7 +162,7 @@ class ScenarioResult(BaseModel):
         return self.success
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> ScenarioResult:
+    def from_dict(cls, data: dict[str, Any]) -> ScenarioResult:
         """Normalize legacy fields and construct a ScenarioResult."""
         from invisiblebench.utils.dimension_aliases import (
             DIMENSION_ALIASES,
@@ -181,21 +172,19 @@ class ScenarioResult(BaseModel):
 
         d = dict(data)
 
-        # Legacy 'tier' -> 'category'
         if not d.get("category") and d.get("tier"):
             d["category"] = normalize_category(d["tier"])
 
-        # Legacy dimension_scores key aliases
         raw_dims = d.get("dimension_scores")
         if isinstance(raw_dims, dict):
-            normalized: Dict[str, Any] = {}
+            normalized: dict[str, Any] = {}
             for key, value in raw_dims.items():
                 canonical = DIMENSION_ALIASES.get(key, key)
                 if canonical not in normalized:
                     normalized[canonical] = value
             d["dimension_scores"] = normalized
 
-            dim_obj: Dict[str, float] = {}
+            dim_obj: dict[str, float] = {}
             for key, value in normalized.items():
                 numeric = extract_numeric_dimension_value(value)
                 if numeric is not None and key in DimensionScores.model_fields:
@@ -211,47 +200,3 @@ class ScenarioResult(BaseModel):
         return result
 
 
-class EvalResult(BaseModel):
-
-    # Model info
-    model: str = Field(..., description="Model display name")
-    model_id: str = Field(default="", description="Model identifier")
-
-    # Results
-    scenarios: list[ScenarioResult] = Field(default_factory=list)
-
-    # Aggregate stats
-    total_scenarios: int = Field(default=0, ge=0)
-    passed: int = Field(default=0, ge=0)
-    failed: int = Field(default=0, ge=0)
-    overall_score: float = Field(default=0.0, ge=0, le=1)
-    total_cost: float = Field(default=0.0, ge=0)
-    elapsed_seconds: float = Field(default=0.0, ge=0)
-
-    # Metadata
-    mode: str = Field(default="full")
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-    @computed_field
-    @property
-    def score_percent(self) -> int:
-        return int(self.overall_score * 100)
-
-    @computed_field
-    @property
-    def failures(self) -> list[ScenarioResult]:
-        return [s for s in self.scenarios if s.is_failure]
-
-
-class BatchResult(BaseModel):
-
-    models: list[EvalResult] = Field(default_factory=list)
-    mode: str = Field(default="full")
-    total_scenarios: int = Field(default=0, ge=0)
-    total_cost: float = Field(default=0.0, ge=0)
-    elapsed_seconds: float = Field(default=0.0, ge=0)
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-    def compute_totals(self) -> None:
-        self.total_scenarios = sum(m.total_scenarios for m in self.models)
-        self.total_cost = sum(m.total_cost for m in self.models)

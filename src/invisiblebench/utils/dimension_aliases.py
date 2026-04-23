@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Mapping, Optional
 
 V2_DIMENSIONS = [
     "safety",
@@ -38,9 +38,9 @@ def _normalize_dimension_key(raw_key: Any, *, warn: bool = True) -> Optional[str
     return canonical if canonical is not None else normalized
 
 
-def normalize_dimension_scores(raw_scores: Mapping[str, Any] | None) -> Dict[str, Any]:
+def normalize_dimension_scores(raw_scores: Mapping[str, Any] | None) -> dict[str, Any]:
     """Normalize legacy dimension keys to v2 canonical names."""
-    normalized: Dict[str, Any] = {}
+    normalized: dict[str, Any] = {}
     if not isinstance(raw_scores, Mapping):
         return normalized
 

@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 
 def cohen_kappa_continuous(
-    ratings_a: List[float], ratings_b: List[float], n_bins: int = 5
+    ratings_a: list[float], ratings_b: list[float], n_bins: int = 5
 ) -> float:
     """Compute Cohen's kappa by binning continuous scores.
 
@@ -30,7 +30,7 @@ def cohen_kappa_continuous(
     n = len(bins_a)
     categories = list(range(n_bins))
 
-    matrix: Dict[Tuple[int, int], int] = {}
+    matrix: dict[tuple[int, int], int] = {}
     for ca in categories:
         for cb in categories:
             matrix[(ca, cb)] = 0

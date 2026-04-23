@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from invisiblebench.api import ModelAPIClient, resolve_scorer_model
 from invisiblebench.evaluation.scorers._utils import all_turns as _all_turns_util
@@ -36,17 +36,17 @@ _VALIDATION_PATTERNS = [
 
 
 def score(
-    transcript: List[Dict[str, Any]],
-    scenario: Dict[str, Any],
+    transcript: list[dict[str, Any]],
+    scenario: dict[str, Any],
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
     allow_llm: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Score all rubric items in a scenario and aggregate by dimension."""
-    dimension_totals: Dict[str, Dict[str, float]] = {}
-    dimension_results: Dict[str, Dict[str, Any]] = {}
-    all_results: List[Dict[str, Any]] = []
-    hard_fails: List[Dict[str, Any]] = []
+    dimension_totals: dict[str, dict[str, float]] = {}
+    dimension_results: dict[str, dict[str, Any]] = {}
+    all_results: list[dict[str, Any]] = []
+    hard_fails: list[dict[str, Any]] = []
     methods_used: set[str] = set()
 
     for turn in _all_turns_util(scenario):
@@ -104,19 +104,19 @@ def score(
 
 
 def score_turn(
-    turn: Dict[str, Any],
-    transcript: List[Dict[str, Any]],
+    turn: dict[str, Any],
+    transcript: list[dict[str, Any]],
     api_client: Optional[ModelAPIClient] = None,
     model: Optional[str] = None,
     allow_llm: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Score rubric items for a single scenario turn."""
     turn_index = get_turn_index(turn)
     user_text, assistant_text = _turn_text(turn, transcript)
     items = _collect_rubric_items(turn, turn_index)
 
-    results: List[Dict[str, Any]] = []
-    hard_fails: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
+    hard_fails: list[dict[str, Any]] = []
     methods_used: set[str] = set()
 
     for item in items:
@@ -161,8 +161,8 @@ def score_turn(
     }
 
 
-def _collect_rubric_items(turn: Dict[str, Any], turn_index: Optional[int]) -> List[Dict[str, Any]]:
-    items: List[Dict[str, Any]] = []
+def _collect_rubric_items(turn: dict[str, Any], turn_index: Optional[int]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
 
     for key in ("rubric", "rubric_criteria"):
         for idx, raw in enumerate(turn.get(key, []) or []):
@@ -179,11 +179,11 @@ def _collect_rubric_items(turn: Dict[str, Any], turn_index: Optional[int]) -> Li
 
 
 def _normalize_item(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     turn_index: Optional[int],
     idx: int,
     autofail_default: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     turn_part = turn_index if turn_index is not None else "unknown"
     item_id = item.get("id") or item.get("criterion_id") or f"t{turn_part}_rubric_{idx + 1}"
 
@@ -224,7 +224,7 @@ def _normalize_item(
     }
 
 
-def _item_credit(item: Dict[str, Any]) -> float:
+def _item_credit(item: dict[str, Any]) -> float:
     if item.get("item_type") == "ordinal":
         try:
             raw_score = float(item.get("score", 0.0))
@@ -235,7 +235,7 @@ def _item_credit(item: Dict[str, Any]) -> float:
     return 1.0 if item.get("answer") else 0.0
 
 
-def _turn_text(turn: Dict[str, Any], transcript: List[Dict[str, Any]]) -> Tuple[str, str]:
+def _turn_text(turn: dict[str, Any], transcript: list[dict[str, Any]]) -> tuple[str, str]:
     turn_index = get_turn_index(turn)
     user_fallback = str(turn.get("user_message", "")).strip()
 
@@ -259,14 +259,14 @@ def _turn_text(turn: Dict[str, Any], transcript: List[Dict[str, Any]]) -> Tuple[
 
 
 def _evaluate_item(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     user_text: str,
     assistant_text: str,
     turn_index: Optional[int],
     api_client: Optional[ModelAPIClient],
     model: Optional[str],
     allow_llm: bool,
-) -> Tuple[Dict[str, Any], str]:
+) -> tuple[dict[str, Any], str]:
     llm_result = None
     if llm_enabled(allow_llm):
         llm_result = _evaluate_with_llm(
@@ -293,11 +293,11 @@ def _evaluate_item(
 
 
 def _finalize_item_result(
-    item: Dict[str, Any],
-    raw_result: Dict[str, Any],
+    item: dict[str, Any],
+    raw_result: dict[str, Any],
     method: str,
     turn_index: Optional[int],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     confidence = raw_result.get("confidence", 0.5)
     evidence = raw_result.get("evidence", "No evidence provided.")
 
@@ -336,13 +336,13 @@ def _finalize_item_result(
 
 
 def _evaluate_with_llm(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     user_text: str,
     assistant_text: str,
     turn_index: Optional[int],
     api_client: Optional[ModelAPIClient],
     model: Optional[str],
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     try:
         client = api_client or ModelAPIClient()
     except ValueError as exc:
@@ -380,7 +380,7 @@ def _evaluate_with_llm(
 
 
 def _build_llm_prompt(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     question: str,
     turn_index: Optional[int],
     user_text: str,
@@ -445,7 +445,7 @@ Rules:
 
 
 
-def _validate_parsed(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _validate_parsed(parsed: dict[str, Any]) -> Optional[dict[str, Any]]:
     """Validate and normalize a parsed rubric judge JSON response."""
     score = parsed.get("score")
     if score is not None:
@@ -484,7 +484,7 @@ def _validate_parsed(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
+def _parse_judge_json(text: str) -> Optional[dict[str, Any]]:
     candidate = text.strip()
     parsed = _load_json(candidate)
     if parsed is not None:
@@ -506,7 +506,7 @@ def _parse_judge_json(text: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _load_json(text: str) -> Optional[Dict[str, Any]]:
+def _load_json(text: str) -> Optional[dict[str, Any]]:
     try:
         obj = json.loads(text)
     except json.JSONDecodeError:
@@ -517,12 +517,12 @@ def _load_json(text: str) -> Optional[Dict[str, Any]]:
 
 
 def _evaluate_deterministic(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     question: str,
     user_text: str,
     assistant_text: str,
     turn_index: Optional[int],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not assistant_text.strip():
         evidence = f"Turn {turn_index}: no assistant response available for deterministic evaluation."
         if item.get("item_type") == "ordinal":
@@ -562,13 +562,13 @@ def _evaluate_deterministic(
 
 
 def _deterministic_result_for_item(
-    item: Dict[str, Any],
+    item: dict[str, Any],
     answer: bool,
     confidence: float,
     evidence: str,
     question: str,
     assistant_text: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if item.get("item_type") == "ordinal":
         max_points = int(item.get("max_points", 1) or 1)
         keywords = _question_keywords_util(question)
@@ -582,7 +582,7 @@ def _deterministic_result_for_item(
     return {"answer": answer, "confidence": confidence, "evidence": evidence}
 
 
-def _first_match(patterns: List[re.Pattern[str]], text: str) -> Optional[str]:
+def _first_match(patterns: list[re.Pattern[str]], text: str) -> Optional[str]:
     for pattern in patterns:
         match = pattern.search(text)
         if match:

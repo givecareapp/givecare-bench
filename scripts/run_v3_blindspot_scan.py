@@ -26,7 +26,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -48,13 +48,13 @@ logger = logging.getLogger("v3_scan")
 SCENARIOS_ROOT = REPO_ROOT / "benchmark" / "scenarios"
 
 
-def load_scenario(scenario_id: str) -> Dict[str, Any]:
+def load_scenario(scenario_id: str) -> dict[str, Any]:
     """Find a scenario JSON by id across benchmark/scenarios/."""
     for path in SCENARIOS_ROOT.rglob("*.json"):
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             continue
         if data.get("scenario_id") == scenario_id:
             return data
@@ -67,8 +67,8 @@ def load_scenario(scenario_id: str) -> Dict[str, Any]:
     return {"scenario_id": scenario_id, "category": "unknown"}
 
 
-def load_transcript(path: Path) -> List[Dict[str, Any]]:
-    turns: List[Dict[str, Any]] = []
+def load_transcript(path: Path) -> list[dict[str, Any]]:
+    turns: list[dict[str, Any]] = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -81,21 +81,21 @@ def load_transcript(path: Path) -> List[Dict[str, Any]]:
     return turns
 
 
-def transcripts_for_run(run_dir: Path) -> List[Dict[str, Any]]:
+def transcripts_for_run(run_dir: Path) -> list[dict[str, Any]]:
     """Pair each transcript JSONL with its (model, scenario_id) metadata."""
     transcripts_dir = run_dir / "transcripts"
     if not transcripts_dir.is_dir():
         return []
 
     results_path = run_dir / "all_results.json"
-    results_by_key: Dict[str, Dict[str, Any]] = {}
+    results_by_key: dict[str, dict[str, Any]] = {}
     if results_path.exists():
         with open(results_path, encoding="utf-8") as f:
             for r in json.load(f):
                 key = f"{r['model_id']}__{r['scenario_id']}"
                 results_by_key[key] = r
 
-    pairs: List[Dict[str, Any]] = []
+    pairs: list[dict[str, Any]] = []
     for transcript_path in sorted(transcripts_dir.glob("*.jsonl")):
         stem = transcript_path.stem
         # Try to match against results_by_key
@@ -129,15 +129,15 @@ def transcripts_for_run(run_dir: Path) -> List[Dict[str, Any]]:
     return pairs
 
 
-def enrich_scenario_with_inferred_tags(scenario: Dict[str, Any]) -> Dict[str, Any]:
+def enrich_scenario_with_inferred_tags(scenario: dict[str, Any]) -> dict[str, Any]:
     """Infer failure_mode_tags from legacy scenario fields so v0 modes can fire.
 
     This is a bridge pass — full scenario tagging is task #17. For now we
     infer from category + risk_triggers + rubric so deterministic modes
     have enough eligibility signal to match existing scenarios.
     """
-    def _as_str_tags(items: Any) -> List[str]:
-        out: List[str] = []
+    def _as_str_tags(items: Any) -> list[str]:
+        out: list[str] = []
         if not items:
             return out
         for x in items:
@@ -151,7 +151,7 @@ def enrich_scenario_with_inferred_tags(scenario: Dict[str, Any]) -> Dict[str, An
                         break
         return out
 
-    inferred: List[str] = _as_str_tags(scenario.get("failure_mode_tags"))
+    inferred: list[str] = _as_str_tags(scenario.get("failure_mode_tags"))
     inferred.extend(_as_str_tags(scenario.get("risk_triggers")))
     inferred.extend(_as_str_tags(scenario.get("tags")))
 
@@ -226,8 +226,8 @@ def scan_run(
 
     logger.info("Scanning %d transcripts in %s", len(pairs), run_dir.name)
 
-    outputs: List[Dict[str, Any]] = []
-    engine_outputs: List[ModeEngineOutput] = []
+    outputs: list[dict[str, Any]] = []
+    engine_outputs: list[ModeEngineOutput] = []
 
     for i, pair in enumerate(pairs, 1):
         transcript = load_transcript(pair["transcript_path"])
@@ -265,9 +265,9 @@ def scan_run(
 
 def write_outputs(
     output_dir: Path,
-    outputs: List[Dict[str, Any]],
-    engine_outputs: List[ModeEngineOutput],
-    run_dirs: List[Path],
+    outputs: list[dict[str, Any]],
+    engine_outputs: list[ModeEngineOutput],
+    run_dirs: list[Path],
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -284,8 +284,8 @@ def write_outputs(
         json.dump({"rates": rates, "n_runs": len(engine_outputs)}, f, indent=2)
 
     # Per-model blindspot rates
-    by_model: Dict[str, List[ModeEngineOutput]] = collections.defaultdict(list)
-    by_model_records: Dict[str, List[Dict[str, Any]]] = collections.defaultdict(list)
+    by_model: dict[str, list[ModeEngineOutput]] = collections.defaultdict(list)
+    by_model_records: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
     for r, eo in zip(outputs, engine_outputs):
         key = r.get("model") or "unknown"
         by_model[key].append(eo)
@@ -306,7 +306,7 @@ def write_outputs(
         json.dump(per_model_rates, f, indent=2)
 
     # Human summary
-    summary_lines: List[str] = []
+    summary_lines: list[str] = []
     summary_lines.append("# V3 Blindspot Scan — Summary\n")
     summary_lines.append(f"- Source run dirs: {', '.join(str(d.name) for d in run_dirs)}")
     summary_lines.append(f"- Transcripts scanned: {len(outputs)}")
@@ -318,7 +318,7 @@ def write_outputs(
     summary_lines.append("|---|---:|---:|")
 
     # Recompute with eligibility counts for display
-    eligible_counts: Dict[str, Dict[str, int]] = {}
+    eligible_counts: dict[str, dict[str, int]] = {}
     for eo in engine_outputs:
         for label, val in eo.blindspot_profile.items():
             if val is None:
@@ -418,7 +418,7 @@ def main() -> int:
     logger.info("Loaded %d modes from failure_modes.yaml", len(engine.modes))
     logger.info("Loaded %d routing entries", len(engine.routing))
 
-    run_dirs: List[Path] = []
+    run_dirs: list[Path] = []
     if args.all:
         run_dirs = sorted(
             (REPO_ROOT / "results").glob("run_*"),
@@ -440,8 +440,8 @@ def main() -> int:
         logger.error("No run_* directories found")
         return 2
 
-    all_outputs: List[Dict[str, Any]] = []
-    all_engine_outputs: List[ModeEngineOutput] = []
+    all_outputs: list[dict[str, Any]] = []
+    all_engine_outputs: list[ModeEngineOutput] = []
 
     for run_dir in run_dirs:
         outputs, engine_outputs = scan_run(

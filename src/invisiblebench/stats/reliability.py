@@ -12,7 +12,7 @@ import logging
 import random
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.stats import cohen_kappa_continuous as _cohen_kappa_continuous
 from invisiblebench.utils.dimension_aliases import (
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 def _pairwise_kappas(
-    all_scores: List[List[float]], n_bins: int = 5
-) -> List[float]:
+    all_scores: list[list[float]], n_bins: int = 5
+) -> list[float]:
     """Compute Cohen's kappa for all pairs of runs."""
     kappas = []
     for i in range(len(all_scores)):
@@ -36,7 +36,7 @@ def _pairwise_kappas(
     return kappas
 
 
-def _mean_absolute_deviation(all_scores: List[List[float]]) -> float:
+def _mean_absolute_deviation(all_scores: list[list[float]]) -> float:
     """Mean absolute deviation across runs for each item."""
     if not all_scores or not all_scores[0]:
         return 0.0
@@ -65,12 +65,12 @@ def _interpret_kappa(k: float) -> str:
 
 
 LLM_SCORERS = V2_DIMENSIONS
-DETERMINISTIC_SCORERS: List[str] = []
+DETERMINISTIC_SCORERS: list[str] = []
 
 
 def find_transcripts(
     results_path: str, sample_size: int = 10
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Find transcript files from a results directory or file.
 
     Returns list of dicts with 'transcript_path', 'scenario_path', 'scenario_id'.
@@ -115,7 +115,7 @@ def run_reliability(
     n_runs: int = 5,
     sample_size: int = 10,
     output_dir: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run reliability analysis on existing transcripts.
 
     Scores each transcript n_runs times with cache disabled, then computes
@@ -153,7 +153,7 @@ def run_reliability(
             continue
 
     # Run scoring multiple times
-    dimension_runs: Dict[str, List[List[float]]] = {d: [] for d in LLM_SCORERS}
+    dimension_runs: dict[str, list[list[float]]] = {d: [] for d in LLM_SCORERS}
 
     for _run_idx in range(n_runs):
         # Clear cache before each run to force fresh LLM calls
@@ -165,7 +165,7 @@ def run_reliability(
             enable_llm=True,
         )
 
-        run_scores: Dict[str, List[float]] = {d: [] for d in LLM_SCORERS}
+        run_scores: dict[str, list[float]] = {d: [] for d in LLM_SCORERS}
 
         for item in items:
             # Find matching scenario
@@ -208,7 +208,7 @@ def run_reliability(
         for dim in LLM_SCORERS:
             dimension_runs[dim].append(run_scores[dim])
 
-    results: Dict[str, Any] = {"dimensions": {}, "n_runs": n_runs, "n_items": len(items)}
+    results: dict[str, Any] = {"dimensions": {}, "n_runs": n_runs, "n_items": len(items)}
 
     for dim in LLM_SCORERS:
         runs = dimension_runs[dim]
@@ -253,7 +253,7 @@ def run_reliability(
     return results
 
 
-def format_reliability_report(results: Dict[str, Any]) -> str:
+def format_reliability_report(results: dict[str, Any]) -> str:
     """Format reliability results as a terminal-friendly table."""
     lines = []
     lines.append(
@@ -267,7 +267,7 @@ def format_reliability_report(results: Dict[str, Any]) -> str:
     dims = results.get("dimensions", {})
 
     # Show canonical scorers first, then any extra/legacy dimensions.
-    ordered_dims: List[str] = []
+    ordered_dims: list[str] = []
     for dim in LLM_SCORERS + DETERMINISTIC_SCORERS:
         if dim in dims:
             ordered_dims.append(dim)

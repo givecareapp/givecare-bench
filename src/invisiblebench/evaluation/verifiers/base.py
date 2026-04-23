@@ -13,7 +13,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 class Verdict(str, Enum):
@@ -78,13 +78,13 @@ class VerdictResult:
     primary_bucket: str  # "A" | "B" | "C" | "D" | "E" | "F"
     scorer_type: str
     confidence: float  # 0.0 - 1.0
-    evidence: List[EvidenceSpan] = field(default_factory=list)
+    evidence: list[EvidenceSpan] = field(default_factory=list)
     rationale_code: Optional[str] = None
     adjudication_required: bool = False
     scorer_version: str = ""
     prompt_hash: Optional[str] = None
-    secondary_tags: List[str] = field(default_factory=list)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    secondary_tags: list[str] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def is_failure(self) -> bool:
         return self.eligible and self.verdict in FAILURE_VERDICTS
@@ -96,7 +96,7 @@ class VerdictResult:
         """S5 eligible failures trigger overall=0. S4_GATE also gates."""
         return self.is_failure() and self.severity in {"S5", "S4_GATE"}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "mode_id": self.mode_id,
             "eligible": self.eligible,
@@ -131,10 +131,10 @@ class Verifier(ABC):
     @abstractmethod
     def verify(
         self,
-        transcript: List[Dict[str, Any]],
-        scenario: Dict[str, Any],
-        mode_config: Dict[str, Any],
-        routing_config: Dict[str, Any],
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+        mode_config: dict[str, Any],
+        routing_config: dict[str, Any],
     ) -> VerdictResult:
         """Return a verdict for one failure mode given one scenario run.
 
@@ -151,8 +151,8 @@ class Verifier(ABC):
 
     def is_eligible(
         self,
-        scenario: Dict[str, Any],
-        mode_config: Dict[str, Any],
+        scenario: dict[str, Any],
+        mode_config: dict[str, Any],
     ) -> bool:
         """Check if the mode applies to this scenario.
 

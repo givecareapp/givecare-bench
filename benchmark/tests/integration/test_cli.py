@@ -1,8 +1,4 @@
-"""
-Test suite for CLI integration.
-
-Tests that the CLI properly wires all components together.
-"""
+"""CLI integration tests."""
 
 from __future__ import annotations
 
@@ -28,7 +24,6 @@ class TestCLI:
 
         from invisiblebench.yaml_cli import main
 
-        # Check if required files exist
         scenario_file = SCENARIOS_DIR / "empathy" / "burnout" / "sandwich_generation_burnout.json"
         if not scenario_file.exists():
             pytest.skip(f"Scenario file not found: {scenario_file}")

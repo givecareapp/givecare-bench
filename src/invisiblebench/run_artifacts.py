@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from invisiblebench.results_io import flatten_model_results, write_json
 
@@ -27,7 +27,7 @@ def _is_model_result_doc(data: JsonDocument) -> bool:
     return isinstance(data, dict) and isinstance(data.get("scenarios"), list) and "model" in data
 
 
-def load_model_result_documents(source: Path) -> List[Dict[str, Any]]:
+def load_model_result_documents(source: Path) -> list[dict[str, Any]]:
     """Load one or more per-model result documents from a source path."""
     if not source.exists():
         raise ArtifactLoadError(f"Path not found: {source}")
@@ -43,7 +43,7 @@ def load_model_result_documents(source: Path) -> List[Dict[str, Any]]:
         if model_dir.exists():
             source = model_dir
 
-        docs: List[Dict[str, Any]] = []
+        docs: list[dict[str, Any]] = []
         for path in sorted(source.glob("*.json")):
             data = _read_json(path)
             if _is_model_result_doc(data):
@@ -54,7 +54,7 @@ def load_model_result_documents(source: Path) -> List[Dict[str, Any]]:
     raise ArtifactLoadError(f"No per-model result JSONs found in: {source}")
 
 
-def load_result_rows(source: Path) -> List[Dict[str, Any]]:
+def load_result_rows(source: Path) -> list[dict[str, Any]]:
     """Load flat scenario rows from any supported artifact source."""
     if not source.exists():
         raise ArtifactLoadError(f"Path not found: {source}")
@@ -107,7 +107,7 @@ def detect_transcripts_dir(source: Path) -> Path | None:
     return None
 
 
-def write_aggregate_results(run_source: Path, rows: List[Dict[str, Any]] | None = None) -> Path:
+def write_aggregate_results(run_source: Path, rows: list[dict[str, Any]] | None = None) -> Path:
     """Write/refresh all_results.json for a run dir or model_results dir."""
     if rows is None:
         rows = load_result_rows(run_source)

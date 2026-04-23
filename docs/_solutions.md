@@ -4,6 +4,20 @@ Append-only. Newest first. Format: `## YYYY-MM-DD — title`.
 
 ---
 
+## 2026-04-23 — Codebase quality sweep: type modernization, dead code, circular imports, DRY
+
+Systematic 8-area cleanup across 66 files (-442 net lines).
+
+Key fixes:
+- **Circular import**: `scorers/__init__.py` → `false_refusal.py` → `scorers/__init__.py` re-entrant cycle broken by switching to direct module import and moving shared refusal/engagement constants to `_utils.py`
+- **Dead code**: removed `EvalResult`, `BatchResult`, `BenchmarkConfig`, `ScoringConfig` (never instantiated), `atomic_json_write` (unused), `DimensionScores.low_scores()`, 4 unused pytest fixtures, `legacy_dimension_scores` field in `ModeEngineOutput`, duplicate `_is_success` in `stats/analysis.py`
+- **DRY**: created `scripts/_audit_helpers.py` consolidating 9 helpers duplicated across 8 scripts; consolidated `assistant_text_by_turn`/`user_text_by_turn` into parameterized `_text_by_turn`; shared `resolve_sample_setting` across compliance and safety scorers
+- **Types**: 1154 legacy `typing` generics modernized to Python 3.12+ syntax via ruff UP006/UP007
+- **Try/except**: 10 broad `except Exception` narrowed to specific types; 1 catch-log-reraise removed
+- **Comments**: 97 items of comment noise removed via `scripts/deslop.py`
+
+---
+
 ## 2026-04-21 — Frozen holdout and orchestrator bridge no longer require fully rebuildable local artifacts
 
 Two local-only assumptions were still leaking into the verified workflow.

@@ -21,7 +21,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
@@ -180,8 +180,8 @@ MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
 def run_givecare_eval(
-    category_filter: Optional[List[str]] = None,
-    scenario_filter: Optional[List[str]] = None,
+    category_filter: Optional[list[str]] = None,
+    scenario_filter: Optional[list[str]] = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
@@ -265,7 +265,7 @@ def run_givecare_eval(
     # Run scenarios
     provider = GiveCareProvider(deployment="dev", wait_ms=15000)
     transcript_data = []
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
 
     try:
         for scenario_path in scenario_paths:
@@ -429,12 +429,12 @@ def run_givecare_eval(
     return 0 if failed == 0 else 1
 
 
-def _parse_harness_model_names(spec: Optional[str], default_model: str) -> List[str]:
+def _parse_harness_model_names(spec: Optional[str], default_model: str) -> list[str]:
     """Parse comma-separated harness model names, preserving order and uniqueness."""
     if not spec:
         return [default_model]
     seen: set[str] = set()
-    models: List[str] = []
+    models: list[str] = []
     for item in spec.split(","):
         name = item.strip()
         if name and name not in seen:
@@ -444,8 +444,8 @@ def _parse_harness_model_names(spec: Optional[str], default_model: str) -> List[
 
 
 def run_givecare_orchestrator_eval(
-    category_filter: Optional[List[str]] = None,
-    scenario_filter: Optional[List[str]] = None,
+    category_filter: Optional[list[str]] = None,
+    scenario_filter: Optional[list[str]] = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
@@ -453,7 +453,7 @@ def run_givecare_orchestrator_eval(
     generate_diagnostic: bool = False,
     output_dir: Optional[Path] = None,
     adapter_name: str = "givecare-orchestrator",
-    model_names: Optional[List[str]] = None,
+    model_names: Optional[list[str]] = None,
     update_leaderboard: bool = False,
 ) -> int:
     """Run the experimental GiveCare orchestrator system harness against the benchmark core."""
@@ -465,7 +465,7 @@ def run_givecare_orchestrator_eval(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = root / "results" / "givecare_orchestrator" / f"run_{timestamp}"
 
-    scenario_paths: List[Dict[str, Any]] = []
+    scenario_paths: list[dict[str, Any]] = []
     private_confidential_dir = get_private_confidential_dir(root)
     try:
         collected_paths = collect_scenario_paths(
@@ -542,8 +542,8 @@ def run_givecare_orchestrator_eval(
     )
     write_manifest(manifest, output_dir)
 
-    transcript_data: List[Tuple[str, Path, Dict[str, Any], str]] = []
-    results: List[Dict[str, Any]] = []
+    transcript_data: list[tuple[str, Path, dict[str, Any], str]] = []
+    results: list[dict[str, Any]] = []
     for model_name in selected_models:
         model_label = get_model_label(model_name)
         model_id = get_model_id(model_name)
@@ -765,7 +765,7 @@ def _normalize_scenario_token(value: str) -> str:
     return "".join(ch for ch in value.lower() if ch.isalnum())
 
 
-def _scenario_matches_filter(scenario: Dict[str, Any], pattern: str) -> bool:
+def _scenario_matches_filter(scenario: dict[str, Any], pattern: str) -> bool:
     pattern = pattern.strip().lower()
     if not pattern:
         return False
@@ -789,9 +789,9 @@ def _scenario_matches_filter(scenario: Dict[str, Any], pattern: str) -> bool:
 
 def get_scenarios(
     *,
-    category_filter: Optional[List[str]] = None,
+    category_filter: Optional[list[str]] = None,
     include_confidential: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """Get scenario configurations for the selected benchmark scope."""
     root = get_project_root()
     private_confidential_dir = get_private_confidential_dir(root)
@@ -813,7 +813,7 @@ def get_scenarios(
     return scenarios
 
 
-def estimate_cost(category: str, model: Dict) -> float:
+def estimate_cost(category: str, model: dict) -> float:
     """Estimate cost for a single evaluation (model-under-test + scorer LLM calls)."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
@@ -839,7 +839,7 @@ def estimate_cost(category: str, model: Dict) -> float:
     return model_cost + scorer_cost
 
 
-def resolve_models(spec: str, all_models: List[Dict]) -> List[int]:
+def resolve_models(spec: str, all_models: list[dict]) -> list[int]:
     """Resolve model spec string into list of 0-indexed model indices.
 
     Accepts numbers, names, or mixed:
@@ -898,7 +898,7 @@ class ScenarioDisplay:
 
     SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
-    def __init__(self, model_name: str, scenarios: List[Dict], start_time: float):
+    def __init__(self, model_name: str, scenarios: list[dict], start_time: float):
         self.model_name = model_name
         self.scenarios = scenarios
         self.start_time = start_time
@@ -909,15 +909,15 @@ class ScenarioDisplay:
         self.by_category = {c: [s for s in scenarios if s["category"] == c] for c in self.categories}
 
         # State tracking: scenario path -> {"status": pending|running|pass|fail, "score": int|None}
-        self.states: Dict[str, Dict] = {}
+        self.states: dict[str, dict] = {}
         for s in scenarios:
             self.states[s["path"]] = {"status": "pending", "score": None}
 
         # Category summaries
-        self.cat_scores: Dict[str, List[float]] = {c: [] for c in self.categories}
-        self.cat_done: Dict[str, bool] = dict.fromkeys(self.categories, False)
-        self.cat_start_time: Dict[str, float] = {}
-        self.cat_elapsed: Dict[str, float] = dict.fromkeys(self.categories, 0.0)
+        self.cat_scores: dict[str, list[float]] = {c: [] for c in self.categories}
+        self.cat_done: dict[str, bool] = dict.fromkeys(self.categories, False)
+        self.cat_start_time: dict[str, float] = {}
+        self.cat_elapsed: dict[str, float] = dict.fromkeys(self.categories, 0.0)
 
         # Counters
         self.completed = 0
@@ -1102,7 +1102,7 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
 
 
-def generate_transcript(model_id: str, scenario: Dict, api_client: "ModelAPIClient", output_path: Path) -> Path:
+def generate_transcript(model_id: str, scenario: dict, api_client: "ModelAPIClient", output_path: Path) -> Path:
     """Generate model transcript from scenario.
 
     Raises:
@@ -1118,7 +1118,7 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: "ModelAPIClie
 
     transcript = []
     conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
-    errors: List[str] = []
+    errors: list[str] = []
 
     # Get turns from scenario
     if "sessions" in scenario_data:
@@ -1135,7 +1135,7 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: "ModelAPIClie
         # Resolve conditional branch (adaptive user message).
         user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
 
-        user_entry: Dict[str, Any] = {"turn": turn_num, "role": "user", "content": user_msg}
+        user_entry: dict[str, Any] = {"turn": turn_num, "role": "user", "content": user_msg}
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
         transcript.append(user_entry)
@@ -1183,11 +1183,11 @@ def generate_transcript(model_id: str, scenario: Dict, api_client: "ModelAPIClie
 
 
 def write_detailed_outputs(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     output_dir: Path,
     model_id: str,
     scenario_id: str,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Write per-scenario JSON/HTML reports and return their paths."""
     from invisiblebench.export.reports import ReportGenerator
 
@@ -1211,8 +1211,8 @@ def write_detailed_outputs(
 
 
 async def evaluate_scenario_async(
-    model: Dict,
-    scenario: Dict,
+    model: dict,
+    scenario: dict,
     api_client: "ModelAPIClient",
     orchestrator: "ScoringOrchestrator",
     output_dir: Path,
@@ -1220,7 +1220,7 @@ async def evaluate_scenario_async(
     detailed_output: bool = False,
     run_suffix: str = "",
     run_id: Optional[str] = None,
-) -> Dict:
+) -> dict:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
         scenario_path = Path(scenario["path"])
@@ -1254,7 +1254,7 @@ async def evaluate_scenario_async(
 
             transcript = []
             conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
-            errors: List[str] = []
+            errors: list[str] = []
 
             if "sessions" in scenario_data:
                 all_turns = []
@@ -1270,7 +1270,7 @@ async def evaluate_scenario_async(
                 # Resolve conditional branch (adaptive user message).
                 user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
 
-                user_entry: Dict[str, Any] = {
+                user_entry: dict[str, Any] = {
                     "turn": turn_num,
                     "role": "user",
                     "content": user_msg,
@@ -1354,7 +1354,7 @@ async def evaluate_scenario_async(
                 run_id=run_id,
             )
 
-            detail_paths: Dict[str, str] = {}
+            detail_paths: dict[str, str] = {}
             if detailed_output:
                 detail_paths = write_detailed_outputs(
                     result,
@@ -1412,7 +1412,7 @@ async def evaluate_scenario_async(
 def _compute_success(
     score: float,
     hard_fail: bool,
-    gates: Dict,
+    gates: dict,
     threshold: float = PASS_THRESHOLD,
 ) -> bool:
     """Compute the success signal from score, hard_fail, and gates."""
@@ -1427,13 +1427,13 @@ def _compute_success(
 
 
 def _make_error_result(
-    model: Dict,
+    model: dict,
     scenario_name: str,
     scenario_id: str,
     category: str,
     reason: str,
     cost: Optional[float] = None,
-) -> Dict:
+) -> dict:
     """Build a standardized error result dict for failed scenarios."""
     return {
         "model": model["name"],
@@ -1467,10 +1467,10 @@ def _make_harness_error_result(
     scenario_id: str,
     category: str,
     reason: str,
-    extra: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     """Build a standardized error row for system-harness failures."""
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "model": model_name,
         "model_id": model_id,
         "provider": provider,
@@ -1502,19 +1502,19 @@ def _make_harness_error_result(
     return result
 
 
-def _safe_load_scenario_data(path: Path) -> Dict[str, Any]:
+def _safe_load_scenario_data(path: Path) -> dict[str, Any]:
     """Best-effort scenario loader for error reporting paths."""
     try:
         with open(path) as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return {}
 
 
 def _run_single_scenario(
-    model: Dict,
-    scenario: Dict,
+    model: dict,
+    scenario: dict,
     scenario_path: Path,
     scenario_id: str,
     run_suffix: str,
@@ -1524,7 +1524,7 @@ def _run_single_scenario(
     rules_path: Path,
     detailed_output: bool = False,
     run_id: Optional[str] = None,
-) -> Dict:
+) -> dict:
     """Run one scenario once and return standardized result row."""
     transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
     transcript_path = output_dir / "transcripts" / transcript_name
@@ -1556,7 +1556,7 @@ def _run_single_scenario(
             run_id=run_id,
         )
 
-        detail_paths: Dict[str, str] = {}
+        detail_paths: dict[str, str] = {}
         if detailed_output:
             detail_paths = write_detailed_outputs(
                 result,
@@ -1612,12 +1612,12 @@ def _run_single_scenario(
         )
 
 
-def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
+def _aggregate_multi_run_results(run_results: list[dict]) -> dict:
     """Aggregate N run results with median score and reliability stats."""
     if len(run_results) == 1:
         return run_results[0]
 
-    def _score_value(result: Dict[str, Any]) -> float:
+    def _score_value(result: dict[str, Any]) -> float:
         score = result.get("overall_score", 0.0)
         return float(score) if isinstance(score, (int, float)) else 0.0
 
@@ -1632,7 +1632,7 @@ def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
     pass_count = sum(1 for p in pass_flags if p)
     hard_fail_count = sum(1 for hf in hard_fail_flags if hf)
 
-    dimension_values: Dict[str, List[float]] = {}
+    dimension_values: dict[str, list[float]] = {}
     for result in run_results:
         raw_dims = result.get("dimensions") or result.get("dimension_scores", {})
         dims = normalize_dimension_scores(raw_dims)
@@ -1641,7 +1641,7 @@ def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
             if isinstance(score, (int, float)):
                 dimension_values.setdefault(dim, []).append(float(score))
 
-    def _stats(values: List[float]) -> tuple[float, float, float]:
+    def _stats(values: list[float]) -> tuple[float, float, float]:
         if not values:
             return 0.0, 0.0, 0.0
         if len(values) == 1:
@@ -1656,7 +1656,7 @@ def _aggregate_multi_run_results(run_results: List[Dict]) -> Dict:
     any_hard_fail = any(r.get("hard_fail") for r in run_results)
     if any_hard_fail:
         final["hard_fail"] = True
-        all_reasons: List[str] = []
+        all_reasons: list[str] = []
         for r in run_results:
             for reason in r.get("hard_fail_reasons", []):
                 if reason not in all_reasons:
@@ -1718,7 +1718,7 @@ def _write_run_audit(
     harness: str,
     mode: str,
     previous_source: Optional[Path] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate run audit artifacts and return the audit dict."""
     audit = audit_results_source(
         source,
@@ -1732,7 +1732,7 @@ def _write_run_audit(
     return audit
 
 
-def _print_audit_summary(audit: Dict[str, Any], console: Optional[Console] = None) -> None:
+def _print_audit_summary(audit: dict[str, Any], console: Optional[Console] = None) -> None:
     """Print compact audit summary to console/stdout."""
     msg = (
         f"Audit: {audit.get('summary_status', 'WARN')} | "
@@ -1748,12 +1748,12 @@ def _print_audit_summary(audit: Dict[str, Any], console: Optional[Console] = Non
 
 
 def run_benchmark(
-    models: List[Dict],
+    models: list[dict],
     output_dir: Path,
     dry_run: bool = False,
     auto_confirm: bool = False,
-    category_filter: Optional[List[str]] = None,
-    scenario_filter: Optional[List[str]] = None,
+    category_filter: Optional[list[str]] = None,
+    scenario_filter: Optional[list[str]] = None,
     parallel: Optional[int] = None,
     detailed_output: bool = False,
     update_leaderboard: bool = False,
@@ -1813,7 +1813,7 @@ def run_benchmark(
     write_manifest(manifest, output_dir)
     model_results_dir = output_dir / "model_results"
 
-    def persist_model_results(model_rows: List[Dict[str, Any]]) -> None:
+    def persist_model_results(model_rows: list[dict[str, Any]]) -> None:
         if not model_rows:
             return
         write_model_results(
@@ -1910,14 +1910,14 @@ def run_benchmark(
     if parallel and parallel > 1:
         if RICH_AVAILABLE and console:
             # Track progress per model
-            model_progress: Dict[str, tuple] = (
+            model_progress: dict[str, tuple] = (
                 {}
             )  # model_name -> (completed, total, current_scenario)
             progress_lock = threading.Lock()
-            all_results: List[Dict] = []
+            all_results: list[dict] = []
             results_lock = threading.Lock()
 
-            async def run_model_scenarios(model: Dict) -> List[Dict]:
+            async def run_model_scenarios(model: dict) -> list[dict]:
                 """Run all scenarios for a single model sequentially."""
                 model_results = []
                 model_name = model["name"]
@@ -2033,9 +2033,9 @@ def run_benchmark(
             results = all_results
         else:
             # Non-rich parallel fallback - still parallelize by model
-            all_results: List[Dict] = []
+            all_results: list[dict] = []
 
-            async def run_model_scenarios_simple(model: Dict) -> List[Dict]:
+            async def run_model_scenarios_simple(model: dict) -> list[dict]:
                 model_results = []
                 for scenario in scenarios:
                     dummy_sem = asyncio.Semaphore(1)
@@ -2092,7 +2092,7 @@ def run_benchmark(
         scenarios_by_cat = {c: [s for s in scenarios if s["category"] == c] for c in cats}
 
         for model in models:
-            model_results: List[Dict[str, Any]] = []
+            model_results: list[dict[str, Any]] = []
             display = ScenarioDisplay(model["name"], scenarios, start_time)
 
             with Live(
@@ -2211,7 +2211,7 @@ def run_benchmark(
         # Fallback without rich - still run actual evaluations
         eval_num = 0
         for model in models:
-            model_results: List[Dict[str, Any]] = []
+            model_results: list[dict[str, Any]] = []
             for scenario in scenarios:
                 eval_num += 1
                 print(
@@ -2424,7 +2424,7 @@ def run_benchmark(
                 for bucket, count in buckets.items():
                     label = bucket.replace("_", " ").title()
                     console.print(f"  [red]{label}:[/red]  {count}")
-        except Exception as _e:
+        except ImportError as _e:
             logger.debug("Success rate table rendering failed: %s", _e)
 
         console.print()
@@ -2619,7 +2619,7 @@ def run_benchmark(
                             else:
                                 reasons = "gate failure"
                             console.print(f"  [red]✗[/red] [bold]{q['model']}[/bold]  {reasons}")
-        except Exception as _e:
+        except ImportError as _e:
             logger.debug("Safety report card rendering failed: %s", _e)
 
         console.print(f"\n[dim]{results_path}[/dim]")
@@ -2902,7 +2902,7 @@ def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> 
     if not run_ref.startswith("run_"):
         names_to_match.add(f"run_{run_ref}")
 
-    matched_runs: List[Path] = []
+    matched_runs: list[Path] = []
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
@@ -2932,7 +2932,7 @@ def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> 
     raise ValueError(f"Resolved run is missing supported result artifacts: {run_dir}")
 
 
-def load_run_results(results_path: Path) -> List[Dict[str, Any]]:
+def load_run_results(results_path: Path) -> list[dict[str, Any]]:
     """Load a run's result rows from any supported artifact source."""
     try:
         return [row for row in load_result_rows(results_path) if isinstance(row, dict)]
@@ -2940,9 +2940,9 @@ def load_run_results(results_path: Path) -> List[Dict[str, Any]]:
         raise ValueError(f"Could not load run results from {results_path}: {e}") from e
 
 
-def aggregate_results_by_model(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def aggregate_results_by_model(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Aggregate per-model average overall score and status counts."""
-    by_model: Dict[str, Dict[str, Any]] = {}
+    by_model: dict[str, dict[str, Any]] = {}
 
     for row in results:
         model = str(row.get("model") or row.get("model_id") or "unknown_model")
@@ -2983,11 +2983,11 @@ def aggregate_results_by_model(results: List[Dict[str, Any]]) -> Dict[str, Dict[
 
 
 def compute_run_diff(
-    base_by_model: Dict[str, Dict[str, Any]], new_by_model: Dict[str, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    base_by_model: dict[str, dict[str, Any]], new_by_model: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Compute per-model deltas and regression flags."""
     model_names = sorted(set(base_by_model) | set(new_by_model))
-    comparisons: List[Dict[str, Any]] = []
+    comparisons: list[dict[str, Any]] = []
 
     for model in model_names:
         base_stats = base_by_model.get(model)
@@ -3039,14 +3039,14 @@ def _format_delta(value: Optional[float]) -> str:
     return f"{value:+.3f}"
 
 
-def _format_status_counts(counts: Optional[Dict[str, int]]) -> str:
+def _format_status_counts(counts: Optional[dict[str, int]]) -> str:
     """Format pass/fail/error status counts for terminal output."""
     if not counts:
         return "N/A"
     return f"{counts.get('pass', 0)}/{counts.get('fail', 0)}/{counts.get('error', 0)}"
 
 
-def _print_diff_table(comparisons: List[Dict[str, Any]]) -> None:
+def _print_diff_table(comparisons: list[dict[str, Any]]) -> None:
     """Print per-model diff table with regression indicators."""
     headers = [
         "Model",
@@ -3097,7 +3097,7 @@ def _print_diff_table(comparisons: List[Dict[str, Any]]) -> None:
         console.print(table)
         return
 
-    rows: List[List[str]] = []
+    rows: list[list[str]] = []
     for comp in comparisons:
         rows.append(
             [
@@ -3116,7 +3116,7 @@ def _print_diff_table(comparisons: List[Dict[str, Any]]) -> None:
         for i, cell in enumerate(row):
             widths[i] = max(widths[i], len(cell))
 
-    def _fmt_row(row: List[str]) -> str:
+    def _fmt_row(row: list[str]) -> str:
         return " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
 
     print(_fmt_row(headers))
@@ -3178,7 +3178,7 @@ def _run_doctor() -> int:
             probe.write_text("ok")
             probe.unlink()
             return True
-        except Exception:
+        except OSError:
             return False
 
     checks = [
@@ -3201,7 +3201,7 @@ def _run_doctor() -> int:
     return doctor_runner(checks, exit_on_fail=False)
 
 
-def _collect_runs() -> List[Dict[str, Any]]:
+def _collect_runs() -> list[dict[str, Any]]:
     """Return run records sorted newest first, with narrow fields."""
     from invisiblebench.cli.archive import list_runs
 
@@ -3210,7 +3210,7 @@ def _collect_runs() -> List[Dict[str, Any]]:
         return []
     runs = list_runs(results_dir)
     runs.sort(key=lambda r: r.get("date") or datetime.min, reverse=True)
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     for r in runs:
         records.append(
             {
@@ -3228,7 +3228,7 @@ def _collect_runs() -> List[Dict[str, Any]]:
 def _emit_or_write_json(
     *,
     command: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     record_count: int,
     out_path: Optional[str],
 ) -> int:
@@ -3328,13 +3328,13 @@ def _run_runs(
     return 0
 
 
-def _load_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
+def _load_run_metadata(run_id: str) -> Optional[dict[str, Any]]:
     """Resolve a run by id (exact or prefix) and return its metadata."""
     results_dir = _runs_dir()
     if not results_dir.exists():
         return None
 
-    candidates: List[Path] = []
+    candidates: list[Path] = []
     direct = results_dir / run_id
     if direct.is_dir():
         candidates = [direct]
@@ -3354,11 +3354,11 @@ def _load_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
     run_path = max(candidates, key=lambda p: p.stat().st_mtime)
 
     manifest_path = run_path / "run_manifest.json"
-    manifest: Dict[str, Any] = {}
+    manifest: dict[str, Any] = {}
     if manifest_path.exists():
         try:
             manifest = json.loads(manifest_path.read_text())
-        except Exception as exc:
+        except (OSError, json.JSONDecodeError) as exc:
             manifest = {"_manifest_error": str(exc)}
 
     from invisiblebench.cli.archive import get_run_info
@@ -3421,7 +3421,7 @@ def _run_leaderboard_status_json(out_path: Optional[str] = None) -> int:
     )
 
 
-def _read_leaderboard_json() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def _read_leaderboard_json() -> tuple[Optional[dict[str, Any]], Optional[str]]:
     """Return (leaderboard.json contents, error) for envelope payloads."""
     from invisiblebench.cli.leaderboard import _leaderboard_output
 
@@ -3462,7 +3462,7 @@ def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> 
         return 1
 
     data, err = _read_leaderboard_json()
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "action": action,
         "exit_code": rc,
         "leaderboard": data,
@@ -3487,7 +3487,7 @@ def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> 
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="InvisibleBench - AI Safety Benchmark Runner",

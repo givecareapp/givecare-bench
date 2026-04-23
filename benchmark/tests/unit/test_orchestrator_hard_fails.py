@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from invisiblebench.evaluation.orchestrator import ScoringOrchestrator, _safety_hard_fail_reasons
 
@@ -54,8 +54,8 @@ def _run_with_overrides(
     tmp_path: Path,
     configs_dir: Path,
     monkeypatch,
-    overrides: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
+    overrides: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
     from invisiblebench.evaluation import orchestrator as orchestrator_module
 
     transcript_path = _write_transcript(tmp_path)

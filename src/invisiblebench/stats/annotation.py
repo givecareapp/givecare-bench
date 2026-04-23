@@ -11,7 +11,7 @@ import json
 import random
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from invisiblebench.stats import cohen_kappa_continuous as _cohen_kappa_continuous
 from invisiblebench.utils.dimension_aliases import (
@@ -26,9 +26,9 @@ from invisiblebench.utils.dimension_aliases import (
 )
 
 
-def _normalize_annotation_scores(raw_scores: Dict[str, Any]) -> Dict[str, float]:
+def _normalize_annotation_scores(raw_scores: dict[str, Any]) -> dict[str, float]:
 
-    normalized: Dict[str, float] = {}
+    normalized: dict[str, float] = {}
     for key, value in raw_scores.items():
         canonical = DIMENSION_ALIASES.get(key, key)
         score = extract_numeric_dimension_value(value)
@@ -42,7 +42,7 @@ def export_annotation_kit(
     output_dir: str,
     sample_size: int = 20,
     stratify: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Export transcripts as markdown scoring forms for human raters.
 
     Args:
@@ -75,7 +75,7 @@ def export_annotation_kit(
     # Find scenario files for expected behaviors
     root = Path(__file__).parent.parent.parent.parent
     scenarios_dir = root / "benchmark" / "scenarios"
-    scenario_data: Dict[str, Dict[str, Any]] = {}
+    scenario_data: dict[str, dict[str, Any]] = {}
     for f in scenarios_dir.rglob("*.json"):
         if "archive" in str(f):
             continue
@@ -95,7 +95,7 @@ def export_annotation_kit(
     rng = random.Random(42)
 
     if stratify and all_results:
-        by_cat: Dict[str, List[Path]] = {}
+        by_cat: dict[str, list[Path]] = {}
         for tf in transcript_files:
             cat = "unknown"
             for r in all_results:
@@ -105,7 +105,7 @@ def export_annotation_kit(
                     break
             by_cat.setdefault(str(cat), []).append(tf)
 
-        selected: List[Path] = []
+        selected: list[Path] = []
         per_cat = max(1, sample_size // len(by_cat)) if by_cat else sample_size
         for cat_files in by_cat.values():
             selected.extend(rng.sample(cat_files, min(per_cat, len(cat_files))))
@@ -118,8 +118,8 @@ def export_annotation_kit(
         selected = rng.sample(transcript_files, min(sample_size, len(transcript_files)))
 
     # LLM scores for comparison (keyed by scenario_id)
-    llm_scores: Dict[str, Dict[str, float]] = {}
-    llm_hard_fails: Dict[str, bool] = {}
+    llm_scores: dict[str, dict[str, float]] = {}
+    llm_hard_fails: dict[str, bool] = {}
     for r in all_results:
         if not isinstance(r, dict):
             continue
@@ -192,8 +192,8 @@ def export_annotation_kit(
 
 def _build_annotation_form(
     scenario_id: str,
-    turns: List[Dict[str, Any]],
-    scenario: Optional[Dict[str, Any]],
+    turns: list[dict[str, Any]],
+    scenario: Optional[dict[str, Any]],
     index: int,
 ) -> str:
 
@@ -307,7 +307,7 @@ Mark `hard_fail = yes` if ANY of these occurred:
 def import_annotations(
     annotations_path: str,
     llm_scores_path: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Import human annotations and compute agreement metrics.
 
     Args:
@@ -316,8 +316,8 @@ def import_annotations(
 
     Returns dict with agreement metrics.
     """
-    annotations: Dict[str, Dict[str, Dict[str, float]]] = {}  # rater -> scenario -> dim -> score
-    hard_fail_annotations: Dict[str, Dict[str, bool]] = {}  # rater -> scenario -> bool
+    annotations: dict[str, dict[str, dict[str, float]]] = {}  # rater -> scenario -> dim -> score
+    hard_fail_annotations: dict[str, dict[str, bool]] = {}  # rater -> scenario -> bool
 
     with open(annotations_path) as f:
         reader = csv.DictReader(f)
@@ -355,8 +355,8 @@ def import_annotations(
     if not raters:
         return {"error": "No annotations found"}
 
-    llm_dim_scores: Dict[str, Dict[str, float]] = {}
-    llm_hf: Dict[str, bool] = {}
+    llm_dim_scores: dict[str, dict[str, float]] = {}
+    llm_hf: dict[str, bool] = {}
     if llm_scores_path:
         with open(llm_scores_path) as f:
             llm_data = json.load(f)
@@ -377,7 +377,7 @@ def import_annotations(
         return {"error": "No common scenarios across raters", "raters": raters}
 
     # Human-human agreement (pairwise kappa per dimension)
-    hh_agreement: Dict[str, List[Dict[str, Any]]] = {}
+    hh_agreement: dict[str, list[dict[str, Any]]] = {}
     for dim in DIMENSIONS:
         pairs = []
         for i, r_a in enumerate(raters):
@@ -391,7 +391,7 @@ def import_annotations(
         hh_agreement[dim] = pairs
 
     # Human-LLM agreement
-    hl_agreement: Dict[str, Dict[str, Any]] = {}
+    hl_agreement: dict[str, dict[str, Any]] = {}
     if llm_dim_scores:
         for dim in DIMENSIONS:
             kappas = []
@@ -415,7 +415,7 @@ def import_annotations(
             }
 
     # Hard-fail agreement
-    hf_agreement: Dict[str, Any] = {}
+    hf_agreement: dict[str, Any] = {}
     if llm_hf:
         for rater in raters:
             agree = 0
@@ -451,7 +451,7 @@ def import_annotations(
     }
 
 
-def format_agreement_report(results: Dict[str, Any]) -> str:
+def format_agreement_report(results: dict[str, Any]) -> str:
 
     lines = []
     lines.append(

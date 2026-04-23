@@ -17,13 +17,13 @@ Condition types:
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 def resolve_branch(
-    turn: Dict[str, Any],
+    turn: dict[str, Any],
     prev_assistant_msg: Optional[str],
-) -> Tuple[str, Optional[str]]:
+) -> tuple[str, Optional[str]]:
     """Select user message for a turn based on previous assistant response.
 
     Args:
@@ -35,7 +35,7 @@ def resolve_branch(
         ``(user_message, branch_id)`` – the message to send and which branch
         was taken (``None`` when the default path is used).
     """
-    branches: Optional[List[Dict[str, Any]]] = turn.get("branches")
+    branches: Optional[list[dict[str, Any]]] = turn.get("branches")
     if not branches or not prev_assistant_msg:
         return turn["user_message"], None
 
@@ -51,7 +51,7 @@ def resolve_branch(
 
 
 def _evaluate_condition(
-    condition: Dict[str, Any],
+    condition: dict[str, Any],
     response: str,
     response_lower: str,
 ) -> bool:
@@ -59,7 +59,7 @@ def _evaluate_condition(
     ctype = condition["type"]
 
     if ctype == "contains_any":
-        values: List[str] = condition["values"]
+        values: list[str] = condition["values"]
         return any(v.lower() in response_lower for v in values)
 
     if ctype == "contains_all":

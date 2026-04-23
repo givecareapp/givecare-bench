@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Iterable
 
 from invisiblebench.failure_taxonomy import compute_quality_summary, compute_reliability_summary
 from invisiblebench.models.results import is_result_success
@@ -45,7 +45,7 @@ def _safe_filename(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in safe)
 
 
-def _coerce_dimension_scores(result: Dict[str, Any]) -> Dict[str, Any]:
+def _coerce_dimension_scores(result: dict[str, Any]) -> dict[str, Any]:
     dims = result.get("dimensions")
     if isinstance(dims, dict) and dims:
         return dims
@@ -56,19 +56,19 @@ def _coerce_dimension_scores(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def aggregate_model_results(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     *,
     benchmark_version: str = "unknown",
     timestamp: str | None = None,
     mode: str | None = None,
-    run_metadata: Dict[str, Any] | None = None,
-) -> Dict[str, Dict[str, Any]]:
+    run_metadata: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
     """Group flat scenario rows into per-model result documents.
 
     Output shape is compatible with existing leaderboard tooling while preserving
     richer per-scenario fields for local run recovery and diagnostics.
     """
-    models: Dict[str, Dict[str, Any]] = {}
+    models: dict[str, dict[str, Any]] = {}
     ts = timestamp or datetime.now().isoformat()
 
     for result in results:
@@ -139,14 +139,14 @@ def aggregate_model_results(
 
 
 def write_model_results(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     output_dir: Path,
     *,
     benchmark_version: str = "unknown",
     timestamp: str | None = None,
     mode: str | None = None,
-    run_metadata: Dict[str, Any] | None = None,
-) -> List[Path]:
+    run_metadata: dict[str, Any] | None = None,
+) -> list[Path]:
     """Write one JSON file per model/provider and return written paths."""
     output_dir.mkdir(parents=True, exist_ok=True)
     docs = aggregate_model_results(
@@ -156,7 +156,7 @@ def write_model_results(
         mode=mode,
         run_metadata=run_metadata,
     )
-    written: List[Path] = []
+    written: list[Path] = []
     for model_name, model_data in docs.items():
         path = output_dir / f"{_safe_filename(model_name)}.json"
         with open(path, "w") as f:
@@ -173,9 +173,9 @@ def write_json(path: Path, data: Any) -> Path:
     return path
 
 
-def flatten_model_results(model_files: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def flatten_model_results(model_files: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten per-model result documents back into all_results-style rows."""
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for doc in model_files:
         model = doc.get("model", doc.get("model_name", "unknown"))
         model_id = doc.get("model_id", model)

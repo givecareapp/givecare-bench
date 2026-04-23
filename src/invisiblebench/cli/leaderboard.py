@@ -15,7 +15,7 @@ import importlib.util
 import json
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from invisiblebench.results_io import write_model_results
 from invisiblebench.run_artifacts import load_result_rows
@@ -46,7 +46,7 @@ def _leaderboard_output() -> Path:
     return get_project_root() / "data" / "leaderboard"
 
 
-def _prepare(input_path: Path, output_dir: Path) -> List[str]:
+def _prepare(input_path: Path, output_dir: Path) -> list[str]:
     """Normalize flat result rows into canonical per-model files."""
     rows = load_result_rows(input_path)
     if not rows:
@@ -177,7 +177,6 @@ def add_results(results_path: Path) -> int:
             out(f"[red]No model_results/ or JSON files found in: {results_path}[/red]")
             return 1
 
-    # Prepare per-model files in a temp dir first
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp = Path(tmp_dir)
         if per_model_source is not None:
@@ -196,14 +195,13 @@ def add_results(results_path: Path) -> int:
             out("[red]No models found in results file[/red]")
             return 1
 
-        # Check scenario count mismatch before copying
-        existing_counts: Dict[str, int] = {}
+        existing_counts: dict[str, int] = {}
         for f in canonical.glob("*.json"):
             with open(f) as fh:
                 data = json.load(fh)
             existing_counts[data.get("model", f.stem)] = len(data.get("scenarios", []))
 
-        new_counts: Dict[str, int] = {}
+        new_counts: dict[str, int] = {}
         for f in tmp.glob("*.json"):
             with open(f) as fh:
                 data = json.load(fh)
@@ -219,7 +217,6 @@ def add_results(results_path: Path) -> int:
                 )
                 out("[yellow]  Scores are comparable but health check will note the difference.[/yellow]")
 
-        # Copy into canonical dir (overwrite existing models)
         for f in tmp.glob("*.json"):
             dest = canonical / f.name
             dest.write_text(f.read_text())
@@ -229,11 +226,9 @@ def add_results(results_path: Path) -> int:
             count = new_counts.get(m, "?")
             out(f"  • {m} ({count} scenarios)")
 
-    # Regenerate leaderboard
     out("\n[bold]Regenerating leaderboard...[/bold]")
     _generate(canonical, _leaderboard_output())
 
-    # Run health check
     out("")
     from invisiblebench.cli.health import run_health
     return run_health(verbose=False)
