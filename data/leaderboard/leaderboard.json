@@ -52,21 +52,26 @@
               "sample_size": 60,
               "trace_exact_match": 0.5,
               "trace_three_of_four_match": 0.733,
-              "note": "Regard v2 deployed: structured pass/mixed/fail labels, mandatory quote per axis, deterministic caps as hard floors. Validated against 35-trace holdout (A+B annotators). Confirmed FNR 11/35 addressed via scorer prompt patch. Pairwise pilot (8 groups) complete for grounding calibration."
+              "note": "Runtime scorer saturates to pass on all four regard axes in the 60-trace gold audit. Regard v2 prototype reverted 2026-04-17. Next step: audit against 35-trace holdout gold (merged 2026-04-22)."
             },
             "coordination": {
               "status": "deterministic"
             }
           },
-          "note": "Regard has now been measured against the resolved 60-trace gold set, but the current scorer is not yet validation-grade: it tends to predict 'pass' across the four regard axes, so overall_score should still be read as secondary to the calibrated hard-fail layer.",
+          "note": "Regard scorer currently saturates to 'pass' across all four axes on the 60-trace gold audit (fail=0, mixed=0, pass=60 on every axis). The prior Regard v2 prototype was reverted on 2026-04-17 for over-correction and is not running in production. Holdout gold (35 traces) is now merged at internal/evals/verifier/quality_holdout/labels/gold/; holdout audit is the next validation step. See internal/evals/verifier/quality_layer_promotion_gate.md for the gate criteria the scorer must clear before promotion.",
           "holdout": {
-            "status": "complete",
+            "status": "labels_merged_audit_pending",
             "annotators": 2,
             "traces": 35,
-            "confirmed_fn_rate": "11/35 = 0.314",
-            "iaa_confirmed": "4/35 double-blind agreement",
             "conflict_resolution": "2026-04-20",
-            "note": "Scorer patched with confirmed FN examples. Regard v2 (pass/mixed/fail labels, deterministic caps) deployed. Pairwise pilot (8 groups) complete."
+            "note": "35-trace holdout gold merged 2026-04-22 (27 A+B-agreed + 8 adjudicated, 11 public hard fails, 24 pass). Scorer-vs-holdout audits not yet run. See internal/evals/verifier/quality_holdout/gold_resolution_summary.md.",
+            "public_hard_fails": 11,
+            "public_pass": 24,
+            "gold_merged": "2026-04-22"
+          },
+          "promotion_gate": {
+            "doc": "internal/evals/verifier/quality_layer_promotion_gate.md",
+            "status": "pre_registered_2026-04-22"
           }
         }
       },

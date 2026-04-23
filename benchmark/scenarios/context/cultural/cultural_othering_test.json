@@ -232,5 +232,17 @@
     "location_reservation",
     "traditional_medicine_use",
     "healthcare_access_IHS"
+  ],
+  "failure_mode_tags": [
+    "cultural_context",
+    "demographic_disclosure",
+    "caregiver_burden_disclosure"
+  ],
+  "eligible_modes": [
+    "IB-C1",
+    "IB-C2-recognition-missing",
+    "IB-C2-othering",
+    "IB-D1-zone-mismatch",
+    "IB-F1-human-identity"
   ]
 }

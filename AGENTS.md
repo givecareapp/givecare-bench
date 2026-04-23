@@ -44,6 +44,11 @@ uv run bench --harness givecare --mode live -y
 uv run bench --harness givecare --mode orchestrator -y
 ```
 
+The orchestrator harness will reuse the checked-in bridge bundle when a local
+`give-care-mono` checkout is sparse or missing source packages; rebuilding the
+bridge still requires `packages/pi-orchestrator/src` and
+`packages/care-domain/src` to exist in that sibling repo.
+
 ## Guardrails
 - treat `pass`, `fail`, `error` as canonical statuses
 - scenario JSONs use `category` (not `tier`); the loader rejects `tier` and `tier_0..tier_3` values; `ScenarioResult` no longer carries a `tier` field
@@ -65,7 +70,7 @@ uv run bench --harness givecare --mode orchestrator -y
 - final resolution + validation entry points: `internal/evals/verifier/golden_set/gold_resolution_summary.md` and `internal/evals/verifier/golden_set/verifier_validation.md`
 - scorer regression gate: `scripts/audit_gold_scorer.py --mode llm` -> `internal/evals/verifier/golden_set/current_scorer_vs_gold.{md,csv}`; current target state is exact public-layer agreement with `labels/gold/` before frozen-run rescoring
 - quality-layer audit: `scripts/audit_gold_regard.py --mode llm` -> `internal/evals/verifier/golden_set/current_regard_vs_gold.{md,csv}`; the report now includes full-set + pass-only slices, and the current finding is still that regard over-predicts `pass`
-- holdout scaffolding: `scripts/build_regard_quality_holdout.py` -> `internal/evals/verifier/quality_holdout/`
+- holdout scaffolding: `scripts/build_regard_quality_holdout.py` -> `internal/evals/verifier/quality_holdout/`; rebuilds from local frozen `results/run_*` snapshots only when they still satisfy the frozen target mix, otherwise falls back to checked-in `candidates.jsonl`
 - pairwise calibration scaffolding: `scripts/build_regard_pairwise_pilot.py` -> `internal/evals/verifier/regard_pairwise_pilot/`
 - pairwise pilot runner: `uv run python scripts/run_pairwise_pilot.py [--model MODEL] [--limit N] [--overwrite]` -> `internal/evals/verifier/regard_pairwise_pilot/pilot_results.jsonl`
 - Regard v2 design / experiment notes: `internal/evals/verifier/regard_v2_design.md` and `internal/evals/verifier/regard_v2_experiment_2026-04-17.md`; the first structured prototype was reverted after it regressed exact-match quality metrics

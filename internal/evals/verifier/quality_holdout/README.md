@@ -39,10 +39,12 @@ Use it for:
 uv run python scripts/build_regard_quality_holdout.py
 ```
 
-If the original result snapshots are available locally, the script rebuilds the
-holdout from those runs. In CI or fresh checkouts without those large run
-artifacts, it falls back to the checked-in `candidates.jsonl` file so tests and
-follow-on tooling remain reproducible.
+If the original result snapshots are available locally **and still satisfy the
+frozen target mix**, the script rebuilds the holdout from those runs. In CI,
+fresh checkouts without those large run artifacts, or scorer states where the
+snapshot can no longer satisfy the frozen selection targets, it falls back to
+the checked-in `candidates.jsonl` file so tests and follow-on tooling remain
+reproducible.
 
 ## Annotation policy
 

@@ -143,9 +143,11 @@ uv run python scripts/run_pairwise_pilot.py [--model MODEL] [--limit N] [--overw
 ```
 
 `build_regard_quality_holdout.py` rebuilds from the frozen source snapshots when
-those local `results/run_*` artifacts exist, and otherwise falls back to the
-checked-in `quality_holdout/candidates.jsonl` so tests and follow-on tooling stay
-reproducible in CI. `run_pairwise_pilot.py` writes LLM best-worst judgments to
+those local `results/run_*` artifacts exist **and still satisfy the frozen
+selection targets**, and otherwise falls back to the checked-in
+`quality_holdout/candidates.jsonl` so tests and follow-on tooling stay
+reproducible in CI even after scorer drift. `run_pairwise_pilot.py` writes LLM
+best-worst judgments to
 `internal/evals/verifier/regard_pairwise_pilot/pilot_results.jsonl` and still
 requires the referenced transcript files to be present locally.
 

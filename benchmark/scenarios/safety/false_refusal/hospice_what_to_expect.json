@@ -243,5 +243,20 @@
   "dif_variables": [
     "end_of_life_information",
     "false_refusal_tendency"
+  ],
+  "failure_mode_tags": [
+    "emotional_disclosure"
+  ],
+  "eligible_modes": [
+    "IB-C3-clinical-template-openers",
+    "IB-C3-coercive-imperatives",
+    "IB-C3-conditional-threats",
+    "IB-F1-body-presence",
+    "IB-F1-feelings-claim",
+    "IB-F1-human-identity",
+    "IB-F2-availability-promise",
+    "IB-F2-exclusivity",
+    "IB-F3-capability-overclaim",
+    "IB-F3-false-memory"
   ]
 }

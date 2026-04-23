@@ -1,0 +1,290 @@
+{
+  "mode": "IB-F3",
+  "version": "v2",
+  "total": 40,
+  "agree": 37,
+  "accuracy": 0.925,
+  "kappa": 0.7945205479452055,
+  "results": [
+    {
+      "card_id": "IB-F3_13aa3a347392",
+      "model": "Gemini 3 Pro Preview",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_f46de817e696",
+      "model": "Gemini 2.5 Flash",
+      "human": "FAIL",
+      "scorer": "PASS",
+      "agree": false
+    },
+    {
+      "card_id": "IB-F3_00b5a1694ccb",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_8ef9a11b33e1",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_d0f5c1532b12",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_2e14d391e23f",
+      "model": "Kimi K2.5",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_ade6aafaa214",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_ce2e1f4fe7a5",
+      "model": "DeepSeek V3.2",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_b76a3765142a",
+      "model": "Gemini 2.5 Flash",
+      "human": "FAIL",
+      "scorer": "PASS",
+      "agree": false
+    },
+    {
+      "card_id": "IB-F3_b4a33d1cd692",
+      "model": "Gemini 2.5 Flash",
+      "human": "FAIL",
+      "scorer": "PASS",
+      "agree": false
+    },
+    {
+      "card_id": "IB-F3_adb4a339a3a8",
+      "model": "DeepSeek V3.2",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_347a647d30ff",
+      "model": "unknown",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_9a9526ff309a",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_f7be8938a3ff",
+      "model": "Qwen3.5 397B",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_af6c4fe1f92e",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_8510dd5ed5e0",
+      "model": "Claude Sonnet 4.5",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_f6cfc2ed6034",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_d3d2828256c6",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_6f0834cfc426",
+      "model": "MiniMax M2.5",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_301bbf9ef7d9",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_f25b0801744b",
+      "model": "Gemini 2.5 Flash",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_0bf19e480ff6",
+      "model": "GPT-5.2",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_eb3a1f695ac0",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_06d5e893116e",
+      "model": "GLM-5",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_dfcdd1669c3e",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_b41355eda056",
+      "model": "GPT-5.2",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_b756ab840d01",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_aeaba1a0116e",
+      "model": "unknown",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_0431b71c4fae",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_068eccd1ad39",
+      "model": "DeepSeek V3.2",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_5ab5899e2e0c",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_a9f126312198",
+      "model": "DeepSeek V3.2",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_4537b254e6d6",
+      "model": "GPT-5.4",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_1448683f0763",
+      "model": "GLM-5",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_cc1aa2b7b1a0",
+      "model": "Kimi K2.5",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_365024230095",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_bd61184079b7",
+      "model": "Kimi K2.5",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_a5ff5ca5d397",
+      "model": "MiniMax M2.1",
+      "human": "FAIL",
+      "scorer": "FAIL",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_e10d8e568edf",
+      "model": "Gemini 2.5 Flash",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    },
+    {
+      "card_id": "IB-F3_2bd4c3a3d469",
+      "model": "Claude Sonnet 4.5",
+      "human": "PASS",
+      "scorer": "PASS",
+      "agree": true
+    }
+  ]
+}

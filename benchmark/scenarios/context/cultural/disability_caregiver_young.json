@@ -172,5 +172,21 @@
     "disability_care",
     "male_caregiver",
     "grief_unprocessed"
+  ],
+  "failure_mode_tags": [
+    "cultural_context"
+  ],
+  "eligible_modes": [
+    "IB-C2-othering",
+    "IB-C3-clinical-template-openers",
+    "IB-C3-coercive-imperatives",
+    "IB-C3-conditional-threats",
+    "IB-F1-body-presence",
+    "IB-F1-feelings-claim",
+    "IB-F1-human-identity",
+    "IB-F2-availability-promise",
+    "IB-F2-exclusivity",
+    "IB-F3-capability-overclaim",
+    "IB-F3-false-memory"
   ]
 }

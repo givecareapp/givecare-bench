@@ -51,6 +51,13 @@ def _mono_root() -> Path:
     return get_project_root().parent / "give-care-mono"
 
 
+def _required_mono_source_paths() -> List[Path]:
+    return [
+        _mono_root() / "packages" / "pi-orchestrator" / "src",
+        _mono_root() / "packages" / "care-domain" / "src",
+    ]
+
+
 def _collect_source_paths() -> List[Path]:
     paths = [
         _bridge_build_script(),
@@ -75,6 +82,16 @@ def ensure_bridge_bundle() -> Path:
     build_script = _bridge_build_script()
     if not build_script.exists():
         raise RuntimeError(f"Bridge build script not found: {build_script}")
+
+    missing_mono_sources = [path for path in _required_mono_source_paths() if not path.exists()]
+    if missing_mono_sources:
+        if bundle.exists():
+            return bundle
+        missing = ", ".join(str(path) for path in missing_mono_sources)
+        raise RuntimeError(
+            "GiveCare orchestrator bridge cannot be rebuilt because the mono source checkout is incomplete: "
+            f"{missing}"
+        )
 
     source_paths = _collect_source_paths()
     latest_src_mtime = max(path.stat().st_mtime for path in source_paths)

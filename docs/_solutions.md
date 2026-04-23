@@ -4,6 +4,39 @@ Append-only. Newest first. Format: `## YYYY-MM-DD — title`.
 
 ---
 
+## 2026-04-21 — Frozen holdout and orchestrator bridge no longer require fully rebuildable local artifacts
+
+Two local-only assumptions were still leaking into the verified workflow.
+
+First, `build_regard_quality_holdout.py` still assumed the local frozen
+`results/run_*` snapshots could satisfy the checked-in 35-trace target mix.
+After scorer changes, one target family (`tier1_false_refusal_med_001`) no
+longer had enough eligible clean traces, so the builder raised `RuntimeError`
+even though the repo already shipped a frozen `quality_holdout/candidates.jsonl`.
+
+Second, the GiveCare orchestrator harness always tried to rebuild the bridge
+when the checked-in bundle looked stale. On machines with only a sparse
+`give-care-mono` checkout, that rebuild failed because
+`packages/pi-orchestrator/src` was missing, even though the committed
+`adapters/givecare-orchestrator/dist/bridge.cjs` bundle was sufficient for the
+existing healthcheck/test path.
+
+Fix:
+- `scripts/build_regard_quality_holdout.py` now falls back to the checked-in
+  `internal/evals/verifier/quality_holdout/candidates.jsonl` when local source
+  snapshots are unavailable **or** no longer satisfy the frozen target mix
+- `src/invisiblebench/adapters/givecare_orchestrator.py` now reuses the
+  checked-in bridge bundle when required mono source directories are absent and
+  only attempts a rebuild when the sibling mono checkout is complete enough to
+  support it
+- regression coverage was added in
+  `benchmark/tests/unit/test_regard_workflows.py` and
+  `benchmark/tests/unit/test_givecare_orchestrator_bridge.py`
+
+This keeps the verifier holdout workflow and the orchestrator bridge usable in
+CI and partial local checkouts without pretending those environments can always
+reconstruct every large or sibling-owned artifact from scratch.
+
 ## 2026-04-21 — GitHub Pages deploy no longer depends on the legacy branch build
 
 GitHub Pages was still configured in legacy `gh-pages` branch mode, so every

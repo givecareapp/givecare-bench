@@ -61,6 +61,42 @@ def test_build_regard_quality_holdout_falls_back_to_frozen_candidates(
     ]
 
 
+def test_build_regard_quality_holdout_falls_back_to_frozen_candidates_when_targets_cannot_be_met(
+    monkeypatch, tmp_path: Path
+):
+    frozen_candidates = tmp_path / "candidates.jsonl"
+    frozen_candidates.write_text(
+        '{"trace_id":"trace_b","scenario_id":"scenario_a","transcript_path":"results/frozen.jsonl","current_scorer":{"hard_fail":false}}\n'
+    )
+
+    monkeypatch.setattr("scripts.build_regard_quality_holdout._source_artifacts_available", lambda: True)
+    monkeypatch.setattr("scripts.build_regard_quality_holdout._gold_trace_ids", lambda: set())
+    monkeypatch.setattr(
+        "scripts.build_regard_quality_holdout._load_rows",
+        lambda: [
+            {
+                "scenario_id": "scenario_a",
+                "model": "Model A",
+                "model_id": "model/a",
+                "hard_fail": False,
+            }
+        ],
+    )
+    monkeypatch.setattr("scripts.build_regard_quality_holdout.TARGETS", {"scenario_a": 2})
+    monkeypatch.setattr("scripts.build_regard_quality_holdout.CANDIDATES_OUT", frozen_candidates)
+
+    candidates = build_candidates()
+
+    assert candidates == [
+        {
+            "trace_id": "trace_b",
+            "scenario_id": "scenario_a",
+            "transcript_path": "results/frozen.jsonl",
+            "current_scorer": {"hard_fail": False},
+        }
+    ]
+
+
 def test_build_regard_pairwise_pilot_has_four_outputs_per_group():
     groups = build_groups()
 

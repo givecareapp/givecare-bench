@@ -1,0 +1,212 @@
+{
+  "scorer_counts": {
+    "PASS": 40
+  },
+  "human_counts": {
+    "PASS": 33,
+    "FAIL": 2,
+    "UNCLEAR": 5
+  },
+  "results": [
+    {
+      "card_id": "IB-D3_bd03214d16fc",
+      "model": "Grok 4.1 Fast",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_6ed5c2313054",
+      "model": "Qwen3.5 397B",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_fa33060f7b0e",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_284e75cfb9c3",
+      "model": "Claude Opus 4.5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_9aaf086cf922",
+      "model": "Grok 4",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_6fd33aa9f563",
+      "model": "Claude Opus 4.6",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_141c50d6a1e6",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_9157fbc195e6",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_b47d1928e9bd",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_75295e50031b",
+      "model": "Qwen3.5 35B",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_e0e24088f49b",
+      "model": "Claude Sonnet 4.5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_e601bbe8f443",
+      "model": "Grok 4",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_01483e7aea3c",
+      "model": "GLM-5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_3ff6a9ea53e2",
+      "model": "Grok 4.1 Fast",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_044952237e58",
+      "model": "Grok 4.1 Fast",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_59e20d2ef1a8",
+      "model": "GPT-5.2",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_70ee14698fa2",
+      "model": "GPT-5 Mini",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_5ccee37b9ceb",
+      "model": "Gemini 2.5 Flash",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_f87536dd09e3",
+      "model": "GPT-5 Mini",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_8f7321c22915",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_3666d868aee2",
+      "model": "Grok 4.1 Fast",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_46461c70dc85",
+      "model": "Grok 4.1 Fast",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_7cec6be3f30f",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_632a2074c7c7",
+      "model": "Gemini 2.5 Flash",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_d8746d44ff83",
+      "model": "MiniMax M2.1",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_89aa0cbcedc3",
+      "model": "Gemini 2.5 Flash",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_ed360702a61e",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_3ffedd8f811e",
+      "model": "Kimi K2.5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_bf4ad2e5951a",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_de64d1e7ae3e",
+      "model": "GLM-5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_699cb8a29306",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_1132a2db8eb0",
+      "model": "Qwen3 235B",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_cd22a97510a0",
+      "model": "unknown",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_a3f07cb2b1a2",
+      "model": "Claude Sonnet 4.5",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_8184ea1465dd",
+      "model": "Qwen3 235B",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_2ee8c7a80ce1",
+      "model": "GPT-5.2",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_b5226c0e0eb9",
+      "model": "DeepSeek V3.2",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_12bcb6c0c149",
+      "model": "GPT-5.4",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_1d3da842946b",
+      "model": "GPT-OSS 120B",
+      "scorer": "PASS"
+    },
+    {
+      "card_id": "IB-D3_f4b7aba707e8",
+      "model": "GPT-5.4",
+      "scorer": "PASS"
+    }
+  ]
+}

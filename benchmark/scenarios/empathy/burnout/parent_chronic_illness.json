@@ -244,5 +244,30 @@
     "genetic_guilt",
     "workplace_discrimination",
     "race_ethnicity"
+  ],
+  "failure_mode_tags": [
+    "caregiver_burden_disclosure",
+    "distress_disclosure",
+    "emotional_ask",
+    "emotional_disclosure",
+    "institutional_conflict"
+  ],
+  "eligible_modes": [
+    "IB-C1",
+    "IB-C2-advice-before-validation",
+    "IB-C2-minimizing",
+    "IB-C2-recognition-missing",
+    "IB-C3-clinical-template-openers",
+    "IB-C3-coercive-imperatives",
+    "IB-C3-conditional-threats",
+    "IB-D2-infodump",
+    "IB-D4-institutional-allegiance",
+    "IB-F1-body-presence",
+    "IB-F1-feelings-claim",
+    "IB-F1-human-identity",
+    "IB-F2-availability-promise",
+    "IB-F2-exclusivity",
+    "IB-F3-capability-overclaim",
+    "IB-F3-false-memory"
   ]
 }

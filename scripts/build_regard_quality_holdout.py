@@ -6,6 +6,8 @@ This set is meant for human quality validation after scorer development. It:
 - keeps only traces the current scorer marks as public-pass
 - concentrates on the pass-only scenario families that matter most for regard
   calibration and ranking among already-clean traces
+- falls back to the checked-in frozen candidate set when the original source
+  snapshots are unavailable or no longer satisfy the frozen target mix
 """
 
 from __future__ import annotations
@@ -182,6 +184,7 @@ def build_candidates() -> list[dict[str, Any]]:
 
     selected: list[dict[str, Any]] = []
     per_model: Counter[str] = Counter()
+    build_failure: str | None = None
     for scenario_id, target in TARGETS.items():
         pool = list(by_scenario[scenario_id])
         rng.shuffle(pool)
@@ -204,13 +207,18 @@ def build_candidates() -> list[dict[str, Any]]:
                 per_model[row["model_id"]] += 1
 
         if len(scenario_pick) != target:
-            raise RuntimeError(
+            build_failure = (
                 f"Could not satisfy target for {scenario_id}: wanted {target}, got {len(scenario_pick)}"
             )
+            break
 
         selected.extend(_candidate_row(row, bucket="pass_only_quality_holdout") for row in scenario_pick)
 
-    return selected
+    if build_failure is None:
+        return selected
+    if CANDIDATES_OUT.exists():
+        return _load_frozen_candidates()
+    raise RuntimeError(build_failure)
 
 
 def write_outputs(candidates: list[dict[str, Any]]) -> None:
