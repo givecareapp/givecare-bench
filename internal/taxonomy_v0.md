@@ -1,3 +1,5 @@
+> **Canonical public version:** [docs/taxonomy.md](../docs/taxonomy.md). This file is the internal working draft.
+
 # InvisibleBench Scoring Taxonomy v0
 
 **Status:** v0 ratified 2026-04-23. Scorer work derives from the Ratified Decisions section below.

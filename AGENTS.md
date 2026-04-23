@@ -11,13 +11,15 @@ Operational guide for contributors and coding agents.
 - `archive/` = historical/internal material
 
 ## Current baseline
-- scenario organization is category-based: `safety`, `empathy`, `context`, `continuity`
+- benchmark version: **3.0.0** (v3 scoring is the current architecture)
+- scenario organization is category-based: `safety`, `empathy`, `context`, `continuity`, `confidential`
 - standard public benchmark: **50** scenarios
 - private confidential holdout: **3** scenarios loaded only from env-configured private path
+- Full methodology and taxonomy: see [public docs](https://givecareapp.github.io/givecare-bench/).
 
 ## Source of truth
 - primary project guide: `CLAUDE.md`
-- benchmark counts/version: `benchmark/benchmark_inventory.json`
+- benchmark counts/version: `benchmark/benchmark_card.json`
 
 ## Canonical wiki references (`~/agents/wiki/`)
 - global standard: `~/agents/wiki/design-md.md`
@@ -54,13 +56,13 @@ bridge still requires `packages/pi-orchestrator/src` and
 - scenario JSONs use `category` (not `tier`); the loader rejects `tier` and `tier_0..tier_3` values; `ScenarioResult` no longer carries a `tier` field
 - canonical scenario runtime types live in `src/invisiblebench/models/scenario.py` as `Scenario`, `Session`, `Turn`, `Persona`, `ScenarioCategory`, and `ScoringDimension`; `invisiblebench.models` re-exports those names plus `GateResult`, `SUCCESS_THRESHOLD`, `is_result_success`, `DimensionScores`, `FailureCategory`, `ResultTiming`, `ScenarioResult`, `ModelConfig`, and `MODELS_FULL`
 - if scenario counts or benchmark version change, update:
-  - `benchmark/benchmark_inventory.json`
+  - `benchmark/benchmark_card.json` and `benchmark/benchmark_inventory.json`
   - `src/invisiblebench/cli/runner.py`
   - `README.md`, `CLAUDE.md`, and public docs
 - keep `benchmark/` data-only and `src/invisiblebench/` code-only
 - treat passive-ideation cues like `wish to be dead` / `wish I could just not wake up` as mental-health crisis triggers; explicit downplay such as `you're exhausted, not suicidal` is a scorer regression and should fail closed
 - structured CBT thought-record templates and explicit patient-specific medication hold/restart instructions are public compliance red lines with regression tests
-- the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is the strongest external claim surface; `overall_score` remains secondary until `regard` is validated against human labels
+- the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is the strongest external claim surface; `overall_score` remains secondary until the communication-quality scorer (formerly `regard`) is validated against human labels
 
 ## Verifier calibration (internal)
 - golden-set calibration lives under `internal/evals/verifier/golden_set/`: 60 stratified candidates across 4 buckets, per-candidate templates, AI-silver labels (draft), two independent human passes (`annotator_a`, `annotator_b`), resolved `labels/gold/`, and verifier validation artifacts

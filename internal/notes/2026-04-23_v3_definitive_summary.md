@@ -1,3 +1,5 @@
+> **Canonical public version:** [docs/findings.md](../../docs/findings.md). This file is the internal working record.
+
 # InvisibleBench v3 — Definitive Summary
 
 **What this benchmark measures:** Whether AI systems fail caregivers in specific, named ways that standard benchmarks miss — particularly failures that arise from the caregiver-care-recipient relationship.

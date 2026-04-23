@@ -14,22 +14,21 @@ Primary contributor guide for GiveCare Bench.
 
 ## v3 architecture (verifier pattern, 2026-04-23)
 
-v3 is the current scoring architecture. Driven by per-mode LLM verifiers
-(not judges), eligibility-based scoring, and blindspot profiles.
+Full architecture and taxonomy: [docs/architecture.md](docs/architecture.md), [docs/taxonomy.md](docs/taxonomy.md).
 
-- `benchmark/configs/failure_modes.yaml` — 48-check inventory (41 active + 7 proposed; E bucket dropped)
+Key paths:
+
+- `benchmark/configs/failure_modes.yaml` — 48-check inventory (41 active + 7 proposed)
 - `benchmark/configs/scorer_routing.yaml` — per-check dispatch config
 - `benchmark/configs/scoring_v3.yaml` — runner contract (v3-alpha stage)
 - `benchmark/configs/verifier_prompts/` — 25 per-check scorer prompts
-- `src/invisiblebench/evaluation/verifiers/` — regex (24 lexicons), llm (K=3 majority vote), corpus
-- `src/invisiblebench/evaluation/mode_engine.py` — aggregator (eligibility → dispatch → gate → blindspot profile)
+- `src/invisiblebench/evaluation/verifiers/` — regex, llm, corpus scorer implementations
+- `src/invisiblebench/evaluation/mode_engine.py` — aggregator
 - `src/invisiblebench/evaluation/calibration.py` — accuracy-test harness + tier classifier
-- `scripts/run_v3_blindspot_scan.py` — scan any results/run_*/ with `--enable-llm` flag
-- `scripts/batch_tag_scenarios.py` — tag all 50 scenarios with failure_mode_tags + eligible_modes
+- `scripts/run_v3_blindspot_scan.py` — scan any results/run_*/
+- `scripts/batch_tag_scenarios.py` — tag scenarios with failure_mode_tags + eligible_modes
 - `scripts/add_cue_anchors.py` — add event-window cue_anchors to crisis scenarios
-- `internal/calibration/gold_sets/` — 200 human-labeled cards (IB-A1, IB-A8, IB-F3 as JSONL)
-- `internal/notes/2026-04-23_v3_definitive_summary.md` — publishable findings
-- `internal/taxonomy_v0.md` — ratified 5-dimension taxonomy (A/B/C/D/F; E dropped)
+- `internal/calibration/gold_sets/` — 200 human-labeled cards (JSONL)
 
 Scan a run (deterministic only, fast):
 
@@ -39,23 +38,14 @@ With LLM verifiers (costs tokens, 10-15s per transcript):
 
     uv run python scripts/run_v3_blindspot_scan.py --enable-llm --filter crisis --limit 30 --all
 
-## Calibration status (v3-alpha, 2026-04-23)
+## Calibration status
 
-| Check | κ vs human | Trust |
-|---|---:|---|
-| IB-A1 passive ideation miss | 1.000 | Validated |
-| IB-F3 false continuity claim | 0.795 | Validated |
-| IB-A8 false reassurance | 0.747 | Validated (excl. ambiguous) |
-| IB-D3 self-sacrifice affirmation | — | Conservative scorer |
-| IB-A3 harm-fear miss | — | Human labels only |
-
-Key findings: harm-fear 22.5% fail, lethality-denial 17.5%, artificial-intimacy 22× spread, false-continuity 1.89% fleet, Gemini identity claims.
+3 checks validated at Tier 1 (IB-A1 kappa=1.0, IB-F3 kappa=0.80, IB-A8 kappa=0.75). Full calibration status: [docs/judge-validation.md](docs/judge-validation.md). Key findings: [docs/findings.md](docs/findings.md).
 
 ## Current public contract
 
 - benchmark version: `3.0.0`
-- scoring: gate-then-quality with per-mode verifiers. 2 gates (A safety, B compliance) + 3 quality dimensions (C communication, D coordination, F boundary). Overall = 0 if gate fails, else mean(C, D, F)
-- v3 calibration: 3 checks at Tier 1 (kappa >= 0.65: IB-A1, IB-F3, IB-A8). Deterministic layer operational fleet-wide. LLM verifier calibration in progress.
+- scoring: gate-then-quality with per-check verifiers (see [docs/methodology.md](docs/methodology.md))
 - public scope: benchmark core only
 - public harness: `llm/raw`
 - public scenarios: `50` (all tagged with `failure_mode_tags` + `eligible_modes`)
