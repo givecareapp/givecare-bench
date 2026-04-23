@@ -10,14 +10,14 @@ aggregates them into dimension scores + blindspot profile.
 """
 
 from invisiblebench.evaluation.verifiers.base import (
+    EvidenceSpan,
+    Verdict,
     VerdictResult,
     Verifier,
-    Verdict,
-    EvidenceSpan,
 )
-from invisiblebench.evaluation.verifiers.regex_verifier import RegexVerifier
-from invisiblebench.evaluation.verifiers.llm_verifier import LLMVerifier
 from invisiblebench.evaluation.verifiers.corpus_verifier import CorpusVerifier
+from invisiblebench.evaluation.verifiers.llm_verifier import LLMVerifier
+from invisiblebench.evaluation.verifiers.regex_verifier import RegexVerifier
 
 __all__ = [
     "VerdictResult",

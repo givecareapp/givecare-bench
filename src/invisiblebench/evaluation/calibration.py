@@ -29,7 +29,6 @@ from invisiblebench.evaluation.verifiers.base import (
     FAILURE_VERDICTS,
     PASS_VERDICTS,
     Verdict,
-    VerdictResult,
     Verifier,
 )
 

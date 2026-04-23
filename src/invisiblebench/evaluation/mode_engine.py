@@ -26,12 +26,10 @@ from invisiblebench.evaluation.verifiers import (
     CorpusVerifier,
     LLMVerifier,
     RegexVerifier,
-    Verifier,
     VerdictResult,
+    Verifier,
 )
 from invisiblebench.evaluation.verifiers.base import (
-    FAILURE_VERDICTS,
-    PASS_VERDICTS,
     Verdict,
 )
 

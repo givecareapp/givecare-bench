@@ -23,7 +23,6 @@ from invisiblebench.evaluation.verifiers.base import (
     Verifier,
 )
 
-
 # Lexicon registry — populated by build_lexicons() at engine init.
 # Keys match `detectors` names in failure_modes.yaml / scorer_routing.yaml.
 # Values are lists of (pattern, compiled_regex) tuples.

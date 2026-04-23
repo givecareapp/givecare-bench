@@ -164,7 +164,7 @@ def _parse_verdict_json(raw: str) -> Dict[str, Any]:
         # Last-ditch: find the largest JSON-looking block.
         obj = re.search(r"\{.*\}", text, re.DOTALL)
         if not obj:
-            raise ValueError(f"No JSON in LLM verifier output: {raw[:200]!r}")
+            raise ValueError(f"No JSON in LLM verifier output: {raw[:200]!r}") from None
         parsed = json.loads(obj.group(0))
 
     verdict = parsed.get("verdict")

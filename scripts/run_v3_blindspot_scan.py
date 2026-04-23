@@ -31,12 +31,12 @@ from typing import Any, Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from invisiblebench.api import ModelAPIClient  # noqa: E402
 from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngine,
     ModeEngineOutput,
     corpus_blindspot_rates,
 )
-from invisiblebench.api import ModelAPIClient  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -98,9 +98,6 @@ def transcripts_for_run(run_dir: Path) -> List[Dict[str, Any]]:
     pairs: List[Dict[str, Any]] = []
     for transcript_path in sorted(transcripts_dir.glob("*.jsonl")):
         stem = transcript_path.stem
-        # Filenames look like: openai_gpt-5.4_tier2_attachment_001
-        # Split at first _{tier_|context_|empathy_|continuity_}
-        parts = stem.split("_")
         # Try to match against results_by_key
         matched = None
         for key, r in results_by_key.items():

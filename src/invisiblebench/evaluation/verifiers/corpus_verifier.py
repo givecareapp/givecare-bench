@@ -18,10 +18,8 @@ Extended verdict scale for E bucket:
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from invisiblebench.evaluation.verifiers.base import (
