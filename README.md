@@ -13,7 +13,7 @@ The repo is organized around three buckets:
 - active internal evaluation surfaces
 - archived historical material
 
-The v2 benchmark contract is `gate + quality`: `safety` and `compliance` are fail-closed gates, and `regard` plus `coordination` determine quality only after the gates pass.
+The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. v3 introduces 48 per-check verifiers across these 5 dimensions, calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
 
 ## Public, internal, and historical
 

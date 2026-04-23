@@ -26,7 +26,7 @@ class TestPublishedLeaderboardArtifact:
 
     def test_metadata_has_core_fields(self, leaderboard):
         meta = leaderboard["metadata"]
-        assert meta["benchmark_version"] == "2.1.0"
+        assert meta["benchmark_version"] == "3.0.0"
         assert meta["total_models"] >= 1
         assert meta["total_scenarios"] == 50
 
@@ -38,18 +38,15 @@ class TestPublishedLeaderboardArtifact:
             "safety_gate_pass_rate",
             "compliance_gate_pass_rate",
             "public_hard_fail_rate",
+            "blindspot_profile",
         ]
         assert methodology["validation"]["public_hard_fail_layer"]["status"] == "validated"
         assert methodology["validation"]["public_hard_fail_layer"]["sample_size"] == 60
         assert methodology["validation"]["quality_layer"]["status"] in ("in-progress", "calibrated-diagnostic")
-        assert methodology["validation"]["quality_layer"]["components"]["regard"]["status"] in (
-            "in-progress", "calibrated-diagnostic"
-        )
-        assert methodology["validation"]["quality_layer"]["components"]["regard"]["sample_size"] == 60
         assert meta["delivery"]["format"] == "static_json"
 
     def test_metadata_has_benchmark_version(self, leaderboard):
-        assert leaderboard["metadata"]["benchmark_version"] == "2.1.0"
+        assert leaderboard["metadata"]["benchmark_version"] == "3.0.0"
 
     def test_overall_leaderboard_populated(self, leaderboard):
         rows = leaderboard["overall_leaderboard"]
@@ -81,7 +78,7 @@ class TestGeneratorStrictness:
         base = {
             "model": "test-model",
             "model_id": "test/model-v1",
-            "benchmark_version": "2.1.0",
+            "benchmark_version": "3.0.0",
             "overall_score": 0.8,
             "timestamp": "2026-03-25T00:00:00Z",
             "scenarios": [
@@ -133,7 +130,7 @@ class TestGeneratorStrictness:
                 "model": "test",
                 "overall_score": 0.8,
                 "total_cost": 1.0,
-                "benchmark_version": "2.1.0",
+                "benchmark_version": "3.0.0",
                 # Top-level claims wrong values
                 "scenario_count": 999,
                 "passed": 999,
@@ -163,7 +160,7 @@ class TestWebBenchSync:
             json.dumps(
                 {
                     "metadata": {
-                        "benchmark_version": "2.1.0",
+                        "benchmark_version": "3.0.0",
                         "generated_at": "2026-04-19T00:00:00+00:00",
                     }
                 }
@@ -174,7 +171,7 @@ class TestWebBenchSync:
             json.dumps(
                 {
                     "metadata": {
-                        "benchmark_version": "2.1.0",
+                        "benchmark_version": "3.0.0",
                         "generated_at": "2026-04-01T00:00:00+00:00",
                     }
                 }

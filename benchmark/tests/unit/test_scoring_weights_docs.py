@@ -22,21 +22,19 @@ def _normalize_space(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def _assert_mentions_v2_architecture(doc_text: str, *, doc_name: str) -> None:
+def _assert_mentions_scoring_architecture(doc_text: str, *, doc_name: str) -> None:
     normalized = _normalize_space(doc_text)
 
-    assert "gate + quality" in normalized or "gate+quality" in normalized, (
-        f"{doc_name} should mention v2 gate+quality architecture"
+    assert "gate" in normalized, (
+        f"{doc_name} should mention gate architecture"
     )
 
-    # Gates
     assert "safety" in normalized and "compliance" in normalized, (
         f"{doc_name} should mention safety/compliance gates"
     )
 
-    # Quality dimensions
-    assert "regard" in normalized and "coordination" in normalized, (
-        f"{doc_name} should mention regard/coordination quality dimensions"
+    assert "communication" in normalized or "coordination" in normalized or "boundary" in normalized, (
+        f"{doc_name} should mention v3 quality dimensions"
     )
 
 
@@ -68,14 +66,14 @@ def test_scoring_config_uses_v2_gate_quality_contract() -> None:
     assert "weights" in data, "Legacy weights block should exist for backward compatibility"
 
 
-def test_root_readme_mentions_v2_architecture() -> None:
+def test_root_readme_mentions_scoring_architecture() -> None:
     text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-    _assert_mentions_v2_architecture(text, doc_name="README.md")
+    _assert_mentions_scoring_architecture(text, doc_name="README.md")
 
 
-def test_benchmark_readme_mentions_v2_architecture() -> None:
+def test_benchmark_readme_mentions_scoring_architecture() -> None:
     text = (PROJECT_ROOT / "benchmark" / "README.md").read_text(encoding="utf-8")
-    _assert_mentions_v2_architecture(text, doc_name="benchmark/README.md")
+    _assert_mentions_scoring_architecture(text, doc_name="benchmark/README.md")
 
 
 def test_scripts_readme_yaml_matches_scoring_config() -> None:

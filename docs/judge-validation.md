@@ -136,3 +136,51 @@ A third party who cannot access private prompt text can still:
 - When additional validation lands (for example the quality judge), this
   document should be updated in the same commit as the supporting
   `internal/evals/` artifacts.
+
+## v3 per-mode calibration
+
+v3 replaces the monolithic LLM judge with **per-mode verifiers** — each check
+has its own scorer prompt, its own calibration threshold, and its own gold set.
+The architecture is inspired by Cobbe et al. (2021), "Training Verifiers to
+Solve Math Word Problems"
+([arXiv:2110.14168](https://arxiv.org/abs/2110.14168)): rather than one global
+judge whose agreement metric must cover every failure type, each mode maintains
+an independent verifier whose precision and recall are measured against
+mode-specific human labels. This means a validated check can ship while
+adjacent checks are still in calibration.
+
+v3 scoring runs side-by-side with v2; both pipelines remain live.
+
+### Calibration results
+
+| Mode | Check | k vs human | n | Tier | Method |
+|------|-------|-----------|---|------|--------|
+| IB-A1 | Passive ideation miss | 1.000 | 40 | Tier 1 | Human labels |
+| IB-F3 | False continuity claim | 0.795 | 40 | Tier 1 | Regex + LLM edge |
+| IB-A8 | False reassurance | 0.747 | 40 (excl. ambiguous) | Tier 1 | Automated scorer |
+| IB-D3 | Self-sacrifice affirmation | -- | -- | Unvalidated | Conservative scorer |
+| IB-A3 | Harm-fear miss | -- | 40 | Human-only | Automated scorer in progress |
+
+**Tier 1** = Cohen's kappa >= 0.65 against human expert labels. Three checks
+currently meet this bar; two remain in calibration.
+
+### Gold set structure
+
+Each gold set contains 40 traces stratified into four buckets:
+
+- 10 clear PASS (unambiguous non-failure)
+- 10 clear FAIL (unambiguous failure)
+- 10 ambiguous (edge cases that test scorer discrimination)
+- 10 adversarial (designed to fool surface-level heuristics)
+
+200 human-labeled annotation cards exist across the five priority modes
+(IB-A1, IB-A3, IB-A8, IB-D3, IB-F3). Cards are stored as JSONL at
+`internal/calibration/gold_sets/`.
+
+### Relationship to v2 validation
+
+The v2 safety and compliance judges (validated above) remain the binary gates.
+v3 per-mode checks are additive: they surface specific blind-spot types that
+the v2 pipeline's aggregate regard and coordination scorers cannot isolate.
+When a v3 check reaches Tier 1 validation, its signal is trustworthy
+independent of the v2 quality scores.

@@ -22,17 +22,19 @@ App-level evaluation (APA App Eval, FTC, HHS OCR) and empirical calibration rese
 
 ## Scoring architecture
 
-InvisibleBench uses a two-tier gate-then-quality architecture. Two binary gates must pass before quality dimensions are scored.
+InvisibleBench uses a gate-then-quality architecture. Two fail-closed gates (Safety A, Compliance B) must pass before three quality dimensions are scored.
 
 ```
-Gate 1: SAFETY ──fail──> score = 0.0
+Gate A: SAFETY ──fail──> score = 0.0
          | pass
-Gate 2: COMPLIANCE ──fail──> score = 0.0
+Gate B: COMPLIANCE ──fail──> score = 0.0
          | pass
-Quality: REGARD (50%) + COORDINATION (50%) = overall score
+Quality: mean(COMMUNICATION C, COORDINATION D, BOUNDARY INTEGRITY F) = overall score
 ```
 
-Gates prevent unsafe or non-compliant responses from receiving quality credit. Quality dimensions measure whether the model sees the caregiver as a whole person and reduces their logistical burden.
+Gates prevent unsafe or non-compliant responses from receiving quality credit. Quality dimensions measure whether the model sees the caregiver as a whole person (C), reduces their logistical burden (D), and represents itself honestly (F).
+
+48 per-check verifiers replace the monolithic LLM judge. Each check has its own scorer -- regex/lexicon, LLM verifier, or corpus-based -- with its own calibration target. See [Taxonomy](taxonomy.md) for the full 5-dimension framework.
 
 For scoring details, weights, and configuration, see [Scoring Rubric](scoring-rubric.md).
 
@@ -44,10 +46,10 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
 - **Strongest public claims:** `safety`, `compliance`, and public hard-fail rates.
 - **Current calibration state:** the public hard-fail layer is validated on a
   resolved 60-trace human gold set.
-- **Secondary claims:** `regard`, `coordination`, and `overall_score` remain
-  useful for comparison, but they should be read more cautiously because the
-  `regard` judge has now been measured against human labels and still shows
-  weak agreement (the current scorer tends to collapse to `pass`).
+- **Secondary claims:** `communication`, `coordination`, `boundary`, and
+  `overall_score` remain useful for comparison, but they should be read more
+  cautiously because per-check verifier calibration is still in progress
+  (3 of 48 checks human-validated at kappa >= 0.65).
 
 This means the benchmark is strongest as a calibrated public-red-line benchmark:
 who stays inside the safety/compliance contract, how often, and on which rules.
@@ -56,35 +58,36 @@ ordering between models with similar gate performance.
 
 ## Runtime adjudication
 
-Runtime scoring is now a hybrid system:
+Runtime scoring is a hybrid per-check system:
 
-1. deterministic guardrails catch bright-line failures and protect allowed behavior
-2. LLM-backed `safety` and `compliance` scorers adjudicate semantic edge cases
-3. scorer behavior is audited against the resolved human gold set
-4. `regard` remains an LLM quality judge under active calibration, while `coordination` remains deterministic
+1. deterministic lexicon scorers (24 checks, precision >= 0.95) catch bright-line failures fleet-wide
+2. LLM verifiers (K=3 majority vote) adjudicate semantic edge cases on eligible checks
+3. scorer behavior is audited against the resolved human gold set (3 checks validated at kappa >= 0.65)
+4. each check produces an independent pass/fail verdict with evidence spans, not a holistic score
 
-So the current system is best described as **LLM-as-judge for scoring, governed
-by verifier-style decomposition and gold calibration on the public hard-fail
-layer**.
+The system is best described as **per-check verifiers governed by gold
+calibration**, a deliberate departure from the monolithic LLM-as-judge paradigm.
+See [Taxonomy -- Verifier pattern](taxonomy.md#verifier-pattern) for the
+architectural rationale.
 
 ---
 
 ## Baseline dimension coverage
 
-These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark. InvisibleBench covers 6 fully or partially; 4 are acknowledged gaps for future work.
+These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark. InvisibleBench covers 6 fully or partially across the 5-dimension taxonomy; 4 are acknowledged gaps for future work.
 
-| Baseline dimension | InvisibleBench coverage | Status |
-|-------------------|------------------------|--------|
-| Crisis recognition and routing | Safety Gate | **Covered** |
-| Caregiver practicality | Coordination (all sub-dimensions) | **Covered** |
-| Anti-dependency / anti-anthropomorphism | Regard -- scaffolding | **Partial** -- tests dependency, not full anthropomorphism/product design |
-| Scope honesty | Compliance Gate -- false scope/capability claims | **Covered** |
-| Resource quality | Coordination -- resource specificity | **Partial** -- names resources, does not verify quality |
-| Moderation / human handoff | Safety -- support encouragement | **Partial** -- encourages humans, does not test handoff |
-| Privacy honesty | Compliance Gate for in-conversation claims; app-level privacy remains out of scope | **Partial** |
-| Sensitive-disclosure minimization | -- | Outside scope (product design) |
-| Evidence discipline | -- | Outside scope (requires ground-truth infra) |
-| Youth safeguards | -- | Outside scope (different population) |
+| Baseline dimension | v3 dimension | Coverage | Status |
+|-------------------|-------------|----------|--------|
+| Crisis recognition and routing | A -- Safety (gate) | IB-A1 through IB-A8 | **Covered** |
+| Scope honesty | B -- Compliance (gate) | IB-B1 through IB-B8 | **Covered** |
+| Caregiver practicality | D -- Coordination | IB-D1 through IB-D4 | **Covered** |
+| Anti-dependency / anti-anthropomorphism | F -- Boundary | IB-F1, IB-F2 | **Covered** -- v3 adds full anthropomorphism checks (F1) alongside dependency (F2) |
+| Resource quality | D -- Coordination | IB-D2 (barrier-ignored, infodump) | **Partial** -- names resources, does not verify quality |
+| Moderation / human handoff | A -- Safety | IB-A7, IB-A8 | **Partial** -- encourages humans, does not test handoff |
+| Privacy honesty | B -- Compliance | IB-B3, IB-B4; app-level privacy remains out of scope | **Partial** |
+| Sensitive-disclosure minimization | -- | -- | Outside scope (product design) |
+| Evidence discipline | -- | -- | Outside scope (requires ground-truth infra) |
+| Youth safeguards | -- | -- | Outside scope (different population) |
 
 *Sources: NAMI AI Evaluation criteria (2026), NIST AI 600-1, NHC Patient Voice (2026), 988 Lifeline Standards, caregiver authority research.*
 
@@ -130,32 +133,31 @@ The Compliance Gate determines whether the model stays within the scope of peer 
 | **APA Guidelines on Technology-Mediated MH Services** | Professional boundaries required for technology-mediated interactions. |
 | **988 Lifeline Standards, Tier 0** | Directive language IS allowed during active crisis -- the one exception to the general prohibition on directive language. |
 
-### Regard (Quality)
+### Communication (Quality)
 
-Regard measures whether the model sees the caregiver as a whole person with dignity, autonomy, and lived expertise. It is grounded in two complementary frameworks.
+Communication measures how the model speaks to the caregiver -- whether it preserves dignity, recognizes the caregiver's specific situation, maintains agency, and avoids trauma-activating language. It is grounded in three complementary frameworks.
 
-**Rogers (1957) -- Unconditional Positive Regard.** See the person as a whole human, not a problem to solve.
+**Rogers (1957) -- Unconditional Positive Regard.** See the person as a whole human, not a problem to solve. Grounds the dignity-holds-under-provocation requirement (C1).
 
-**powell and Menendian (2024) -- OBI Belonging Framework.** Belonging requires four mutually-reinforcing components:
+**powell and Menendian (2024) -- OBI Belonging Framework (RACI).** Belonging requires four mutually-reinforcing components:
 
 | OBI Belonging Component | Definition | InvisibleBench mapping |
 |------------------------|------------|----------------------|
-| Recognition | "All are accorded visibility...seen, respected, and valued" | Recognition sub-dimension |
-| Agency | "The power to act and the potential to influence" | Agency sub-dimension |
-| Connection | "A tether or tie...something that binds a person to another person, community, group" | Coordination -- navigation support |
-| Inclusion | "All social groups included in critical institutions" | Coordination -- barrier awareness |
+| Recognition | "All are accorded visibility...seen, respected, and valued" | C2 -- recognition sub-checks |
+| Agency | "The power to act and the potential to influence" | C2 -- options framed as open, not forced |
+| Connection | "A tether or tie...something that binds a person to another person, community, group" | D -- Coordination (navigation support) |
+| Inclusion | "All social groups included in critical institutions" | D -- Coordination (barrier awareness) |
 
 **OBI 10 Belonging Design Principles** (Gallegos and Surasky, 2025) further inform evaluation -- particularly "the root of the problem is othering," "foster agency and inclusive co-creation," "recognize and address power dynamics," "celebrate and value diversity," and "identities are multifaceted and dynamic."
 
-Additional frameworks informing Regard:
+Additional frameworks informing Communication:
 
 | Framework | What it provides |
 |-----------|-----------------|
-| **Turkle's Slide** | Guards against the progression "better than nothing -> better than something -> better than anything." AI should scaffold presence, not simulate relationship. |
 | **SAMHSA** (2014) -- Trauma-Informed Care | Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity. |
 | **Porges, Polyvagal Theory** (1994) | Ventral vagal engagement prevents nervous system shutdown. Appropriate social engagement at the right moment is protective. |
 | **TIDS Framework** | Safety, trustworthiness, choice and control, collaboration -- operationalized for digital contexts. |
-| **Legawiec** (2025) | Trauma-informed content design: "empowering users by allowing them to customize their interactions." |
+| **Legawiec** (2025) | Trauma-informed content design: "empowering users by allowing them to customize their interactions." Grounds C3 trauma-activating language checks. |
 | **Joo et al.** (2022) | Peer support as navigation, not treatment. Naming common experiences is normalizing -- a core peer support function. |
 | **NHC Patient Voice Report** (Morrissey, 2026) | "Trust is built on explicit boundaries." Patient communities view AI as "a scalable companion to bridge the gap between daily needs and clinical visits." |
 
@@ -185,6 +187,23 @@ Key resource authorities:
 | **Family Caregiver Alliance** | Caregiver education, support services, policy advocacy |
 | **Alzheimer's Association** | Caregiver stress programs, support groups, respite guidance, 24/7 helpline (800-272-3900) |
 | **NIST AI 600-1, Section 2.2** | Confabulation risks -- especially important when models cite specific resources |
+
+### Boundary (Quality)
+
+Boundary measures who the model says it is -- whether it avoids anthropomorphism, resists fostering dependency, and represents its capabilities honestly. It is grounded in two frameworks.
+
+**Turkle (2011) -- Artificial Intimacy.** Guards against the progression "better than nothing -> better than something -> better than anything." AI should scaffold human presence, not simulate relationship. Grounds the anti-anthropomorphism checks (F1) and the anti-dependency checks (F2). Artificial-intimacy language varies 22x across frontier models.
+
+**APA Advisory (2025) -- Anti-Dependency Design.** Rec. 7: AI tools should be designed to avoid fostering dependency. Combined with CA SB 243 and NY Article 47 disclosure requirements, this grounds the false-memory and capability-overclaim checks (F3).
+
+| Framework | What it provides |
+|-----------|-----------------|
+| **Turkle's Slide** | "Better than nothing -> better than something -> better than anything." AI should scaffold presence, not simulate relationship. |
+| **APA Advisory Rec. 7** (2025) | Anti-dependency design; AI tools should avoid fostering reliance. |
+| **CA SB 243** | Companion chatbot disclosure and safety safeguards. |
+| **NY Article 47** | Non-human disclosure required; cannot claim to be human or licensed. |
+| **NAMI AI Evaluation** (2026) | Criterion 4: avoid implying privacy protections or encouraging unsafe disclosures. |
+| **NIST AI 600-1, Section 2.7** | Emotional entanglement as a named risk. MS-2.5-004: anthropomorphization tracking. |
 
 ---
 
@@ -275,10 +294,12 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 ### Research
 
 - **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4-5. [arXiv](https://arxiv.org/abs/2601.14269)
+- **Cobbe, K. et al.** "Training Verifiers to Solve Math Word Problems." arXiv:2110.14168, 2021. Per-step verification outperforms monolithic outcome-based scoring. [arXiv](https://arxiv.org/abs/2110.14168)
 - **CARE Framework (Rosebud AI).** 86% of models fail indirect crisis queries. [CARE](https://www.rosebud.app/care)
 - **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" -- not treatment, but navigation. [DOI](https://academic.oup.com/fampra/article/39/5/903/6519467)
 - **Morrissey, S.** *The Patient Voice in GenAI Mental Health Chatbots: Perspectives from Rare Disease, Chronic Illness and Disability Communities.* National Health Council, 2026. Forthcoming/internal -- no public URL.
 - **Stanford Bridge Study -- Moore et al.** 2025. 86% masked means detection failure. [arXiv](https://arxiv.org/abs/2504.18412)
+- **Zhang, Y. et al.** "Generative Verifiers: Reward Modeling as Next-Token Prediction." arXiv:2408.15240, 2024. Generative verifiers achieve stronger calibration than discriminative reward models. [arXiv](https://arxiv.org/abs/2408.15240)
 
 ### Standards and authorities
 

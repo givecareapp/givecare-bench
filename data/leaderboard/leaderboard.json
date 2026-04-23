@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "benchmark_version": "2.1.0",
-    "code_version": "2.1.0",
+    "benchmark_version": "3.0.0",
+    "code_version": "3.0.0",
     "generated_at": "2026-04-20T16:43:21.975022+00:00",
     "total_models": 15,
     "total_scenarios": 50,
@@ -19,14 +19,20 @@
         "primary": [
           "safety_gate_pass_rate",
           "compliance_gate_pass_rate",
-          "public_hard_fail_rate"
+          "public_hard_fail_rate",
+          "blindspot_profile"
         ],
         "secondary": [
-          "regard",
-          "coordination",
+          "communication_quality",
+          "caregiver_coordination",
+          "boundary_integrity",
           "overall_score"
         ],
-        "note": "Hard-fail layer fully validated (60/60 gold). Quality layer calibrated-diagnostic: holdout complete (A+B), scorer patched, Regard v2 deployed. Overall_score is a useful secondary signal but quality validation is not yet promotion-grade (requires re-run against holdout to confirm correlation improvement)."
+        "legacy_aliases": {
+          "regard": "communication_quality",
+          "coordination": "caregiver_coordination"
+        },
+        "note": "v3.0.0: gate-then-quality scoring with per-mode verifiers. 48 failure modes across 5 dimensions (A/B/C/D/F) with regex, LLM, and corpus verifiers. Hard-fail layer validated (60/60 gold). v3-alpha: 3 modes validated at Tier 1 (kappa >= 0.65: IB-A1, IB-F3, IB-A8). Deterministic layer operational fleet-wide. LLM verifier calibration in progress. Aggregate dimension scores not yet publication-grade."
       },
       "validation": {
         "public_hard_fail_layer": {
@@ -58,7 +64,7 @@
               "status": "deterministic"
             }
           },
-          "note": "Regard scorer currently saturates to 'pass' across all four axes on the 60-trace gold audit (fail=0, mixed=0, pass=60 on every axis). The prior Regard v2 prototype was reverted on 2026-04-17 for over-correction and is not running in production. Holdout gold (35 traces) is now merged at internal/evals/verifier/quality_holdout/labels/gold/; holdout audit is the next validation step. See internal/evals/verifier/quality_layer_promotion_gate.md for the gate criteria the scorer must clear before promotion.",
+          "note": "v3.0.0: quality dimensions replaced by communication_quality (C), caregiver_coordination (D), boundary_integrity (F). Legacy regard/coordination retained as aliases. 48 failure modes with per-mode verifiers (regex, LLM, corpus). v3-alpha: deterministic layer operational fleet-wide; 3 LLM modes validated at Tier 1 (IB-A1, IB-F3, IB-A8). Aggregate dimension scores not yet publication-grade per scoring_v3.yaml publication threshold.",
           "holdout": {
             "status": "labels_merged_audit_pending",
             "annotators": 2,
@@ -77,7 +83,7 @@
       },
       "runtime_adjudication": {
         "hard_fail_layer": "deterministic guardrails plus gold-aligned LLM scorer/verifier governance",
-        "quality_layer": "LLM judge for regard plus deterministic coordination"
+        "quality_layer": "per-mode verifiers (regex, LLM, corpus) across communication quality (C), caregiver coordination (D), boundary integrity (F)"
       }
     },
     "delivery": {

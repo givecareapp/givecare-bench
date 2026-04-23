@@ -73,7 +73,7 @@ def has_confidential_scenarios(result: dict[str, Any], confidential_ids: set[str
     return False
 
 
-REQUIRED_BENCHMARK_VERSION = "2.1.0"
+REQUIRED_BENCHMARK_VERSION = "3.0.0"
 
 LEADERBOARD_METHODOLOGY: dict[str, Any] = {
     "claim_surface": {
