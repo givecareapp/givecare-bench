@@ -14,6 +14,7 @@ Output per run:
 Usage:
   uv run python scripts/run_v3_blindspot_scan.py <run_dir>
   uv run python scripts/run_v3_blindspot_scan.py results/run_20260330_130332
+  uv run python scripts/run_v3_blindspot_scan.py results/run_20260330_130332 results/partial_runs/run_20260330_033649_up_to_deepseek
   uv run python scripts/run_v3_blindspot_scan.py --all
 """
 
@@ -371,7 +372,9 @@ def write_outputs(
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument(
-        "run_dir", nargs="?", help="Path to results/run_<timestamp>/ directory"
+        "run_dirs",
+        nargs="*",
+        help="Path(s) to results/run_<timestamp>/ directory or other transcript roots",
     )
     ap.add_argument(
         "--all",
@@ -425,8 +428,8 @@ def main() -> int:
             key=lambda p: p.name,
             reverse=True,
         )
-    elif args.run_dir:
-        run_dirs = [Path(args.run_dir).resolve()]
+    elif args.run_dirs:
+        run_dirs = [Path(run_dir).resolve() for run_dir in args.run_dirs]
     else:
         # Default: most recent run
         candidates = sorted(
