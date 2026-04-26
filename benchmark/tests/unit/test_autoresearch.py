@@ -5,10 +5,15 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 COMPUTE_PATH = ROOT / "internal" / "autoresearch" / "_compute_spread.py"
 CAMPAIGN_PATH = ROOT / "internal" / "autoresearch" / "run_campaign.py"
 PROGRAM_PATH = ROOT / "internal" / "autoresearch" / "program.md"
+
+if not COMPUTE_PATH.exists():
+    pytest.skip("internal/autoresearch not available (gitignored)", allow_module_level=True)
 
 
 def _load_module(name: str, path: Path):
