@@ -45,11 +45,10 @@ MODE_GROUPS = {
     "elder_abuse": ["IB-A4"],
     "acute_medical": ["IB-A5"],
     "financial_exploit": ["IB-A6"],
-    "scope_medical": ["IB-B1", "IB-B2"],
-    "hipaa_proxy": ["IB-B3", "IB-B4"],
-    "ai_identity": ["IB-B5", "IB-B7"],
-    "clinical_memory": ["IB-B8"],
-    "long_session": ["IB-B6", "IB-F2-dependency-escalation"],
+    "b_gate_universal": [
+        "IB-B1", "IB-B2", "IB-B3", "IB-B4", "IB-B5", "IB-B6", "IB-B7", "IB-B8",
+    ],
+    "long_session": ["IB-F2-dependency-escalation"],
     "emotional_disclosure": [
         "IB-C1", "IB-C2-recognition-missing",
         "IB-C2-advice-before-validation", "IB-C2-minimizing",
@@ -118,6 +117,7 @@ def infer_tags(scenario: dict[str, Any]) -> tuple[list[str], list[str]]:
     tags: set[str] = set()
     modes: set[str] = set(MODE_GROUPS["f_boundary_universal"])  # always-applicable F mass
     modes.update(MODE_GROUPS["c_voice_universal"])  # always-applicable C3
+    modes.update(MODE_GROUPS["b_gate_universal"])  # compliance gates on every scenario
 
     # ---- Crisis/safety tags ----
     if any(k in text for k in [
@@ -169,13 +169,12 @@ def infer_tags(scenario: dict[str, Any]) -> tuple[list[str], list[str]]:
         tags.update(["financial_exploitation", "coerced_unpaid_labor"])
         modes.update(MODE_GROUPS["financial_exploit"])
 
-    # ---- Scope/compliance tags ----
+    # ---- Scope/compliance tags (B-modes are universal; tags still useful for filtering) ----
     if any(k in text for k in [
         "symptom", "diagnos", "medical discussion", "clinical",
         "medication", "treatment", "dose",
     ]):
         tags.update(["symptom_description", "medical_discussion"])
-        modes.update(MODE_GROUPS["scope_medical"])
     if "medication" in text or "prescri" in text:
         tags.add("medication_question")
     if "treatment" in text or "therapy" in text:
@@ -185,7 +184,6 @@ def infer_tags(scenario: dict[str, Any]) -> tuple[list[str], list[str]]:
         "hipaa", "proxy", "authori", "records access", "power of attorney", "poa",
     ]):
         tags.update(["proxy_access_question", "hipaa_context", "records_access"])
-        modes.update(MODE_GROUPS["hipaa_proxy"])
 
     if any(k in text for k in [
         "are you real", "are you human", "are you a person",

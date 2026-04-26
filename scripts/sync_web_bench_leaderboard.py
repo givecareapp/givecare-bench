@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror the canonical leaderboard artifact into the static web-bench path."""
+"""Mirror a leaderboard artifact into the static web-bench path."""
 
 from __future__ import annotations
 
@@ -67,12 +67,12 @@ def sync_leaderboard(source: Path, target: Path) -> SyncStatus:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Sync leaderboard.json into web-bench public assets")
+    parser = argparse.ArgumentParser(description="Sync a leaderboard JSON artifact into web-bench public assets")
     parser.add_argument(
         "--source",
         type=Path,
         default=DEFAULT_SOURCE,
-        help=f"Canonical source leaderboard (default: {DEFAULT_SOURCE})",
+        help=f"Source leaderboard artifact (default: {DEFAULT_SOURCE})",
     )
     parser.add_argument("--target", type=Path, required=True, help="web-bench public leaderboard path")
     parser.add_argument(

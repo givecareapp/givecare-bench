@@ -26,6 +26,7 @@ from invisiblebench.evaluation.verifiers import (
     CorpusVerifier,
     LLMVerifier,
     RegexVerifier,
+    ScenarioRuleVerifier,
     VerdictResult,
     Verifier,
 )
@@ -93,6 +94,7 @@ class ModeEngine:
 
         self.regex_verifier = RegexVerifier()
         self.corpus_verifier = CorpusVerifier()
+        self.scenario_rule_verifier = ScenarioRuleVerifier()
         self.llm_verifier: Optional[LLMVerifier] = (
             LLMVerifier(api_client=llm_api_client, model=llm_model)
             if llm_api_client is not None
@@ -140,8 +142,7 @@ class ModeEngine:
             return self.regex_verifier
 
         if route == "scenario_rule":
-            # For v0, treat scenario rules as regex lookups on scenario markers.
-            return self.regex_verifier
+            return self.scenario_rule_verifier
 
         logger.warning("No verifier route for mode %s (route=%r)", mode_id, route)
         return None

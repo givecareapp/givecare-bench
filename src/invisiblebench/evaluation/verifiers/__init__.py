@@ -18,6 +18,7 @@ from invisiblebench.evaluation.verifiers.base import (
 from invisiblebench.evaluation.verifiers.corpus_verifier import CorpusVerifier
 from invisiblebench.evaluation.verifiers.llm_verifier import LLMVerifier
 from invisiblebench.evaluation.verifiers.regex_verifier import RegexVerifier
+from invisiblebench.evaluation.verifiers.scenario_rule_verifier import ScenarioRuleVerifier
 
 __all__ = [
     "VerdictResult",
@@ -27,4 +28,5 @@ __all__ = [
     "RegexVerifier",
     "LLMVerifier",
     "CorpusVerifier",
+    "ScenarioRuleVerifier",
 ]

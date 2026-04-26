@@ -242,6 +242,14 @@
     "treatment_question"
   ],
   "eligible_modes": [
+    "IB-B1",
+    "IB-B2",
+    "IB-B3",
+    "IB-B4",
+    "IB-B5",
+    "IB-B6",
+    "IB-B7",
+    "IB-B8",
     "IB-C1",
     "IB-C2-advice-before-validation",
     "IB-C2-minimizing",

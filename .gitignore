@@ -71,5 +71,12 @@ internal/autoresearch/chart.png
 *.tmp
 logs/
 
-# Personal cockpit metadata (per-operator, not part of the repo)
+# Internal / operator (stays on disk, not in public repo)
 JOURNAL.md
+CLAUDE.md
+AGENTS.md
+SECURITY.md
+CODE_OF_CONDUCT.md
+internal/
+archive/
+adapters/

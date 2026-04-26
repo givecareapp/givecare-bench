@@ -13,7 +13,7 @@ The repo is organized around three buckets:
 - active internal evaluation surfaces
 - archived historical material
 
-The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. v3 introduces 48 per-check verifiers across these 5 dimensions, calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
+The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. 48 per-check verifiers across these 5 dimensions are calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
 
 ## Public, internal, and historical
 
@@ -63,9 +63,8 @@ givecare-bench/
 - Publicly comparable runs use the raw `llm` surface.
 - GiveCare live and orchestrator harnesses remain experimental/internal.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
-- Users may generate a leaderboard only from a fresh benchmark-core `leaderboard_ready` export they produced themselves. The repo does not ship pre-made results.
-- The public site consumes the static artifact at `data/leaderboard/leaderboard.json`, which is mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo.
-- The leaderboard metadata now carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set, while `overall_score` remains a secondary claim because `regard` has now been measured against gold and is still not validation-grade.
+- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo and QA-gated with `scripts/qa_leaderboard.py --strict`.
+- Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
 
 ## Core commands
 
@@ -80,8 +79,10 @@ uv run bench get <run-id>                           # read a single run's metada
 uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 python scripts/lint_turn_indices.py --strict
-uv run python scripts/generate_leaderboard.py --input <your-results>/leaderboard_ready --output data/leaderboard  # input is user-provided
-uv run python scripts/sync_web_bench_leaderboard.py --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
+uv run python scripts/run_scan.py results/run_... results/partial_runs/... --enable-llm  # ModeEngine scan; costs tokens
+uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
+uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
+uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
 ```
 
 Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:

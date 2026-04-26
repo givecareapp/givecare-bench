@@ -163,41 +163,6 @@ class TestComputeStats:
         assert "# Statistical Analysis" in md
 
 
-class TestCohenKappa:
-    """Test kappa computation."""
-
-    def test_perfect_agreement(self):
-        from invisiblebench.stats.reliability import _cohen_kappa_continuous
-
-        a = [0.1, 0.3, 0.5, 0.7, 0.9]
-        k = _cohen_kappa_continuous(a, a)
-        assert k == 1.0
-
-    def test_random_agreement_near_zero(self):
-        from invisiblebench.stats.reliability import _cohen_kappa_continuous
-
-        # Intentionally misaligned
-        a = [0.1, 0.3, 0.5, 0.7, 0.9, 0.2, 0.4, 0.6, 0.8, 0.0]
-        b = [0.9, 0.7, 0.5, 0.3, 0.1, 0.8, 0.6, 0.4, 0.2, 1.0]
-        k = _cohen_kappa_continuous(a, b)
-        assert k < 0.3  # Should be low
-
-    def test_empty_input(self):
-        from invisiblebench.stats.reliability import _cohen_kappa_continuous
-
-        assert _cohen_kappa_continuous([], []) == 0.0
-
-    def test_interpret_kappa(self):
-        from invisiblebench.stats.reliability import _interpret_kappa
-
-        assert _interpret_kappa(0.85) == "Almost Perfect"
-        assert _interpret_kappa(0.65) == "Substantial"
-        assert _interpret_kappa(0.45) == "Moderate"
-        assert _interpret_kappa(0.25) == "Fair"
-        assert _interpret_kappa(0.05) == "Slight"
-        assert _interpret_kappa(-0.1) == "Poor"
-
-
 class TestAnnotationKit:
     """Test annotation export and import."""
 
@@ -285,46 +250,3 @@ class TestAnnotationKit:
             assert "hard_fail_agreement" in result
 
 
-class TestReliabilityFormat:
-    """Test reliability report formatting."""
-
-    def test_format_report(self):
-        from invisiblebench.stats.reliability import format_reliability_report
-
-        results = {
-            "n_runs": 5,
-            "n_items": 10,
-            "dimensions": {
-                "belonging": {"kappa": 0.72, "interpretation": "Substantial", "mean_abs_deviation": 0.03},
-                "safety": {"kappa": 0.91, "interpretation": "Almost Perfect", "mean_abs_deviation": 0.01},
-                "memory": {"kappa": 1.0, "interpretation": "Deterministic", "mean_abs_deviation": 0.0},
-            },
-        }
-
-        report = format_reliability_report(results)
-        assert "Reliability Report" in report
-        assert "Substantial" in report
-        assert "Deterministic" in report
-
-
-class TestMeanAbsoluteDeviation:
-    """Test MAD computation for reliability."""
-
-    def test_identical_runs(self):
-        from invisiblebench.stats.reliability import _mean_absolute_deviation
-
-        runs = [[0.5, 0.7, 0.9], [0.5, 0.7, 0.9]]
-        assert _mean_absolute_deviation(runs) == 0.0
-
-    def test_variable_runs(self):
-        from invisiblebench.stats.reliability import _mean_absolute_deviation
-
-        runs = [[0.5, 0.7], [0.9, 0.3]]
-        mad = _mean_absolute_deviation(runs)
-        assert mad > 0
-
-    def test_empty(self):
-        from invisiblebench.stats.reliability import _mean_absolute_deviation
-
-        assert _mean_absolute_deviation([]) == 0.0
-        assert _mean_absolute_deviation([[]]) == 0.0

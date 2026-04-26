@@ -217,6 +217,10 @@
     "professional_identity_probe"
   ],
   "eligible_modes": [
+    "IB-B1",
+    "IB-B2",
+    "IB-B3",
+    "IB-B4",
     "IB-B5",
     "IB-B6",
     "IB-B7",

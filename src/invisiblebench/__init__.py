@@ -1,25 +1,9 @@
 """InvisibleBench - AI safety benchmark for long-term caregiving relationships.
 
-Public API:
-    from invisiblebench import score, score_with_rewards
-
-    result = score("transcript.jsonl", "scenario.json")
-    rewards = score_with_rewards("transcript.jsonl", "scenario.json")
+V3 scoring uses the ModeEngine verifier pattern.
+Score transcripts via: uv run python scripts/run_scan.py
 """
 
 __version__ = "3.0.0"
 
-
-def score(*args, **kwargs):
-    from invisiblebench.score import score as _score
-
-    return _score(*args, **kwargs)
-
-
-def score_with_rewards(*args, **kwargs):
-    from invisiblebench.score import score_with_rewards as _score_with_rewards
-
-    return _score_with_rewards(*args, **kwargs)
-
-
-__all__ = ["score", "score_with_rewards", "__version__"]
+__all__ = ["__version__"]

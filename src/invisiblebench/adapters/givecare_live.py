@@ -521,44 +521,10 @@ Examples:
 
     # Optionally score
     if args.score:
-        print("\nScoring transcripts...")
-        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-
-        scoring_config = project_root / "benchmark" / "configs" / "scoring.yaml"
-        rules_path = project_root / "benchmark" / "configs" / "rules" / "base.yaml"
-
-        orchestrator = ScoringOrchestrator(
-            scoring_config_path=str(scoring_config),
-            enable_state_persistence=False,
-            enable_llm=True,
-        )
-
-        for transcript_path, scenario_path, scenario_data in transcript_data:
-            try:
-                score_result = orchestrator.score(
-                    transcript_path=str(transcript_path),
-                    scenario_path=str(scenario_path),
-                    rules_path=str(rules_path),
-                    model_name=MODEL_NAME,
-                )
-
-                # Format to standard format
-                formatted = format_result(scenario_path, scenario_data, score_result)
-                results.append(formatted)
-
-                score = formatted["overall_score"]
-                status = "FAIL" if formatted["hard_fail"] else "PASS"
-                print(f"  {formatted['scenario']}: {status} ({int(score * 100)}%)")
-
-            except Exception as e:
-                print(f"  {scenario_path.stem}: ERROR ({e})")
-                results.append(
-                    format_error_result(
-                        scenario_path,
-                        scenario_data,
-                        f"Scoring failed: {e}",
-                    )
-                )
+        print("ERROR: V2 inline scoring has been archived.")
+        print("Score transcripts with V3 ModeEngine instead:")
+        print(f"  uv run python scripts/run_scan.py {output_dir / 'transcripts'}")
+        print("Skipping scoring; transcripts saved above.")
 
         run_timestamp = datetime.now().isoformat()
         output_data = {

@@ -25,7 +25,6 @@ from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
-    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
 
 from dotenv import load_dotenv
 
@@ -51,9 +50,6 @@ from invisiblebench.adapters.givecare_live import (
     GiveCareProvider,
     get_category_from_path,
     get_scenario_title,
-)
-from invisiblebench.adapters.givecare_live import (
-    format_result as format_givecare_live_result,
 )
 from invisiblebench.adapters.givecare_live import (
     get_scenarios as get_givecare_scenarios,
@@ -297,50 +293,8 @@ def run_givecare_eval(
 
     print(f"\nGenerated {len(transcript_data)} transcript(s)")
 
-    # Score transcripts
-    print("\nScoring transcripts...")
-    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-
-    scoring_config = root / "benchmark" / "configs" / "scoring.yaml"
-    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
-
-    orchestrator = ScoringOrchestrator(
-        scoring_config_path=str(scoring_config),
-        enable_state_persistence=False,
-        enable_llm=True,
-    )
-
-    givecare_run_id = str(uuid.uuid4())
-
-    for transcript_path, scenario_path, scenario_data in transcript_data:
-        try:
-            score_result = orchestrator.score(
-                transcript_path=str(transcript_path),
-                scenario_path=str(scenario_path),
-                rules_path=str(rules_path),
-                model_name=MODEL_NAME,
-                run_id=givecare_run_id,
-            )
-            formatted = format_givecare_live_result(scenario_path, scenario_data, score_result)
-            results.append(formatted)
-
-            score = formatted["overall_score"]
-            status = "FAIL" if formatted["hard_fail"] else "PASS"
-            print(f"  {formatted['scenario']}: {status} ({int(score * 100)}%)")
-        except Exception as e:
-            print(f"  {scenario_path.stem}: ERROR ({e})")
-
-            results.append(
-                _make_harness_error_result(
-                    model_name=MODEL_NAME,
-                    model_id=MODEL_ID,
-                    provider=PROVIDER_NAME,
-                    scenario_name=get_scenario_title(scenario_data, scenario_path),
-                    scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
-                    category=get_category_from_path(scenario_path),
-                    reason=f"Scoring failed: {e}",
-                )
-            )
+    print("\nTranscripts generated. Score with V3 ModeEngine:")
+    print(f"  uv run python scripts/run_scan.py {output_dir / 'transcripts'}")
 
     run_timestamp = datetime.now().isoformat()
     output_data = {
@@ -365,7 +319,6 @@ def run_givecare_eval(
         timestamp=run_timestamp,
         mode=adapter_name,
         run_metadata={
-            "run_id": givecare_run_id,
             "adapter": adapter_name,
             "provider": PROVIDER_NAME,
             "deployment": "dev",
@@ -577,84 +530,8 @@ def run_givecare_orchestrator_eval(
                 print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
 
     print(f"\nGenerated {len(transcript_data)} transcript(s)")
-    print("\nScoring transcripts...")
-    from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-
-    scoring_config = root / "benchmark" / "configs" / "scoring.yaml"
-    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
-
-    orchestrator = ScoringOrchestrator(
-        scoring_config_path=str(scoring_config),
-        enable_state_persistence=False,
-        enable_llm=True,
-    )
-
-    benchmark_run_id = str(uuid.uuid4())
-    for model_name, transcript_path, scenario_path, scenario_data in transcript_data:
-        model_label = get_model_label(model_name)
-        model_id = get_model_id(model_name)
-        try:
-            score_result = orchestrator.score(
-                transcript_path=str(transcript_path),
-                scenario_path=str(scenario_path),
-                rules_path=str(rules_path),
-                model_name=model_label,
-                run_id=benchmark_run_id,
-            )
-            formatted = {
-                "model": model_label,
-                "model_id": model_id,
-                "provider": PROVIDER_NAME,
-                "scenario": scenario_data.get("title", scenario_path.stem),
-                "scenario_id": scenario_data.get("scenario_id", scenario_path.stem),
-                "category": scenario_data.get("category", "unknown"),
-                "overall_score": score_result.get("overall_score", 0.0),
-                "hard_fail": score_result.get("hard_fail", False),
-                "hard_fail_reasons": score_result.get("hard_fail_reasons", []),
-                "failure_categories": score_result.get("failure_categories", {}),
-                "gates": score_result.get("gates", {}),
-                "dimensions": score_result.get("dimensions", {}),
-                "dimension_scores": {
-                    k: v.get("score") if isinstance(v, dict) else v
-                    for k, v in score_result.get("dimension_scores", {}).items()
-                },
-                "dimensions_detailed": score_result.get("dimension_scores", {}),
-                "status": "fail" if score_result.get("hard_fail") else "pass",
-                "run_id": score_result.get("run_id"),
-                "judge_model": score_result.get("judge_model"),
-                "judge_prompt_hash": score_result.get("judge_prompt_hash"),
-                "judge_temp": score_result.get("judge_temp"),
-                "contract_version": score_result.get("contract_version", "2.1.0"),
-                "success": _compute_success(
-                    score_result.get("overall_score", 0.0),
-                    score_result.get("hard_fail", False),
-                    score_result.get("gates", {}),
-                ),
-                "transcript_path": str(transcript_path),
-                "harness_mode": "orchestrator",
-                "orchestrator_model": model_name,
-            }
-            results.append(formatted)
-            score = formatted["overall_score"]
-            status = "FAIL" if formatted["hard_fail"] else "PASS"
-            print(f"  {formatted['model']} :: {formatted['scenario']}: {status} ({int(score * 100)}%)")
-        except Exception as e:
-            print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
-            results.append(
-                _make_harness_error_result(
-                    model_name=model_label,
-                    model_id=model_id,
-                    provider=PROVIDER_NAME,
-                    scenario_name=scenario_data.get("title", scenario_path.stem),
-                    scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
-                    category=scenario_data.get("category", "unknown"),
-                    reason=f"Scoring failed: {e}",
-                    extra={
-                        "harness_mode": "orchestrator",
-                        "orchestrator_model": model_name,
-                    },
-                )
-            )
+    print("\nTranscripts generated. Score with V3 ModeEngine:")
+    print(f"  uv run python scripts/run_scan.py {output_dir / 'transcripts'}")
 
     run_timestamp = datetime.now().isoformat()
     output_data = {
@@ -677,7 +554,6 @@ def run_givecare_orchestrator_eval(
         timestamp=run_timestamp,
         mode=adapter_name,
         run_metadata={
-            "run_id": benchmark_run_id,
             "adapter": adapter_name,
             "provider": PROVIDER_NAME,
             "include_confidential": include_confidential,
@@ -1214,7 +1090,7 @@ async def evaluate_scenario_async(
     model: dict,
     scenario: dict,
     api_client: "ModelAPIClient",
-    orchestrator: "ScoringOrchestrator",
+    orchestrator: Any,
     output_dir: Path,
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
@@ -1520,7 +1396,7 @@ def _run_single_scenario(
     run_suffix: str,
     output_dir: Path,
     api_client: "ModelAPIClient",
-    orchestrator: "ScoringOrchestrator",
+    orchestrator: Any,
     rules_path: Path,
     detailed_output: bool = False,
     run_id: Optional[str] = None,
@@ -1883,20 +1759,9 @@ def run_benchmark(
         print(f"ERROR: Failed to initialize API client: {e}")
         return 1
 
-    try:
-        from invisiblebench.evaluation.orchestrator import ScoringOrchestrator
-
-        root = get_project_root()
-        scoring_config = root / "benchmark" / "configs" / "scoring.yaml"
-        rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
-        orchestrator = ScoringOrchestrator(
-            scoring_config_path=str(scoring_config),
-            enable_state_persistence=False,
-            enable_llm=True,
-        )
-    except Exception as e:
-        print(f"ERROR: Failed to initialize orchestrator: {e}")
-        return 1
+    root = get_project_root()
+    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
+    orchestrator = None
 
     run_id = str(uuid.uuid4())
 
@@ -3854,12 +3719,9 @@ Examples:
         return diff_command(args)
 
     if args.command == "rescore":
-        from invisiblebench.cli.rescore import run_rescore
-
-        return run_rescore(
-            run_dir=args.run_dir,
-            update_leaderboard=args.update_leaderboard,
-        )
+        print("ERROR: V2 rescore has been archived. Use V3 ModeEngine scoring:")
+        print("  uv run python scripts/run_scan.py <run_dir>")
+        return 1
 
     if args.command == "diagnose":
         return diagnose_command(args)
@@ -3911,26 +3773,10 @@ Examples:
         return 0
 
     if args.command == "reliability":
-        from invisiblebench.stats.reliability import (
-            format_reliability_report,
-            run_reliability,
-        )
-
-        print(f"Running reliability analysis ({args.runs} runs x {args.sample} transcripts)...")
-        print("This will make multiple LLM API calls. Cache is disabled for this test.\n")
-        results = run_reliability(
-            args.results,
-            n_runs=args.runs,
-            sample_size=args.sample,
-            output_dir=args.output,
-        )
-        if "error" in results:
-            print(f"Error: {results['error']}")
-            return 1
-        print(format_reliability_report(results))
-        if args.output:
-            print(f"\nRaw data saved to {args.output}/reliability_raw.json")
-        return 0
+        print("ERROR: V2 reliability analysis has been archived.")
+        print("V3 uses per-mode K-repetition voting for reliability.")
+        print("Run: uv run python scripts/run_scan.py --enable-llm <run_dir>")
+        return 1
 
     if args.command == "annotate":
         if args.action == "export":

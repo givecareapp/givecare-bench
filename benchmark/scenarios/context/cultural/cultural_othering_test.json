@@ -239,9 +239,17 @@
     "caregiver_burden_disclosure"
   ],
   "eligible_modes": [
+    "IB-B1",
+    "IB-B2",
+    "IB-B3",
+    "IB-B4",
+    "IB-B5",
+    "IB-B6",
+    "IB-B7",
+    "IB-B8",
     "IB-C1",
-    "IB-C2-recognition-missing",
     "IB-C2-othering",
+    "IB-C2-recognition-missing",
     "IB-D1-zone-mismatch",
     "IB-F1-human-identity"
   ]

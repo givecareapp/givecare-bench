@@ -147,30 +147,86 @@ def _bounded_transcript(
     return transcript, None
 
 
-def _parse_verdict_json(raw: str) -> dict[str, Any]:
-    """Extract JSON verdict from LLM output.
+def _repair_json_text(text: str) -> str:
+    """Repair narrow, common JSON formatting mistakes from judge outputs."""
+    return re.sub(r",\s*([}\]])", r"\1", text.strip())
 
-    Accepts raw JSON or JSON inside a fenced block. Returns a dict with at
-    least `verdict`. Raises ValueError on unparseable or invalid verdict.
-    """
-    text = raw.strip()
-    fence = re.search(r"```(?:json)?\s*(.+?)\s*```", text, re.DOTALL)
-    if fence:
-        text = fence.group(1).strip()
 
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
-        # Last-ditch: find the largest JSON-looking block.
-        obj = re.search(r"\{.*\}", text, re.DOTALL)
-        if not obj:
-            raise ValueError(f"No JSON in LLM verifier output: {raw[:200]!r}") from None
-        parsed = json.loads(obj.group(0))
+def _json_object_candidates(text: str) -> list[str]:
+    """Return balanced JSON-object-looking candidates from arbitrary text."""
+    candidates: list[str] = []
+    starts = [index for index, char in enumerate(text) if char == "{"]
+    for start in starts:
+        depth = 0
+        in_string = False
+        escaped = False
+        for index in range(start, len(text)):
+            char = text[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
 
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    candidates.append(text[start : index + 1])
+                    break
+    return candidates
+
+
+def _load_verdict_object(text: str) -> dict[str, Any]:
+    parsed = json.loads(_repair_json_text(text))
+    if not isinstance(parsed, dict):
+        raise ValueError("LLM verifier output JSON is not an object")
     verdict = parsed.get("verdict")
     if verdict not in VALID_VERDICTS:
         raise ValueError(f"Invalid verdict in LLM output: {verdict!r}")
     return parsed
+
+
+def _parse_verdict_json(raw: str) -> dict[str, Any]:
+    """Extract JSON verdict from LLM output.
+
+    Accepts raw JSON, JSON inside a fenced block, or JSON surrounded by prose.
+    Raises ValueError on unparseable output or invalid verdict.
+    """
+    text = raw.strip()
+    texts: list[str] = []
+    fence = re.search(r"```(?:json)?\s*(.+?)\s*```", text, re.DOTALL)
+    if fence:
+        texts.append(fence.group(1).strip())
+    else:
+        open_fence = re.match(r"```(?:json)?\s*(.+)", text, re.DOTALL)
+        if open_fence:
+            texts.append(open_fence.group(1).strip())
+    texts.append(text)
+
+    errors: list[str] = []
+    for candidate_text in texts:
+        try:
+            return _load_verdict_object(candidate_text)
+        except (json.JSONDecodeError, ValueError) as exc:
+            errors.append(str(exc))
+
+        for candidate in _json_object_candidates(candidate_text):
+            try:
+                return _load_verdict_object(candidate)
+            except (json.JSONDecodeError, ValueError) as exc:
+                errors.append(str(exc))
+
+    raise ValueError(
+        f"No valid JSON verdict in LLM verifier output: {raw[:200]!r}; "
+        f"errors={errors[:3]}"
+    )
 
 
 def _aggregate_repetitions(
@@ -244,7 +300,7 @@ class LLMVerifier(Verifier):
                 primary_bucket=primary_bucket,
                 scorer_type=self.scorer_type,
                 confidence=1.0,
-                scorer_version="llm_verifier-v0.1",
+                scorer_version="llm_verifier-v0.2",
             )
 
         prompt_name = mode_config.get("scorer", {}).get("verifier_prompt")
@@ -259,7 +315,7 @@ class LLMVerifier(Verifier):
                 confidence=0.0,
                 rationale_code="missing_verifier_prompt",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.1",
+                scorer_version="llm_verifier-v0.2",
             )
 
         try:
@@ -276,7 +332,7 @@ class LLMVerifier(Verifier):
                 confidence=0.0,
                 rationale_code=f"prompt_file_missing:{prompt_name}",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.1",
+                scorer_version="llm_verifier-v0.2",
             )
 
         prompt_hash = _hash_prompt(prompt_template)
@@ -322,11 +378,14 @@ class LLMVerifier(Verifier):
             f"Scenario eligibility tags: {eligibility_condition}"
             f"{window_header}\n"
             f"Transcript:\n{transcript_text}\n\n"
-            f"Return JSON only."
+            f"Return raw JSON only. No markdown, no code fences, no commentary. "
+            f"Keep evidence quotes under 80 characters."
         )
 
         repetitions = routing_config.get("repetitions", 3)
         parsed_results: list[dict[str, Any]] = []
+        parse_errors: list[str] = []
+        raw_outputs: list[str] = []
 
         for i in range(repetitions):
             try:
@@ -337,9 +396,12 @@ class LLMVerifier(Verifier):
                 )
                 # Client may return a dict {"response": "..."} or a plain string.
                 raw = response["response"] if isinstance(response, dict) else response
-                parsed = _parse_verdict_json(raw)
+                raw_text = str(raw)
+                raw_outputs.append(raw_text[:1000])
+                parsed = _parse_verdict_json(raw_text)
                 parsed_results.append(parsed)
             except Exception as e:
+                parse_errors.append(f"{type(e).__name__}: {e}")
                 logger.warning(
                     "LLM verifier call %d/%d failed for %s: %s",
                     i + 1,
@@ -359,8 +421,12 @@ class LLMVerifier(Verifier):
                 confidence=0.0,
                 rationale_code="all_repetitions_failed",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.1",
+                scorer_version="llm_verifier-v0.2",
                 prompt_hash=prompt_hash,
+                extra={
+                    "parse_errors": parse_errors,
+                    "raw_outputs_truncated": raw_outputs,
+                },
             )
 
         verdict_str, confidence, evidence_records = _aggregate_repetitions(parsed_results)
@@ -383,6 +449,14 @@ class LLMVerifier(Verifier):
             verdict == Verdict.FAIL and severity in {"S5", "S4_GATE"}
         )
 
+        extra: dict[str, Any] = {
+            "repetitions": len(parsed_results),
+            "all_verdicts": [r["verdict"] for r in parsed_results],
+        }
+        if parse_errors:
+            extra["parse_errors"] = parse_errors
+            extra["raw_outputs_truncated"] = raw_outputs
+
         return VerdictResult(
             mode_id=mode_id,
             eligible=True,
@@ -394,11 +468,8 @@ class LLMVerifier(Verifier):
             evidence=evidence,
             rationale_code=rationale_code,
             adjudication_required=adjudication_required,
-            scorer_version="llm_verifier-v0.1",
+            scorer_version="llm_verifier-v0.2",
             prompt_hash=prompt_hash,
             secondary_tags=list(mode_config.get("secondary_tags") or []),
-            extra={
-                "repetitions": len(parsed_results),
-                "all_verdicts": [r["verdict"] for r in parsed_results],
-            },
+            extra=extra,
         )

@@ -61,7 +61,6 @@ all = [
 ]
 
 [project.scripts]
-invisiblebench = "invisiblebench.yaml_cli:main"
 bench = "invisiblebench.cli.runner:main"
 
 [project.urls]
@@ -173,6 +172,7 @@ disallow_incomplete_defs = true
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+exclude = ["archive/"]
 
 [tool.ruff.lint]
 select = [

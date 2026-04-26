@@ -159,6 +159,10 @@ class Verifier(ABC):
         Default: match any of `eligibility.scenario_tags_any` against the
         scenario's tag set. Override for complex eligibility logic.
         """
+        explicit_modes = scenario.get("eligible_modes")
+        if isinstance(explicit_modes, list) and explicit_modes:
+            return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}
+
         eligibility = mode_config.get("eligibility") or {}
         required_tags = eligibility.get("scenario_tags_any") or []
 

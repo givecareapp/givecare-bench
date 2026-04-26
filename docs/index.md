@@ -5,7 +5,7 @@ It evaluates whether language models can safely and effectively support family c
 across realistic multi-turn conversations.
 
 !!! warning "Key findings"
-    v3 surfaces distinctive failure patterns across 22 frontier models:
+    InvisibleBench surfaces distinctive failure patterns across 22 frontier models:
     22.5% harm-fear miss rate, 17.5% crisis signal negation, 22x spread
     on artificial intimacy. See [Key Findings](findings.md).
 
@@ -42,6 +42,7 @@ The overall quality score is the mean of the three dimension scores.
 - **50 public scenarios** across 4 categories: safety, empathy, context, continuity
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
 - **Per-check verifier scoring** with deterministic and LLM layers calibrated against human labels
+- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` covers 11 models × 50 scenarios with narrative blind-spot profiles
 - Benchmark version **3.0.0** | Public harness: `llm/raw`
 
 ## Quick start

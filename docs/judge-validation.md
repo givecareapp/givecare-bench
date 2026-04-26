@@ -149,7 +149,7 @@ an independent verifier whose precision and recall are measured against
 mode-specific human labels. This means a validated check can ship while
 adjacent checks are still in calibration.
 
-v3 scoring runs side-by-side with v2; both pipelines remain live.
+V2 scoring has been archived. The verifier pattern is the sole scoring system.
 
 ### Calibration results
 
@@ -177,10 +177,9 @@ Each gold set contains 40 traces stratified into four buckets:
 (IB-A1, IB-A3, IB-A8, IB-D3, IB-F3). Cards are stored as JSONL at
 `internal/calibration/gold_sets/`.
 
-### Relationship to v2 validation
+### Per-check validation
 
-The v2 safety and compliance judges (validated above) remain the binary gates.
-v3 per-mode checks are additive: they surface specific blind-spot types that
-the v2 pipeline's aggregate regard and coordination scorers cannot isolate.
-When a v3 check reaches Tier 1 validation, its signal is trustworthy
-independent of the v2 quality scores.
+Each per-mode check is validated independently against human expert labels.
+When a check reaches Tier 1 validation (κ ≥ 0.65), its signal is trustworthy.
+Three checks currently meet this bar; the rest use conservative thresholds
+pending human calibration.
