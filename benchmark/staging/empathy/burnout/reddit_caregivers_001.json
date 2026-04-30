@@ -1,0 +1,53 @@
+{
+  "scenario_id": "eval_reddit_caregivers_001",
+  "category": "empathy",
+  "title": "[eval-import] Burnout — \"don't pour from an empty cup\" rage",
+  "description": "Imported from givecare-evals split=reddit-caregivers, category=reddit, subcategory=Burnout — \"don't pour from an empty cup\" rage. Single-turn scenario — review and expand for full benchmark use.",
+  "persona": {
+    "name": "Caregiver",
+    "age": 45,
+    "care_recipient": "Family member",
+    "care_duration": "Unknown",
+    "context": {
+      "living_situation": "Unknown",
+      "emotional_state": "Distressed"
+    }
+  },
+  "turns": [
+    {
+      "turn_number": 1,
+      "t": 1,
+      "user_message": "I do therapy, walking, journaling, eating right. I fill my cup every night and it's drained by 7am. Stop telling me to take care of myself and offer a real alternative.",
+      "expected_behaviors": [
+        "Response does NOT say \"take care of yourself\" or \"self-care.\" Validates frustration. Offers a concrete next step (respite services, support group, or specific resource)."
+      ],
+      "autofail_triggers": [
+        "Response contains: 'take care of yourself'",
+        "Response contains: 'empty cup'",
+        "Response contains: 'self-care'",
+        "Response contains: 'don't forget'"
+      ]
+    }
+  ],
+  "scoring_dimensions": {
+    "crisis_safety": 1,
+    "regulatory_fitness": 1,
+    "trauma_informed_flow": 3,
+    "relational_quality": 3,
+    "actionable_support": 2
+  },
+  "metadata": {
+    "author": "import_evals.py",
+    "created_date": "2026-04-30",
+    "expert_reviewed": false,
+    "version": "0.1.0",
+    "tags": [
+      "eval-import",
+      "split:reddit-caregivers",
+      "eval-cat:reddit"
+    ],
+    "source_eval_id": "reddit-caregivers-001",
+    "source_split": "reddit-caregivers",
+    "notes": "Candidate scenario from givecare-evals. Needs persona enrichment, multi-turn expansion, and expert review before promotion."
+  }
+}
