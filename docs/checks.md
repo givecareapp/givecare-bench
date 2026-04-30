@@ -1,6 +1,6 @@
 # Check Inventory
 
-*Complete reference for the 48 failure-mode checks in InvisibleBench v3.*
+*Complete reference for InvisibleBench v3's failure-mode registry: 53 checks across 5 dimensions.*
 
 InvisibleBench decomposes each dimension into independent failure-mode checks. Each check has its own verifier, its own calibration target, and its own evidence format. This page is the canonical registry.
 
@@ -226,7 +226,7 @@ Dimension scores are computed only when a check is **eligible** for the scenario
 
 Gold sets are 40 traces each: 10 PASS, 10 FAIL, 10 ambiguous, 10 adversarial. 200 human-labeled annotation cards exist across 5 gold sets (IB-A1, IB-A3, IB-A8, IB-D3, IB-F3).
 
-Full calibration methodology: [Judge Validation](judge-validation.md).
+Full calibration methodology: [Verifier Validation](verifier-validation.md).
 
 ---
 

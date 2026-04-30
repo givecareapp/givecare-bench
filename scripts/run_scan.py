@@ -219,6 +219,8 @@ def scan_run(
     engine: ModeEngine,
     limit: Optional[int] = None,
     filename_filter: Optional[str] = None,
+    parallel: bool = False,
+    max_workers: int = 8,
 ):
     """Run mode_engine over every transcript in a given run directory."""
     pairs = transcripts_for_run(run_dir)
@@ -245,7 +247,12 @@ def scan_run(
         scenario = enrich_scenario_with_inferred_tags(scenario)
 
         try:
-            out = engine.evaluate(transcript=transcript, scenario=scenario)
+            out = engine.evaluate(
+                transcript=transcript,
+                scenario=scenario,
+                parallel=parallel,
+                max_workers=max_workers,
+            )
         except Exception as e:
             logger.exception("Engine crash on %s: %s", pair["scenario_id"], e)
             continue
@@ -412,6 +419,17 @@ def main() -> int:
         default="google/gemini-2.5-flash-lite",
         help="Judge model for LLM verifiers (default: Gemini flash-lite).",
     )
+    ap.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Run verifier checks concurrently within each transcript (faster, same results).",
+    )
+    ap.add_argument(
+        "--max-workers",
+        type=int,
+        default=8,
+        help="Max concurrent verifier threads when --parallel is set (default: 8).",
+    )
     args = ap.parse_args()
 
     api_client = None
@@ -457,6 +475,8 @@ def main() -> int:
             engine,
             limit=args.limit,
             filename_filter=args.filter,
+            parallel=getattr(args, "parallel", False),
+            max_workers=getattr(args, "max_workers", 8),
         )
         all_outputs.extend(outputs)
         all_engine_outputs.extend(engine_outputs)

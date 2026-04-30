@@ -2,7 +2,7 @@
 
 This directory is the public benchmark contract.
 
-The scoring model is gate-then-quality. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) are quality dimensions scored only after the gates pass. v3 adds 48 per-check verifiers across all 5 dimensions, calibrated against human expert labels. See [methodology](../docs/methodology.md) and [taxonomy](../docs/taxonomy.md).
+The scoring model is gate-then-quality. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) are quality dimensions scored only after the gates pass. v3 adds 41 active verifier checks (48-mode failure registry) across all 5 dimensions, calibrated against human expert labels. See [methodology](../docs/methodology.md) and [taxonomy](../docs/taxonomy.md).
 
 It contains:
 - `benchmark_inventory.json`: source of truth for benchmark counts/version

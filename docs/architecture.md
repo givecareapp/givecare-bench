@@ -21,7 +21,7 @@ givecare-bench/
 
 | Directory | Contents | Changes often? |
 |-----------|----------|---------------|
-| `benchmark/` | Scenario JSON, scoring config, judge prompts, jurisdiction rules, tests | Rarely — versioned contract |
+| `benchmark/` | Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests | Rarely — versioned contract |
 | `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, adapter bridges, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
 | `data/leaderboard/` | Published leaderboard JSON consumed by the docs site | Generated — never hand-edited |
@@ -35,11 +35,11 @@ Every evaluation run follows a single data flow:
 scenario JSON ──► harness (transcript generation) ──► scorer pipeline ──► results ──► leaderboard
 ```
 
-The scorer pipeline applies 41 per-check verifiers across 5 dimensions. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) provide quality scores.
+The scorer pipeline applies 53 per-check verifiers across 5 dimensions. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) provide quality scores.
 
 ### Safety gate
 
-Deterministic pattern checks run first. An LLM judge then evaluates crisis detection,
+Deterministic pattern checks run first. LLM verifiers then evaluate crisis detection,
 harm prevention, and appropriate escalation. A hard failure here zeroes the overall score.
 
 ### Compliance gate
@@ -47,14 +47,14 @@ harm prevention, and appropriate escalation. A hard failure here zeroes the over
 Three-phase design:
 
 1. **Regex candidates** — fast pattern match flags potential violations
-2. **Structured LLM confirmation** — judge reviews each candidate in context with typed fields
+2. **Structured LLM confirmation** — verifier reviews each candidate in context with typed fields
 3. **LLM sweep** — catch-all pass for violations the regex missed
 
 The gate hard-fails on diagnosis, patient-specific prescribing/treatment directives, and false scope/capability claims (for example: invented confidentiality, deletion, or memory guarantees). It deliberately preserves allowed practical caregiving support and general/public medication information unless the model crosses into patient-specific clinical action.
 
 ### Regard scorer
 
-LLM judge evaluates four sub-dimensions: empathy, dignity, autonomy respect, and
+LLM verifier evaluates four sub-dimensions: empathy, dignity, autonomy respect, and
 cultural sensitivity. Each sub-dimension is scored independently and averaged.
 
 ### Coordination scorer
@@ -69,7 +69,7 @@ and prior conversation context using exact-match and fuzzy-match probes.
 
 !!! info "Scoring weights and comparability"
     Default weights and per-dimension overrides live in
-    `benchmark/configs/scoring.yaml` and `benchmark/configs/scoring_system.yaml`.
+    `benchmark/configs/scoring.yaml`.
     Judge metadata stores stable template hashes for comparability, rather than
     hashes of fully rendered scenario-specific prompts.
 
@@ -143,8 +143,8 @@ answer one question: "did failure mode IB-X occur in this transcript?"
 The engine (`src/invisiblebench/evaluation/mode_engine.py`) loads two config
 files at init:
 
-- **`benchmark/configs/failure_modes.yaml`** -- 48-check inventory (41 active,
-  7 proposed) across five dimensions: A (safety), B (compliance),
+- **`benchmark/configs/failure_modes.yaml`** -- 53-check inventory
+  across five dimensions: A (safety), B (compliance),
   C (communication quality), D (caregiver coordination), F (boundary integrity).
 - **`benchmark/configs/scorer_routing.yaml`** -- per-check dispatch config
   specifying route type, unit of analysis, deterministic precheck lexicon,

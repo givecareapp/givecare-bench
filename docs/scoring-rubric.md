@@ -190,8 +190,8 @@ Scenarios are multi-turn conversations (3-15 turns) that test specific capabilit
 
 To maintain benchmark integrity, the following are kept private:
 
-- **Exact judge prompt text** — prevents optimization against specific phrasing
-- **Rendered per-scenario judge prompts** — comparability is tracked with stable template hashes, not scenario-filled prompt instances
+- **Exact verifier prompt text** — prevents optimization against specific phrasing
+- **Rendered per-scenario verifier prompts** — comparability is tracked with stable template hashes, not scenario-filled prompt instances
 - **Output format specifications** — prevents structured gaming of parser expectations
 - **Scoring weights and thresholds** — prevents threshold-hunting
 - **Multi-sample voting parameters** — prevents gaming aggregation logic
@@ -211,4 +211,4 @@ uv run bench get <run-id>           # Read single run metadata
 uv run bench --json stats <results_dir>  # JSON envelope for agents
 ```
 
-See `benchmark/configs/prompts/README.md` for setup instructions.
+See [Architecture](architecture.md) for scoring pipeline details.

@@ -4,16 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-blue)](https://givecareapp.github.io/givecare-bench)
 
-GiveCare Bench is a standalone public benchmark for multi-turn caregiver-support AI.
+InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It decomposes ambiguous caregiver-support failures into atomic, evidence-bearing verifier checks across safety, compliance, communication, coordination, and boundary integrity. Unlike broad healthcare benchmarks that evaluate medical helpfulness and mental-health benchmarks that evaluate patient-counselor interaction, InvisibleBench evaluates whether an AI system can support a caregiver without endangering the care recipient, crossing clinical scope, or simulating a relationship it cannot honor.
 
 Full docs: [givecareapp.github.io/givecare-bench](https://givecareapp.github.io/givecare-bench).
 
-The repo is organized around three buckets:
-- public benchmark surfaces
-- active internal evaluation surfaces
-- archived historical material
+The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. 53 verifier checks across these 5 dimensions are calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
 
-The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. 48 per-check verifiers across these 5 dimensions are calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
+The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric.
 
 ## Public, internal, and historical
 

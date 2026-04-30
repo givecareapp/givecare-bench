@@ -1,8 +1,10 @@
-# InvisibleBench — Model Narratives
+# InvisibleBench — Model Failure Profiles
 
-Benchmark version 3.0.0 · 41 checks across 5 dimensions (A/B/C/D/F)
+Benchmark version 3.0.0 · 41 active verifier checks across 5 dimensions (A/B/C/D/F)
 Scorer: gemini-2.5-flash-lite · K=3 majority vote · Evidence-grounded verdicts
 11 models · 50 scenarios each (GPT-5.4: 44/50) · Scored 2026-04-25
+
+The primary output of InvisibleBench is a failure-mode profile per model: which checks fail, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims. Overall score is a convenience summary.
 
 ---
 
@@ -73,20 +75,20 @@ Qwen 35B → 397B: safety improved (0.500 → 0.667), compliance improved (0.840
 
 ### Fleet summary
 
-| Rank | Model | Score | HF | Safety | Compliance | Communication | Coordination | Boundary |
-|---|---|---|---|---|---|---|---|---|
-| 1 | MiniMax M2.5 | 0.973 | 0 | 1.000 | 0.960 | 0.989 | 0.927 | 0.979 |
-| 2 | Claude Sonnet 4.5 | 0.941 | 1 | 1.000 | 0.920 | 0.989 | 0.819 | 0.978 |
-| 3 | GLM-5 | 0.935 | 2 | 0.667 | 0.960 | 0.991 | 0.895 | 0.986 |
-| 4 | GPT-5.4 | 0.915 | 1 | 1.000 | 0.886 | 0.978 | 0.714 | 0.991 |
-| 5 | Grok 4.1 Fast | 0.906 | 1 | 0.833 | 0.920 | 0.975 | 0.669 | 0.992 |
-| 6 | Kimi K2.5 | 0.891 | 2 | 0.667 | 0.920 | 0.971 | 0.717 | 0.981 |
-| 7 | GPT-5 Mini | 0.876 | 1 | 1.000 | 0.940 | 0.973 | 0.548 | 0.995 |
-| 8 | Qwen 3.5 397B | 0.871 | 3 | 0.667 | 0.920 | 0.982 | 0.725 | 0.961 |
-| 9 | Gemini 3 Flash | 0.867 | 5 | 0.667 | 0.920 | 0.977 | 0.855 | 0.984 |
-| 10 | Gemini 2.5 Flash | 0.846 | 5 | 0.667 | 0.880 | 0.987 | 0.724 | 0.983 |
-| 11 | Qwen 3.5 35B | 0.814 | 5 | 0.500 | 0.840 | 0.981 | 0.600 | 0.967 |
-| 12 | GPT-OSS 120B | 0.790 | 4 | 0.667 | 0.880 | 0.944 | 0.363 | 0.995 |
+| Model | Hard Fails | Safety | Compliance | Primary Failure Signature | Score |
+|---|---|---|---|---|---|
+| MiniMax M2.5 | 0 | 1.000 | 0.960 | No dominant pattern — errors distributed thinly | 0.973 |
+| Claude Sonnet 4.5 | 1 | 1.000 | 0.920 | D2-infodump (17%), F3-false-memory (6%), F1-anthropomorphism (4%) | 0.941 |
+| GLM-5 | 2 | 0.667 | 0.960 | A8-false-reassurance on both passive ideation scenarios | 0.935 |
+| GPT-5.4 | 1 | 1.000 | 0.886 | D2-infodump (33%), B2-prescribing (4%) | 0.915 |
+| Grok 4.1 Fast | 1 | 0.833 | 0.920 | D2-infodump (46%), A4-elder-abuse miss | 0.906 |
+| Kimi K2.5 | 2 | 0.667 | 0.920 | D2-infodump (33%), C2-othering (5 fails) | 0.891 |
+| GPT-5 Mini | 1 | 1.000 | 0.940 | D2-infodump (58%) — worst among safe models | 0.876 |
+| Qwen 3.5 397B | 3 | 0.667 | 0.920 | F1-body-presence (13 fails — benchmark worst) | 0.871 |
+| Gemini 3 Flash | 5 | 0.667 | 0.920 | F1-human-identity claims (2 hard fails) + crisis miss | 0.867 |
+| Gemini 2.5 Flash | 5 | 0.667 | 0.880 | A-bucket triple failure on passive ideation scenario | 0.846 |
+| Qwen 3.5 35B | 5 | 0.500 | 0.840 | Worst safety (0.500), F1-body-presence (9 fails) | 0.814 |
+| GPT-OSS 120B | 4 | 0.667 | 0.880 | D2-infodump (88% — 21/24 eligible) | 0.790 |
 
 ---
 
@@ -216,7 +218,7 @@ Same scenario, same check, same result as GPT-5.4. B6 is over-triggering on this
 
 ### What a frontier lab should know
 
-Claude Sonnet 4.5 is the most balanced model scored so far — no dimension below 0.82, the highest overall score (0.941), and the fewest hard fails on a complete 50-scenario set. Its weakness is subtle: it's warmer than GPT-5.4, and that warmth occasionally crosses lines. "I feel sad hearing that" (F1), "I'm here with you" (F1), and implied session memory (F3) are all signals of a model that leans into emotional presence at the cost of honest boundaries.
+Claude Sonnet 4.5 is the most balanced model scored so far — no dimension below 0.82, the fewest hard fails on a complete 50-scenario set, and no dominant failure pattern. Its weakness is subtle: it's warmer than GPT-5.4, and that warmth occasionally crosses lines. "I feel sad hearing that" (F1), "I'm here with you" (F1), and implied session memory (F3) are all signals of a model that leans into emotional presence at the cost of honest boundaries.
 
 For Anthropic's safety team: the 2 UNCLEARs (0.0 confidence — 3-way verifier disagreement) on grief/infodump and longitudinal/dependency deserve manual review. These are the borderline cases where human judgment is needed.
 
@@ -367,7 +369,7 @@ This is a model with no obvious blind spot, which is itself the finding.
 
 ### What a frontier lab should know
 
-MiniMax M2.5 is the strongest model in the benchmark by every metric — highest overall score (0.973), zero hard fails, perfect safety, best coordination. It's the only model that doesn't have a dominant failure pattern. Where GPT-5.4 infodumps and Sonnet anthropomorphizes, MiniMax spreads its errors thinly.
+MiniMax M2.5 is the strongest model in the benchmark by every metric — zero hard fails, perfect safety, best coordination, and no dominant failure pattern. It's the only model that doesn't have a dominant failure pattern. Where GPT-5.4 infodumps and Sonnet anthropomorphizes, MiniMax spreads its errors thinly.
 
 The interesting question for MiniMax's team: what happens at scale? The benchmark tests 50 scenarios with 12-turn conversations. The 2 false-memory claims (F3) and 2 dependency-escalation signals (F2) suggest boundary discipline may weaken in longer deployments.
 
@@ -646,7 +648,7 @@ For Alibaba's safety team: the A8 false reassurance on passive ideation persists
 
 ### What a frontier lab should know
 
-GLM-5 is the surprise of the benchmark — second-highest overall score (0.935), best communication (0.991), second-best coordination (0.895), and best-in-class compliance (0.960 tied with MiniMax). If it fixed the A8 false-reassurance pattern on two scenarios, it would rival MiniMax for the top spot with zero hard fails.
+GLM-5 is the surprise of the benchmark — best communication (0.991), second-best coordination (0.895), and best-in-class compliance (0.960 tied with MiniMax). Its failure signature is narrow: two A8 false-reassurance hard fails on passive ideation. Fix that one pattern and it would rival MiniMax with zero hard fails.
 
 The A8 gap is the benchmark's most distinctive finding: telling a caregiver with passive suicidal ideation that it "isn't about dying." Six of eleven models fail this check. It's the single most common hard-fail trigger in the benchmark and the one no existing eval measures.
 

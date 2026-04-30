@@ -14,6 +14,7 @@ The engine never computes a score heuristically — it aggregates verdicts.
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import statistics
 from dataclasses import dataclass, field
@@ -175,61 +176,123 @@ class ModeEngine:
         self,
         transcript: list[dict[str, Any]],
         scenario: dict[str, Any],
+        parallel: bool = False,
+        max_workers: int = 8,
     ) -> ModeEngineOutput:
-        """Run all eligible modes against this scenario run."""
+        """Run all eligible modes against this scenario run.
+
+        Args:
+            parallel: If True, run verifier calls concurrently using threads.
+                      Safe because verifier calls are I/O-bound (API requests).
+        """
+        if parallel:
+            return self._evaluate_parallel(
+                transcript, scenario, max_workers
+            )
+        return self._evaluate_sequential(transcript, scenario)
+
+    def _evaluate_sequential(
+        self,
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+    ) -> ModeEngineOutput:
         results: list[VerdictResult] = []
 
         for mode_id, mode_config in self.modes.items():
-            routing = self.routing.get(mode_id)
-            if routing is None:
-                logger.debug("No routing for mode %s; skipping", mode_id)
-                continue
-
-            # Safety override — skip C3 coercive-language modes in acute scenarios.
-            if self._should_suppress_c3_safety_override(mode_id, scenario):
-                continue
-
-            verifier = self._route_verifier(mode_id)
-            if verifier is None:
-                # Mode needs LLM but no client available. Produce UNCLEAR envelope.
-                result = VerdictResult(
-                    mode_id=mode_id,
-                    eligible=False,  # not eligible without verifier
-                    verdict=Verdict.NOT_APPLICABLE,
-                    severity=mode_config.get("severity", "S2"),
-                    primary_bucket=mode_config.get("primary_bucket", "C"),
-                    scorer_type="unrouted",
-                    confidence=0.0,
-                    rationale_code="no_verifier_available",
-                    scorer_version="mode_engine-v0.1",
-                )
+            result = self._run_single_mode(
+                mode_id, mode_config, transcript, scenario
+            )
+            if result is not None:
                 results.append(result)
-                continue
-
-            try:
-                result = verifier.verify(
-                    transcript=transcript,
-                    scenario=scenario,
-                    mode_config=mode_config,
-                    routing_config=routing,
-                )
-            except Exception as e:
-                logger.exception("Verifier failed for mode %s: %s", mode_id, e)
-                result = VerdictResult(
-                    mode_id=mode_id,
-                    eligible=True,
-                    verdict=Verdict.UNCLEAR,
-                    severity=mode_config.get("severity", "S2"),
-                    primary_bucket=mode_config.get("primary_bucket", "C"),
-                    scorer_type=getattr(verifier, "scorer_type", "unknown"),
-                    confidence=0.0,
-                    rationale_code=f"verifier_exception:{type(e).__name__}",
-                    adjudication_required=True,
-                    scorer_version="mode_engine-v0.1",
-                )
-            results.append(result)
 
         return self._aggregate(results, scenario)
+
+    def _evaluate_parallel(
+        self,
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+        max_workers: int,
+    ) -> ModeEngineOutput:
+        tasks: list[tuple[str, dict[str, Any]]] = []
+        for mode_id, mode_config in self.modes.items():
+            routing = self.routing.get(mode_id)
+            if routing is None:
+                continue
+            if self._should_suppress_c3_safety_override(mode_id, scenario):
+                continue
+            tasks.append((mode_id, mode_config))
+
+        results: list[VerdictResult] = []
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
+            futures = {
+                executor.submit(
+                    self._run_single_mode,
+                    mode_id,
+                    mode_config,
+                    transcript,
+                    scenario,
+                ): mode_id
+                for mode_id, mode_config in tasks
+            }
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+
+        return self._aggregate(results, scenario)
+
+    def _run_single_mode(
+        self,
+        mode_id: str,
+        mode_config: dict[str, Any],
+        transcript: list[dict[str, Any]],
+        scenario: dict[str, Any],
+    ) -> VerdictResult | None:
+        routing = self.routing.get(mode_id)
+        if routing is None:
+            logger.debug("No routing for mode %s; skipping", mode_id)
+            return None
+
+        if self._should_suppress_c3_safety_override(mode_id, scenario):
+            return None
+
+        verifier = self._route_verifier(mode_id)
+        if verifier is None:
+            return VerdictResult(
+                mode_id=mode_id,
+                eligible=False,
+                verdict=Verdict.NOT_APPLICABLE,
+                severity=mode_config.get("severity", "S2"),
+                primary_bucket=mode_config.get("primary_bucket", "C"),
+                scorer_type="unrouted",
+                confidence=0.0,
+                rationale_code="no_verifier_available",
+                scorer_version="mode_engine-v0.1",
+            )
+
+        try:
+            return verifier.verify(
+                transcript=transcript,
+                scenario=scenario,
+                mode_config=mode_config,
+                routing_config=routing,
+            )
+        except Exception as e:
+            logger.exception("Verifier failed for mode %s: %s", mode_id, e)
+            return VerdictResult(
+                mode_id=mode_id,
+                eligible=True,
+                verdict=Verdict.UNCLEAR,
+                severity=mode_config.get("severity", "S2"),
+                primary_bucket=mode_config.get("primary_bucket", "C"),
+                scorer_type=getattr(verifier, "scorer_type", "unknown"),
+                confidence=0.0,
+                rationale_code=f"verifier_exception:{type(e).__name__}",
+                adjudication_required=True,
+                scorer_version="mode_engine-v0.1",
+            )
 
     # -----------------------------------------------------------------
     # Aggregation

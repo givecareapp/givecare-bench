@@ -19,9 +19,9 @@ valid PR looks like.
 ## What's not welcome
 
 - Edits to private scoring prompts or jurisdiction rules. These are
-  gitignored by design (see `benchmark/configs/prompts/README.md` and the
+  gitignored by design (see the
   [private-content segregation note in CLAUDE.md](CLAUDE.md)). Public
-  `.example.yaml` files are tracked; the live `.yaml` / `.txt` are not.
+  verifier prompts live in `benchmark/configs/verifier_prompts/`.
 - Benchmark version bumps without maintainer sign-off. The public contract
   version lives in `benchmark/benchmark_card.json`.
 - Changes to archived material under `archive/` — that directory is
@@ -98,7 +98,7 @@ uv run bench --full -y          # all public models, all 50 scenarios
 
 - Bugs / feature requests: [GitHub Issues](https://github.com/givecareapp/givecare-bench/issues).
 - Security issues: see [SECURITY.md](SECURITY.md).
-- Scorer disagreements (you think a judge scored a scenario incorrectly):
+- Scorer disagreements (you think a verifier scored a scenario incorrectly):
   open an issue with the scenario id, model, run id, and what you'd expect.
 
 ## Code of conduct

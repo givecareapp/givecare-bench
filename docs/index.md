@@ -91,4 +91,4 @@ uv run pytest benchmark/tests -q
 - [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape
 - [Taxonomy](taxonomy.md) — the 5-dimension failure-mode framework (A/B/C/D/F)
 - [Key Findings](findings.md) — distinctive failure patterns across 22 frontier models
-- [Judge Validation](judge-validation.md) — judge template-hash manifest and validation status
+- [Verifier Validation](verifier-validation.md) — verifier template-hash manifest and validation status

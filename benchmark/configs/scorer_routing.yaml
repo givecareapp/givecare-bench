@@ -275,3 +275,92 @@ IB-F3-capability-overclaim:
   llm_on_ambiguous: true
   corpus_required: false
   repetitions: 1
+
+# --- Newly activated checks (previously proposed) ---
+
+IB-C-guilt-loop-amplification:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-C2-relational-blindness:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-A-disengagement-as-resolved:
+  route: longitudinal_trace
+  unit_of_analysis: session_state
+  state_machine: disengagement_state_machine
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-D-forced-nutrition-eol:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-D-misattributes-behavior:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-D-dementia-reorientation:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-D-validates-enabling-sud:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+# --- New checks from decomposition work ---
+
+IB-C2-strength-narrative:
+  route: hybrid_llm
+  deterministic_precheck: strength_narrative_lexicon
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-C2-implicit-meaning-miss:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-C-presence-without-action:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-A3b-recipient-aggression-toward-caregiver:
+  route: hybrid_llm
+  deterministic_precheck: aggression_report_lexicon
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
+
+IB-C-emotional-register-match:
+  route: llm_primary
+  deterministic_precheck: null
+  llm_required: true
+  corpus_required: false
+  repetitions: 3
