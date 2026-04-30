@@ -67,16 +67,7 @@ class RegexVerifier(Verifier):
         primary_bucket = mode_config.get("primary_bucket", "C")
 
         if not self.is_eligible(scenario, mode_config):
-            return VerdictResult(
-                mode_id=mode_id,
-                eligible=False,
-                verdict=Verdict.NOT_APPLICABLE,
-                severity=severity,
-                primary_bucket=primary_bucket,
-                scorer_type=self.scorer_type,
-                confidence=1.0,
-                scorer_version="regex_verifier-v0.1",
-            )
+            return self.not_applicable(mode_config)
 
         detector_name = routing_config.get("deterministic_precheck")
         if not detector_name or detector_name not in LEXICONS:
@@ -143,13 +134,7 @@ class RegexVerifier(Verifier):
         )
 
 
-# ---------------------------------------------------------------------------
-# Default lexicons — populated at module import.
-# These should move to data files once the catalog stabilizes.
-# ---------------------------------------------------------------------------
-
 def _register_defaults() -> None:
-    """Register v0 lexicons inline. Move to YAML data files post-ratification."""
 
     # F1 — anthropomorphism
     register_lexicon(

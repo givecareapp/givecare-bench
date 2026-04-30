@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any
 
 PUBLIC_CATEGORIES = ("safety", "empathy", "context", "continuity")
 PRIVATE_CONFIDENTIAL_ENV = "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR"
@@ -13,7 +14,7 @@ PRIVATE_CONFIDENTIAL_ENV = "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR"
 
 def scenario_category_for_path(
     path: Path,
-    private_confidential_dir: Optional[Path] = None,
+    private_confidential_dir: Path | None = None,
 ) -> str:
     """Infer the benchmark category for a scenario path."""
     resolved_path = path.resolve()
@@ -28,7 +29,7 @@ def scenario_category_for_path(
     return resolved_path.parent.name
 
 
-def get_project_root(start: Optional[Path] = None) -> Path:
+def get_project_root(start: Path | None = None) -> Path:
     """Find the project root (where pyproject.toml lives)."""
     current = (start or Path(__file__)).resolve()
     for parent in current.parents:
@@ -37,21 +38,21 @@ def get_project_root(start: Optional[Path] = None) -> Path:
     return Path.cwd()
 
 
-def inventory_path(project_root: Optional[Path] = None) -> Path:
+def inventory_path(project_root: Path | None = None) -> Path:
     root = project_root or get_project_root()
     return root / "benchmark" / "benchmark_inventory.json"
 
 
-def load_inventory(project_root: Optional[Path] = None) -> dict[str, Any]:
+def load_inventory(project_root: Path | None = None) -> dict[str, Any]:
     path = inventory_path(project_root)
     return json.loads(path.read_text())
 
 
-def get_benchmark_version(project_root: Optional[Path] = None) -> str:
+def get_benchmark_version(project_root: Path | None = None) -> str:
     return str(load_inventory(project_root).get("benchmark_version", "unknown"))
 
 
-def get_code_version(project_root: Optional[Path] = None) -> str:
+def get_code_version(project_root: Path | None = None) -> str:
     root = project_root or get_project_root()
     toml_path = root / "pyproject.toml"
     if not toml_path.exists():
@@ -64,7 +65,7 @@ def get_code_version(project_root: Optional[Path] = None) -> str:
     return "unknown"
 
 
-def get_private_confidential_dir(project_root: Optional[Path] = None) -> Optional[Path]:
+def get_private_confidential_dir(project_root: Path | None = None) -> Path | None:
     raw = os.environ.get(PRIVATE_CONFIDENTIAL_ENV)
     if not raw:
         return None
@@ -76,7 +77,7 @@ def get_private_confidential_dir(project_root: Optional[Path] = None) -> Optiona
     return path
 
 
-def require_private_confidential_dir(project_root: Optional[Path] = None) -> Path:
+def require_private_confidential_dir(project_root: Path | None = None) -> Path:
     path = get_private_confidential_dir(project_root)
     if path is None:
         raise RuntimeError(
@@ -101,9 +102,9 @@ def _iter_json_files(paths: Iterable[Path]) -> list[Path]:
 
 
 def collect_public_scenario_paths(
-    project_root: Optional[Path] = None,
+    project_root: Path | None = None,
     *,
-    category_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
 ) -> list[Path]:
     root = project_root or get_project_root()
     scenarios_dir = root / "benchmark" / "scenarios"
@@ -113,15 +114,15 @@ def collect_public_scenario_paths(
     return _iter_json_files([scenarios_dir / category for category in categories])
 
 
-def collect_confidential_scenario_paths(project_root: Optional[Path] = None) -> list[Path]:
+def collect_confidential_scenario_paths(project_root: Path | None = None) -> list[Path]:
     confidential_dir = require_private_confidential_dir(project_root)
     return _iter_json_files([confidential_dir])
 
 
 def collect_scenario_paths(
-    project_root: Optional[Path] = None,
+    project_root: Path | None = None,
     *,
-    category_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
     include_confidential: bool = False,
 ) -> list[Path]:
     public_paths = collect_public_scenario_paths(

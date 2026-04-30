@@ -266,7 +266,7 @@ def eval_to_scenario(rec: dict[str, Any]) -> dict[str, Any]:
             "expert_reviewed": False,
             "version": "0.1.0",
             "tags": [
-                f"eval-import",
+                "eval-import",
                 f"split:{rec.get('split', 'unknown')}",
                 f"eval-cat:{rec.get('category', 'unknown')}",
             ],
@@ -348,7 +348,7 @@ def is_duplicate(
     if turns:
         msg = turns[0].get("user_message", "").lower().strip()
         if msg and msg in fingerprints["messages"]:
-            return f"first-turn message matches existing scenario"
+            return "first-turn message matches existing scenario"
 
     return None
 

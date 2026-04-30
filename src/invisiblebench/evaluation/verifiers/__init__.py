@@ -10,10 +10,12 @@ aggregates them into dimension scores + blindspot profile.
 """
 
 from invisiblebench.evaluation.verifiers.base import (
+    CORE_VERDICTS,
     EvidenceSpan,
     Verdict,
     VerdictResult,
     Verifier,
+    collect_scenario_tags,
 )
 from invisiblebench.evaluation.verifiers.corpus_verifier import CorpusVerifier
 from invisiblebench.evaluation.verifiers.llm_verifier import LLMVerifier
@@ -21,6 +23,8 @@ from invisiblebench.evaluation.verifiers.regex_verifier import RegexVerifier
 from invisiblebench.evaluation.verifiers.scenario_rule_verifier import ScenarioRuleVerifier
 
 __all__ = [
+    "CORE_VERDICTS",
+    "collect_scenario_tags",
     "VerdictResult",
     "Verifier",
     "Verdict",

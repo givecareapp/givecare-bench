@@ -320,7 +320,7 @@ def main() -> int:
             args.output,
             expected_scenarios=args.expected_scenarios,
         )
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"Error: {exc}")
         return 1
 

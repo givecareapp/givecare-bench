@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Sequence
 
 CURRENT_BOARD_LEADERBOARD_DIR = Path("results/leaderboard_ready")
 CURRENT_BOARD_TRANSCRIPT_DIRS = (
@@ -34,7 +35,7 @@ def _resolve_transcript_path(
     transcript_dirs: Sequence[Path],
     model_id: str,
     scenario_id: str,
-) -> Optional[Path]:
+) -> Path | None:
     prefixes = _model_prefix_candidates(model_id)
     roots = [project_root / transcript_dir for transcript_dir in transcript_dirs]
 
@@ -47,7 +48,7 @@ def _resolve_transcript_path(
     return None
 
 
-def _resolve_detail_path(project_root: Path, raw_path: Optional[str]) -> Optional[Path]:
+def _resolve_detail_path(project_root: Path, raw_path: str | None) -> Path | None:
     if not raw_path:
         return None
 
@@ -195,26 +196,3 @@ def build_verifier_corpus_summary(manifest: Sequence[dict[str, Any]]) -> dict[st
     }
 
 
-def write_verifier_corpus_manifest(
-    project_root: Path,
-    output_path: Path,
-    *,
-    leaderboard_dir: Path = CURRENT_BOARD_LEADERBOARD_DIR,
-    transcript_dirs: Sequence[Path] = CURRENT_BOARD_TRANSCRIPT_DIRS,
-) -> list[dict[str, Any]]:
-    manifest = build_verifier_corpus_manifest(
-        project_root,
-        leaderboard_dir=leaderboard_dir,
-        transcript_dirs=transcript_dirs,
-    )
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as fh:
-        for row in manifest:
-            fh.write(json.dumps(row, sort_keys=True) + "\n")
-    return manifest
-
-
-def write_verifier_corpus_summary(summary: dict[str, Any], output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as fh:
-        json.dump(summary, fh, indent=2, sort_keys=True)

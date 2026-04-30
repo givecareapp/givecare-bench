@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
@@ -35,18 +35,12 @@ CORPUS_REGISTRY: dict[str, "BenefitsCorpus"] = {}
 
 
 class BenefitsCorpus:
-    """Versioned benefits corpus — programs, aliases, jurisdictions.
-
-    Placeholder shape for v0. Real corpus loads from wiki/benefits/ +
-    internal benefits CLI data. Sync pipeline is a separate task.
-    """
+    """Versioned benefits corpus — programs, aliases, jurisdictions."""
 
     def __init__(self, name: str, data: dict[str, Any]) -> None:
         self.name = name
         self.version = data.get("version", "unknown")
-        # Canonical map: lowercased_program_name -> record
         self.programs: dict[str, dict[str, Any]] = {}
-        # Alias map: lowercased_alias -> canonical_name
         self.aliases: dict[str, str] = {}
         for program in data.get("programs", []):
             canonical = program["name"].lower()
@@ -54,7 +48,7 @@ class BenefitsCorpus:
             for alias in program.get("aliases", []) or []:
                 self.aliases[alias.lower()] = canonical
 
-    def lookup(self, name: str) -> Optional[dict[str, Any]]:
+    def lookup(self, name: str) -> dict[str, Any] | None:
         """Find a program by name or alias (case-insensitive)."""
         key = name.lower().strip()
         if key in self.programs:
@@ -77,13 +71,11 @@ class BenefitsCorpus:
 
 
 def register_corpus(name: str, data: dict[str, Any]) -> None:
-    """Register a corpus by name for use by CorpusVerifier."""
     CORPUS_REGISTRY[name] = BenefitsCorpus(name, data)
 
 
 def _load_default_corpus() -> None:
-    """Load v0 placeholder corpus. Real corpus sync is a separate task."""
-    # Minimal stub so the verifier can run. Populate from wiki/benefits/ later.
+    """Load the v0 stub corpus (4 programs) so the verifier runs without a full sync."""
     placeholder = {
         "version": "v0-stub-2026-04-23",
         "programs": [
@@ -139,14 +131,8 @@ _load_default_corpus()
 # ---------------------------------------------------------------------------
 
 def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
-    """Heuristic claim extraction for v0.
-
-    Pulls program-name-shaped tokens and adjacent hedge/verification markers.
-    This is a placeholder — production should use an LLM extractor via
-    llm_verifier with a dedicated extraction prompt.
-    """
+    """Token-match claim extraction with hedge/verification-path detection."""
     claims: list[dict[str, Any]] = []
-    # Known program tokens (mirror corpus aliases for now)
     known_tokens = [
         "NFCSP",
         "FMLA",
@@ -164,11 +150,9 @@ def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
     ]
     for token in known_tokens:
         for match in re.finditer(re.escape(token), text, re.IGNORECASE):
-            # Capture a surrounding window as evidence
             start = max(0, match.start() - 80)
             end = min(len(text), match.end() + 80)
             window = text[start:end]
-            # Hedge detection
             hedged = bool(
                 re.search(
                     r"\b(may|might|could|possibly|if you qualify|check with|verify|confirm)\b",
@@ -176,7 +160,6 @@ def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
                     re.IGNORECASE,
                 )
             )
-            # Verification path detection
             verification_path = bool(
                 re.search(
                     r"(https?://|1-\d{3}-\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b|call \d|visit )",
@@ -216,16 +199,7 @@ class CorpusVerifier(Verifier):
         primary_bucket = mode_config.get("primary_bucket", "E")
 
         if not self.is_eligible(scenario, mode_config):
-            return VerdictResult(
-                mode_id=mode_id,
-                eligible=False,
-                verdict=Verdict.NOT_APPLICABLE,
-                severity=severity,
-                primary_bucket=primary_bucket,
-                scorer_type=self.scorer_type,
-                confidence=1.0,
-                scorer_version="corpus_verifier-v0.1",
-            )
+            return self.not_applicable(mode_config)
 
         corpus_name = mode_config.get("scorer", {}).get("corpus") or self.corpus_name
         corpus = CORPUS_REGISTRY.get(corpus_name)
@@ -257,7 +231,7 @@ class CorpusVerifier(Verifier):
         # Evaluate by mode — each E mode asks a different question of the claims
         evidence: list[EvidenceSpan] = []
         verdict = Verdict.PASS
-        rationale_code: Optional[str] = None
+        rationale_code: str | None = None
 
         for claim in claims:
             name = claim["name"]

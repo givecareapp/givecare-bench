@@ -11,7 +11,7 @@ import json
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.utils.dimension_aliases import (
     DIMENSION_ALIASES,
@@ -124,8 +124,8 @@ class DiagnosticReport:
     def __init__(
         self,
         results_path: Path,
-        transcripts_dir: Optional[Path] = None,
-        previous_results_path: Optional[Path] = None,
+        transcripts_dir: Path | None = None,
+        previous_results_path: Path | None = None,
     ):
         """
         Initialize diagnostic report generator.
@@ -145,7 +145,7 @@ class DiagnosticReport:
         )
         self.transcripts: dict[str, list[dict]] = {}
 
-    def _load_json(self, path: Path) -> Optional[dict]:
+    def _load_json(self, path: Path) -> dict | None:
 
         if not path or not path.exists():
             return None
@@ -305,7 +305,7 @@ class DiagnosticReport:
 
         return patterns
 
-    def _compare_with_previous(self, current: list[dict]) -> Optional[dict]:
+    def _compare_with_previous(self, current: list[dict]) -> dict | None:
 
         if not self.previous_data:
             return None
@@ -767,7 +767,7 @@ class DiagnosticReport:
 
         return suggestion
 
-    def generate(self, output_path: Optional[Path] = None) -> str:
+    def generate(self, output_path: Path | None = None) -> str:
         """
         Generate diagnostic report.
 
@@ -1046,9 +1046,9 @@ class DiagnosticReport:
 
 def generate_diagnostic_report(
     results_path: str,
-    transcripts_dir: Optional[str] = None,
-    previous_results_path: Optional[str] = None,
-    output_path: Optional[str] = None,
+    transcripts_dir: str | None = None,
+    previous_results_path: str | None = None,
+    output_path: str | None = None,
 ) -> str:
     """
     Generate a diagnostic report from eval results.

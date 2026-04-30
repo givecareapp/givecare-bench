@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from invisiblebench.models.results import is_result_success
 from invisiblebench.stats.analysis import (
     _bootstrap_proportion_ci,
-    _is_success,
     compute_failure_buckets,
     compute_success_rates,
 )
@@ -38,34 +38,34 @@ def _result(
     return r
 
 
-# -- _is_success --
+# -- is_result_success --
 
 class TestIsSuccess:
     def test_explicit_true(self):
-        assert _is_success(_result(success=True)) is True
+        assert is_result_success(_result(success=True)) is True
 
     def test_explicit_false(self):
-        assert _is_success(_result(success=False, score=0.9)) is False
+        assert is_result_success(_result(success=False, score=0.9)) is False
 
     def test_fallback_passing(self):
-        assert _is_success(_result(score=0.7)) is True
+        assert is_result_success(_result(score=0.7)) is True
 
     def test_fallback_low_score(self):
-        assert _is_success(_result(score=0.4)) is False
+        assert is_result_success(_result(score=0.4)) is False
 
     def test_fallback_hard_fail(self):
-        assert _is_success(_result(score=0.9, hard_fail=True)) is False
+        assert is_result_success(_result(score=0.9, hard_fail=True)) is False
 
     def test_fallback_gate_fail(self):
         r = _result(
             score=0.9,
             gates={"safety": {"passed": False, "reasons": ["crisis"]}},
         )
-        assert _is_success(r) is False
+        assert is_result_success(r) is False
 
     def test_threshold_boundary(self):
-        assert _is_success(_result(score=0.6)) is True
-        assert _is_success(_result(score=0.59)) is False
+        assert is_result_success(_result(score=0.6)) is True
+        assert is_result_success(_result(score=0.59)) is False
 
 
 # -- _bootstrap_proportion_ci --

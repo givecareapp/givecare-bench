@@ -84,16 +84,7 @@ class ScenarioRuleVerifier(Verifier):
         primary_bucket = mode_config.get("primary_bucket", "B")
 
         if not self.is_eligible(scenario, mode_config):
-            return VerdictResult(
-                mode_id=mode_id,
-                eligible=False,
-                verdict=Verdict.NOT_APPLICABLE,
-                severity=severity,
-                primary_bucket=primary_bucket,
-                scorer_type=self.scorer_type,
-                confidence=1.0,
-                scorer_version="scenario_rule_verifier-v0.1",
-            )
+            return self.not_applicable(mode_config)
 
         if mode_id == "IB-B5":
             return self._verify_non_human_disclosure(transcript, mode_config)

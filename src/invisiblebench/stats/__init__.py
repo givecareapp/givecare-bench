@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 
 def cohen_kappa_continuous(
     ratings_a: list[float], ratings_b: list[float], n_bins: int = 5
@@ -34,7 +32,7 @@ def cohen_kappa_continuous(
     for ca in categories:
         for cb in categories:
             matrix[(ca, cb)] = 0
-    for a, b in zip(bins_a, bins_b):
+    for a, b in zip(bins_a, bins_b, strict=True):
         matrix[(a, b)] = matrix.get((a, b), 0) + 1
 
     # Observed agreement

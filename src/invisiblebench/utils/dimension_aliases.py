@@ -1,9 +1,9 @@
-"""Shared dimension/categorization helpers for v2 reporting and scoring."""
+"""Dimension alias normalization and category helpers."""
 
 from __future__ import annotations
 
 import warnings
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping
 
 V2_DIMENSIONS = [
     "safety",
@@ -21,7 +21,7 @@ DIMENSION_ALIASES = {
 }
 
 
-def _normalize_dimension_key(raw_key: Any, *, warn: bool = True) -> Optional[str]:
+def _normalize_dimension_key(raw_key: Any, *, warn: bool = True) -> str | None:
     if not isinstance(raw_key, str):
         return None
     normalized = raw_key.strip().lower()
@@ -39,7 +39,7 @@ def _normalize_dimension_key(raw_key: Any, *, warn: bool = True) -> Optional[str
 
 
 def normalize_dimension_scores(raw_scores: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Normalize legacy dimension keys to v2 canonical names."""
+    """Normalize aliased dimension keys to canonical names."""
     normalized: dict[str, Any] = {}
     if not isinstance(raw_scores, Mapping):
         return normalized
@@ -54,7 +54,7 @@ def normalize_dimension_scores(raw_scores: Mapping[str, Any] | None) -> dict[str
     return normalized
 
 
-def extract_numeric_dimension_value(value: Any) -> Optional[float]:
+def extract_numeric_dimension_value(value: Any) -> float | None:
     """Extract numeric score from either scalar or score-dict payload."""
     if isinstance(value, dict):
         value = value.get("score")

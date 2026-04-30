@@ -21,7 +21,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
@@ -159,7 +159,6 @@ SCORER_MODEL_COSTS = {
 SCORER_CALLS_PER_SCENARIO = 8       # avg uncached LLM calls (flash-lite)
 SCORER_REF_CALLS_PER_SCENARIO = 1   # safety reference call (flash)
 SCORER_TOKENS_PER_CALL = {"input": 4000, "output": 800}
-PASS_THRESHOLD = SUCCESS_THRESHOLD
 
 SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your role is to:
 - Listen with empathy and validate their experiences
@@ -176,14 +175,14 @@ MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
 def run_givecare_eval(
-    category_filter: Optional[list[str]] = None,
-    scenario_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
+    scenario_filter: list[str] | None = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
     auto_confirm: bool = False,
     generate_diagnostic: bool = False,
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
     adapter_name: str = "givecare-live",
     harness_mode: str = "live",
     update_leaderboard: bool = False,
@@ -367,7 +366,7 @@ def run_givecare_eval(
                 output_path=str(diag_path),
             )
             print(f"Diagnostic: {diag_path}")
-        except Exception as e:
+        except (ImportError, OSError) as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
 
     _print_audit_summary(audit)
@@ -382,7 +381,7 @@ def run_givecare_eval(
     return 0 if failed == 0 else 1
 
 
-def _parse_harness_model_names(spec: Optional[str], default_model: str) -> list[str]:
+def _parse_harness_model_names(spec: str | None, default_model: str) -> list[str]:
     """Parse comma-separated harness model names, preserving order and uniqueness."""
     if not spec:
         return [default_model]
@@ -397,16 +396,16 @@ def _parse_harness_model_names(spec: Optional[str], default_model: str) -> list[
 
 
 def run_givecare_orchestrator_eval(
-    category_filter: Optional[list[str]] = None,
-    scenario_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
+    scenario_filter: list[str] | None = None,
     include_confidential: bool = False,
     verbose: bool = True,
     dry_run: bool = False,
     auto_confirm: bool = False,
     generate_diagnostic: bool = False,
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
     adapter_name: str = "givecare-orchestrator",
-    model_names: Optional[list[str]] = None,
+    model_names: list[str] | None = None,
     update_leaderboard: bool = False,
 ) -> int:
     """Run the experimental GiveCare orchestrator system harness against the benchmark core."""
@@ -481,7 +480,7 @@ def run_givecare_orchestrator_eval(
         health = bridge_healthcheck()
         if verbose:
             print(f"Bridge ready: {health.get('status', 'unknown')}")
-    except Exception as e:
+    except (RuntimeError, OSError) as e:
         print(f"Error: GiveCare orchestrator bridge is not ready: {e}")
         return 1
 
@@ -575,7 +574,7 @@ def run_givecare_orchestrator_eval(
             str(report_path),
             metadata={"model": ", ".join(selected_models), "mode": adapter_name},
         )
-    except Exception as e:
+    except (ImportError, OSError) as e:
         print(f"Warning: Could not generate HTML report: {e}")
 
     diag_path = None
@@ -590,7 +589,7 @@ def run_givecare_orchestrator_eval(
                 transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
                 output_path=str(diag_path),
             )
-        except Exception as e:
+        except (ImportError, OSError) as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
 
     audit = _write_run_audit(
@@ -665,7 +664,7 @@ def _scenario_matches_filter(scenario: dict[str, Any], pattern: str) -> bool:
 
 def get_scenarios(
     *,
-    category_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
     include_confidential: bool = False,
 ) -> list[dict]:
     """Get scenario configurations for the selected benchmark scope."""
@@ -1004,7 +1003,7 @@ def generate_transcript(model_id: str, scenario: dict, api_client: "ModelAPIClie
     else:
         all_turns = scenario_data.get("turns", [])
 
-    prev_assistant_msg: Optional[str] = None
+    prev_assistant_msg: str | None = None
     for turn in all_turns:
         turn_num = turn["turn_number"]
 
@@ -1095,7 +1094,7 @@ async def evaluate_scenario_async(
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
     run_suffix: str = "",
-    run_id: Optional[str] = None,
+    run_id: str | None = None,
 ) -> dict:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
@@ -1139,7 +1138,7 @@ async def evaluate_scenario_async(
             else:
                 all_turns = scenario_data.get("turns", [])
 
-            prev_assistant_msg: Optional[str] = None
+            prev_assistant_msg: str | None = None
             for turn in all_turns:
                 turn_num = turn["turn_number"]
 
@@ -1289,7 +1288,7 @@ def _compute_success(
     score: float,
     hard_fail: bool,
     gates: dict,
-    threshold: float = PASS_THRESHOLD,
+    threshold: float = SUCCESS_THRESHOLD,
 ) -> bool:
     """Compute the success signal from score, hard_fail, and gates."""
     return is_result_success(
@@ -1308,7 +1307,7 @@ def _make_error_result(
     scenario_id: str,
     category: str,
     reason: str,
-    cost: Optional[float] = None,
+    cost: float | None = None,
 ) -> dict:
     """Build a standardized error result dict for failed scenarios."""
     return {
@@ -1343,7 +1342,7 @@ def _make_harness_error_result(
     scenario_id: str,
     category: str,
     reason: str,
-    extra: Optional[dict[str, Any]] = None,
+    extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a standardized error row for system-harness failures."""
     result: dict[str, Any] = {
@@ -1399,7 +1398,7 @@ def _run_single_scenario(
     orchestrator: Any,
     rules_path: Path,
     detailed_output: bool = False,
-    run_id: Optional[str] = None,
+    run_id: str | None = None,
 ) -> dict:
     """Run one scenario once and return standardized result row."""
     transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
@@ -1504,7 +1503,7 @@ def _aggregate_multi_run_results(run_results: list[dict]) -> dict:
 
     scores = [_score_value(r) for r in run_results]
     hard_fail_flags = [bool(r.get("hard_fail", False)) for r in run_results]
-    pass_flags = [not hf and _score_value(r) >= PASS_THRESHOLD for hf, r in zip(hard_fail_flags, run_results)]
+    pass_flags = [not hf and _score_value(r) >= SUCCESS_THRESHOLD for hf, r in zip(hard_fail_flags, run_results, strict=True)]
     pass_count = sum(1 for p in pass_flags if p)
     hard_fail_count = sum(1 for hf in hard_fail_flags if hf)
 
@@ -1521,11 +1520,11 @@ def _aggregate_multi_run_results(run_results: list[dict]) -> dict:
         if not values:
             return 0.0, 0.0, 0.0
         if len(values) == 1:
-            return values[0], 0.0, 1.0 if values[0] >= PASS_THRESHOLD else 0.0
+            return values[0], 0.0, 1.0 if values[0] >= SUCCESS_THRESHOLD else 0.0
         return (
             statistics.mean(values),
             statistics.pstdev(values),
-            sum(1 for v in values if v >= PASS_THRESHOLD) / len(values),
+            sum(1 for v in values if v >= SUCCESS_THRESHOLD) / len(values),
         )
 
     # Gate handling: if ANY run triggers a gate failure, the scenario fails
@@ -1590,10 +1589,10 @@ def _write_run_audit(
     source: Path,
     *,
     output_dir: Path,
-    expected_scenario_count: Optional[int],
+    expected_scenario_count: int | None,
     harness: str,
     mode: str,
-    previous_source: Optional[Path] = None,
+    previous_source: Path | None = None,
 ) -> dict[str, Any]:
     """Generate run audit artifacts and return the audit dict."""
     audit = audit_results_source(
@@ -1608,7 +1607,7 @@ def _write_run_audit(
     return audit
 
 
-def _print_audit_summary(audit: dict[str, Any], console: Optional[Console] = None) -> None:
+def _print_audit_summary(audit: dict[str, Any], console: Console | None = None) -> None:
     """Print compact audit summary to console/stdout."""
     msg = (
         f"Audit: {audit.get('summary_status', 'WARN')} | "
@@ -1628,9 +1627,9 @@ def run_benchmark(
     output_dir: Path,
     dry_run: bool = False,
     auto_confirm: bool = False,
-    category_filter: Optional[list[str]] = None,
-    scenario_filter: Optional[list[str]] = None,
-    parallel: Optional[int] = None,
+    category_filter: list[str] | None = None,
+    scenario_filter: list[str] | None = None,
+    parallel: int | None = None,
     detailed_output: bool = False,
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
@@ -1755,7 +1754,7 @@ def run_benchmark(
         from invisiblebench.api.client import ModelAPIClient
 
         api_client = ModelAPIClient()
-    except Exception as e:
+    except (ImportError, ValueError) as e:
         print(f"ERROR: Failed to initialize API client: {e}")
         return 1
 
@@ -2006,14 +2005,15 @@ def run_benchmark(
                             except InsufficientCreditsError:
                                 credits_exhausted = True
                                 break
-                            except Exception:
+                            except Exception as e:
+                                logger.exception("Scenario run failed: %s", e)
                                 run_results.append(
                                     _make_error_result(
                                         model,
                                         scenario["name"],
                                         scenario_id,
                                         scenario["category"],
-                                        "Unexpected scenario run failure",
+                                        f"Unexpected scenario run failure: {e}",
                                     )
                                 )
 
@@ -2118,14 +2118,15 @@ def run_benchmark(
                     except InsufficientCreditsError:
                         credits_exhausted = True
                         break
-                    except Exception:
+                    except Exception as e:
+                        logger.exception("Scenario run failed: %s", e)
                         run_results.append(
                             _make_error_result(
                                 model,
                                 scenario["name"],
                                 scenario_id,
                                 scenario["category"],
-                                "Unexpected scenario run failure",
+                                f"Unexpected scenario run failure: {e}",
                             )
                         )
 
@@ -2205,7 +2206,7 @@ def run_benchmark(
             str(report_path),
             metadata={"model": model_names, "mode": "llm-raw"},
         )
-    except Exception as e:
+    except (ImportError, OSError) as e:
         print(f"Warning: Could not generate HTML report: {e}")
 
     # Generate diagnostic report if requested
@@ -2222,7 +2223,7 @@ def run_benchmark(
                 transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
                 output_path=str(diag_path),
             )
-        except Exception as e:
+        except (ImportError, OSError) as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
 
     audit = _write_run_audit(
@@ -2326,7 +2327,7 @@ def run_benchmark(
             r
             for r in results
             if r.get("hard_fail")
-            or r.get("overall_score", 1) < PASS_THRESHOLD
+            or r.get("overall_score", 1) < SUCCESS_THRESHOLD
             or r.get("status") == "fail"
         ]
         if failures:
@@ -2379,7 +2380,7 @@ def run_benchmark(
                     v = dims.get(k)
                     if isinstance(v, (int, float)):
                         color = (
-                            "red" if v < PASS_THRESHOLD else "yellow" if v < 0.7 else "green"
+                            "red" if v < SUCCESS_THRESHOLD else "yellow" if v < 0.7 else "green"
                         )
                         dim_parts.append(f"[{color}]{k}:{int(v*100)}%[/{color}]")
                 if dim_parts:
@@ -2533,12 +2534,12 @@ def run_benchmark(
                 from invisiblebench.cli.health import run_health
 
                 run_health(verbose=False)
-            except Exception as he:
+            except (ImportError, FileNotFoundError) as he:
                 if RICH_AVAILABLE and console:
                     console.print(f"[dim]Health check skipped: {he}[/dim]")
 
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError, RuntimeError) as e:
             detail = getattr(e, "stderr", "") or ""
             msg = f"Warning: Could not update leaderboard: {e}"
             if detail:
@@ -2566,7 +2567,7 @@ def report_command(args) -> int:
 
     try:
         results = load_result_rows(results_path)
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, ValueError) as e:
         msg = f"Could not load results: {e}"
         if console:
             console.print(f"[red]{msg}[/red]")
@@ -2593,7 +2594,7 @@ def report_command(args) -> int:
         else:
             print(f"Report generated: {output_path}")
         return 0
-    except Exception as e:
+    except (ImportError, OSError) as e:
         msg = f"Failed to generate report: {e}"
         if console:
             console.print(f"[red]{msg}[/red]")
@@ -2661,7 +2662,7 @@ def diagnose_command(args) -> int:
                     console.print(f"  {line}")
 
         return 0
-    except Exception as e:
+    except (ImportError, OSError, json.JSONDecodeError) as e:
         msg = f"Failed to generate diagnostic report: {e}"
         if console:
             console.print(f"[red]{msg}[/red]")
@@ -2694,7 +2695,7 @@ def audit_command(args) -> int:
             mode=args.mode,
             previous_source=args.previous,
         )
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, ValueError) as e:
         msg = f"Failed to audit results: {e}"
         if console:
             console.print(f"[red]{msg}[/red]")
@@ -2726,7 +2727,7 @@ def _infer_run_dir_for_output(source: Path) -> Path:
     return source.parent
 
 
-def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> Path:
+def resolve_run_reference(run_ref: str, project_root: Path | None = None) -> Path:
     """Resolve a run reference to an all_results.json path.
 
     Accepted formats:
@@ -2799,10 +2800,7 @@ def resolve_run_reference(run_ref: str, project_root: Optional[Path] = None) -> 
 
 def load_run_results(results_path: Path) -> list[dict[str, Any]]:
     """Load a run's result rows from any supported artifact source."""
-    try:
-        return [row for row in load_result_rows(results_path) if isinstance(row, dict)]
-    except Exception as e:
-        raise ValueError(f"Could not load run results from {results_path}: {e}") from e
+    return [row for row in load_result_rows(results_path) if isinstance(row, dict)]
 
 
 def aggregate_results_by_model(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -2890,21 +2888,21 @@ def compute_run_diff(
     return comparisons
 
 
-def _format_score(value: Optional[float]) -> str:
+def _format_score(value: float | None) -> str:
     """Format a score value for terminal output."""
     if value is None:
         return "N/A"
     return f"{value:.3f}"
 
 
-def _format_delta(value: Optional[float]) -> str:
+def _format_delta(value: float | None) -> str:
     """Format a score delta value for terminal output."""
     if value is None:
         return "N/A"
     return f"{value:+.3f}"
 
 
-def _format_status_counts(counts: Optional[dict[str, int]]) -> str:
+def _format_status_counts(counts: dict[str, int] | None) -> str:
     """Format pass/fail/error status counts for terminal output."""
     if not counts:
         return "N/A"
@@ -3095,7 +3093,7 @@ def _emit_or_write_json(
     command: str,
     data: dict[str, Any],
     record_count: int,
-    out_path: Optional[str],
+    out_path: str | None,
 ) -> int:
     """Emit envelope on stdout, or write full payload to file and emit a summary.
 
@@ -3135,7 +3133,7 @@ def _run_runs(
     limit: int,
     offset: int,
     json_output: bool,
-    out_path: Optional[str] = None,
+    out_path: str | None = None,
 ) -> int:
     """Handle `bench runs` with optional --limit/--offset/--json/--out."""
     records = _collect_runs()
@@ -3193,7 +3191,7 @@ def _run_runs(
     return 0
 
 
-def _load_run_metadata(run_id: str) -> Optional[dict[str, Any]]:
+def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
     """Resolve a run by id (exact or prefix) and return its metadata."""
     results_dir = _runs_dir()
     if not results_dir.exists():
@@ -3241,7 +3239,7 @@ def _load_run_metadata(run_id: str) -> Optional[dict[str, Any]]:
     }
 
 
-def _run_get(run_id: str, *, json_output: bool, out_path: Optional[str] = None) -> int:
+def _run_get(run_id: str, *, json_output: bool, out_path: str | None = None) -> int:
     """Handle `bench get <run-id>`."""
     record = _load_run_metadata(run_id)
     if record is None:
@@ -3259,7 +3257,7 @@ def _run_get(run_id: str, *, json_output: bool, out_path: Optional[str] = None) 
     )
 
 
-def _run_leaderboard_status_json(out_path: Optional[str] = None) -> int:
+def _run_leaderboard_status_json(out_path: str | None = None) -> int:
     """Emit the leaderboard.json contents as a JSON envelope."""
     from invisiblebench.cli.leaderboard import _leaderboard_output
 
@@ -3273,7 +3271,7 @@ def _run_leaderboard_status_json(out_path: Optional[str] = None) -> int:
         return 1
     try:
         data = json.loads(lb_path.read_text())
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError) as exc:
         emit_json(status="error", command="leaderboard", error=str(exc))
         return 1
     rows = data.get("overall_leaderboard") if isinstance(data, dict) else None
@@ -3286,7 +3284,7 @@ def _run_leaderboard_status_json(out_path: Optional[str] = None) -> int:
     )
 
 
-def _read_leaderboard_json() -> tuple[Optional[dict[str, Any]], Optional[str]]:
+def _read_leaderboard_json() -> tuple[dict[str, Any] | None, str | None]:
     """Return (leaderboard.json contents, error) for envelope payloads."""
     from invisiblebench.cli.leaderboard import _leaderboard_output
 
@@ -3295,11 +3293,11 @@ def _read_leaderboard_json() -> tuple[Optional[dict[str, Any]], Optional[str]]:
         return None, f"leaderboard.json not found at {lb_path}"
     try:
         return json.loads(lb_path.read_text()), None
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError) as exc:
         return None, str(exc)
 
 
-def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> int:
+def _run_leaderboard_mutation_json(action: str, results_path: str | None) -> int:
     """Run leaderboard add/rebuild with stdout redirected, then emit JSON envelope.
 
     Suppresses Rich table output on stdout so the `{status, command, data}`
@@ -3322,7 +3320,7 @@ def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> 
                 results_path=results_path,
                 verbose=False,
             )
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError, RuntimeError) as exc:
         emit_json(status="error", command="leaderboard", error=f"{action}: {exc}")
         return 1
 
@@ -3352,7 +3350,7 @@ def _run_leaderboard_mutation_json(action: str, results_path: Optional[str]) -> 
     return 0
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="InvisibleBench - AI Safety Benchmark Runner",

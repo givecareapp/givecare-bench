@@ -27,7 +27,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -38,6 +38,7 @@ from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngineOutput,
     corpus_blindspot_rates,
 )
+from invisiblebench.evaluation.verifiers.base import collect_scenario_tags  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -124,44 +125,21 @@ def transcripts_for_run(run_dir: Path) -> list[dict[str, Any]]:
                 "model_id": matched.get("model_id", "unknown"),
                 "scenario_id": matched.get("scenario_id", stem),
                 "category": matched.get("category", "unknown"),
-                "legacy_result": matched,
             }
         )
     return pairs
 
 
 def enrich_scenario_with_inferred_tags(scenario: dict[str, Any]) -> dict[str, Any]:
-    """Infer failure_mode_tags from legacy scenario fields so v0 modes can fire.
-
-    This is a bridge pass — full scenario tagging is task #17. For now we
-    infer from category + risk_triggers + rubric so deterministic modes
-    have enough eligibility signal to match existing scenarios.
-    """
+    """Infer failure_mode_tags from scenario fields for mode eligibility matching."""
     if scenario.get("eligible_modes"):
         scenario = dict(scenario)
         scenario["_inferred_tags"] = False
         return scenario
 
-    def _as_str_tags(items: Any) -> list[str]:
-        out: list[str] = []
-        if not items:
-            return out
-        for x in items:
-            if isinstance(x, str):
-                out.append(x)
-            elif isinstance(x, dict):
-                # risk_triggers may be dicts with a 'name' or 'type' key
-                for k in ("name", "type", "trigger", "id"):
-                    if isinstance(x.get(k), str):
-                        out.append(x[k])
-                        break
-        return out
+    inferred: list[str] = sorted(collect_scenario_tags(scenario))
 
-    inferred: list[str] = _as_str_tags(scenario.get("failure_mode_tags"))
-    inferred.extend(_as_str_tags(scenario.get("risk_triggers")))
-    inferred.extend(_as_str_tags(scenario.get("tags")))
-
-    category = (scenario.get("category") or scenario.get("tier") or "").lower()
+    category = (scenario.get("category") or "").lower()
     if category == "safety":
         inferred.append("any")  # regex-primary modes like F1/F2/F3 always apply
     if category in {"empathy", "continuity"}:
@@ -217,8 +195,8 @@ def enrich_scenario_with_inferred_tags(scenario: dict[str, Any]) -> dict[str, An
 def scan_run(
     run_dir: Path,
     engine: ModeEngine,
-    limit: Optional[int] = None,
-    filename_filter: Optional[str] = None,
+    limit: int | None = None,
+    filename_filter: str | None = None,
     parallel: bool = False,
     max_workers: int = 8,
 ):
@@ -263,8 +241,6 @@ def scan_run(
             "scenario_id": pair["scenario_id"],
             "category": pair["category"],
             "transcript_path": str(pair["transcript_path"]),
-            "legacy_overall": pair["legacy_result"].get("overall_score"),
-            "legacy_hard_fail": pair["legacy_result"].get("hard_fail"),
             **out.to_dict(),
         }
         outputs.append(record)
@@ -299,7 +275,7 @@ def write_outputs(
     # Per-model blindspot rates
     by_model: dict[str, list[ModeEngineOutput]] = collections.defaultdict(list)
     by_model_records: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
-    for r, eo in zip(outputs, engine_outputs):
+    for r, eo in zip(outputs, engine_outputs, strict=False):
         key = r.get("model") or "unknown"
         by_model[key].append(eo)
         by_model_records[key].append(r)
@@ -437,7 +413,7 @@ def main() -> int:
         try:
             api_client = ModelAPIClient()
             logger.info("LLM verifier enabled with model=%s", args.llm_model)
-        except Exception as e:
+        except (ImportError, ValueError) as e:
             logger.error("Failed to initialize ModelAPIClient: %s", e)
             logger.error("LLM modes will short-circuit to UNCLEAR / NOT_APPLICABLE.")
     engine = ModeEngine(llm_api_client=api_client, llm_model=args.llm_model)

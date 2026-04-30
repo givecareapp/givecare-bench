@@ -82,10 +82,6 @@ def _bootstrap_proportion_ci(
     return (rate, rates[lo_idx], rates[hi_idx])
 
 
-def _is_success(result: dict[str, Any]) -> bool:
-    return is_result_success(result)
-
-
 def compute_success_rates(
     results: list[dict[str, Any]],
     n_bootstrap: int = 10000,
@@ -101,7 +97,7 @@ def compute_success_rates(
     by_cat: dict[str, list[bool]] = {}
     for r in results:
         cat = normalize_category(r.get("category", "unknown"))
-        by_cat.setdefault(cat, []).append(_is_success(r))
+        by_cat.setdefault(cat, []).append(is_result_success(r))
 
     categories: dict[str, dict[str, Any]] = {}
     all_successes = 0
@@ -147,7 +143,7 @@ def compute_failure_buckets(results: list[dict[str, Any]]) -> dict[str, int]:
     """
     buckets: dict[str, int] = {}
     for r in results:
-        if _is_success(r):
+        if is_result_success(r):
             continue
         fc = r.get("failure_categories", {})
         primary = fc.get("primary_category")
@@ -309,12 +305,12 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> dict[str, Any]
             if vals:
                 dim_avgs[dim] = round(statistics.mean(vals), 3)
 
-        # Success rate (v2.1 explicit field) + derived fallback for legacy datasets.
+        # Success rate (explicit field when present, derived from gates+score otherwise).
         explicit_success_values = [s.get("success") for s in scenarios if s.get("success") is not None]
         success_count = sum(1 for v in explicit_success_values if v is True)
         success_rate = round(success_count / len(scenarios), 3) if scenarios else 0.0
 
-        derived_success_count = sum(1 for s in scenarios if _is_success(s))
+        derived_success_count = sum(1 for s in scenarios if is_result_success(s))
         derived_success_rate = round(derived_success_count / len(scenarios), 3) if scenarios else 0.0
 
         if explicit_success_values:
@@ -485,7 +481,7 @@ def format_stats_report(stats: dict[str, Any]) -> str:
         row += f" {total_hf}/{total_n} {pct:>5}"
         lines.append(row)
 
-    # Success Rates (v2.1 explicit field, with derived fallback for legacy datasets)
+    # Success Rates
     has_explicit_success = any(ms.get("success_source") == "explicit" for ms in models.values())
     has_any_success_data = bool(models)
     if has_any_success_data:

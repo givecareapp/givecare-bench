@@ -1,1 +1,1 @@
-"""Test fixtures for LongitudinalBench."""
+"""Test fixtures for InvisibleBench."""

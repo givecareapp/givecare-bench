@@ -10,7 +10,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.scenario import Scenario
@@ -387,7 +387,7 @@ def run_scenario(
     state = _conversation_seed(scenario)
 
     transcript: list[dict[str, Any]] = []
-    prev_assistant_msg: Optional[str] = None
+    prev_assistant_msg: str | None = None
     errors: list[str] = []
 
     for turn in turns:

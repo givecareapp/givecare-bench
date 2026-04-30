@@ -23,7 +23,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.evaluation.verifiers.base import (
     FAILURE_VERDICTS,
@@ -49,8 +49,8 @@ class GoldExample:
     expected: Verdict
     transcript: list[dict[str, Any]]
     scenario: dict[str, Any]
-    author: Optional[str] = None
-    adjudication_notes: Optional[str] = None
+    author: str | None = None
+    adjudication_notes: str | None = None
 
 
 @dataclass
@@ -60,13 +60,13 @@ class CalibrationMetrics:
     mode_id: str
     n_examples: int
     accuracy: float
-    precision: Optional[float]
-    recall: Optional[float]
-    false_negative_rate: Optional[float]
-    false_positive_rate: Optional[float]
+    precision: float | None
+    recall: float | None
+    false_negative_rate: float | None
+    false_positive_rate: float | None
     unclear_rate: float
-    inter_run_stability: Optional[float]  # K>1 repetitions agreement
-    human_verifier_kappa: Optional[float]
+    inter_run_stability: float | None  # K>1 repetitions agreement
+    human_verifier_kappa: float | None
     per_bucket_accuracy: dict[str, float] = field(default_factory=dict)
     confusion_matrix: dict[str, dict[str, int]] = field(default_factory=dict)
 
@@ -101,7 +101,7 @@ class CalibrationMetrics:
 class CalibrationHarness:
     """Run a verifier against a per-mode gold set and compute metrics."""
 
-    def __init__(self, gold_sets_dir: Optional[Path] = None) -> None:
+    def __init__(self, gold_sets_dir: Path | None = None) -> None:
         self.gold_sets_dir = gold_sets_dir or GOLD_SETS_DIR
 
     def load_gold_set(self, mode_id: str) -> list[GoldExample]:
@@ -275,7 +275,7 @@ class CalibrationHarness:
 
     def _cohens_kappa(
         self, verdicts: list[tuple[Verdict, Verdict, str]]
-    ) -> Optional[float]:
+    ) -> float | None:
         """Cohen's kappa between expected (human gold) and actual (verifier)."""
         n = len(verdicts)
         if n == 0:

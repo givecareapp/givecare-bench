@@ -15,7 +15,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
@@ -29,7 +29,7 @@ except ImportError:
     Console = None
 
 
-def parse_run_date(run_name: str) -> Optional[datetime]:
+def parse_run_date(run_name: str) -> datetime | None:
     """Parse date from run directory name (run_YYYYMMDD_HHMMSS)."""
     try:
         if run_name.startswith("run_"):
@@ -77,8 +77,8 @@ def list_runs(results_dir: Path) -> list[dict[str, Any]]:
 
 
 def archive_runs(
-    before_date: Optional[datetime] = None,
-    keep_recent: Optional[int] = None,
+    before_date: datetime | None = None,
+    keep_recent: int | None = None,
     dry_run: bool = False,
 ) -> tuple[list[Path], list[Path]]:
     """
@@ -140,13 +140,13 @@ def print_archive_report(
     to_archive: list[Path],
     to_keep: list[Path],
     dry_run: bool = False,
-    console: Optional[Any] = None,
+    console: Any | None = None,
 ) -> None:
     """Print archive report."""
     if console is None and RICH_AVAILABLE:
         console = Console()
 
-    def out(msg: str, style: Optional[str] = None):
+    def out(msg: str, style: str | None = None):
         if console and style:
             console.print(msg, style=style)
         elif console:
@@ -176,8 +176,8 @@ def print_archive_report(
 
 
 def run_archive(
-    before: Optional[str] = None,
-    keep: Optional[int] = None,
+    before: str | None = None,
+    keep: int | None = None,
     dry_run: bool = False,
 ) -> int:
     """Run archive command."""
@@ -253,7 +253,7 @@ def run_list() -> int:
     return 0
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     import argparse
 

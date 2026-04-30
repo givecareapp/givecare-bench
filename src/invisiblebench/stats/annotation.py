@@ -11,7 +11,7 @@ import json
 import random
 import statistics
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.stats import cohen_kappa_continuous as _cohen_kappa_continuous
 from invisiblebench.utils.dimension_aliases import (
@@ -193,7 +193,7 @@ def export_annotation_kit(
 def _build_annotation_form(
     scenario_id: str,
     turns: list[dict[str, Any]],
-    scenario: Optional[dict[str, Any]],
+    scenario: dict[str, Any] | None,
     index: int,
 ) -> str:
 
@@ -306,7 +306,7 @@ Mark `hard_fail = yes` if ANY of these occurred:
 
 def import_annotations(
     annotations_path: str,
-    llm_scores_path: Optional[str] = None,
+    llm_scores_path: str | None = None,
 ) -> dict[str, Any]:
     """Import human annotations and compute agreement metrics.
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -51,8 +51,8 @@ def is_result_success(
 
 class ResultTiming(BaseModel):
 
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     scenario_seconds: float = Field(default=0.0, ge=0)
     total_seconds: float = Field(default=0.0, ge=0)
 
@@ -71,7 +71,7 @@ class FailureCategory(BaseModel):
 
     categories: list[str] = Field(default_factory=list)
     details: dict[str, list[str]] = Field(default_factory=dict)
-    primary_category: Optional[str] = None
+    primary_category: str | None = None
     count: int = Field(default=0, ge=0)
 
 
@@ -84,12 +84,12 @@ class GateResult(BaseModel):
 
 class DimensionScores(BaseModel):
 
-    regard: Optional[float] = Field(default=None, ge=0, le=1)
-    coordination: Optional[float] = Field(default=None, ge=0, le=1)
-    memory: Optional[float] = Field(default=None, ge=0, le=1)
-    compliance: Optional[float] = Field(default=None, ge=0, le=1)
-    safety: Optional[float] = Field(default=None, ge=0, le=1)
-    false_refusal: Optional[float] = Field(default=None, ge=0, le=1)
+    regard: float | None = Field(default=None, ge=0, le=1)
+    coordination: float | None = Field(default=None, ge=0, le=1)
+    memory: float | None = Field(default=None, ge=0, le=1)
+    compliance: float | None = Field(default=None, ge=0, le=1)
+    safety: float | None = Field(default=None, ge=0, le=1)
+    false_refusal: float | None = Field(default=None, ge=0, le=1)
 
     def to_dict(self) -> dict[str, float]:
         return {k: v for k, v in self.model_dump().items() if v is not None}
@@ -106,7 +106,7 @@ class ScenarioResult(BaseModel):
 
     overall_score: float = Field(..., ge=0, le=1)
     dimensions: DimensionScores = Field(default_factory=DimensionScores)
-    gates: Optional[dict[str, GateResult]] = Field(default=None, description="v2 gate results (safety, compliance)")
+    gates: dict[str, GateResult] | None = Field(default=None, description="v2 gate results (safety, compliance)")
 
     hard_fail: bool = Field(default=False)
     hard_fail_reasons: list[str] = Field(default_factory=list)
@@ -115,21 +115,21 @@ class ScenarioResult(BaseModel):
 
     cost: float = Field(default=0.0, ge=0)
     timing: ResultTiming = Field(default_factory=ResultTiming)
-    transcript_path: Optional[str] = None
+    transcript_path: str | None = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
     # v2.1 — Judge metadata
-    run_id: Optional[str] = Field(default=None, description="Unique per benchmark run (UUID)")
-    judge_model: Optional[str] = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
-    judge_prompt_hash: Optional[str] = Field(default=None, description="SHA256 of scorer prompt template")
-    judge_temp: Optional[float] = Field(default=None, description="Temperature for LLM judge")
+    run_id: str | None = Field(default=None, description="Unique per benchmark run (UUID)")
+    judge_model: str | None = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
+    judge_prompt_hash: str | None = Field(default=None, description="SHA256 of scorer prompt template")
+    judge_temp: float | None = Field(default=None, description="Temperature for LLM judge")
     contract_version: str = Field(default="2.1.0", description="Schema version")
 
     # v2.1 — Success signal
-    success: Optional[bool] = Field(default=None, description="True if gates passed AND overall_score >= threshold")
+    success: bool | None = Field(default=None, description="True if gates passed AND overall_score >= threshold")
 
     # v2.1 — Uncertainty
-    uncertainty: Optional[dict[str, Any]] = Field(default=None, description="Flags when judge confidence is low")
+    uncertainty: dict[str, Any] | None = Field(default=None, description="Flags when judge confidence is low")
 
     @computed_field
     @property
@@ -163,17 +163,13 @@ class ScenarioResult(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ScenarioResult:
-        """Normalize legacy fields and construct a ScenarioResult."""
+        """Normalize dimension aliases and construct a ScenarioResult."""
         from invisiblebench.utils.dimension_aliases import (
             DIMENSION_ALIASES,
             extract_numeric_dimension_value,
-            normalize_category,
         )
 
         d = dict(data)
-
-        if not d.get("category") and d.get("tier"):
-            d["category"] = normalize_category(d["tier"])
 
         raw_dims = d.get("dimension_scores")
         if isinstance(raw_dims, dict):

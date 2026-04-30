@@ -10,7 +10,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
@@ -125,7 +125,7 @@ class _LRUCache:
         self._data: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._lock = threading.Lock()
 
-    def get(self, key: str) -> Optional[dict[str, Any]]:
+    def get(self, key: str) -> dict[str, Any] | None:
         if self.max_entries <= 0:
             return None
         with self._lock:
@@ -166,7 +166,7 @@ OPENAI_BASE_URL = "https://api.openai.com/v1"
 class APIConfig:
     """Configuration for API clients."""
 
-    openrouter_api_key: Optional[str] = None
+    openrouter_api_key: str | None = None
     timeout: int = 120
     max_retries: int = 3
     retry_delay: float = 2.0
@@ -206,7 +206,7 @@ def _resolve_api_backend() -> tuple[str | None, str | None, dict[str, str]]:
 class ModelAPIClient:
     """Client for calling AI models via OpenRouter or OpenAI-compatible APIs."""
 
-    def __init__(self, config: Optional[APIConfig] = None):
+    def __init__(self, config: APIConfig | None = None):
         """Initialize API client with configuration."""
         disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower()
         if disable_llm in {"1", "true", "yes"}:
@@ -275,7 +275,7 @@ class ModelAPIClient:
             return False
 
     @staticmethod
-    def _cache_key(payload: dict[str, Any]) -> Optional[str]:
+    def _cache_key(payload: dict[str, Any]) -> str | None:
         normalized = dict(payload)
         if "temperature" in normalized:
             try:
@@ -426,7 +426,7 @@ class ModelAPIClient:
             timeout=httpx.Timeout(self.config.timeout),
             limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
         ) as client:
-            last_error: Optional[Exception] = None
+            last_error: Exception | None = None
             for attempt in range(self.config.max_retries):
                 try:
                     response = await client.post(

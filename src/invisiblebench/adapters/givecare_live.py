@@ -25,7 +25,6 @@ import string
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import requests
 from dotenv import load_dotenv
@@ -151,7 +150,7 @@ class GiveCareProvider:
         raise RuntimeError("gc simulate returned no response after 2 attempts")
 
     @staticmethod
-    def _parse_mira_response(output: str) -> Optional[str]:
+    def _parse_mira_response(output: str) -> str | None:
         """Extract Mira's response from gc simulate output. Returns None if not found."""
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
@@ -226,7 +225,7 @@ def run_scenario(
     from invisiblebench.evaluation.branching import resolve_branch
 
     transcript = []
-    prev_assistant_msg: Optional[str] = None
+    prev_assistant_msg: str | None = None
     errors: list[str] = []
 
     for turn in turns:
@@ -300,7 +299,7 @@ def run_scenario(
 
 def get_scenarios(
     scenarios_dir: Path,
-    category_filter: Optional[list[str]] = None,
+    category_filter: list[str] | None = None,
     include_confidential: bool = False,
 ) -> list[Path]:
     """Get all scenario files, optionally filtered by category.
@@ -316,64 +315,6 @@ def get_scenarios(
         category_filter=category_filter,
         include_confidential=include_confidential,
     )
-
-
-def format_result(
-    scenario_path: Path,
-    scenario_data: dict,
-    score_result: dict,
-) -> dict:
-    """Format a single result to match InvisibleBench standard format."""
-    scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-    category = get_category_from_path(scenario_path)
-    title = get_scenario_title(scenario_data, scenario_path)
-
-    overall_score = score_result.get("overall_score", 0.0)
-    hard_fail = score_result.get("hard_fail", False)
-    hard_fail_reasons = score_result.get("hard_fail_reasons", [])
-
-    dimension_scores = {}
-    raw_dimensions = score_result.get("dimension_scores", {})
-    for dim_name, dim_data in raw_dimensions.items():
-        if isinstance(dim_data, dict):
-            dimension_scores[dim_name] = dim_data.get("score", 0.0)
-        else:
-            dimension_scores[dim_name] = dim_data
-
-    failure_categories = {
-        "categories": [],
-        "details": {},
-        "primary_category": None,
-        "count": 0,
-    }
-    if hard_fail:
-        # Determine failure category from hard_fail_reasons
-        for reason in hard_fail_reasons:
-            if "safety" in reason.lower() or "crisis" in reason.lower():
-                failure_categories["categories"].append("safety")
-            elif "compliance" in reason.lower():
-                failure_categories["categories"].append("compliance")
-        failure_categories["count"] = len(failure_categories["categories"])
-        if failure_categories["categories"]:
-            failure_categories["primary_category"] = failure_categories["categories"][0]
-
-    return {
-        "model": MODEL_NAME,
-        "model_id": MODEL_ID,
-        "provider": PROVIDER_NAME,
-        "scenario": title,
-        "scenario_id": scenario_id,
-        "category": category,
-        "overall_score": overall_score,
-        "hard_fail": hard_fail,
-        "hard_fail_reasons": hard_fail_reasons,
-        "failure_categories": failure_categories,
-        "gates": score_result.get("gates", {}),
-        "dimensions": score_result.get("dimensions", {}),
-        "dimension_scores": dimension_scores,
-        "dimensions_detailed": raw_dimensions,
-        "status": "fail" if hard_fail else "pass",
-    }
 
 
 def format_error_result(scenario_path: Path, scenario_data: dict, reason: str) -> dict:

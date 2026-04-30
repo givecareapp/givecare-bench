@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
@@ -27,15 +27,11 @@ except ImportError:
 def load_leaderboard() -> dict[str, Any]:
     """Load the current leaderboard."""
     root = get_project_root()
-    candidates = [
-        root / "data" / "leaderboard" / "leaderboard.json",
-        root / "data" / "v2" / "leaderboard.json",
-    ]
-    for lb_path in candidates:
-        if lb_path.exists():
-            with open(lb_path) as f:
-                return json.load(f)
-    raise FileNotFoundError(f"Leaderboard not found: {candidates[0]}")
+    lb_path = root / "data" / "leaderboard" / "leaderboard.json"
+    if lb_path.exists():
+        with open(lb_path) as f:
+            return json.load(f)
+    raise FileNotFoundError(f"Leaderboard not found: {lb_path}")
 
 
 def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
@@ -119,7 +115,7 @@ def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None
     """Print health report."""
     console = Console() if RICH_AVAILABLE else None
 
-    def out(msg: str, style: Optional[str] = None):
+    def out(msg: str, style: str | None = None):
         if console and style:
             console.print(msg, style=style)
         elif console:
@@ -216,19 +212,20 @@ def run_health(verbose: bool = False) -> int:
     """Run health check and print report."""
     try:
         data = load_leaderboard()
-        analysis = analyze_leaderboard(data)
-        print_health_report(analysis, verbose=verbose)
-
-        # Return non-zero if there are issues
-        if analysis["models_with_errors"] or analysis["models_incomplete"]:
-            return 1
-        return 0
-    except Exception as e:
+    except FileNotFoundError as e:
         print(f"Error running health check: {e}")
         return 2
 
+    analysis = analyze_leaderboard(data)
+    print_health_report(analysis, verbose=verbose)
 
-def main(argv: Optional[list[str]] = None) -> int:
+    # Return non-zero if there are issues
+    if analysis["models_with_errors"] or analysis["models_incomplete"]:
+        return 1
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
     """CLI entry point for standalone usage."""
     import argparse
 

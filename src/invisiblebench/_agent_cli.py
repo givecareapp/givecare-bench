@@ -14,8 +14,9 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Optional
+from typing import Any
 
 from rich.console import Console
 
@@ -58,7 +59,7 @@ def create_console() -> Console:
 class DoctorCheck:
     name: str
     check: Callable[[], bool]
-    hint: Optional[str] = None  # printed on failure
+    hint: str | None = None  # printed on failure
 
 
 def doctor_runner(checks: Iterable[DoctorCheck | tuple], *, exit_on_fail: bool = True) -> int:
@@ -126,8 +127,8 @@ def confirm_or_abort(
     yes: bool = False,
     force: bool = False,
     destructive: bool = False,
-    preview: Optional[str] = None,
-    cost_estimate: Optional[str] = None,
+    preview: str | None = None,
+    cost_estimate: str | None = None,
 ) -> bool:
     """Gate a mutation.
 
@@ -183,7 +184,7 @@ def emit_json(
     status: str = "ok",
     command: str,
     data: Any = None,
-    error: Optional[str] = None,
+    error: str | None = None,
 ) -> None:
     """Write a {status, command, data} envelope to stdout.
 
@@ -199,7 +200,7 @@ def emit_json(
     sys.stdout.flush()
 
 
-def emit_path(path: str | os.PathLike, label: Optional[str] = None) -> None:
+def emit_path(path: str | os.PathLike, label: str | None = None) -> None:
     """Echo a file path to STDERR so stdout stays parseable.
 
     When --json is set, stdout carries the envelope; path goes to stderr.

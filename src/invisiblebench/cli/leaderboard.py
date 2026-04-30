@@ -15,7 +15,6 @@ import importlib.util
 import json
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from invisiblebench.results_io import write_model_results
 from invisiblebench.run_artifacts import load_result_rows
@@ -166,7 +165,7 @@ def add_results(results_path: Path) -> int:
     canonical.mkdir(parents=True, exist_ok=True)
 
     # Accept either a flat all_results.json or a run/model_results directory.
-    per_model_source: Optional[Path] = None
+    per_model_source: Path | None = None
     if results_path.is_dir():
         model_results_dir = results_path / "model_results"
         if model_results_dir.exists():
@@ -268,7 +267,7 @@ def rebuild_leaderboard() -> int:
 
 def run_leaderboard(
     action: str,
-    results_path: Optional[str] = None,
+    results_path: str | None = None,
     verbose: bool = False,
 ) -> int:
     """Dispatch leaderboard subcommands."""

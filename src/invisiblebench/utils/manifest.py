@@ -12,7 +12,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.utils.benchmark_inventory import (
     collect_confidential_scenario_paths,
@@ -53,7 +53,7 @@ def _file_hash(path: Path) -> str:
     return h.hexdigest()
 
 
-def _scenario_hash(scenarios_dir: Path, extra_files: Optional[list[Path]] = None) -> str:
+def _scenario_hash(scenarios_dir: Path, extra_files: list[Path] | None = None) -> str:
     """Sorted-path SHA256 so hash is stable across filesystem orderings."""
     h = hashlib.sha256()
     scenario_files = sorted(scenarios_dir.rglob("*.json"))
@@ -91,9 +91,9 @@ def _read_contract_version(config_path: Path) -> str:
 def generate_manifest(
     project_root: Path,
     model_ids: list[str],
-    run_id: Optional[str] = None,
-    harness: Optional[str] = None,
-    mode: Optional[str] = None,
+    run_id: str | None = None,
+    harness: str | None = None,
+    mode: str | None = None,
     include_confidential: bool = False,
 ) -> dict[str, Any]:
     """Snapshot environment metadata at run start to detect setup drift across comparisons."""

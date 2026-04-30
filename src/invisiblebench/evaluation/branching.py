@@ -17,13 +17,13 @@ Condition types:
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+from typing import Any
 
 
 def resolve_branch(
     turn: dict[str, Any],
-    prev_assistant_msg: Optional[str],
-) -> tuple[str, Optional[str]]:
+    prev_assistant_msg: str | None,
+) -> tuple[str, str | None]:
     """Select user message for a turn based on previous assistant response.
 
     Args:
@@ -35,7 +35,7 @@ def resolve_branch(
         ``(user_message, branch_id)`` – the message to send and which branch
         was taken (``None`` when the default path is used).
     """
-    branches: Optional[list[dict[str, Any]]] = turn.get("branches")
+    branches: list[dict[str, Any]] | None = turn.get("branches")
     if not branches or not prev_assistant_msg:
         return turn["user_message"], None
 

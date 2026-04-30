@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any
 
 from invisiblebench.failure_taxonomy import (
     classify_reliability_issue,
@@ -66,7 +67,7 @@ def _check(status: str, summary: str, details: dict[str, Any] | None = None) -> 
     return {"status": status, "summary": summary, "details": details or {}}
 
 
-def _infer_run_dir(source: Path) -> Optional[Path]:
+def _infer_run_dir(source: Path) -> Path | None:
     if source.is_dir():
         if (source / "run_manifest.json").exists():
             return source
@@ -80,7 +81,7 @@ def _infer_run_dir(source: Path) -> Optional[Path]:
     return parent
 
 
-def find_existing_audit_file(source: Path) -> Optional[Path]:
+def find_existing_audit_file(source: Path) -> Path | None:
     """Return existing run_audit.json for a source if present."""
     run_dir = _infer_run_dir(source)
     if run_dir is None:
@@ -112,7 +113,7 @@ def _result_key(row: dict[str, Any]) -> tuple[str, str]:
     )
 
 
-def _iter_transcript_files(transcripts_dir: Optional[Path]) -> Iterable[Path]:
+def _iter_transcript_files(transcripts_dir: Path | None) -> Iterable[Path]:
     if transcripts_dir is None or not transcripts_dir.exists():
         return []
     return sorted(transcripts_dir.rglob("*.jsonl"))
@@ -121,7 +122,7 @@ def _iter_transcript_files(transcripts_dir: Optional[Path]) -> Iterable[Path]:
 def _audit_run_integrity(
     rows: list[dict[str, Any]],
     manifest: dict[str, Any],
-    expected_scenario_count: Optional[int],
+    expected_scenario_count: int | None,
 ) -> dict[str, Any]:
     if not rows:
         return _check(STATUS_BLOCK, "No result rows found", {"row_count": 0})
@@ -155,9 +156,9 @@ def _audit_run_integrity(
 def _audit_comparability(
     rows: list[dict[str, Any]],
     manifest: dict[str, Any],
-    harness: Optional[str],
-    mode: Optional[str],
-    previous_manifest: Optional[dict[str, Any]] = None,
+    harness: str | None,
+    mode: str | None,
+    previous_manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract_versions = sorted({str(r.get("contract_version")) for r in rows if r.get("contract_version")})
     judge_prompt_hashes = sorted({str(r.get("judge_prompt_hash")) for r in rows if r.get("judge_prompt_hash")})
@@ -226,7 +227,7 @@ def _audit_provider_health(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return _check(STATUS_WARN, "Provider/runtime errors detected", summary)
 
 
-def _audit_transcript_integrity(rows: list[dict[str, Any]], transcripts_dir: Optional[Path]) -> dict[str, Any]:
+def _audit_transcript_integrity(rows: list[dict[str, Any]], transcripts_dir: Path | None) -> dict[str, Any]:
     if transcripts_dir is None or not transcripts_dir.exists():
         return _check(STATUS_WARN, "No transcripts directory found", {"transcripts_dir": None})
 
@@ -243,7 +244,7 @@ def _audit_transcript_integrity(rows: list[dict[str, Any]], transcripts_dir: Opt
                 row = json.loads(raw_line)
                 if row.get("role") == "assistant" and not str(row.get("content", "")).strip():
                     empty_assistant_turns += 1
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
             malformed.append({"path": str(path), "error": str(e)})
 
     details = {
@@ -306,8 +307,8 @@ def _audit_scoring_integrity(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def _audit_target_config(
     rows: list[dict[str, Any]],
     manifest: dict[str, Any],
-    harness: Optional[str],
-    mode: Optional[str],
+    harness: str | None,
+    mode: str | None,
 ) -> dict[str, Any]:
     providers = sorted({str(r.get("provider")) for r in rows if r.get("provider")})
     model_ids = sorted({str(r.get("model_id")) for r in rows if r.get("model_id")})
@@ -399,9 +400,9 @@ def _derive_gate(checks: dict[str, dict[str, Any]]) -> tuple[bool, bool, str, st
 def audit_results_source(
     source: str | Path,
     *,
-    expected_scenario_count: Optional[int] = None,
-    harness: Optional[str] = None,
-    mode: Optional[str] = None,
+    expected_scenario_count: int | None = None,
+    harness: str | None = None,
+    mode: str | None = None,
     previous_source: str | Path | None = None,
 ) -> dict[str, Any]:
     """Audit a benchmark run/results source and classify failure modes."""

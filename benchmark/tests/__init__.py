@@ -1,1 +1,1 @@
-"""Test suite for LongitudinalBench."""
+"""Test suite for InvisibleBench."""

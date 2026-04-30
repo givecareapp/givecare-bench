@@ -13,7 +13,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class Verdict(str, Enum):
@@ -48,6 +48,11 @@ FAILURE_VERDICTS: frozenset[Verdict] = frozenset(
 # Verdicts that count as passes.
 PASS_VERDICTS: frozenset[Verdict] = frozenset({Verdict.PASS, Verdict.SUPPORTED})
 
+# Core verdicts that LLM judges can emit (used for output validation).
+CORE_VERDICTS: frozenset[str] = frozenset(
+    v.value for v in (Verdict.PASS, Verdict.FAIL, Verdict.UNCLEAR, Verdict.NOT_APPLICABLE)
+)
+
 
 @dataclass
 class EvidenceSpan:
@@ -60,7 +65,7 @@ class EvidenceSpan:
     role: str  # "user" | "assistant" | "system"
     turn: int
     quote: str
-    rationale: Optional[str] = None
+    rationale: str | None = None
 
 
 @dataclass
@@ -79,10 +84,10 @@ class VerdictResult:
     scorer_type: str
     confidence: float  # 0.0 - 1.0
     evidence: list[EvidenceSpan] = field(default_factory=list)
-    rationale_code: Optional[str] = None
+    rationale_code: str | None = None
     adjudication_required: bool = False
     scorer_version: str = ""
-    prompt_hash: Optional[str] = None
+    prompt_hash: str | None = None
     secondary_tags: list[str] = field(default_factory=list)
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -123,10 +128,40 @@ class VerdictResult:
         }
 
 
+def collect_scenario_tags(scenario: dict[str, Any]) -> set[str]:
+    """Extract all string tags from a scenario's tag fields."""
+    tags: set[str] = set()
+    for key in ("failure_mode_tags", "risk_triggers", "tags"):
+        for item in scenario.get(key, []) or []:
+            if isinstance(item, str):
+                tags.add(item)
+            elif isinstance(item, dict):
+                for k in ("name", "type", "trigger", "id"):
+                    v = item.get(k)
+                    if isinstance(v, str):
+                        tags.add(v)
+                        break
+    return tags
+
+
 class Verifier(ABC):
     """Verifier contract. One verifier class per scorer type."""
 
     scorer_type: str = "base"
+    scorer_version: str = "v0.1"
+
+    def not_applicable(self, mode_config: dict[str, Any]) -> VerdictResult:
+        """Return a NOT_APPLICABLE verdict for a mode this scenario isn't eligible for."""
+        return VerdictResult(
+            mode_id=str(mode_config.get("id", "")),
+            eligible=False,
+            verdict=Verdict.NOT_APPLICABLE,
+            severity=str(mode_config.get("severity", "S1")),
+            primary_bucket=str(mode_config.get("primary_bucket", "C")),
+            scorer_type=self.scorer_type,
+            confidence=1.0,
+            scorer_version=f"{self.scorer_type}-{self.scorer_version}",
+        )
 
     @abstractmethod
     def verify(
@@ -169,16 +204,4 @@ class Verifier(ABC):
         if not required_tags or required_tags == ["any"]:
             return True
 
-        scenario_tags: set[str] = set()
-        for key in ("failure_mode_tags", "risk_triggers", "tags"):
-            for item in scenario.get(key, []) or []:
-                if isinstance(item, str):
-                    scenario_tags.add(item)
-                elif isinstance(item, dict):
-                    for k in ("name", "type", "trigger", "id"):
-                        v = item.get(k)
-                        if isinstance(v, str):
-                            scenario_tags.add(v)
-                            break
-
-        return bool(scenario_tags.intersection(required_tags))
+        return bool(collect_scenario_tags(scenario).intersection(required_tags))

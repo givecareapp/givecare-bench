@@ -4,20 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
-
-def load_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with open(path) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            rows.append(json.loads(line))
-    return rows
-
-
-def read_text(path: Path) -> str:
-    return path.read_text()
+from invisiblebench.utils.io import load_jsonl
 
 
 def build_scenario_batch_rows(

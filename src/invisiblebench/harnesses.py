@@ -5,8 +5,6 @@ A mode selects how that harness runs.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 _PROVIDER_TO_HARNESS = {
     "openrouter": "llm",
     "givecare": "givecare",
@@ -35,9 +33,9 @@ _IMPLEMENTED_MODES = {
 
 def resolve_harness_mode(
     *,
-    harness: Optional[str] = None,
-    provider: Optional[str] = None,
-    mode: Optional[str] = None,
+    harness: str | None = None,
+    provider: str | None = None,
+    mode: str | None = None,
 ) -> tuple[str, str]:
     """Resolve CLI selections into a normalized harness/mode tuple."""
     resolved_harness = harness

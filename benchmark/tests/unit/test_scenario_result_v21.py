@@ -212,17 +212,6 @@ class TestFromDict:
         # Legacy attunement/belonging normalized to regard in dimension_scores
         assert result.success is True  # gates pass (no gates/no hard_fail), score >= 0.6
 
-    def test_from_dict_legacy_tier_to_category(self) -> None:
-        data = {
-            "scenario_id": "tier2_001",
-            "scenario": "Tier Scenario",
-            "model": "Model",
-            "overall_score": 0.7,
-            "tier": "safety",
-        }
-        result = ScenarioResult.from_dict(data)
-        assert result.category == "safety"
-
     def test_from_dict_legacy_dimension_normalization(self) -> None:
         """Legacy attunement/belonging/consistency keys are normalized."""
         data = {

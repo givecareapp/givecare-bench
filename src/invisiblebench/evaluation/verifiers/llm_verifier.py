@@ -24,9 +24,10 @@ import logging
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from invisiblebench.evaluation.verifiers.base import (
+    CORE_VERDICTS,
     EvidenceSpan,
     Verdict,
     VerdictResult,
@@ -37,10 +38,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PROMPT_DIR = Path(__file__).resolve().parents[4] / "benchmark" / "configs" / "verifier_prompts"
 
-VALID_VERDICTS = {"PASS", "FAIL", "UNCLEAR", "NOT_APPLICABLE"}
+VALID_VERDICTS = CORE_VERDICTS
 
 
-def _load_prompt(prompt_name: str, prompt_dir: Optional[Path] = None) -> str:
+def _load_prompt(prompt_name: str, prompt_dir: Path | None = None) -> str:
     """Load a verifier prompt from configs/verifier_prompts/."""
     directory = prompt_dir or DEFAULT_PROMPT_DIR
     path = directory / prompt_name
@@ -73,7 +74,7 @@ def _bounded_transcript(
     scenario: dict[str, Any],
     mode_config: dict[str, Any],
     routing_config: dict[str, Any],
-) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Slice transcript per `unit_of_analysis` rule.
 
     Returns (bounded_transcript, window_metadata).
@@ -269,12 +270,13 @@ class LLMVerifier(Verifier):
     """
 
     scorer_type = "llm_verifier"
+    scorer_version = "v0.2"
 
     def __init__(
         self,
         api_client: Any,
         model: str = "google/gemini-2.5-flash-lite",
-        prompt_dir: Optional[Path] = None,
+        prompt_dir: Path | None = None,
     ) -> None:
         self.api_client = api_client
         self.model = model
@@ -292,16 +294,7 @@ class LLMVerifier(Verifier):
         primary_bucket = mode_config.get("primary_bucket", "C")
 
         if not self.is_eligible(scenario, mode_config):
-            return VerdictResult(
-                mode_id=mode_id,
-                eligible=False,
-                verdict=Verdict.NOT_APPLICABLE,
-                severity=severity,
-                primary_bucket=primary_bucket,
-                scorer_type=self.scorer_type,
-                confidence=1.0,
-                scorer_version="llm_verifier-v0.2",
-            )
+            return self.not_applicable(mode_config)
 
         prompt_name = mode_config.get("scorer", {}).get("verifier_prompt")
         if not prompt_name:

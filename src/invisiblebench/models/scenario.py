@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -56,7 +56,7 @@ def _normalize_session_data(data: JsonMap) -> JsonMap:
 def _normalize_scenario_data(
     data: JsonMap,
     *,
-    source_path: Optional[str] = None,
+    source_path: str | None = None,
 ) -> JsonMap:
     normalized = dict(data)
     if "tier" in normalized and "category" not in normalized:
@@ -78,15 +78,15 @@ class Persona(BaseModel):
     care_recipient: str
     care_duration: str
     context: dict[str, Any]
-    role: Optional[str] = None
-    gender: Optional[str] = None
-    race_ethnicity: Optional[str] = None
-    income_bracket: Optional[str] = None
-    employment: Optional[str] = None
-    education: Optional[str] = None
-    primary_language: Optional[str] = None
-    care_hours_per_week: Optional[int] = None
-    living_situation: Optional[str] = None
+    role: str | None = None
+    gender: str | None = None
+    race_ethnicity: str | None = None
+    income_bracket: str | None = None
+    employment: str | None = None
+    education: str | None = None
+    primary_language: str | None = None
+    care_hours_per_week: int | None = None
+    living_situation: str | None = None
 
     @classmethod
     def from_dict(cls, data: JsonMap) -> "Persona":
@@ -105,7 +105,7 @@ class Turn(BaseModel):
     autofail_rubric: list[dict[str, Any]] = Field(default_factory=list)
     rubric_criteria: list[dict[str, Any]] = Field(default_factory=list)
     probes: list[dict[str, Any]] = Field(default_factory=list)
-    context_notes: Optional[str] = None
+    context_notes: str | None = None
 
     @classmethod
     def from_dict(cls, data: JsonMap) -> "Turn":
@@ -116,7 +116,7 @@ class Session(BaseModel):
     session_number: int
     time_elapsed: str
     turns: list[Turn]
-    session_context: Optional[str] = None
+    session_context: str | None = None
 
     @classmethod
     def from_dict(cls, data: JsonMap) -> "Session":
@@ -135,7 +135,7 @@ class Scenario(BaseModel):
     probes: list[dict[str, Any]] = Field(default_factory=list)
     risk_triggers: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-    source_path: Optional[str] = None
+    source_path: str | None = None
 
     @computed_field
     @property
@@ -164,7 +164,7 @@ class Scenario(BaseModel):
     def display_name(self) -> str:
         return self.title or self.scenario_id.replace("_", " ").title()
 
-    def get_turn(self, turn_number: int) -> Optional[Turn]:
+    def get_turn(self, turn_number: int) -> Turn | None:
         for turn in self.all_turns:
             if turn.turn_number == turn_number:
                 return turn
@@ -189,6 +189,6 @@ class Scenario(BaseModel):
     def from_dict(
         cls,
         data: JsonMap,
-        source_path: Optional[str] = None,
+        source_path: str | None = None,
     ) -> "Scenario":
         return cls.model_validate(_normalize_scenario_data(data, source_path=source_path))
