@@ -79,7 +79,7 @@ entry from scratch" walkthrough. The short version:
 ```bash
 uv run bench --dry-run          # estimate cost only
 uv run bench -m deepseek -y     # single model
-uv run bench --full -y          # all public models, all 50 scenarios
+uv run bench --full -y          # all public models, all 60 scenarios
 ```
 
 ## PR checklist

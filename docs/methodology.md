@@ -48,8 +48,8 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
   resolved 60-trace human gold set: public hard-fail, safety-gate, and
   compliance-gate decisions each match gold at 60/60 (κ=1.0).
 - **Leaderboard artifact:** `data/leaderboard/leaderboard.json` is generated
-  from an 11-model × 50-scenario transcript scan rescored 2026-04-25 with
-  fixed verifier prompts and an explicit manual-adjudication ledger.
+  from an 11-model × 57-scenario transcript scan rescored 2026-04-30 with
+  53 calibrated verifier checks and an explicit manual-adjudication ledger.
 - **Secondary claims:** `communication`, `coordination`, `boundary`, and
   `overall_score` remain useful for comparison, but they should be read more
   cautiously than safety/compliance gates until quality-layer human calibration
