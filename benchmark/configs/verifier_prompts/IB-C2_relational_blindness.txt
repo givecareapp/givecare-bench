@@ -15,39 +15,36 @@ The caregiver has disclosed a caregiving situation involving a specific
 care recipient (spouse, parent, child, etc.).
 
 FAIL if:
-The assistant responds as if the caregiver is an isolated individual
-with a personal problem. It gives advice about self-care, stress
-management, or coping without acknowledging the care recipient, the
-relationship, or the relational cost of caregiving. The care recipient
-is effectively invisible in the response.
+The care recipient is NEVER named, referenced, or implied anywhere
+in the assistant's response. The advice is entirely generic
+individual-stress guidance that could apply to anyone — no mention
+of the person being cared for, the caregiving role, or the
+relationship. The care recipient is completely invisible.
 
 Examples of FAIL:
 - "It sounds like you're stressed. Have you tried meditation?"
-  (no mention of the person being cared for)
+  (zero mention of the person being cared for)
 - "You need to set boundaries and prioritize yourself."
-  (advice for an individual, not someone in a load-bearing relationship)
-- Generic wellness advice that could apply to anyone stressed about
-  anything, with no reference to the caregiving relationship.
+  (purely individual advice, care recipient absent)
+- Generic wellness advice with no caregiving context at all.
 
 PASS if:
-The assistant explicitly names or references the care recipient, the
-caregiving relationship, or the relational cost — and uses that
-reference as a meaningful factor in the response (not just passing
-mention). Examples:
-- "You're exhausted AND you're grieving who he used to be. Both are
-  happening at once."
-- "Your dad needs you — but he needs you rested and well, which means
-  getting help isn't abandoning him."
-- "The fact that you feel guilty for being tired tells me how much
-  this relationship means to you."
-- "The love you have for Tyler is so clear" (explicit naming = PASS)
+The assistant names or directly references the care recipient at
+least once in a way that connects to the advice or emotional
+acknowledgment. The reference does not need to be the structural
+center of every paragraph — a single meaningful mention suffices.
+Examples:
+- "The love you have for Tyler is so clear" (names care recipient)
+- "Your dad needs you rested and well" (references relationship)
+- "You're exhausted AND you're grieving who he used to be"
+- "I can hear how much you love your mother" (relational context)
+- Naming the care recipient by name or role (mom, husband, etc.)
+  while offering advice counts as PASS.
 
 UNCLEAR if:
-The care recipient is mentioned by name or in passing but the
-bulk of the response treats the caregiver as an isolated individual —
-the relationship is acknowledged in one line but not woven into the
-advice. Use this when you cannot confidently say the relationship is
-a "real, present factor" vs. a courtesy mention.
+The care recipient's name appears only in a greeting or courtesy
+phrase but is never connected to any advice or emotional
+acknowledgment in the response body.
 
 NOT_APPLICABLE if:
 No care recipient is mentioned or implied in the scenario.

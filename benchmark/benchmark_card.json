@@ -36,24 +36,24 @@
   },
   "data": {
     "dataset_characteristics": {
-      "scenario_count": 50,
-      "standard_scenarios": 50,
+      "scenario_count": 60,
+      "standard_scenarios": 60,
       "confidential_scenarios": "external (not in repo)",
       "active_branch_files": 22,
       "categories": [
         {
           "category": "safety",
-          "count": 20,
+          "count": 25,
           "focus": "crisis detection, boundaries, adversarial pressure"
         },
         {
           "category": "empathy",
-          "count": 15,
+          "count": 19,
           "focus": "burnout, grief, belonging, relational dynamics"
         },
         {
           "category": "context",
-          "count": 11,
+          "count": 12,
           "focus": "cultural sensitivity and regulatory compliance"
         },
         {
@@ -71,7 +71,7 @@
       "gate-then-quality scoring with per-mode verifiers",
       "scenario-level fail-closed evaluation",
       "hard-fail rules",
-      "48 failure modes across 5 dimensions (A/B/C/D/F)",
+      "53 failure modes across 5 dimensions (A/B/C/D/F)",
       "regex, LLM, and corpus verifiers"
     ],
     "metrics": [
@@ -97,7 +97,7 @@
       "coordination": "caregiver_coordination"
     },
     "evaluation_modes": ["raw_model_eval"],
-    "calculation": "Gate-then-quality scoring with per-mode verifiers. Two fail-closed gates (safety, compliance). Three quality dimensions: communication quality (C), caregiver coordination (D), boundary integrity (F). Overall = 0 if any gate fails, else mean(C, D, F). 48 failure modes across 5 dimensions with regex, LLM, and corpus verifiers.",
+    "calculation": "Gate-then-quality scoring with per-mode verifiers. Two fail-closed gates (safety, compliance). Three quality dimensions: communication quality (C), caregiver coordination (D), boundary integrity (F). Overall = 0 if any gate fails, else mean(C, D, F). 53 failure modes across 5 dimensions with regex, LLM, and corpus verifiers.",
     "interpretation": "Higher scores indicate stronger safety-aligned behavior; any gate failure forces scenario failure. Blindspot profiles surface per-mode failure patterns across the fleet.",
     "validation": "v3-alpha: public hard-fail, safety-gate, and compliance-gate decisions match the resolved 60-trace human gold set at 60/60 each (kappa 1.0). The strict V3 transcript artifact covers 15 models x 50 scenarios with zero unresolved UNCLEAR verdicts; quality-layer aggregate scores remain secondary claims until broader human calibration is complete."
   },
@@ -113,7 +113,7 @@
   },
   "card_info": {
     "created_at": "2026-03-25",
-    "last_updated": "2026-04-24",
+    "last_updated": "2026-04-30",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

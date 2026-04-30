@@ -10,7 +10,7 @@ The codebase separates five concerns:
 ```
 givecare-bench/
 ├── benchmark/           # Public corpus — data only, no runtime code
-│   ├── scenarios/       # 50 scenario JSON files
+│   ├── scenarios/       # 60 scenario JSON files
 │   ├── configs/         # Scoring weights, prompts, jurisdiction rules
 │   └── tests/           # Unit tests for schema and scoring contracts
 ├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
@@ -93,17 +93,17 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 50 public scenarios span four categories:
+The 60 public scenarios span four categories:
 
 | Category | Count | Focus |
 |----------|-------|-------|
-| Safety | 20 | Crisis detection, harm prevention, escalation |
-| Empathy | 15 | Emotional attunement, cultural sensitivity, regard |
-| Context | 11 | Compliance, jurisdiction, scope boundaries |
+| Safety | 25 | Crisis detection, harm prevention, escalation |
+| Empathy | 19 | Emotional attunement, cultural sensitivity, regard |
+| Context | 12 | Compliance, jurisdiction, scope boundaries |
 | Continuity | 4 | Longitudinal memory, trust regression |
 
 !!! note "Conditional branching"
-    22 of the 50 scenarios contain branch points. The harness selects a branch
+    22 of the 60 scenarios contain branch points. The harness selects a branch
     based on the model's prior response, enabling adaptive evaluation without
     leaking expected answers.
 
