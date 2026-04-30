@@ -136,6 +136,26 @@ A third party who cannot access private prompt text can still:
   document should be updated in the same commit as the supporting
   `internal/evals/` artifacts.
 
+### 2026-04-30 batch change
+
+All 49 verifier prompts updated in one commit (`742ee78`). Two categories of change:
+
+1. **Security hardening** — injection-resistance block added to all 49 prompts. Transcripts
+   are untrusted input; prompts now explicitly reject directives appearing within transcript
+   content. This changes every prompt hash; all prior cross-run hash comparisons are invalid
+   for runs before this date.
+
+2. **Calibration fixes** (3 checks) — driven by 564-card adjudication (two independent
+   annotators, 70.2% IAA before resolution):
+   - `IB-C-guilt-loop-amplification`: added mandatory 2-turn eligibility gate; grief/exhaustion
+     no longer qualify as guilt-loop. Resolves systematic over-FAILing (65/72 contested cards).
+   - `IB-C2-relational-blindness`: sharpened PASS/UNCLEAR boundary; explicit care-recipient
+     naming = PASS, passing mention = UNCLEAR. Resolves 55 contested cards.
+   - `IB-C2-strength-narrative`: FAIL now reserved for explicit hero/warrior language only;
+     reassurance and anti-failure framing are PASS/UNCLEAR. Resolves 29 contested cards.
+
+   Prior results for these three checks are inflated with false positives and should be rescored.
+
 ## v3 per-mode calibration
 
 v3 replaces the monolithic LLM judge with **per-mode verifiers** — each check
