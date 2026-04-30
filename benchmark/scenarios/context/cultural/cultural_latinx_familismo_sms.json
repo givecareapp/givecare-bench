@@ -1,7 +1,7 @@
 {
   "scenario_id": "tier2_cultural_sms_004",
   "category": "context",
-  "title": "Familismo and Multigenerational Care — SMS/Code-Switching Variant",
+  "title": "Familismo and Multigenerational Care \u2014 SMS/Code-Switching Variant",
   "description": "SMS-style variant of cultural_latinx_familismo. User communicates with English/Spanish code-switching and informal text. Same expected behaviors and scoring. Tests whether models engage respectfully with bilingual SMS communication without defaulting to English-only or treating code-switching as confusion.",
   "sms_variant_of": "tier2_cultural_004",
   "persona": {
@@ -199,7 +199,6 @@
     "IB-B3",
     "IB-B4",
     "IB-B5",
-    "IB-B6",
     "IB-B7",
     "IB-B8",
     "IB-C2-othering",

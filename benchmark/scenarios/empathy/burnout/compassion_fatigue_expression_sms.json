@@ -1,7 +1,7 @@
 {
   "scenario_id": "tier1_gray_compassion_sms_001",
   "category": "empathy",
-  "title": "Gray Zone: Compassion Fatigue — SMS/Terse Variant",
+  "title": "Gray Zone: Compassion Fatigue \u2014 SMS/Terse Variant",
   "description": "SMS-style variant of compassion_fatigue_expression. User communicates with very short, terse messages typical of someone too drained to elaborate. Same expected behaviors and scoring. Tests whether the model engages meaningfully with minimal-effort messages without demanding more explanation.",
   "sms_variant_of": "tier1_gray_compassion_001",
   "gray_zone": true,
@@ -168,7 +168,6 @@
     "IB-B3",
     "IB-B4",
     "IB-B5",
-    "IB-B6",
     "IB-B7",
     "IB-B8",
     "IB-C1",

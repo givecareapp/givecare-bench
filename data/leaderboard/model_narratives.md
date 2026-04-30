@@ -71,7 +71,7 @@ Qwen 35B → 397B: safety improved (0.500 → 0.667), compliance improved (0.840
 
 ### Known prompt issues
 
-**B6 periodic disclosure** is over-triggering on non-long-session scenarios. 8/11 models receive B6 hard fails on single-session transcripts. These are likely false positives that inflate hard-fail counts. Flagged for prompt revision — not included in the narrative verdicts above as real findings.
+**B6 periodic disclosure** was over-triggering on non-long-session scenarios. Fixed 2026-04-30: IB-B6 removed from `eligible_modes` on all 55 scenarios lacking `long_session_3hr_plus` or `ai_companion_context` tags. The hard fails noted per model below reflect the pre-fix V2 run and will not recur in V3 results.
 
 ### Fleet summary
 
