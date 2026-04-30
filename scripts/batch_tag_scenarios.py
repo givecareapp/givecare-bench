@@ -11,10 +11,11 @@ Tag surface matches eligibility conditions in benchmark/configs/failure_modes.ya
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 from typing import Any
 
-REPO = pathlib.Path("/home/deploy/gc-repos/givecare-bench")
+REPO = pathlib.Path(os.environ.get("BENCH_REPO_ROOT", pathlib.Path(__file__).resolve().parents[1]))
 SCEN = REPO / "benchmark/scenarios"
 
 

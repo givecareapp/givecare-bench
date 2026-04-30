@@ -48,7 +48,12 @@ def _bridge_bundle() -> Path:
 
 
 def _mono_root() -> Path:
-    return get_project_root().parent / "give-care-mono"
+    configured = os.environ.get("GIVECARE_ORCHESTRATOR_SOURCE_ROOT") or os.environ.get(
+        "GIVECARE_MONO_ROOT"
+    )
+    if configured:
+        return Path(configured)
+    return get_project_root().parent / "gc-sms"
 
 
 def _required_mono_source_paths() -> list[Path]:
@@ -89,7 +94,7 @@ def ensure_bridge_bundle() -> Path:
             return bundle
         missing = ", ".join(str(path) for path in missing_mono_sources)
         raise RuntimeError(
-            "GiveCare orchestrator bridge cannot be rebuilt because the mono source checkout is incomplete: "
+            "GiveCare orchestrator bridge cannot be rebuilt because the source checkout is incomplete: "
             f"{missing}"
         )
 

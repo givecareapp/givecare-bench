@@ -19,6 +19,7 @@ Usage:
 
 import argparse
 import json
+import os
 import random
 import string
 import sys
@@ -68,8 +69,8 @@ class GiveCareProvider:
         self.wait_ms = wait_ms
         self.phone = self._generate_phone()
 
-        # Path to gc CLI (in give-care-mono repo)
-        self.givecare_dir = PROJECT_ROOT.parent / "give-care-mono"
+        # Path to gc CLI (default sibling polyrepo checkout: ../gc-sms)
+        self.givecare_dir = Path(os.environ.get("GIVECARE_SMS_REPO", PROJECT_ROOT.parent / "gc-sms"))
         self.gc_cli = self.givecare_dir / "packages" / "cli" / "dist" / "index.js"
 
         if not self.gc_cli.exists():

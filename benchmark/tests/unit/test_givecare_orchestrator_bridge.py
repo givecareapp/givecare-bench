@@ -9,14 +9,14 @@ import invisiblebench.adapters.givecare_orchestrator as givecare_orchestrator
 from invisiblebench.adapters.givecare_orchestrator import bridge_healthcheck, ensure_bridge_bundle
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-MONO_ROOT = REPO_ROOT.parent / "give-care-mono"
+SOURCE_ROOT = REPO_ROOT.parent / "gc-sms"
 BRIDGE_BUNDLE = REPO_ROOT / "adapters/givecare-orchestrator/dist/bridge.cjs"
-PI_ORCHESTRATOR_SOURCE = MONO_ROOT / "packages/pi-orchestrator/src/index.ts"
+PI_ORCHESTRATOR_SOURCE = SOURCE_ROOT / "packages/pi-orchestrator/src/index.ts"
 
 
 @pytest.mark.skipif(
-    not (MONO_ROOT.exists() and (BRIDGE_BUNDLE.exists() or PI_ORCHESTRATOR_SOURCE.exists())),
-    reason="give-care bridge bundle or mono source checkout not available",
+    not (SOURCE_ROOT.exists() and (BRIDGE_BUNDLE.exists() or PI_ORCHESTRATOR_SOURCE.exists())),
+    reason="give-care bridge bundle or source checkout not available",
 )
 def test_ensure_bridge_bundle_and_healthcheck() -> None:
     bundle = ensure_bridge_bundle()
@@ -26,11 +26,11 @@ def test_ensure_bridge_bundle_and_healthcheck() -> None:
     assert health["status"] == "ready"
 
 
-def test_ensure_bridge_bundle_uses_prebuilt_bundle_when_mono_sources_are_unavailable(
+def test_ensure_bridge_bundle_uses_prebuilt_bundle_when_sources_are_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    mono_root = tmp_path / "give-care-mono"
-    mono_root.mkdir()
+    source_root = tmp_path / "gc-sms"
+    source_root.mkdir()
     build_script = tmp_path / "build.mjs"
     build_script.write_text("// build")
     source_path = tmp_path / "bridge.ts"
@@ -40,7 +40,7 @@ def test_ensure_bridge_bundle_uses_prebuilt_bundle_when_mono_sources_are_unavail
     bundle_path.write_text("// prebuilt bundle")
     os.utime(bundle_path, (1, 1))
 
-    monkeypatch.setattr(givecare_orchestrator, "_mono_root", lambda: mono_root)
+    monkeypatch.setattr(givecare_orchestrator, "_mono_root", lambda: source_root)
     monkeypatch.setattr(givecare_orchestrator, "_bridge_build_script", lambda: build_script)
     monkeypatch.setattr(givecare_orchestrator, "_bridge_bundle", lambda: bundle_path)
     monkeypatch.setattr(givecare_orchestrator, "_collect_source_paths", lambda: [source_path])
@@ -56,15 +56,15 @@ def test_ensure_bridge_bundle_uses_prebuilt_bundle_when_mono_sources_are_unavail
 def test_bridge_diagnostics_reports_build_required_when_bundle_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    mono_root = tmp_path / "give-care-mono"
-    mono_root.mkdir()
+    source_root = tmp_path / "gc-sms"
+    source_root.mkdir()
     build_script = tmp_path / "build.mjs"
     build_script.write_text("// build")
     source_path = tmp_path / "bridge.ts"
     source_path.write_text("// source")
     bundle_path = tmp_path / "dist" / "bridge.cjs"
 
-    monkeypatch.setattr(givecare_orchestrator, "_mono_root", lambda: mono_root)
+    monkeypatch.setattr(givecare_orchestrator, "_mono_root", lambda: source_root)
     monkeypatch.setattr(givecare_orchestrator, "_bridge_build_script", lambda: build_script)
     monkeypatch.setattr(givecare_orchestrator, "_bridge_bundle", lambda: bundle_path)
     monkeypatch.setattr(givecare_orchestrator, "_collect_source_paths", lambda: [source_path])
