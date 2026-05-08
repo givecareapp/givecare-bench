@@ -128,25 +128,6 @@ wheels = [
 ]
 
 [[package]]
-name = "anthropic"
-version = "0.74.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "docstring-parser" },
-    { name = "httpx" },
-    { name = "jiter" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/7b/609eea5c54ae69b1a4a94169d4b0c86dc5c41b43509989913f6cdc61b81d/anthropic-0.74.1.tar.gz", hash = "sha256:04c087b2751385c524f6d332d066a913870e4de8b3e335fb0a0c595f1f88dc6e", size = 428981, upload-time = "2025-11-19T22:17:31.533Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/45/6b18d0692302b8cbc01a10c35b43953d3c4172fbd4f83337b8ed21a8eaa4/anthropic-0.74.1-py3-none-any.whl", hash = "sha256:b07b998d1cee7f41d9f02530597d7411672b362cc2417760a40c0167b81c6e65", size = 371473, upload-time = "2025-11-19T22:17:29.998Z" },
-]
-
-[[package]]
 name = "anyio"
 version = "4.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -705,7 +686,6 @@ name = "invisiblebench"
 version = "3.0.0"
 source = { editable = "." }
 dependencies = [
-    { name = "anthropic" },
     { name = "instructor" },
     { name = "jsonlines" },
     { name = "openai" },
@@ -714,7 +694,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "rich" },
-    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -753,7 +732,6 @@ visualization = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=0.60.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "instructor", specifier = ">=1.14.5" },
     { name = "invisiblebench", extras = ["analytics", "visualization", "dev", "docs"], marker = "extra == 'all'" },
@@ -774,7 +752,6 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "scipy", marker = "extra == 'analytics'", specifier = ">=1.10.0" },
     { name = "seaborn", marker = "extra == 'visualization'", specifier = ">=0.12.0" },
-    { name = "tqdm", specifier = ">=4.66.0" },
 ]
 provides-extras = ["analytics", "visualization", "docs", "dev", "all"]
 

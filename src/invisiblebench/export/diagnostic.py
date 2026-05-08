@@ -191,7 +191,7 @@ class DiagnosticReport:
             return self.results_data
         return []
 
-    def _is_failure(self, result: dict) -> bool:
+    def _is_failure(self, result: dict[str, Any]) -> bool:
 
         return (
             result.get("hard_fail", False)
@@ -719,7 +719,7 @@ class DiagnosticReport:
 
         return lines
 
-    def _suggest_fix(self, violation: dict, dimension: str) -> str:
+    def _suggest_fix(self, violation: dict[str, Any], dimension: str) -> str:
 
         rule = violation.get("rule", "").lower()
         suggestions = {

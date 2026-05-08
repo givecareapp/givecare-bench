@@ -246,15 +246,15 @@ class ReportGenerator:
 
         return "\n".join(html_parts)
 
-    def generate_batch_report(self, results: list, output_path: str, metadata: dict = None) -> None:
+    def generate_batch_report(self, results: list[dict[str, Any]], output_path: str, metadata: dict[str, Any] | None = None) -> None:
         html_content = self._build_batch_html(results, metadata or {})
         with open(output_path, "w") as f:
             f.write(html_content)
 
-    def _build_batch_html(self, results: list, metadata: dict) -> str:
+    def _build_batch_html(self, results: list[dict[str, Any]], metadata: dict[str, Any]) -> str:
 
 
-        def is_failure(result: dict) -> bool:
+        def is_failure(result: dict[str, Any]) -> bool:
             status = result.get("status")
             return (
                 status in {"fail", "error"}

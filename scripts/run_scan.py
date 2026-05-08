@@ -60,11 +60,6 @@ def load_scenario(scenario_id: str) -> dict[str, Any]:
             continue
         if data.get("scenario_id") == scenario_id:
             return data
-    # Fallback — legacy id lookup by filename stem
-    for path in SCENARIOS_ROOT.rglob("*.json"):
-        if path.stem == scenario_id:
-            with open(path, encoding="utf-8") as f:
-                return json.load(f)
     logger.warning("Scenario not found: %s", scenario_id)
     return {"scenario_id": scenario_id, "category": "unknown"}
 

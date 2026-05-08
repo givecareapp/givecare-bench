@@ -688,7 +688,7 @@ def get_scenarios(
     return scenarios
 
 
-def estimate_cost(category: str, model: dict) -> float:
+def estimate_cost(category: str, model: dict[str, Any]) -> float:
     """Estimate cost for a single evaluation (model-under-test + scorer LLM calls)."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
@@ -959,7 +959,7 @@ class ScenarioDisplay:
         return lines
 
 
-def print_banner(console: Console, mode: str, models: list, scenarios: list, total_cost: float):
+def print_banner(console: Console, mode: str, models: list[dict[str, Any]], scenarios: list[dict[str, Any]], total_cost: float):
     """Print startup banner."""
     cat_counts = []
     for cat in sorted({s["category"] for s in scenarios}):
@@ -977,7 +977,7 @@ def print_banner(console: Console, mode: str, models: list, scenarios: list, tot
     console.print()
 
 
-def generate_transcript(model_id: str, scenario: dict, api_client: "ModelAPIClient", output_path: Path) -> Path:
+def generate_transcript(model_id: str, scenario: dict[str, Any], api_client: "ModelAPIClient", output_path: Path) -> Path:
     """Generate model transcript from scenario.
 
     Raises:
@@ -1086,8 +1086,8 @@ def write_detailed_outputs(
 
 
 async def evaluate_scenario_async(
-    model: dict,
-    scenario: dict,
+    model: dict[str, Any],
+    scenario: dict[str, Any],
     api_client: "ModelAPIClient",
     orchestrator: Any,
     output_dir: Path,
@@ -1095,7 +1095,7 @@ async def evaluate_scenario_async(
     detailed_output: bool = False,
     run_suffix: str = "",
     run_id: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
         scenario_path = Path(scenario["path"])
@@ -1287,7 +1287,7 @@ async def evaluate_scenario_async(
 def _compute_success(
     score: float,
     hard_fail: bool,
-    gates: dict,
+    gates: dict[str, Any],
     threshold: float = SUCCESS_THRESHOLD,
 ) -> bool:
     """Compute the success signal from score, hard_fail, and gates."""
@@ -1302,7 +1302,7 @@ def _compute_success(
 
 
 def _make_error_result(
-    model: dict,
+    model: dict[str, Any],
     scenario_name: str,
     scenario_id: str,
     category: str,
@@ -1388,8 +1388,8 @@ def _safe_load_scenario_data(path: Path) -> dict[str, Any]:
 
 
 def _run_single_scenario(
-    model: dict,
-    scenario: dict,
+    model: dict[str, Any],
+    scenario: dict[str, Any],
     scenario_path: Path,
     scenario_id: str,
     run_suffix: str,
