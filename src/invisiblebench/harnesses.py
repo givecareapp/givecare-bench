@@ -12,7 +12,7 @@ _PROVIDER_TO_HARNESS = {
 
 _DEFAULT_MODE = {
     "llm": "raw",
-    "givecare": "live",
+    "givecare": "v2",
 }
 
 _MODE_ALIASES = {
@@ -22,12 +22,12 @@ _MODE_ALIASES = {
 
 _ALLOWED_MODES = {
     "llm": {"raw"},
-    "givecare": {"live", "orchestrator"},
+    "givecare": {"v2"},
 }
 
 _IMPLEMENTED_MODES = {
     "llm": {"raw"},
-    "givecare": {"live", "orchestrator"},
+    "givecare": {"v2"},
 }
 
 

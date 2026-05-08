@@ -21,7 +21,6 @@ These are the parts external users should rely on:
 - `scripts/`: active maintenance utilities
 - `docs/`: public docs
 - `data/leaderboard/`: generated public leaderboard artifact
-- `adapters/`: external bridge assets used by experimental/internal harnesses
 
 ### Internal-active
 These are versioned in the repo, but they are not part of the public benchmark contract:
@@ -51,16 +50,15 @@ givecare-bench/
 │   ├── evals/
 │   └── papers/
 ├── archive/              # historical material only
-└── adapters/             # external bridge assets
 ```
 
 ## Public release policy
 
 - Public leaderboard scope is benchmark-core only.
 - Publicly comparable runs use the raw `llm` surface.
-- GiveCare live and orchestrator harnesses remain experimental/internal.
+- GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
-- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, mirrored into `apps/web-bench/public/bench/leaderboard.json` in the web repo and QA-gated with `scripts/qa_leaderboard.py --strict`.
+- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `scripts/sync_web_bench_leaderboard.py` and QA-gated with `scripts/qa_leaderboard.py --strict`.
 - Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
 
 ## Core commands
@@ -79,7 +77,7 @@ python scripts/lint_turn_indices.py --strict
 uv run python scripts/run_scan.py results/run_... results/partial_runs/... --enable-llm  # ModeEngine scan; costs tokens
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
-uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/apps/web-bench/public/bench/leaderboard.json
+uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
 ```
 
 Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:

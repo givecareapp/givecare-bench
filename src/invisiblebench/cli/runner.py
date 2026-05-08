@@ -34,44 +34,28 @@ from invisiblebench._agent_cli import (
     doctor_runner,
     emit_json,
 )
-from invisiblebench.adapters.givecare_live import (
-    MODEL_ID as GIVECARE_LIVE_MODEL_ID,
+from invisiblebench.adapters.givecare_v2 import (
+    MODEL_ID as GIVECARE_V2_MODEL_ID,
 )
-from invisiblebench.adapters.givecare_live import (
-    MODEL_NAME as GIVECARE_LIVE_MODEL_NAME,
+from invisiblebench.adapters.givecare_v2 import (
+    MODEL_NAME as GIVECARE_V2_MODEL_NAME,
 )
-from invisiblebench.adapters.givecare_live import (
-    PROVIDER_NAME as GIVECARE_LIVE_PROVIDER_NAME,
+from invisiblebench.adapters.givecare_v2 import (
+    PROVIDER_NAME as GIVECARE_V2_PROVIDER_NAME,
 )
-from invisiblebench.adapters.givecare_live import (
-    PROVIDER_VERSION as GIVECARE_LIVE_PROVIDER_VERSION,
+from invisiblebench.adapters.givecare_v2 import (
+    PROVIDER_VERSION as GIVECARE_V2_PROVIDER_VERSION,
 )
-from invisiblebench.adapters.givecare_live import (
-    GiveCareProvider,
+from invisiblebench.adapters.givecare_v2 import (
+    GiveCareV2Provider,
     get_category_from_path,
     get_scenario_title,
 )
-from invisiblebench.adapters.givecare_live import (
+from invisiblebench.adapters.givecare_v2 import (
     get_scenarios as get_givecare_scenarios,
 )
-from invisiblebench.adapters.givecare_live import (
-    run_scenario as run_givecare_live_scenario,
-)
-from invisiblebench.adapters.givecare_orchestrator import (
-    DEFAULT_ORCHESTRATOR_MODEL,
-    bridge_diagnostics,
-    bridge_healthcheck,
-    get_model_id,
-    get_model_label,
-)
-from invisiblebench.adapters.givecare_orchestrator import (
-    PROVIDER_NAME as GIVECARE_ORCH_PROVIDER_NAME,
-)
-from invisiblebench.adapters.givecare_orchestrator import (
-    PROVIDER_VERSION as GIVECARE_ORCH_PROVIDER_VERSION,
-)
-from invisiblebench.adapters.givecare_orchestrator import (
-    run_scenario as run_givecare_orchestrator_scenario,
+from invisiblebench.adapters.givecare_v2 import (
+    run_scenario as run_givecare_v2_scenario,
 )
 from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
 from invisiblebench.evaluation.branching import resolve_branch
@@ -183,17 +167,17 @@ def run_givecare_eval(
     auto_confirm: bool = False,
     generate_diagnostic: bool = False,
     output_dir: Path | None = None,
-    adapter_name: str = "givecare-live",
-    harness_mode: str = "live",
+    adapter_name: str = "givecare-v2",
+    harness_mode: str = "v2",
     update_leaderboard: bool = False,
 ) -> int:
-    """Run the experimental GiveCare live system harness against the benchmark core."""
+    """Run the GiveCare V2 system harness against the benchmark core."""
     root = get_project_root()
 
-    MODEL_ID = GIVECARE_LIVE_MODEL_ID
-    MODEL_NAME = GIVECARE_LIVE_MODEL_NAME
-    PROVIDER_NAME = GIVECARE_LIVE_PROVIDER_NAME
-    PROVIDER_VERSION = GIVECARE_LIVE_PROVIDER_VERSION
+    MODEL_ID = GIVECARE_V2_MODEL_ID
+    MODEL_NAME = GIVECARE_V2_MODEL_NAME
+    PROVIDER_NAME = GIVECARE_V2_PROVIDER_NAME
+    PROVIDER_VERSION = GIVECARE_V2_PROVIDER_VERSION
 
     scenarios_dir = root / "benchmark" / "scenarios"
     if output_dir is None:
@@ -229,7 +213,7 @@ def run_givecare_eval(
     scenario_count = len(scenario_paths)
     conf_note = " (including private confidential set)" if include_confidential else ""
     print(
-        f"GiveCare System Harness [{harness_mode}, experimental/internal]: "
+        f"GiveCare V2 System Harness [{harness_mode}]: "
         f"{scenario_count} scenario(s){conf_note}"
     )
 
@@ -241,7 +225,7 @@ def run_givecare_eval(
 
     if not auto_confirm:
         confirm = input(
-            f"\nRun {scenario_count} scenarios against the GiveCare live system harness? [y/N] "
+            f"\nRun {scenario_count} scenarios against the GiveCare V2 system harness? [y/N] "
         )
         if confirm.lower() != "y":
             print("Aborted")
@@ -258,15 +242,20 @@ def run_givecare_eval(
     write_manifest(manifest, output_dir)
 
     # Run scenarios
-    provider = GiveCareProvider(deployment="dev", wait_ms=15000)
+    try:
+        provider = GiveCareV2Provider()
+        if verbose:
+            print(f"Health: {json.dumps(provider.healthcheck(), indent=2)}")
+    except Exception as e:
+        print(f"Error: GiveCare V2 harness is not ready: {e}")
+        return 1
     transcript_data = []
     results: list[dict[str, Any]] = []
 
     try:
         for scenario_path in scenario_paths:
-            provider.phone = provider._generate_phone()
             try:
-                transcript_path, scenario_data = run_givecare_live_scenario(
+                transcript_path, scenario_data = run_givecare_v2_scenario(
                     provider,
                     str(scenario_path),
                     output_dir / "transcripts",
@@ -302,9 +291,8 @@ def run_givecare_eval(
             "provider_version": PROVIDER_VERSION,
             "model": MODEL_NAME,
             "model_id": MODEL_ID,
-            "deployment": "dev",
             "timestamp": run_timestamp,
-            "scenario_count": len(results),
+            "scenario_count": len(scenario_paths),
             "include_confidential": include_confidential,
         },
         "results": results,
@@ -320,7 +308,6 @@ def run_givecare_eval(
         run_metadata={
             "adapter": adapter_name,
             "provider": PROVIDER_NAME,
-            "deployment": "dev",
             "include_confidential": include_confidential,
         },
     )
@@ -343,7 +330,7 @@ def run_givecare_eval(
     avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
 
     print(f"\n{'='*50}")
-    print("GiveCare System Eval Results")
+    print("GiveCare V2 Eval Results")
     print(f"{'='*50}")
     print(f"Scenarios: {len(results)}")
     print(f"Passed:    {passed}")
@@ -369,252 +356,6 @@ def run_givecare_eval(
         except (ImportError, OSError) as e:
             print(f"Warning: Could not generate diagnostic report: {e}")
 
-    _print_audit_summary(audit)
-    print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
-
-    if update_leaderboard:
-        print(
-            "Skipping leaderboard update: public leaderboard accepts only benchmark-core "
-            "(llm/raw) runs. GiveCare harnesses remain experimental/internal."
-        )
-
-    return 0 if failed == 0 else 1
-
-
-def _parse_harness_model_names(spec: str | None, default_model: str) -> list[str]:
-    """Parse comma-separated harness model names, preserving order and uniqueness."""
-    if not spec:
-        return [default_model]
-    seen: set[str] = set()
-    models: list[str] = []
-    for item in spec.split(","):
-        name = item.strip()
-        if name and name not in seen:
-            seen.add(name)
-            models.append(name)
-    return models or [default_model]
-
-
-def run_givecare_orchestrator_eval(
-    category_filter: list[str] | None = None,
-    scenario_filter: list[str] | None = None,
-    include_confidential: bool = False,
-    verbose: bool = True,
-    dry_run: bool = False,
-    auto_confirm: bool = False,
-    generate_diagnostic: bool = False,
-    output_dir: Path | None = None,
-    adapter_name: str = "givecare-orchestrator",
-    model_names: list[str] | None = None,
-    update_leaderboard: bool = False,
-) -> int:
-    """Run the experimental GiveCare orchestrator system harness against the benchmark core."""
-    PROVIDER_NAME = GIVECARE_ORCH_PROVIDER_NAME
-    PROVIDER_VERSION = GIVECARE_ORCH_PROVIDER_VERSION
-
-    root = get_project_root()
-    if output_dir is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = root / "results" / "givecare_orchestrator" / f"run_{timestamp}"
-
-    scenario_paths: list[dict[str, Any]] = []
-    private_confidential_dir = get_private_confidential_dir(root)
-    try:
-        collected_paths = collect_scenario_paths(
-            root,
-            category_filter=category_filter,
-            include_confidential=include_confidential,
-        )
-    except RuntimeError as e:
-        print(str(e))
-        return 1
-
-    for path in collected_paths:
-        scenario_paths.append(
-            {
-                "category": scenario_category_for_path(path, private_confidential_dir),
-                "path": str(path),
-                "name": path.stem.replace("_", " ").title(),
-            }
-        )
-
-    if scenario_filter:
-        scenario_paths = [
-            scenario
-            for scenario in scenario_paths
-            if any(_scenario_matches_filter(scenario, pattern) for pattern in scenario_filter)
-        ]
-
-    if not scenario_paths:
-        print("No scenarios found")
-        return 1
-
-    selected_models = model_names or [DEFAULT_ORCHESTRATOR_MODEL]
-    scenario_count = len(scenario_paths)
-    conf_note = " (including private confidential set)" if include_confidential else ""
-    print(
-        "GiveCare System Harness [orchestrator, experimental/internal]: "
-        f"{len(selected_models)} model(s) × {scenario_count} scenario(s){conf_note}"
-    )
-
-    if dry_run:
-        print("\nDry run - no transcripts will be generated")
-        print(f"Bridge diagnostics: {json.dumps(bridge_diagnostics(), indent=2)}")
-        print("Models:")
-        for model_name in selected_models:
-            print(f"  - {model_name}")
-        print("Scenarios:")
-        for scenario in scenario_paths:
-            print(f"  - {Path(scenario['path']).stem}")
-        return 0
-
-    if not auto_confirm:
-        confirm = input(
-            f"\nRun {scenario_count} scenarios against {len(selected_models)} GiveCare orchestrator model(s)? [y/N] "
-        )
-        if confirm.lower() != "y":
-            print("Aborted")
-            return 0
-
-    try:
-        health = bridge_healthcheck()
-        if verbose:
-            print(f"Bridge ready: {health.get('status', 'unknown')}")
-    except (RuntimeError, OSError) as e:
-        print(f"Error: GiveCare orchestrator bridge is not ready: {e}")
-        return 1
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    manifest = generate_manifest(
-        project_root=root,
-        model_ids=[get_model_id(name) for name in selected_models],
-        harness="givecare",
-        mode="orchestrator",
-        include_confidential=include_confidential,
-    )
-    write_manifest(manifest, output_dir)
-
-    transcript_data: list[tuple[str, Path, dict[str, Any], str]] = []
-    results: list[dict[str, Any]] = []
-    for model_name in selected_models:
-        model_label = get_model_label(model_name)
-        model_id = get_model_id(model_name)
-        for scenario in scenario_paths:
-            scenario_path = Path(scenario["path"])
-            try:
-                transcript_path, scenario_data = run_givecare_orchestrator_scenario(
-                    model_name,
-                    str(scenario_path),
-                    output_dir / "transcripts",
-                    verbose=verbose,
-                )
-                transcript_data.append((model_name, transcript_path, scenario_path, scenario_data))
-            except Exception as e:
-                scenario_data = _safe_load_scenario_data(scenario_path)
-                results.append(
-                    _make_harness_error_result(
-                        model_name=model_label,
-                        model_id=model_id,
-                        provider=PROVIDER_NAME,
-                        scenario_name=scenario_data.get("title", scenario_path.stem),
-                        scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
-                        category=scenario_data.get("category", scenario.get("category", "unknown")),
-                        reason=f"Transcript generation failed: {e}",
-                        extra={
-                            "harness_mode": "orchestrator",
-                            "orchestrator_model": model_name,
-                        },
-                    )
-                )
-                print(f"  {model_label} :: {scenario_path.stem}: ERROR ({e})")
-
-    print(f"\nGenerated {len(transcript_data)} transcript(s)")
-    print("\nTranscripts generated. Score with V3 ModeEngine:")
-    print(f"  uv run python scripts/run_scan.py {output_dir / 'transcripts'}")
-
-    run_timestamp = datetime.now().isoformat()
-    output_data = {
-        "metadata": {
-            "provider": PROVIDER_NAME,
-            "provider_version": PROVIDER_VERSION,
-            "models": selected_models,
-            "timestamp": run_timestamp,
-            "scenario_count": len(results),
-            "include_confidential": include_confidential,
-            "mode": "orchestrator",
-        },
-        "results": results,
-    }
-
-    write_model_results(
-        results,
-        output_dir / "model_results",
-        benchmark_version=manifest.get("benchmark_version", "unknown"),
-        timestamp=run_timestamp,
-        mode=adapter_name,
-        run_metadata={
-            "adapter": adapter_name,
-            "provider": PROVIDER_NAME,
-            "include_confidential": include_confidential,
-            "mode": "orchestrator",
-        },
-    )
-    results_path = output_dir / "all_results.json"
-    write_json(results_path, results)
-    wrapper_path = output_dir / "givecare_orchestrator_results.json"
-    write_json(wrapper_path, output_data)
-
-    report_path = output_dir / "report.html"
-    try:
-        from invisiblebench.export.reports import ReportGenerator
-
-        reporter = ReportGenerator()
-        reporter.generate_batch_report(
-            results,
-            str(report_path),
-            metadata={"model": ", ".join(selected_models), "mode": adapter_name},
-        )
-    except (ImportError, OSError) as e:
-        print(f"Warning: Could not generate HTML report: {e}")
-
-    diag_path = None
-    if generate_diagnostic:
-        try:
-            from invisiblebench.export.diagnostic import generate_diagnostic_report
-
-            diag_path = output_dir / "diagnostic_report.md"
-            transcripts_path = output_dir / "transcripts"
-            generate_diagnostic_report(
-                results_path=str(results_path),
-                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
-                output_path=str(diag_path),
-            )
-        except (ImportError, OSError) as e:
-            print(f"Warning: Could not generate diagnostic report: {e}")
-
-    audit = _write_run_audit(
-        results_path,
-        output_dir=output_dir,
-        expected_scenario_count=len(scenario_paths),
-        harness="givecare",
-        mode="orchestrator",
-    )
-
-    passed = sum(1 for r in results if is_result_success(r))
-    failed = len(results) - passed
-    avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
-    print(f"\n{'='*50}")
-    print("GiveCare Orchestrator Eval Results")
-    print(f"{'='*50}")
-    print(f"Models:     {len(selected_models)}")
-    print(f"Scenarios:  {len(results)}")
-    print(f"Passed:     {passed}")
-    print(f"Failed:     {failed}")
-    print(f"Average:    {avg_score:.1f}%")
-    print(f"{'='*50}")
-    print(f"Saved: {wrapper_path}")
-    if diag_path:
-        print(f"Diagnostic: {diag_path}")
     _print_audit_summary(audit)
     print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
 
@@ -3367,12 +3108,10 @@ Examples:
   uv run bench --harness llm --mode raw -m deepseek -y
 
   # Eval Harness (GiveCare/Mira product)
-  uv run bench --harness givecare --mode live -y              Full live/system path
-  uv run bench --harness givecare --mode orchestrator -y      Direct Pi orchestrator harness
-  uv run bench --harness givecare --mode orchestrator -m gemini-3.1-flash-lite-preview -y
-  uv run bench --provider givecare -y                         Backward-compatible alias for live
-  INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR=/path/to/private/confidential uv run bench --harness givecare --mode live -y --confidential
-  uv run bench --harness givecare --mode live -c safety -y
+  uv run bench --harness givecare --mode v2 -y                Full V2 runtime path
+  uv run bench --provider givecare -y                         Alias for givecare/v2
+  INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR=/path/to/private/confidential uv run bench --harness givecare --mode v2 -y --confidential
+  uv run bench --harness givecare --mode v2 -c safety -y
 
   # Diagnostics
   uv run bench --provider givecare -y --diagnose  Run with diagnostic report
@@ -3587,7 +3326,7 @@ Examples:
         "--mode",
         type=str,
         default=None,
-        help="Harness mode. LLM: raw. GiveCare: live | orchestrator",
+        help="Harness mode. LLM: raw. GiveCare: v2",
     )
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
@@ -3826,28 +3565,11 @@ Examples:
     if not is_mode_implemented(harness_name, harness_mode):
         print(
             f"Harness mode not implemented yet: {harness_name}/{harness_mode}. "
-            f"Use '{harness_name}/{'live' if harness_name == 'givecare' else 'raw'}' for now."
+            f"Use '{harness_name}/{'v2' if harness_name == 'givecare' else 'raw'}' for now."
         )
         return 1
 
     if harness_name == "givecare":
-        if harness_mode == "orchestrator":
-            return run_givecare_orchestrator_eval(
-                category_filter=category_filter,
-                scenario_filter=scenario_filter,
-                include_confidential=args.confidential,
-                verbose=True,
-                dry_run=args.dry_run,
-                auto_confirm=args.yes,
-                generate_diagnostic=args.diagnose,
-                output_dir=args.output,
-                adapter_name=adapter_name(harness_name, harness_mode),
-                model_names=_parse_harness_model_names(
-                    args.models,
-                    os.environ.get("GIVECARE_ORCHESTRATOR_MODEL", "gemini-3.1-flash-lite-preview"),
-                ),
-                update_leaderboard=args.update_leaderboard,
-            )
         return run_givecare_eval(
             category_filter=category_filter,
             scenario_filter=scenario_filter,

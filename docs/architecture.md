@@ -15,16 +15,16 @@ givecare-bench/
 │   └── tests/           # Unit tests for schema and scoring contracts
 ├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
 ├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
-├── data/leaderboard/    # Generated public artifacts (JSON, HTML)
+├── data/leaderboard/    # Canonical generated leaderboard artifacts
 └── archive/             # Historical docs, scripts, and remediation bundles
 ```
 
 | Directory | Contents | Changes often? |
 |-----------|----------|---------------|
 | `benchmark/` | Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests | Rarely — versioned contract |
-| `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, adapter bridges, statistical analysis | Yes — runtime logic |
+| `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, provider adapters, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
-| `data/leaderboard/` | Published leaderboard JSON consumed by the docs site | Generated — never hand-edited |
+| `data/leaderboard/` | Canonical leaderboard JSON projected into public web assets by `scripts/sync_web_bench_leaderboard.py` | Generated — never hand-edited |
 | `archive/` | Superseded docs, one-off scripts, and historical internal remediation artifacts | Rarely |
 
 ## Scoring pipeline
@@ -113,9 +113,9 @@ The public leaderboard contract accepts only the `llm/raw` harness, which sends
 scenario turns directly to the model API and captures raw completions.
 
 !!! warning "Experimental adapters"
-    `givecare/live` and `givecare/orchestrator` are internal adapters that route
-    through the GiveCare production stack. They share the scenario and scoring core
-    but are **not** part of the public leaderboard contract.
+    `givecare/v2` is the only active GiveCare product harness. It calls the
+    gc-sms V2 HTTP contract through `/api/admin` actions and is **not** part of
+    the public comparative leaderboard contract.
 
 ## Jurisdiction rules
 

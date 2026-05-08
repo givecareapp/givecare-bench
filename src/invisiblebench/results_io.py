@@ -36,7 +36,6 @@ _SCENARIO_OPTIONAL_KEYS = (
     "run_stats",
     "run_summary",
     "harness_mode",
-    "orchestrator_model",
 )
 
 

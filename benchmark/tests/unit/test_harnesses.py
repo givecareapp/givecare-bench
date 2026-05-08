@@ -9,12 +9,12 @@ def test_resolve_default_provider_to_llm_raw() -> None:
     assert resolve_harness_mode(provider="openrouter") == ("llm", "raw")
 
 
-def test_resolve_givecare_defaults_to_live() -> None:
-    assert resolve_harness_mode(provider="givecare") == ("givecare", "live")
+def test_resolve_givecare_defaults_to_v2() -> None:
+    assert resolve_harness_mode(provider="givecare") == ("givecare", "v2")
 
 
 def test_harness_overrides_provider_mapping() -> None:
-    assert resolve_harness_mode(harness="givecare", mode="live") == ("givecare", "live")
+    assert resolve_harness_mode(harness="givecare", mode="v2") == ("givecare", "v2")
 
 
 def test_llm_benchmark_alias_maps_to_raw() -> None:
@@ -23,7 +23,7 @@ def test_llm_benchmark_alias_maps_to_raw() -> None:
 
 def test_invalid_mode_raises() -> None:
     with pytest.raises(ValueError):
-        resolve_harness_mode(harness="llm", mode="live")
+        resolve_harness_mode(harness="llm", mode="v2")
 
 
 def test_removed_integration_mode_raises() -> None:
@@ -33,9 +33,8 @@ def test_removed_integration_mode_raises() -> None:
 
 def test_mode_implementation_tracking() -> None:
     assert is_mode_implemented("llm", "raw") is True
-    assert is_mode_implemented("givecare", "live") is True
-    assert is_mode_implemented("givecare", "orchestrator") is True
+    assert is_mode_implemented("givecare", "v2") is True
 
 
 def test_adapter_name() -> None:
-    assert adapter_name("givecare", "live") == "givecare-live"
+    assert adapter_name("givecare", "v2") == "givecare-v2"
