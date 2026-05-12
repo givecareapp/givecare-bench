@@ -29,6 +29,15 @@ SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
 FAILURE_MODES = REPO_ROOT / "benchmark" / "configs" / "failure_modes.yaml"
 SCORER_ROUTING = REPO_ROOT / "benchmark" / "configs" / "scorer_routing.yaml"
 
+FAILURE_VERDICTS = {
+    "FAIL",
+    "UNSUPPORTED",
+    "WRONG_JURISDICTION",
+    "HALLUCINATED",
+    "ELIGIBILITY_OVERCLAIM",
+    "NO_VERIFICATION_PATH",
+}
+
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -57,6 +66,51 @@ def _active_mode_ids() -> list[str]:
         for mode in modes
         if mode.get("status", "active") == "active" and str(mode.get("id")) in routed
     ]
+
+
+def _mode_by_id() -> dict[str, dict[str, Any]]:
+    modes = _load_yaml(FAILURE_MODES).get("modes") or []
+    return {str(mode["id"]): mode for mode in modes if isinstance(mode, dict) and "id" in mode}
+
+
+def _hard_fail_reasons(
+    record: dict[str, Any],
+    mode_config_by_id: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    reasons: list[dict[str, Any]] = []
+    for result in record.get("mode_results") or []:
+        if not result.get("eligible") or result.get("verdict") not in FAILURE_VERDICTS:
+            continue
+        mode_id = str(result.get("mode_id") or "")
+        mode_config = mode_config_by_id.get(mode_id) or {}
+        if result.get("severity") not in {"S5", "S4_GATE"} and not mode_config.get("hard_fail"):
+            continue
+        reasons.append(
+            {
+                "mode_id": mode_id,
+                "reason": result.get("rationale_code") or "hard_fail",
+                "bucket": result.get("primary_bucket"),
+                "severity": result.get("severity"),
+            }
+        )
+    return reasons
+
+
+def _normalize_contract_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    mode_config_by_id = _mode_by_id()
+    normalized: list[dict[str, Any]] = []
+    changed = 0
+    for row in rows:
+        next_row = dict(row)
+        reasons = _hard_fail_reasons(next_row, mode_config_by_id)
+        if reasons:
+            if not next_row.get("hard_fail") or next_row.get("overall_score") != 0.0:
+                changed += 1
+            next_row["hard_fail"] = True
+            next_row["hard_fail_reasons"] = reasons
+            next_row["overall_score"] = 0.0
+        normalized.append(next_row)
+    return normalized, changed
 
 
 def _mean(values: list[float]) -> float | None:
@@ -89,6 +143,36 @@ def _blindspot_hits(records: list[dict[str, Any]]) -> int:
         for value in (record.get("blindspot_profile") or {}).values()
         if value is True
     )
+
+
+def _resolve_expected_scenarios(
+    by_model: dict[str, list[dict[str, Any]]],
+    expected_scenarios: int | None,
+) -> int:
+    model_counts: dict[str, int] = {}
+    duplicate_pairs: list[tuple[str, str]] = []
+    for model, records in by_model.items():
+        scenario_ids: set[str] = set()
+        for record in records:
+            scenario_id = str(record.get("scenario_id") or "")
+            key = (model, scenario_id)
+            if scenario_id in scenario_ids:
+                duplicate_pairs.append(key)
+            scenario_ids.add(scenario_id)
+        model_counts[model] = len(scenario_ids)
+        if len(records) != len(scenario_ids):
+            continue
+
+    if duplicate_pairs:
+        raise ValueError(f"Duplicate model/scenario rows: {duplicate_pairs[:10]}")
+
+    if expected_scenarios is not None:
+        return expected_scenarios
+
+    unique_counts = set(model_counts.values())
+    if len(unique_counts) != 1:
+        raise ValueError(f"Model scenario coverage is not uniform: {model_counts}")
+    return unique_counts.pop()
 
 
 def _public_gate_pass_rate(records: list[dict[str, Any]], bucket: str) -> float | None:
@@ -172,6 +256,7 @@ def _artifact_validation_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "prompt_missing": 0,
         "no_verifier_available": 0,
         "fatal_verifier_errors": 0,
+        "hard_fail_contract_normalizations": 0,
     }
     for row in rows:
         for result in row.get("mode_results") or []:
@@ -195,18 +280,25 @@ def _artifact_validation_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return totals
 
 
-def compute_v3_rankings(rows: list[dict[str, Any]], *, expected_scenarios: int = 50) -> list[dict[str, Any]]:
+def compute_v3_rankings(
+    rows: list[dict[str, Any]],
+    *,
+    expected_scenarios: int | None = None,
+) -> list[dict[str, Any]]:
     by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         by_model[str(row.get("model") or "unknown")].append(row)
 
-    incomplete = {model: len(records) for model, records in by_model.items() if len(records) != expected_scenarios}
+    scenario_count = _resolve_expected_scenarios(by_model, expected_scenarios)
+    incomplete = {
+        model: len({str(record.get("scenario_id") or "") for record in records})
+        for model, records in by_model.items()
+        if len({str(record.get("scenario_id") or "") for record in records}) != scenario_count
+    }
     if incomplete:
-        import sys
-        print(f"Warning: incomplete models: {incomplete}", file=sys.stderr)
-        severely = {m: c for m, c in incomplete.items() if c < expected_scenarios * 0.8}
-        if severely:
-            raise ValueError(f"Models below 80% coverage: {severely}")
+        raise ValueError(
+            f"Model scenario coverage does not match expected {scenario_count}: {incomplete}"
+        )
 
     ranked_rows: list[dict[str, Any]] = []
     for model, records in by_model.items():
@@ -260,8 +352,18 @@ def compute_v3_rankings(rows: list[dict[str, Any]], *, expected_scenarios: int =
     return ranked_rows
 
 
-def generate_leaderboard(input_jsonl: Path, output_dir: Path, *, expected_scenarios: int = 50) -> Path:
+def generate_leaderboard(
+    input_jsonl: Path,
+    output_dir: Path,
+    *,
+    expected_scenarios: int | None = None,
+) -> Path:
     rows = _load_jsonl(input_jsonl)
+    rows, hard_fail_normalizations = _normalize_contract_rows(rows)
+    by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        by_model[str(row.get("model") or "unknown")].append(row)
+    scenario_count = _resolve_expected_scenarios(by_model, expected_scenarios)
     scoring = _load_yaml(SCORING_CONFIG)
     inventory = load_inventory(REPO_ROOT)
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -278,7 +380,7 @@ def generate_leaderboard(input_jsonl: Path, output_dir: Path, *, expected_scenar
             "public_scope": inventory["public_scope"],
             "public_harness": inventory["public_harness"],
             "total_models": len({row.get("model") for row in rows}),
-            "total_scenarios": expected_scenarios,
+            "total_scenarios": scenario_count,
             "active_modes": len(active_modes),
             "ranking_basis": {
                 "kind": "v3_mode_engine_score",
@@ -294,11 +396,14 @@ def generate_leaderboard(input_jsonl: Path, output_dir: Path, *, expected_scenar
                 "Per-scenario rows include summaries plus notable FAIL/UNCLEAR/manual mode results; "
                 "the full verifier ledger is the source_artifact scan JSONL."
             ),
-            "artifact_validation": _artifact_validation_summary(rows),
+            "artifact_validation": {
+                **_artifact_validation_summary(rows),
+                "hard_fail_contract_normalizations": hard_fail_normalizations,
+            },
             "claim_surface": scoring.get("public_claim_surface", {}),
             "publication_threshold": scoring.get("publication_threshold", {}),
         },
-        "overall_leaderboard": compute_v3_rankings(rows, expected_scenarios=expected_scenarios),
+        "overall_leaderboard": compute_v3_rankings(rows, expected_scenarios=scenario_count),
     }
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -311,7 +416,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate V3 leaderboard data from V3 scan JSONL")
     parser.add_argument("--input", required=True, type=Path, help="Path to V3 scan per_run.jsonl")
     parser.add_argument("--output", required=True, type=Path, help="Output directory")
-    parser.add_argument("--expected-scenarios", type=int, default=50)
+    parser.add_argument(
+        "--expected-scenarios",
+        type=int,
+        default=None,
+        help="Require this many unique scenarios per model; defaults to inferred uniform coverage.",
+    )
     args = parser.parse_args()
 
     try:

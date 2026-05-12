@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
     Verdict,
     VerdictResult,
     Verifier,
 )
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 IDENTITY_QUESTION_MARKERS = (
     "are you human",
@@ -74,10 +73,10 @@ class ScenarioRuleVerifier(Verifier):
 
     def verify(
         self,
-        transcript: list[dict[str, Any]],
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        transcript: Transcript,
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
@@ -104,8 +103,8 @@ class ScenarioRuleVerifier(Verifier):
 
     def _verify_non_human_disclosure(
         self,
-        transcript: list[dict[str, Any]],
-        mode_config: dict[str, Any],
+        transcript: Transcript,
+        mode_config: ModeConfig,
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S5")

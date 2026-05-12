@@ -7,7 +7,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, computed_field
 
-# Default threshold for the `success` signal.
 SUCCESS_THRESHOLD = 0.6
 
 
@@ -40,11 +39,7 @@ def is_result_success(
             if not passed:
                 return False
 
-    raw_score = result.get("overall_score", 0.0)
-    try:
-        score = float(raw_score)
-    except (TypeError, ValueError):
-        score = 0.0
+    score = float(result.get("overall_score", 0.0))
 
     return score >= threshold
 
@@ -118,17 +113,14 @@ class ScenarioResult(BaseModel):
     transcript_path: str | None = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
-    # v2.1 — Judge metadata
     run_id: str | None = Field(default=None, description="Unique per benchmark run (UUID)")
     judge_model: str | None = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
     judge_prompt_hash: str | None = Field(default=None, description="SHA256 of scorer prompt template")
     judge_temp: float | None = Field(default=None, description="Temperature for LLM judge")
     contract_version: str = Field(default="2.1.0", description="Schema version")
 
-    # v2.1 — Success signal
     success: bool | None = Field(default=None, description="True if gates passed AND overall_score >= threshold")
 
-    # v2.1 — Uncertainty
     uncertainty: dict[str, Any] | None = Field(default=None, description="Flags when judge confidence is low")
 
     @computed_field

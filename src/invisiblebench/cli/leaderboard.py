@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
-"""
-Leaderboard management for InvisibleBench.
-
-Usage:
-    bench leaderboard add results/run_*/all_results.json   # Add/update from flat run results
-    bench leaderboard add results/run_*/                   # Add/update from run directory model_results/
-    bench leaderboard rebuild                              # Rebuild from leaderboard_ready/
-    bench leaderboard status                               # Show current leaderboard + health
-    bench leaderboard status -v                            # Verbose (per-scenario details)
-"""
+"""Leaderboard management for InvisibleBench."""
 from __future__ import annotations
 
 import importlib.util
 import json
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from invisiblebench.results_io import write_model_results
 from invisiblebench.run_artifacts import load_result_rows
@@ -73,7 +65,7 @@ def _generate(input_dir: Path, output_dir: Path) -> None:
     module.generate_leaderboard(input_dir, output_dir)
 
 
-def _load_run_manifest(source: Path) -> dict:
+def _load_run_manifest(source: Path) -> dict[str, Any]:
     candidates = []
     if source.is_dir():
         candidates.append(source / "run_manifest.json")

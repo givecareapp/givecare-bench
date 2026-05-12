@@ -339,7 +339,7 @@ def write_outputs(
     )
     summary_lines.append(
         "- Scenario eligibility uses explicit `eligible_modes` when present; tag "
-        "inference is only a legacy fallback."
+        "inference is the fallback for scenarios without that field."
     )
     summary_lines.append(
         "- Hard-fail rate counts regex-detected B5/B7/B8 and F1-human-identity. "

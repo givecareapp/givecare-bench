@@ -53,7 +53,6 @@ def create_console() -> Console:
     )
 
 
-# ---------- doctor ----------
 
 @dataclass
 class DoctorCheck:
@@ -105,7 +104,6 @@ def doctor_runner(checks: Iterable[DoctorCheck | tuple], *, exit_on_fail: bool =
     return 0
 
 
-# ---------- stdin / file ----------
 
 def read_stdin_or_file(arg: str) -> str:
     """Return the contents of `arg`, treating "-" as stdin.
@@ -118,7 +116,6 @@ def read_stdin_or_file(arg: str) -> str:
         return f.read()
 
 
-# ---------- mutation gate ----------
 
 def confirm_or_abort(
     prompt: str,
@@ -177,7 +174,6 @@ def confirm_or_abort(
     return True
 
 
-# ---------- output ----------
 
 def emit_json(
     *,

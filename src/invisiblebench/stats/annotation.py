@@ -43,16 +43,7 @@ def export_annotation_kit(
     sample_size: int = 20,
     stratify: bool = True,
 ) -> dict[str, Any]:
-    """Export transcripts as markdown scoring forms for human raters.
-
-    Args:
-        results_path: Path to results JSON or directory with transcripts.
-        output_dir: Directory to write annotation files.
-        sample_size: Number of transcripts to sample.
-        stratify: If True, sample equally across categories.
-
-    Returns dict with export metadata.
-    """
+    """Export transcripts as markdown scoring forms for human raters."""
     results_file = Path(results_path)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -308,14 +299,7 @@ def import_annotations(
     annotations_path: str,
     llm_scores_path: str | None = None,
 ) -> dict[str, Any]:
-    """Import human annotations and compute agreement metrics.
-
-    Args:
-        annotations_path: Path to completed scores.csv
-        llm_scores_path: Path to _llm_scores.json (from export)
-
-    Returns dict with agreement metrics.
-    """
+    """Import human annotations and compute agreement metrics."""
     annotations: dict[str, dict[str, dict[str, float]]] = {}  # rater -> scenario -> dim -> score
     hard_fail_annotations: dict[str, dict[str, bool]] = {}  # rater -> scenario -> bool
 
@@ -339,11 +323,12 @@ def import_annotations(
                         pass
                     continue
 
+                # Check aliased column headers (e.g. "attunement" -> "regard")
                 for alias, canonical in DIMENSION_ALIASES.items():
-                    legacy_val = row.get(alias, "").strip()
-                    if legacy_val:
+                    alias_val = row.get(alias, "").strip()
+                    if alias_val:
                         try:
-                            annotations[rater][sid][canonical] = float(legacy_val)
+                            annotations[rater][sid][canonical] = float(alias_val)
                             break
                         except ValueError:
                             pass

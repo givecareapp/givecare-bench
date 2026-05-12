@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-Archive management for InvisibleBench results.
-
-Usage:
-    bench archive                    # Archive all runs except today's
-    bench archive --before 20260129  # Archive runs before date
-    bench archive --keep 5           # Keep N most recent, archive rest
-    bench archive --list             # List what would be archived (dry run)
-    bench clean                      # Alias for archive
-"""
+"""Archive management for InvisibleBench results."""
 from __future__ import annotations
 
 import json
@@ -31,13 +22,13 @@ except ImportError:
 
 def parse_run_date(run_name: str) -> datetime | None:
     """Parse date from run directory name (run_YYYYMMDD_HHMMSS)."""
+    if not run_name.startswith("run_"):
+        return None
+    date_str = run_name[4:12]  # YYYYMMDD
     try:
-        if run_name.startswith("run_"):
-            date_str = run_name[4:12]  # YYYYMMDD
-            return datetime.strptime(date_str, "%Y%m%d")
-    except (ValueError, IndexError):
-        pass
-    return None
+        return datetime.strptime(date_str, "%Y%m%d")
+    except ValueError:
+        return None
 
 
 def get_run_info(run_path: Path) -> dict[str, Any]:
@@ -58,11 +49,11 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
         try:
             with open(results_file) as f:
                 data = json.load(f)
-                if isinstance(data, list):
-                    info["scenarios"] = len(data)
-                    info["models"] = list({r.get("model", "unknown") for r in data})
-        except (json.JSONDecodeError, KeyError):
-            pass
+        except (OSError, json.JSONDecodeError):
+            data = None
+        if isinstance(data, list):
+            info["scenarios"] = len(data)
+            info["models"] = list({r.get("model", "unknown") for r in data})
 
     return info
 

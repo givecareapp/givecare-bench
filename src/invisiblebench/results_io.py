@@ -1,7 +1,7 @@
 """Result writing utilities for benchmark runs.
 
 Primary durable artifact: one JSON per model/provider per run.
-Aggregate files (all_results.json, givecare_results.json) are derived compatibility outputs.
+Aggregate files (all_results.json) are derived outputs.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench.failure_taxonomy import compute_quality_summary, compute_reliability_summary
+from invisiblebench.models._types import ResultRow
 from invisiblebench.models.results import is_result_success
 
 # Optional fields forwarded between scenario dicts and flat result rows.
@@ -56,7 +57,7 @@ def _coerce_dimension_scores(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def aggregate_model_results(
-    results: list[dict[str, Any]],
+    results: list[ResultRow],
     *,
     benchmark_version: str = "unknown",
     timestamp: str | None = None,
@@ -65,8 +66,8 @@ def aggregate_model_results(
 ) -> dict[str, dict[str, Any]]:
     """Group flat scenario rows into per-model result documents.
 
-    Output shape is compatible with existing leaderboard tooling while preserving
-    richer per-scenario fields for local run recovery and diagnostics.
+    Output shape matches leaderboard tooling and preserves per-scenario
+    fields for run recovery and diagnostics.
     """
     models: dict[str, dict[str, Any]] = {}
     ts = timestamp or datetime.now().isoformat()
@@ -139,7 +140,7 @@ def aggregate_model_results(
 
 
 def write_model_results(
-    results: list[dict[str, Any]],
+    results: list[ResultRow],
     output_dir: Path,
     *,
     benchmark_version: str = "unknown",
@@ -173,7 +174,7 @@ def write_json(path: Path, data: Any) -> Path:
     return path
 
 
-def flatten_model_results(model_files: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+def flatten_model_results(model_files: Iterable[dict[str, Any]]) -> list[ResultRow]:
     """Flatten per-model result documents back into all_results-style rows."""
     rows: list[dict[str, Any]] = []
     for doc in model_files:

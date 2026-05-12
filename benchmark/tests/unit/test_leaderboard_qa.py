@@ -104,6 +104,40 @@ def test_v3_qa_accepts_clean_strict_artifact(tmp_path: Path) -> None:
     assert errors == []
 
 
+def test_v3_qa_infers_current_scan_coverage(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "v3_leaderboard.json"
+    rows = [
+        _scan_row("model-a", "s1"),
+        _scan_row("model-a", "s2"),
+        _scan_row("model-b", "s1"),
+        _scan_row("model-b", "s2"),
+    ]
+    _write_jsonl(scan, rows)
+    leaderboard.write_text(
+        json.dumps(_leaderboard(scan, models=2, scenarios=2)),
+        encoding="utf-8",
+    )
+
+    errors = validate_leaderboard(scan, leaderboard)
+
+    assert errors == []
+
+
+def test_v3_qa_inferred_coverage_rejects_stale_metadata(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "v3_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    leaderboard.write_text(
+        json.dumps(_leaderboard(scan, models=1, scenarios=50)),
+        encoding="utf-8",
+    )
+
+    errors = validate_leaderboard(scan, leaderboard)
+
+    assert any("leaderboard_total_scenarios" in error for error in errors)
+
+
 def test_v3_qa_rejects_gate_unclear(tmp_path: Path) -> None:
     scan = tmp_path / "per_run.jsonl"
     leaderboard = tmp_path / "v3_leaderboard.json"

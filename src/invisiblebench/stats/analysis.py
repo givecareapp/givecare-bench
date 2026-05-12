@@ -12,6 +12,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.models._types import ResultRow
 from invisiblebench.models.results import is_result_success
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
@@ -83,7 +84,7 @@ def _bootstrap_proportion_ci(
 
 
 def compute_success_rates(
-    results: list[dict[str, Any]],
+    results: list[ResultRow],
     n_bootstrap: int = 10000,
 ) -> dict[str, Any]:
     """Compute success rates by category with bootstrap CIs.
@@ -136,7 +137,7 @@ def compute_success_rates(
     }
 
 
-def compute_failure_buckets(results: list[dict[str, Any]]) -> dict[str, int]:
+def compute_failure_buckets(results: list[ResultRow]) -> dict[str, int]:
     """Count failures by bucket (from failure_categories.primary_category).
 
     Only counts results where success=False.
@@ -220,22 +221,11 @@ def load_results(results_path: str) -> list[dict[str, Any]]:
 
 
 def _get_category(result: dict[str, Any]) -> str:
-    """Extract category from a result dict."""
     return normalize_category(result.get("category"))
 
 
 def compute_stats(results_path: str, n_bootstrap: int = 10000) -> dict[str, Any]:
-    """Compute full statistical analysis from results.
-
-    Args:
-        results_path: Path to all_results.json or leaderboard_ready/ directory.
-        n_bootstrap: Number of bootstrap samples for CIs.
-
-    Returns dict with:
-        - models: per-model stats
-        - pairwise: pairwise comparisons
-        - category_stats: per-category distributions
-    """
+    """Compute per-model stats, pairwise comparisons, and category distributions."""
     path = Path(results_path)
 
     all_results: list[dict[str, Any]] = []

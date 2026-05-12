@@ -21,6 +21,12 @@ from invisiblebench.evaluation.verifiers.corpus_verifier import CorpusVerifier
 from invisiblebench.evaluation.verifiers.llm_verifier import LLMVerifier
 from invisiblebench.evaluation.verifiers.regex_verifier import RegexVerifier
 from invisiblebench.evaluation.verifiers.scenario_rule_verifier import ScenarioRuleVerifier
+from invisiblebench.models._types import (
+    ModeConfig,
+    RoutingConfig,
+    ScenarioData,
+    Transcript,
+)
 
 __all__ = [
     "CORE_VERDICTS",
@@ -29,6 +35,10 @@ __all__ = [
     "Verifier",
     "Verdict",
     "EvidenceSpan",
+    "ModeConfig",
+    "RoutingConfig",
+    "ScenarioData",
+    "Transcript",
     "RegexVerifier",
     "LLMVerifier",
     "CorpusVerifier",

@@ -77,9 +77,9 @@ def validate_leaderboard(
     leaderboard_path: Path,
     *,
     manual_adjudications_path: Path | None = None,
-    expected_rows: int = 750,
-    expected_models: int = 15,
-    expected_scenarios: int = 50,
+    expected_rows: int | None = None,
+    expected_models: int | None = None,
+    expected_scenarios: int | None = None,
     expected_contract: str = "3.0.0-alpha",
     expected_stage: str = "v3-alpha",
     strict: bool = False,
@@ -90,7 +90,7 @@ def validate_leaderboard(
     leaderboard = _load_json(leaderboard_path)
     metadata = leaderboard.get("metadata") or {}
 
-    if len(rows) != expected_rows:
+    if expected_rows is not None and len(rows) != expected_rows:
         errors.append(f"rows={len(rows)} expected={expected_rows}")
 
     by_model: dict[str, set[str]] = defaultdict(set)
@@ -105,13 +105,25 @@ def validate_leaderboard(
             duplicate_pairs.append(pair)
         seen_pairs.add(pair)
 
-    if len(by_model) != expected_models:
-        errors.append(f"models={len(by_model)} expected={expected_models}")
+    effective_models = expected_models if expected_models is not None else len(by_model)
+    if len(by_model) != effective_models:
+        errors.append(f"models={len(by_model)} expected={effective_models}")
+
+    if expected_scenarios is None:
+        observed_counts = {model: len(scenarios) for model, scenarios in by_model.items()}
+        unique_counts = set(observed_counts.values())
+        if len(unique_counts) == 1:
+            effective_scenarios = unique_counts.pop()
+        else:
+            effective_scenarios = None
+            errors.append(f"scenario_count_mismatch={observed_counts}")
+    else:
+        effective_scenarios = expected_scenarios
 
     bad_model_counts = {
         model: len(scenarios)
         for model, scenarios in by_model.items()
-        if len(scenarios) != expected_scenarios
+        if effective_scenarios is not None and len(scenarios) != effective_scenarios
     }
     if bad_model_counts:
         errors.append(f"scenario_count_mismatch={bad_model_counts}")
@@ -133,11 +145,14 @@ def validate_leaderboard(
         errors.append(
             f"publication_stage={metadata.get('publication_stage')!r} expected={expected_stage!r}"
         )
-    if metadata.get("total_models") != expected_models:
-        errors.append(f"leaderboard_total_models={metadata.get('total_models')} expected={expected_models}")
-    if metadata.get("total_scenarios") != expected_scenarios:
+    if metadata.get("total_models") != effective_models:
         errors.append(
-            f"leaderboard_total_scenarios={metadata.get('total_scenarios')} expected={expected_scenarios}"
+            f"leaderboard_total_models={metadata.get('total_models')} expected={effective_models}"
+        )
+    if effective_scenarios is not None and metadata.get("total_scenarios") != effective_scenarios:
+        errors.append(
+            f"leaderboard_total_scenarios={metadata.get('total_scenarios')} "
+            f"expected={effective_scenarios}"
         )
 
     prompt_missing = 0
@@ -224,9 +239,9 @@ def main() -> int:
     parser.add_argument("--scan", required=True, type=Path, help="V3 per_run.jsonl scan artifact")
     parser.add_argument("--leaderboard", required=True, type=Path, help="Generated v3_leaderboard.json")
     parser.add_argument("--manual-adjudications", type=Path, default=None)
-    parser.add_argument("--expected-rows", type=int, default=750)
-    parser.add_argument("--expected-models", type=int, default=15)
-    parser.add_argument("--expected-scenarios", type=int, default=50)
+    parser.add_argument("--expected-rows", type=int, default=None)
+    parser.add_argument("--expected-models", type=int, default=None)
+    parser.add_argument("--expected-scenarios", type=int, default=None)
     parser.add_argument("--expected-contract", default="3.0.0-alpha")
     parser.add_argument("--expected-stage", default="v3-alpha")
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")

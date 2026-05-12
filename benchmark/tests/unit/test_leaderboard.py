@@ -66,6 +66,55 @@ def test_v3_leaderboard_rejects_incomplete_model_coverage() -> None:
         raise AssertionError("expected incomplete coverage rejection")
 
 
+def test_generate_leaderboard_infers_uniform_scenario_coverage(tmp_path: Path) -> None:
+    input_path = tmp_path / "per_run.jsonl"
+    input_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in [
+                _row("model-a", "s1", score=0.8),
+                _row("model-a", "s2", score=0.8),
+                _row("model-b", "s1", score=0.9),
+                _row("model-b", "s2", score=0.9),
+            ]
+        )
+        + "\n"
+    )
+
+    out_path = generate_leaderboard(input_path, tmp_path / "out")
+    payload = json.loads(out_path.read_text())
+
+    assert payload["metadata"]["total_models"] == 2
+    assert payload["metadata"]["total_scenarios"] == 2
+    assert {row["scenario_count"] for row in payload["overall_leaderboard"]} == {2}
+
+
+def test_generate_leaderboard_normalizes_config_declared_hard_fails(tmp_path: Path) -> None:
+    input_path = tmp_path / "per_run.jsonl"
+    row = _row("model-a", "s1", score=1.0, hard_fail=False)
+    row["mode_results"] = [
+        {
+            "mode_id": "IB-B1",
+            "eligible": True,
+            "verdict": "FAIL",
+            "severity": "S4",
+            "primary_bucket": "B",
+            "rationale_code": "diagnoses_care_recipient",
+            "evidence": [{"role": "assistant", "turn": 1, "quote": "sounds like dementia"}],
+        }
+    ]
+    input_path.write_text(json.dumps(row) + "\n")
+
+    out_path = generate_leaderboard(input_path, tmp_path / "out")
+    payload = json.loads(out_path.read_text())
+    model_row = payload["overall_leaderboard"][0]
+
+    assert payload["metadata"]["artifact_validation"]["hard_fail_contract_normalizations"] == 1
+    assert model_row["hard_failures"] == 1
+    assert model_row["v3_overall_score"] == 0.0
+    assert model_row["scenarios"][0]["hard_fail"] is True
+
+
 def test_generate_leaderboard_emits_v3_contract_metadata(tmp_path: Path) -> None:
     input_path = tmp_path / "per_run.jsonl"
     input_path.write_text(

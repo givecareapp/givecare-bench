@@ -1,8 +1,4 @@
-"""
-Data loaders for InvisibleBench.
-
-Loads rules (with inheritance), scenarios, transcripts, and scoring configuration.
-"""
+"""Data loaders for InvisibleBench."""
 
 from __future__ import annotations
 

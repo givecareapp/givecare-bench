@@ -28,6 +28,7 @@ from invisiblebench.evaluation.verifiers.base import (
     VerdictResult,
     Verifier,
 )
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class BenefitsCorpus:
         juris_list = program.get("jurisdictions") or []
         if not juris_list:
             # Federal programs have no jurisdiction restriction.
-            return program.get("federal", False)
+            return bool(program.get("federal", False))
         return jurisdiction.upper() in [j.upper() for j in juris_list]
 
 
@@ -125,10 +126,6 @@ def _load_default_corpus() -> None:
 
 _load_default_corpus()
 
-
-# ---------------------------------------------------------------------------
-# Claim extractor (LLM-assisted — LLM extracts, corpus decides truth)
-# ---------------------------------------------------------------------------
 
 def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
     """Token-match claim extraction with hedge/verification-path detection."""
@@ -189,10 +186,10 @@ class CorpusVerifier(Verifier):
 
     def verify(
         self,
-        transcript: list[dict[str, Any]],
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        transcript: Transcript,
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")

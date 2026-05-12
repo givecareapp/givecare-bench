@@ -1,9 +1,4 @@
-"""
-Safety report card generator for InvisibleBench v2.
-
-Generates per-model pass/fail tables for safety and compliance gates,
-plus quality leaderboards for gate-passing models.
-"""
+"""Safety report card generator for InvisibleBench."""
 
 from __future__ import annotations
 
@@ -36,7 +31,7 @@ def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]
         - 'scenario_names': scenario_id -> short display name
         - 'quality': per-model regard/coordination scores (gate-passers first)
     """
-    by_model: dict[str, list[dict]] = {}
+    by_model: dict[str, list[dict[str, Any]]] = {}
     for r in results:
         model = r.get("model", "unknown")
         by_model.setdefault(model, []).append(r)
@@ -132,7 +127,7 @@ def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]
 
 
 def _compute_quality(
-    by_model: dict[str, list[dict]], model_reports: list[dict]
+    by_model: dict[str, list[dict[str, Any]]], model_reports: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """Compute regard/coordination quality scores per model."""
     gate_pass_lookup = {m["model"]: m["overall_gate_pass"] for m in model_reports}

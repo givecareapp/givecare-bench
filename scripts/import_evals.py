@@ -21,10 +21,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_EVALS_DIR = REPO_ROOT.parent / "givecare-evals" / "data"
 SCENARIOS_DIR = REPO_ROOT / "benchmark" / "scenarios"
@@ -164,9 +160,6 @@ DEFAULT_PERSONA = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def slugify(text: str) -> str:
@@ -282,9 +275,6 @@ def eval_to_scenario(rec: dict[str, Any]) -> dict[str, Any]:
     return scenario
 
 
-# ---------------------------------------------------------------------------
-# Deduplication
-# ---------------------------------------------------------------------------
 
 
 def load_existing_scenario_fingerprints(scenarios_dir: Path) -> dict[str, set[str]]:
@@ -380,9 +370,6 @@ def find_near_duplicates(
     return near
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:

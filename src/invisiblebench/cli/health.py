@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""
-Health check for InvisibleBench results and leaderboard.
-
-Usage:
-    bench health              # Check current leaderboard health
-    bench health --verbose    # Include per-scenario details
-"""
+"""Health check for InvisibleBench results and leaderboard."""
 from __future__ import annotations
 
 import json
@@ -95,18 +89,18 @@ def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
         if len(models) >= 3
     }
 
-    # v2.1 field validation
-    v21_warnings: list[str] = []
+    # Schema field validation (contract_version, judge_model)
+    schema_warnings: list[str] = []
     for model_data in data["overall_leaderboard"]:
         model_name = model_data["model"]
         scenarios = model_data.get("scenarios", [])
         missing_cv = sum(1 for s in scenarios if not s.get("contract_version"))
         missing_jm = sum(1 for s in scenarios if not s.get("judge_model"))
         if missing_cv > 0:
-            v21_warnings.append(f"{model_name}: {missing_cv} scenario(s) missing contract_version")
+            schema_warnings.append(f"{model_name}: {missing_cv} scenario(s) missing contract_version")
         if missing_jm > 0:
-            v21_warnings.append(f"{model_name}: {missing_jm} scenario(s) missing judge_model")
-    results["v21_warnings"] = v21_warnings
+            schema_warnings.append(f"{model_name}: {missing_jm} scenario(s) missing judge_model")
+    results["schema_warnings"] = schema_warnings
 
     return results
 
@@ -170,11 +164,11 @@ def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None
                 out(f"    [{', '.join(models)}]", "dim")
         out("")
 
-    # v2.1 field warnings
-    v21_warnings = analysis.get("v21_warnings", [])
-    if v21_warnings:
-        out("[bold yellow]⚠ v2.1 schema warnings:[/bold yellow]", "bold yellow")
-        for w in v21_warnings:
+    # Schema field warnings
+    schema_warnings = analysis.get("schema_warnings", [])
+    if schema_warnings:
+        out("[bold yellow]⚠ Schema warnings:[/bold yellow]", "bold yellow")
+        for w in schema_warnings:
             out(f"  • {w}")
         out("")
 

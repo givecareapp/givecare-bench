@@ -6,7 +6,7 @@ Runs benchmark scenarios against the active gc-sms Convex HTTP contract:
 - `/api/admin` action `harnessHealth`
 - `/api/admin` action `runBenchmarkTurn`
 
-No local gc-sms package paths, bridge bundles, or legacy CLI layout are used.
+Connects via HTTP to the gc-sms Convex admin API.
 """
 
 from __future__ import annotations

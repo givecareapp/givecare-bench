@@ -14,7 +14,6 @@ UNCLEAR and the routing config escalates to the LLMVerifier.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from invisiblebench.evaluation.verifiers.base import (
     EvidenceSpan,
@@ -22,6 +21,7 @@ from invisiblebench.evaluation.verifiers.base import (
     VerdictResult,
     Verifier,
 )
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 # Lexicon registry — populated by build_lexicons() at engine init.
 # Keys match `detectors` names in failure_modes.yaml / scorer_routing.yaml.
@@ -57,10 +57,10 @@ class RegexVerifier(Verifier):
 
     def verify(
         self,
-        transcript: list[dict[str, Any]],
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        transcript: Transcript,
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")

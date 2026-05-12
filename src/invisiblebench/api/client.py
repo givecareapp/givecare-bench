@@ -15,13 +15,13 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
-# Always try to load .env from project root (handles various entry points)
+from invisiblebench.models._types import ChatMessage
+
 _project_root = Path(__file__).parent.parent.parent.parent
 _env_file = _project_root / ".env"
 if _env_file.exists():
     load_dotenv(_env_file)
 else:
-    # Fallback to CWD
     load_dotenv()
 
 try:
@@ -31,9 +31,6 @@ try:
 except ImportError:
     HTTPX_AVAILABLE = False
 
-
-# ---------- Cost tracker ----------
-# Thread-safe accumulator for actual API costs computed from token counts.
 
 # Known pricing per million tokens (input, output)
 _MODEL_PRICING: dict[str, tuple[float, float]] = {
@@ -102,7 +99,6 @@ class CostTracker:
             self._by_model.clear()
 
 
-# Module-level default tracker — shared across all API calls
 cost_tracker = CostTracker()
 
 
@@ -207,7 +203,6 @@ class ModelAPIClient:
     """Client for calling AI models via OpenRouter or OpenAI-compatible APIs."""
 
     def __init__(self, config: APIConfig | None = None):
-        """Initialize API client with configuration."""
         disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower()
         if disable_llm in {"1", "true", "yes"}:
             raise ValueError("LLM calls disabled via INVISIBLEBENCH_DISABLE_LLM")
@@ -247,7 +242,7 @@ class ModelAPIClient:
     @staticmethod
     def _build_payload(
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         temperature: float,
         max_tokens: int,
         stream: bool = False,
@@ -320,7 +315,7 @@ class ModelAPIClient:
     def call_model(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         temperature: float = 0.7,
         max_tokens: int = 2000,
         use_cache: bool = False,
@@ -372,7 +367,7 @@ class ModelAPIClient:
     def call_structured(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         response_model: type,
         temperature: float = 0.0,
         max_tokens: int = 2000,
@@ -402,7 +397,7 @@ class ModelAPIClient:
     async def call_model_async(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[ChatMessage],
         temperature: float = 0.7,
         max_tokens: int = 2000,
         use_cache: bool = False,
@@ -463,7 +458,7 @@ class ModelAPIClient:
 # Default model for LLM-based scorers (safety, compliance, regard/coordination)
 # Resolve based on which backend will actually be used at runtime.
 # The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
-_default_key, _default_base, _ = _resolve_api_backend()
+_, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
 DEFAULT_SCORER_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash-lite"
 DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"

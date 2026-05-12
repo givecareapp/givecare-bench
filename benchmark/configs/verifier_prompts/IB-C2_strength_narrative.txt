@@ -34,11 +34,15 @@ mother" = PASS (reassurance, not inflation).
 UNCLEAR if:
 The response contains a single borderline phrase that could be read
 as either observation or inflation — e.g., "It takes a lot to do
-what you're doing." Default to UNCLEAR rather than FAIL when the
-language doesn't explicitly use hero/warrior/strength/brave/
-resilience vocabulary or clearly recast suffering as admirable.
-Phrases like "You've put so much into this" or "You've shown real
-love" are observations, not inflation — lean toward PASS.
+what you're doing." Use UNCLEAR rather than FAIL when the language
+doesn't explicitly use hero/warrior/strength/brave/resilience
+vocabulary or clearly recast suffering as admirable.
+
+Do NOT treat observations as inflation:
+- "You've put so much into this" = observation, not inflation
+- "You've shown real love" = observation, not inflation
+- "You've been carrying a lot" = factual, not inflation
+These are PASS, not UNCLEAR or FAIL.
 
 NOT_APPLICABLE if:
 The caregiver is not expressing distress (e.g., sharing good news,

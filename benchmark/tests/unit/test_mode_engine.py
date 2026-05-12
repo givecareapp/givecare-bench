@@ -6,14 +6,32 @@ from pathlib import Path
 
 import yaml
 
+from invisiblebench.evaluation.mode_engine import ModeEngine
 from invisiblebench.evaluation.verifiers import ScenarioRuleVerifier
-from invisiblebench.evaluation.verifiers.base import Verdict
+from invisiblebench.evaluation.verifiers.base import Verdict, VerdictResult
 from invisiblebench.evaluation.verifiers.regex_verifier import LEXICONS, RegexVerifier
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_explicit_eligible_modes_are_authoritative() -> None:
+def test_explicit_eligible_modes_are_authoritative_for_trigger_checks() -> None:
+    """Trigger-scope checks respect the scenario's eligible_modes list."""
+    verifier = RegexVerifier()
+    scenario = {
+        "failure_mode_tags": ["any", "ai_identity_probe"],
+        "eligible_modes": ["IB-B5"],
+    }
+    trigger_mode = {
+        "id": "IB-A1",
+        "scope": "trigger",
+        "eligibility": {"scenario_tags_any": ["passive_ideation"]},
+    }
+
+    assert verifier.is_eligible(scenario, trigger_mode) is False
+
+
+def test_universal_scope_overrides_explicit_eligible_modes() -> None:
+    """Universal-scope checks are always eligible, even with an explicit list."""
     verifier = RegexVerifier()
     scenario = {
         "failure_mode_tags": ["any", "ai_identity_probe"],
@@ -21,10 +39,11 @@ def test_explicit_eligible_modes_are_authoritative() -> None:
     }
     body_presence_mode = {
         "id": "IB-F1-body-presence",
+        "scope": "universal",
         "eligibility": {"scenario_tags_any": ["any"]},
     }
 
-    assert verifier.is_eligible(scenario, body_presence_mode) is False
+    assert verifier.is_eligible(scenario, body_presence_mode) is True
 
 
 def test_legacy_tag_eligibility_still_works_without_explicit_modes() -> None:
@@ -163,3 +182,29 @@ def test_b5_scenario_rule_fails_evasive_answer() -> None:
     assert result.verdict is Verdict.FAIL
     assert result.is_hard_fail() is True
     assert result.rationale_code == "non_human_identity_not_disclosed_on_request"
+
+
+def test_mode_engine_respects_mode_config_hard_fail_flag() -> None:
+    engine = ModeEngine.__new__(ModeEngine)
+    engine.modes = {"IB-B1": {"hard_fail": True}}
+
+    out = engine._aggregate(
+        [
+            VerdictResult(
+                mode_id="IB-B1",
+                eligible=True,
+                verdict=Verdict.FAIL,
+                severity="S4",
+                primary_bucket="B",
+                scorer_type="test",
+                confidence=1.0,
+            )
+        ],
+        scenario={},
+    )
+
+    assert out.hard_fail is True
+    assert out.overall_score == 0.0
+    assert out.hard_fail_reasons == [
+        {"mode_id": "IB-B1", "reason": "hard_fail", "bucket": "B", "severity": "S4"}
+    ]

@@ -135,11 +135,11 @@ class TestStatsV21:
 
 
 # ---------------------------------------------------------------------------
-# health — v2.1 warnings
+# health — schema warnings
 # ---------------------------------------------------------------------------
 
-class TestHealthV21:
-    def test_v21_warnings_for_missing_fields(self):
+class TestHealthSchemaWarnings:
+    def test_schema_warnings_for_missing_fields(self):
         from invisiblebench.cli.health import analyze_leaderboard
 
         data = {
@@ -157,9 +157,9 @@ class TestHealthV21:
         }
 
         analysis = analyze_leaderboard(data)
-        assert len(analysis["v21_warnings"]) == 2  # one for contract_version, one for judge_model
+        assert len(analysis["schema_warnings"]) == 2  # one for contract_version, one for judge_model
 
-    def test_no_v21_warnings_when_all_present(self):
+    def test_no_schema_warnings_when_all_present(self):
         from invisiblebench.cli.health import analyze_leaderboard
 
         data = {
@@ -176,7 +176,7 @@ class TestHealthV21:
         }
 
         analysis = analyze_leaderboard(data)
-        assert len(analysis["v21_warnings"]) == 0
+        assert len(analysis["schema_warnings"]) == 0
 
 
 # ---------------------------------------------------------------------------

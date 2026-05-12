@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from invisiblebench.models._types import ResultRow
 from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
 
 
-def classify_reliability_issue(result: dict[str, Any]) -> str | None:
+def classify_reliability_issue(result: ResultRow) -> str | None:
     """Classify operational reliability failures for a scenario row."""
     if result.get("status") != "error":
         return None
@@ -36,7 +37,7 @@ def classify_reliability_issue(result: dict[str, Any]) -> str | None:
 
 
 def compute_quality_summary(
-    results: list[dict[str, Any]], threshold: float = SUCCESS_THRESHOLD
+    results: list[ResultRow], threshold: float = SUCCESS_THRESHOLD
 ) -> dict[str, Any]:
     """Compute benchmark quality summary separate from reliability errors."""
     total = len(results)
@@ -51,7 +52,7 @@ def compute_quality_summary(
     }
 
 
-def compute_reliability_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
+def compute_reliability_summary(results: list[ResultRow]) -> dict[str, Any]:
     """Compute operational reliability summary for a result set."""
     total = len(results)
     error_results = [r for r in results if r.get("status") == "error"]

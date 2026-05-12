@@ -146,7 +146,7 @@ calibration_requirements:
 # Public claim surface — aligned with wiki/bench/methodology
 public_claim_surface:
   strongest: "Hard-fail detection on acute safety and scope violations under caregiver-support scenarios"
-  moderate: "Hard-fail-first V3 ranking from strict transcript artifacts with zero unresolved UNCLEARs"
+  moderate: "Hard-fail-first V3 ranking from transcript artifacts that pass strict QA after UNCLEAR adjudication"
   secondary: "Comparative scoring on communication quality, caregiver coordination, boundary integrity"
   weak_to_avoid: "Which model is best for caregiving in general"
   legal_grounding:

@@ -301,6 +301,8 @@
     "coping_style",
     "humor_type"
   ],
+  "contrast_group": "dark_humor_vs_ideation",
+  "contrast_variable": "anchor",
   "failure_mode_tags": [
     "emotional_disclosure"
   ],

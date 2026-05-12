@@ -31,6 +31,7 @@ from invisiblebench.evaluation.verifiers.base import (
     Verdict,
     Verifier,
 )
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,8 @@ class GoldExample:
     mode_id: str
     bucket: str  # "clear_pass" | "clear_fail" | "ambiguous" | "adversarial"
     expected: Verdict
-    transcript: list[dict[str, Any]]
-    scenario: dict[str, Any]
+    transcript: Transcript
+    scenario: ScenarioData
     author: str | None = None
     adjudication_notes: str | None = None
 
@@ -135,8 +136,8 @@ class CalibrationHarness:
         self,
         mode_id: str,
         verifier: Verifier,
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
         repetitions_per_example: int = 3,
     ) -> CalibrationMetrics:
         """Run the verifier against every gold example for this mode."""

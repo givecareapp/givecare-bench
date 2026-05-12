@@ -24,7 +24,10 @@ import logging
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from invisiblebench.api.client import ModelAPIClient
 
 from invisiblebench.evaluation.verifiers.base import (
     CORE_VERDICTS,
@@ -33,6 +36,7 @@ from invisiblebench.evaluation.verifiers.base import (
     VerdictResult,
     Verifier,
 )
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +62,7 @@ def _hash_prompt(prompt_text: str) -> str:
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:16]
 
 
-def _format_transcript_for_prompt(transcript: list[dict[str, Any]]) -> str:
+def _format_transcript_for_prompt(transcript: Transcript) -> str:
     """Render transcript as numbered turn-annotated text."""
     lines = []
     for t in transcript:
@@ -70,11 +74,11 @@ def _format_transcript_for_prompt(transcript: list[dict[str, Any]]) -> str:
 
 
 def _bounded_transcript(
-    transcript: list[dict[str, Any]],
-    scenario: dict[str, Any],
-    mode_config: dict[str, Any],
-    routing_config: dict[str, Any],
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    transcript: Transcript,
+    scenario: ScenarioData,
+    mode_config: ModeConfig,
+    routing_config: RoutingConfig,
+) -> tuple[Transcript, dict[str, Any] | None]:
     """Slice transcript per `unit_of_analysis` rule.
 
     Returns (bounded_transcript, window_metadata).
@@ -86,8 +90,7 @@ def _bounded_transcript(
     - `scenario_level` / `session_state`: full transcript (no slicing).
     - `extracted_claim`: full transcript (corpus verifier handles extraction).
 
-    Default fallback (no unit_of_analysis set): full transcript — preserves
-    backward compatibility with existing prompts.
+    Default (no unit_of_analysis set): full transcript.
     """
     unit = (routing_config.get("unit_of_analysis") or "").strip()
     if not unit or unit in {"scenario_level", "session_state", "extracted_claim"}:
@@ -252,7 +255,7 @@ def _aggregate_repetitions(
     confidence = top_count / len(parsed_results)
 
     # Take evidence from the first result matching the majority verdict.
-    evidence = []
+    evidence: list[dict[str, Any]] = []
     for r in parsed_results:
         if r["verdict"] == top_verdict:
             evidence = r.get("evidence", []) or []
@@ -274,7 +277,7 @@ class LLMVerifier(Verifier):
 
     def __init__(
         self,
-        api_client: Any,
+        api_client: ModelAPIClient,
         model: str = "google/gemini-2.5-flash-lite",
         prompt_dir: Path | None = None,
     ) -> None:
@@ -284,10 +287,10 @@ class LLMVerifier(Verifier):
 
     def verify(
         self,
-        transcript: list[dict[str, Any]],
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        transcript: Transcript,
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
@@ -379,46 +382,56 @@ class LLMVerifier(Verifier):
         parsed_results: list[dict[str, Any]] = []
         parse_errors: list[str] = []
         raw_outputs: list[str] = []
+        max_tokens_schedule = [4000, 8000, 16000]
 
         for i in range(repetitions):
-            try:
-                response = self.api_client.call_model(
-                    model=self.model,
-                    messages=[{"role": "user", "content": user_prompt}],
-                    temperature=0.0 if i == 0 else 0.3,  # encourage variation
-                )
-                # Client may return a dict {"response": "..."} or a plain string.
-                raw = response["response"] if isinstance(response, dict) else response
-                raw_text = str(raw)
-                raw_outputs.append(raw_text[:1000])
-                parsed = _parse_verdict_json(raw_text)
-                parsed_results.append(parsed)
-            except Exception as e:
-                parse_errors.append(f"{type(e).__name__}: {e}")
+            last_err: Exception | None = None
+            for max_tok in max_tokens_schedule:
+                try:
+                    response = self.api_client.call_model(
+                        model=self.model,
+                        messages=[{"role": "user", "content": user_prompt}],
+                        temperature=0.0 if i == 0 else 0.3,
+                        max_tokens=max_tok,
+                    )
+                    raw = response["response"] if isinstance(response, dict) else response
+                    raw_text = str(raw)
+                    raw_outputs.append(raw_text[:1000])
+                    parsed = _parse_verdict_json(raw_text)
+                    parsed_results.append(parsed)
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+                    if max_tok < max_tokens_schedule[-1]:
+                        logger.debug(
+                            "LLM verifier %d/%d for %s failed at max_tokens=%d, escalating: %s",
+                            i + 1, repetitions, mode_id, max_tok, e,
+                        )
+            if last_err is not None:
+                parse_errors.append(f"{type(last_err).__name__}: {last_err}")
                 logger.warning(
-                    "LLM verifier call %d/%d failed for %s: %s",
-                    i + 1,
-                    repetitions,
-                    mode_id,
-                    e,
+                    "LLM verifier call %d/%d failed for %s after all token escalations: %s",
+                    i + 1, repetitions, mode_id, last_err,
                 )
 
         if not parsed_results:
             return VerdictResult(
                 mode_id=mode_id,
                 eligible=True,
-                verdict=Verdict.UNCLEAR,
+                verdict=Verdict.FAIL,
                 severity=severity,
                 primary_bucket=primary_bucket,
                 scorer_type=self.scorer_type,
                 confidence=0.0,
-                rationale_code="all_repetitions_failed",
+                rationale_code="verifier_infrastructure_failure",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.2",
+                scorer_version="llm_verifier-v0.3",
                 prompt_hash=prompt_hash,
                 extra={
                     "parse_errors": parse_errors,
                     "raw_outputs_truncated": raw_outputs,
+                    "fail_closed": True,
                 },
             )
 

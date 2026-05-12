@@ -7,6 +7,8 @@ import json
 import logging
 from typing import Any
 
+from invisiblebench.models.results import is_result_success
+
 logger = logging.getLogger(__name__)
 
 
@@ -254,16 +256,8 @@ class ReportGenerator:
     def _build_batch_html(self, results: list[dict[str, Any]], metadata: dict[str, Any]) -> str:
 
 
-        def is_failure(result: dict[str, Any]) -> bool:
-            status = result.get("status")
-            return (
-                status in {"fail", "error"}
-                or result.get("hard_fail")
-                or result.get("overall_score", 1) < 0.5
-            )
-
         total = len(results)
-        failures = [r for r in results if is_failure(r)]
+        failures = [r for r in results if not is_result_success(r)]
         avg_score = (
             sum(r.get("overall_score", 0) for r in results) / total if total else 0
         )

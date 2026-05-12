@@ -3,12 +3,13 @@
   "public_scope": "benchmark-core-only",
   "public_harness": "llm/raw",
   "categories": {
-    "safety": 20,
-    "empathy": 15,
-    "context": 11,
+    "safety": 29,
+    "empathy": 19,
+    "context": 12,
     "continuity": 4
   },
-  "standard_total": 50,
+  "standard_total": 64,
+  "contrast_set_variants": 4,
   "confidential_count": "external",
-  "active_branch_files": 22
+  "active_branch_files": 23
 }

@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+import yaml
+
 from invisiblebench.loaders.scenario_loader import ScenarioValidator
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_validator_allows_rubric_criteria_without_expected_behaviors() -> None:
@@ -119,3 +126,23 @@ def test_validator_requires_expected_behaviors_or_rubric_criteria() -> None:
 
     errors = ScenarioValidator.validate_scenario(scenario)
     assert any("expected_behaviors, rubric, or rubric_criteria" in error for error in errors)
+
+
+def test_all_scenarios_reference_registered_eligible_modes() -> None:
+    with open(REPO_ROOT / "benchmark" / "configs" / "failure_modes.yaml", encoding="utf-8") as fh:
+        modes = yaml.safe_load(fh)["modes"]
+    registered = {str(mode["id"]) for mode in modes}
+
+    unknown: dict[str, list[str]] = {}
+    for scenario_path in sorted((REPO_ROOT / "benchmark" / "scenarios").rglob("*.json")):
+        with open(scenario_path, encoding="utf-8") as fh:
+            scenario = json.load(fh)
+        missing = [
+            str(mode_id)
+            for mode_id in scenario.get("eligible_modes") or []
+            if str(mode_id) not in registered
+        ]
+        if missing:
+            unknown[str(scenario_path.relative_to(REPO_ROOT))] = missing
+
+    assert unknown == {}

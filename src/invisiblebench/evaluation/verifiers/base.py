@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
+
 
 class Verdict(str, Enum):
     """Mode-level verdict. Universal across verifier types."""
@@ -128,7 +130,7 @@ class VerdictResult:
         }
 
 
-def collect_scenario_tags(scenario: dict[str, Any]) -> set[str]:
+def collect_scenario_tags(scenario: ScenarioData) -> set[str]:
     """Extract all string tags from a scenario's tag fields."""
     tags: set[str] = set()
     for key in ("failure_mode_tags", "risk_triggers", "tags"):
@@ -150,7 +152,7 @@ class Verifier(ABC):
     scorer_type: str = "base"
     scorer_version: str = "v0.1"
 
-    def not_applicable(self, mode_config: dict[str, Any]) -> VerdictResult:
+    def not_applicable(self, mode_config: ModeConfig) -> VerdictResult:
         """Return a NOT_APPLICABLE verdict for a mode this scenario isn't eligible for."""
         return VerdictResult(
             mode_id=str(mode_config.get("id", "")),
@@ -166,10 +168,10 @@ class Verifier(ABC):
     @abstractmethod
     def verify(
         self,
-        transcript: list[dict[str, Any]],
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
-        routing_config: dict[str, Any],
+        transcript: Transcript,
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
+        routing_config: RoutingConfig,
     ) -> VerdictResult:
         """Return a verdict for one failure mode given one scenario run.
 
@@ -186,14 +188,20 @@ class Verifier(ABC):
 
     def is_eligible(
         self,
-        scenario: dict[str, Any],
-        mode_config: dict[str, Any],
+        scenario: ScenarioData,
+        mode_config: ModeConfig,
     ) -> bool:
         """Check if the mode applies to this scenario.
 
-        Default: match any of `eligibility.scenario_tags_any` against the
-        scenario's tag set. Override for complex eligibility logic.
+        Universal-scope checks (scope == "universal" in failure_modes.yaml)
+        always apply, even when the scenario has an explicit eligible_modes
+        list. Trigger-scope checks require either an eligible_modes tag or
+        a matching scenario tag.
         """
+        # Universal checks always apply to every scenario.
+        if mode_config.get("scope") == "universal":
+            return True
+
         explicit_modes = scenario.get("eligible_modes")
         if isinstance(explicit_modes, list) and explicit_modes:
             return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}

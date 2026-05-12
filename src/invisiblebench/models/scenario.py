@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
+from invisiblebench.models._types import JsonMap
+
 
 class ScenarioCategory(str, Enum):
     """Top-level benchmark categories."""
@@ -33,9 +35,6 @@ class ScoringDimension(str, Enum):
     MEMORY_HYGIENE = "memory_hygiene"
     BOUNDARIES = "boundaries"
     GRAY_ZONE = "gray_zone"
-
-
-JsonMap = dict[str, Any]
 
 
 def _normalize_turn_data(data: JsonMap) -> JsonMap:
@@ -136,6 +135,8 @@ class Scenario(BaseModel):
     risk_triggers: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     source_path: str | None = None
+    contrast_group: str | None = None
+    contrast_variable: str | None = None
 
     @computed_field
     @property

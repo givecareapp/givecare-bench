@@ -1,9 +1,4 @@
-"""
-Diagnostic report generator for InvisibleBench.
-
-Generates actionable markdown reports that help identify and fix issues
-in AI systems being evaluated.
-"""
+"""Diagnostic report generator for InvisibleBench."""
 
 from __future__ import annotations
 
@@ -13,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.models.results import is_result_success
 from invisiblebench.utils.dimension_aliases import (
     DIMENSION_ALIASES,
     extract_numeric_dimension_value,
@@ -127,14 +123,6 @@ class DiagnosticReport:
         transcripts_dir: Path | None = None,
         previous_results_path: Path | None = None,
     ):
-        """
-        Initialize diagnostic report generator.
-
-        Args:
-            results_path: Path to results JSON (all_results.json or givecare_results.json)
-            transcripts_dir: Directory containing transcript JSONL files
-            previous_results_path: Optional path to previous results for comparison
-        """
         self.results_path = Path(results_path)
         self.transcripts_dir = Path(transcripts_dir) if transcripts_dir else None
         self.previous_results_path = Path(previous_results_path) if previous_results_path else None
@@ -143,16 +131,16 @@ class DiagnosticReport:
         self.previous_data = (
             self._load_json(self.previous_results_path) if self.previous_results_path else None
         )
-        self.transcripts: dict[str, list[dict]] = {}
+        self.transcripts: dict[str, list[dict[str, Any]]] = {}
 
-    def _load_json(self, path: Path) -> dict | None:
+    def _load_json(self, path: Path) -> dict[str, Any] | None:
 
         if not path or not path.exists():
             return None
         with open(path) as f:
             return json.load(f)
 
-    def _load_transcript(self, scenario_id: str) -> list[dict]:
+    def _load_transcript(self, scenario_id: str) -> list[dict[str, Any]]:
 
         if scenario_id in self.transcripts:
             return self.transcripts[scenario_id]
@@ -160,7 +148,6 @@ class DiagnosticReport:
         if not self.transcripts_dir:
             return []
 
-        # Try various naming patterns
         patterns = [
             f"givecare_{scenario_id}.jsonl",
             f"{scenario_id}.jsonl",
@@ -181,7 +168,7 @@ class DiagnosticReport:
 
         return []
 
-    def _get_results_list(self) -> list[dict]:
+    def _get_results_list(self) -> list[dict[str, Any]]:
 
         if not self.results_data:
             return []
@@ -193,13 +180,9 @@ class DiagnosticReport:
 
     def _is_failure(self, result: dict[str, Any]) -> bool:
 
-        return (
-            result.get("hard_fail", False)
-            or result.get("status") in ("fail", "error")
-            or result.get("overall_score", 1.0) < 0.5
-        )
+        return not is_result_success(result)
 
-    def _get_low_dimensions(self, result: dict, threshold: float = 0.6) -> list[tuple[str, float]]:
+    def _get_low_dimensions(self, result: dict[str, Any], threshold: float = 0.6) -> list[tuple[str, float]]:
 
         dims = result.get("dimensions", {})
         low = []
@@ -208,7 +191,7 @@ class DiagnosticReport:
                 low.append((dim, score))
         return sorted(low, key=lambda x: x[1])
 
-    def _extract_violations(self, result: dict) -> list[dict]:
+    def _extract_violations(self, result: dict[str, Any]) -> list[dict[str, Any]]:
 
         violations = []
         dims_detailed = result.get("dimensions_detailed", {})
@@ -217,7 +200,6 @@ class DiagnosticReport:
             if not isinstance(dim_data, dict):
                 continue
 
-            # Get violations
             for v in dim_data.get("violations", []) or []:
                 violations.append(
                     {
@@ -229,7 +211,6 @@ class DiagnosticReport:
                     }
                 )
 
-            # Get hard fails
             for hf in dim_data.get("hard_fails", []) or []:
                 violations.append(
                     {
@@ -243,7 +224,7 @@ class DiagnosticReport:
 
         return sorted(violations, key=lambda x: (x["type"] != "hard_fail", x["turn"]))
 
-    def _get_turn_content(self, transcript: list[dict], turn: int) -> tuple[str, str]:
+    def _get_turn_content(self, transcript: list[dict[str, Any]], turn: int) -> tuple[str, str]:
 
         user_content = ""
         assistant_content = ""
@@ -257,7 +238,7 @@ class DiagnosticReport:
 
         return user_content, assistant_content
 
-    def _analyze_patterns(self, results: list[dict]) -> dict[str, Any]:
+    def _analyze_patterns(self, results: list[dict[str, Any]]) -> dict[str, Any]:
 
         patterns = {
             "by_dimension": defaultdict(list),
@@ -272,7 +253,6 @@ class DiagnosticReport:
             if self._is_failure(r):
                 patterns["by_category"][cat]["failed"] += 1
 
-            # Track low dimensions
             for dim, score in self._get_low_dimensions(r):
                 patterns["by_dimension"][dim].append(
                     {
@@ -281,7 +261,6 @@ class DiagnosticReport:
                     }
                 )
 
-            # Track violations
             for v in self._extract_violations(r):
                 patterns["by_rule"][v["rule"]].append(
                     {
@@ -290,7 +269,6 @@ class DiagnosticReport:
                     }
                 )
 
-        # Find common issues (appear in 2+ scenarios)
         for rule, occurrences in patterns["by_rule"].items():
             if len(occurrences) >= 2:
                 patterns["common_issues"].append(
@@ -305,7 +283,7 @@ class DiagnosticReport:
 
         return patterns
 
-    def _compare_with_previous(self, current: list[dict]) -> dict | None:
+    def _compare_with_previous(self, current: list[dict[str, Any]]) -> dict[str, Any] | None:
 
         if not self.previous_data:
             return None
@@ -392,14 +370,9 @@ class DiagnosticReport:
         return comparison
 
     def _analyze_cross_scenario_patterns(
-        self, results: list[dict]
+        self, results: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Analyze all scored scenarios for recurring anti-patterns.
-
-        Returns a list of detected patterns, each with name, frequency,
-        affected scenarios, example quotes, suggested fix, and caregiver
-        impact statement.
-        """
+        """Detect recurring anti-patterns across all scored scenarios."""
         n_total = len(results)
         if n_total == 0:
             return []
@@ -596,7 +569,7 @@ class DiagnosticReport:
             )
 
         # --- 5. Deflection from emotion ---
-        # regard < mean AND agency > mean (regard/coordination proxy for older/baseline outputs)
+        # regard < mean AND agency > mean (coordination used as agency proxy when breakdown unavailable)
         att_scores = [
             sd["dims"].get("regard", 0)
             for sd in scenario_data
@@ -604,7 +577,7 @@ class DiagnosticReport:
         ]
         att_mean = sum(att_scores) / len(att_scores) if att_scores else 0.5
 
-        # For agency, check detailed breakdown or use score fallback
+        # Agency: prefer detailed breakdown, fall back to coordination score
         agency_scores: list[float] = []
         for sd in scenario_data:
             regard_detail = sd["dims_detailed"].get("regard", {})
@@ -613,7 +586,7 @@ class DiagnosticReport:
             if agency is not None:
                 agency_scores.append(agency)
             else:
-                # Use coordinated dimension score as a fallback proxy
+                # Use coordination dimension score as proxy
                 coordination_score = extract_numeric_dimension_value(
                     sd["dims"].get("coordination")
                 )
@@ -758,25 +731,9 @@ class DiagnosticReport:
             "coordination": "Strengthen actionable next steps and preserve autonomy",
         }
         canonical_dim = DIMENSION_ALIASES.get(dimension, dimension)
-        suggestion = dim_suggestions.get(canonical_dim)
-        if suggestion is None:
-            suggestion = dim_suggestions.get(dimension)
-            if suggestion is None:
-                return "Review scenario transcript for specific issues"
-            return suggestion
-
-        return suggestion
+        return dim_suggestions.get(canonical_dim, "Review scenario transcript for specific issues")
 
     def generate(self, output_path: Path | None = None) -> str:
-        """
-        Generate diagnostic report.
-
-        Args:
-            output_path: Optional path to write markdown file
-
-        Returns:
-            Markdown report content
-        """
         results = self._get_results_list()
         if not results:
             return "# Diagnostic Report\n\nNo results found."
@@ -1050,18 +1007,6 @@ def generate_diagnostic_report(
     previous_results_path: str | None = None,
     output_path: str | None = None,
 ) -> str:
-    """
-    Generate a diagnostic report from eval results.
-
-    Args:
-        results_path: Path to results JSON
-        transcripts_dir: Optional directory with transcript files
-        previous_results_path: Optional previous results for comparison
-        output_path: Optional output path for markdown file
-
-    Returns:
-        Markdown report content
-    """
     report = DiagnosticReport(
         results_path=Path(results_path),
         transcripts_dir=Path(transcripts_dir) if transcripts_dir else None,

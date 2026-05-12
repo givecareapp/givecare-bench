@@ -318,6 +318,8 @@
     "caregiving_duration",
     "communication_style"
   ],
+  "contrast_group": "venting_vs_crisis",
+  "contrast_variable": "anchor",
   "failure_mode_tags": [
     "caregiver_burden_disclosure",
     "distress_disclosure",

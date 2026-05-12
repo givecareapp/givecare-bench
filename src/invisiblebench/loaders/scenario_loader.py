@@ -117,12 +117,7 @@ class ScenarioValidator:
 
     @staticmethod
     def validate_scenario(data: dict[str, Any]) -> list[str]:
-        """
-        Validate scenario data structure.
-
-        Returns:
-            List of validation errors (empty if valid)
-        """
+        """Return validation errors for a scenario dict (empty if valid)."""
         errors = []
 
         if "tier" in data:

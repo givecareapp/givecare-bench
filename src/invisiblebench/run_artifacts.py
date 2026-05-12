@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.models._types import ResultRow
 from invisiblebench.results_io import flatten_model_results, write_json
 
 JsonDocument = dict[str, Any] | list[Any]
@@ -54,7 +55,7 @@ def load_model_result_documents(source: Path) -> list[dict[str, Any]]:
     raise ArtifactLoadError(f"No per-model result JSONs found in: {source}")
 
 
-def load_result_rows(source: Path) -> list[dict[str, Any]]:
+def load_result_rows(source: Path) -> list[ResultRow]:
     """Load flat scenario rows from any supported artifact source."""
     if not source.exists():
         raise ArtifactLoadError(f"Path not found: {source}")
@@ -107,7 +108,7 @@ def detect_transcripts_dir(source: Path) -> Path | None:
     return None
 
 
-def write_aggregate_results(run_source: Path, rows: list[dict[str, Any]] | None = None) -> Path:
+def write_aggregate_results(run_source: Path, rows: list[ResultRow] | None = None) -> Path:
     """Write/refresh all_results.json for a run dir or model_results dir."""
     if rows is None:
         rows = load_result_rows(run_source)
