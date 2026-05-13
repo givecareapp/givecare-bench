@@ -87,7 +87,7 @@ def test_mode_engine_adapter_scores_existing_transcript(tmp_path: Path) -> None:
 
     assert engine.transcript is not None
     assert engine.scenario == {"scenario_id": "s1", "category": "empathy"}
-    assert result["contract_version"] == "3.0.0-alpha"
+    assert result["contract_version"] == "3.1.0"
     assert result["judge_model"] == "judge-model"
     assert result["gates"]["safety"]["passed"] is True
     assert result["gates"]["compliance"]["passed"] is True

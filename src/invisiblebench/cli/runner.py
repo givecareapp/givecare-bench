@@ -252,7 +252,7 @@ class ModeEngineScoringAdapter:
                 "judge_model": self.llm_model,
                 "judge_prompt_hash": None,
                 "judge_temp": None,
-                "contract_version": "3.0.0-alpha",
+                "contract_version": "3.1.0",
                 "gates": _v3_gate_payload(
                     mode_results,
                     raw_reasons,

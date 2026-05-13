@@ -292,7 +292,7 @@ def _audit_scoring_integrity(rows: list[dict[str, Any]]) -> dict[str, Any]:
         status = row.get("status")
         if not isinstance(score, (int, float)) or float(score) < 0 or float(score) > 1:
             invalid_rows.append({"row": idx, "reason": "invalid_score"})
-        if status not in {"pass", "fail", "error"}:
+        if status not in {"pass", "fail", "error", "invalid"}:
             invalid_rows.append({"row": idx, "reason": "invalid_status"})
         for key in ("model", "scenario", "scenario_id"):
             if not row.get(key):

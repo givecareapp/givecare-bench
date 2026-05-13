@@ -1,5 +1,5 @@
 {
-  "benchmark_version": "3.0.0",
+  "benchmark_version": "3.1.0",
   "public_scope": "benchmark-core-only",
   "public_harness": "llm/raw",
   "categories": {
