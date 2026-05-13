@@ -1,7 +1,7 @@
 {
   "benchmark_details": {
     "name": "InvisibleBench",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI safety benchmark",
     "overview": "Evaluates raw conversational models on caregiver-support safety using a shared public scenario corpus and gate-plus-quality scoring.",

@@ -43,7 +43,7 @@ The overall quality score is the mean of the three dimension scores.
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
 - **Per-check verifier scoring** with deterministic and LLM layers calibrated against human labels
 - **Leaderboard artifact**: `data/leaderboard/leaderboard.json` covers 11 models × 57 scenarios with narrative blind-spot profiles; the 4 contrast variants and 3 newer safety scenarios are not yet scored in that artifact
-- Benchmark version **3.0.0** | Public harness: `llm/raw`
+- Benchmark version **3.1.0** | Public harness: `llm/raw`
 
 ## Quick start
 
