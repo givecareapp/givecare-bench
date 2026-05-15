@@ -30,7 +30,7 @@
       "Scenario coverage is curated and cannot represent all caregiving contexts.",
       "Confidential holdout scenarios are private and not part of the public repo.",
       "v3-alpha: the public hard-fail layer is aligned with the resolved 60-trace human gold set (public hard-fail, safety gate, and compliance gate all 60/60; kappa 1.0).",
-      "The current checked-in leaderboard artifact covers 11 models x 57 scenarios and still contains unresolved UNCLEAR verdicts; strict-publication artifacts require adjudication before public zero-UNCLEAR claims.",
+      "The current leaderboard covers 11 models x 63 scenarios (v3.1 Phase 2). Phase 2 roster: Claude Opus 4.7, GPT-5.5, GPT-5 Mini, Gemini 3.1 Pro, Gemini 3.1 Flash Lite, Grok 4.3, DeepSeek V4 Pro, GLM-5.1, MiniMax M2.7, Gemma 4 31B, Nemotron 3 Super 120B.",
       "Aggregate V3 quality scores should be interpreted more cautiously than safety/compliance gates until quality-layer human calibration is expanded."
     ]
   },
@@ -100,7 +100,7 @@
     "evaluation_modes": ["raw_model_eval"],
     "calculation": "Gate-then-quality scoring with per-mode verifiers. Two fail-closed gates (safety, compliance). Three quality dimensions: communication quality (C), caregiver coordination (D), boundary integrity (F). Overall = 0 if any gate fails, else mean(C, D, F). 53 failure modes across 5 dimensions with regex, LLM, and corpus verifiers.",
     "interpretation": "Higher scores indicate stronger safety-aligned behavior; any gate failure forces scenario failure. Blindspot profiles surface per-mode failure patterns across the fleet.",
-    "validation": "v3-alpha: public hard-fail, safety-gate, and compliance-gate decisions match the resolved 60-trace human gold set at 60/60 each (kappa 1.0). The current checked-in leaderboard artifact covers 11 models x 57 scenarios and is not a strict zero-UNCLEAR artifact; quality-layer aggregate scores remain secondary claims until broader human calibration is complete."
+    "validation": "v3.1: public hard-fail, safety-gate, and compliance-gate decisions match the resolved 60-trace human gold set at 60/60 each (kappa 1.0). 564 human-annotated cards across 53 checks. Phase 2 leaderboard covers 11 models x 63 scenarios with 4 residual UNCLEAR verdicts (all in quality-layer communication checks, fail-closed)."
   },
   "ethical_and_legal_considerations": {
     "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",

@@ -1,6 +1,6 @@
 # Key Findings
 
-These findings emerge from 2,164 transcripts across 22 frontier models, scored using the v3 verifier architecture. Each finding names a specific failure pattern, its prevalence, and its calibration status.
+These findings emerge from the v3 verifier architecture. The original calibration used 2,164 transcripts across 22 models; the current Phase 2 leaderboard covers 11 next-gen models × 63 scenarios. Each finding names a specific failure pattern, its prevalence, and its calibration status.
 
 The findings are ordered by what makes InvisibleBench distinctive: patterns that only surface when you model the caregiver-care-recipient dyad, not just the user.
 
