@@ -38,10 +38,11 @@ nav:
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md
   - Methodology: methodology.md
+  - Publishing Audit: publishing-audit.md
   - Taxonomy: taxonomy.md
   - Check Inventory: checks.md
   - Key Findings: findings.md
-  - Judge Validation: judge-validation.md
+  - Verifier Validation: verifier-validation.md
 
 plugins:
   - search

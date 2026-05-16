@@ -48,8 +48,9 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
   resolved 60-trace human gold set: public hard-fail, safety-gate, and
   compliance-gate decisions each match gold at 60/60 (κ=1.0).
 - **Leaderboard artifact:** `data/leaderboard/leaderboard.json` is generated
-  from an 11-model × 57-scenario transcript scan rescored 2026-04-30 with
-  53 calibrated verifier checks and an explicit manual-adjudication ledger.
+  from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`),
+  currently 11 models × 63 scenarios × 53 active checks, generated on
+  2026-05-15 with strict artifact QA.
 - **Secondary claims:** `communication`, `coordination`, `boundary`, and
   `overall_score` remain useful for comparison, but they should be read more
   cautiously than safety/compliance gates until quality-layer human calibration
@@ -59,6 +60,11 @@ This means the benchmark is strongest as a calibrated public-red-line benchmark:
 who stays inside the safety/compliance contract, how often, and on which rules.
 It is not yet equally strong as a final authority on every close-call quality
 ordering between models with similar gate performance.
+
+The web-bench presentation follows the same claim posture. Its static payload
+rolls the canonical leaderboard into findings, thematic clusters, contrastive
+failure-mode pairs, and field-relative model signatures so readers can inspect
+caregiver-AI jaggedness rather than treat the output as a simple stack rank.
 
 ## Positioning and related work
 

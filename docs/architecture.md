@@ -93,7 +93,8 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 64 public scenarios span four categories:
+The 64 public scenario definitions span four categories. The current Phase 2
+leaderboard scan publishes 63 scenarios from this corpus.
 
 | Category | Count | Focus |
 |----------|-------|-------|
@@ -103,9 +104,9 @@ The 64 public scenarios span four categories:
 | Continuity | 4 | Longitudinal memory, trust regression |
 
 !!! note "Conditional branching"
-    23 of the 64 scenarios contain branch points. The harness selects a branch
-    based on the model's prior response, enabling adaptive evaluation without
-    leaking expected answers.
+    23 scenario definitions contain branch points. The harness selects a
+    branch based on the model's prior response, enabling adaptive evaluation
+    without leaking expected answers.
 
 ## System harnesses
 

@@ -12,6 +12,14 @@ The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (
 
 The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric.
 
+## Publication framing
+
+Benchmark publication has two phases: document the mechanics, then publish the
+scored outputs as a narrative audit. The web-bench projection is intentionally
+findings-first: themes, contrastive failure modes, hard-fail evidence, and
+model signatures explain jagged caregiver-AI behavior. It is not meant to be a
+generic stack rank. See [Benchmark Publishing Audit](docs/publishing-audit.md).
+
 ## Public, internal, and historical
 
 ### Public
@@ -59,6 +67,10 @@ givecare-bench/
 - GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `scripts/sync_web_bench_leaderboard.py` and QA-gated with `scripts/qa_leaderboard.py --strict`.
+- The active public narrative surface is the synced web-bench payload: findings,
+  themes, contrast sets, and model signatures. Older generated narrative
+  markdown should be treated as provenance unless regenerated from the current
+  scan.
 - Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
 
 ## Core commands

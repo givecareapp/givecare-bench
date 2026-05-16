@@ -5,9 +5,9 @@ It evaluates whether language models can safely and effectively support family c
 across realistic multi-turn conversations.
 
 !!! warning "Key findings"
-    InvisibleBench surfaces distinctive failure patterns across 22 frontier models:
-    22.5% harm-fear miss rate, 17.5% crisis signal negation, 22x spread
-    on artificial intimacy. See [Key Findings](findings.md).
+    InvisibleBench surfaces distinctive caregiver-AI failure patterns:
+    hard-fail safety gaps, crisis-signal negation, artificial-intimacy variance,
+    and contrast-set brittleness. See [Key Findings](findings.md).
 
 ## Scoring model
 
@@ -39,11 +39,19 @@ The overall quality score is the mean of the three dimension scores.
 
 ## Key facts
 
-- **64 public scenarios** across 4 categories: safety, empathy, context, continuity (includes 4 contrast-set variants)
+- **Current public scan** covers 63 scenarios across 4 categories: safety, empathy, context, continuity (including contrast-set variants)
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
 - **Per-check verifier scoring** with deterministic and LLM layers calibrated against human labels
 - **Leaderboard artifact**: `data/leaderboard/leaderboard.json` covers 11 models × 63 scenarios (Phase 2 roster) with narrative blind-spot profiles
 - Benchmark version **3.1.0** | Public harness: `llm/raw`
+
+## Publication posture
+
+The public web-bench story is a narrative audit, not a stack rank. The release
+flow first documents the benchmark mechanics, then projects the scored outputs
+into caregiver-centered findings: thematic blind spots, contrastive failure
+modes, hard-fail evidence, and model signatures. See
+[Benchmark Publishing Audit](publishing-audit.md).
 
 ## Quick start
 
@@ -89,6 +97,7 @@ uv run pytest benchmark/tests -q
 - [Scoring Rubric](scoring-rubric.md) — full scoring weights, dimension definitions, gate logic
 - [Architecture](architecture.md) — system design, scenario schema, harness pipeline
 - [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape
+- [Publishing Audit](publishing-audit.md) — two-phase publication model and web-bench narrative contract
 - [Taxonomy](taxonomy.md) — the 5-dimension failure-mode framework (A/B/C/D/F)
-- [Key Findings](findings.md) — distinctive failure patterns across 22 frontier models
+- [Key Findings](findings.md) — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard
 - [Verifier Validation](verifier-validation.md) — verifier template-hash manifest and validation status
