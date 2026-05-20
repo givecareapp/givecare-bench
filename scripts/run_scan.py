@@ -22,10 +22,12 @@ from __future__ import annotations
 
 import argparse
 import collections
+import concurrent.futures
 import json
 import logging
 import sys
 import time
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +50,198 @@ logger = logging.getLogger("v3_scan")
 
 
 SCENARIOS_ROOT = REPO_ROOT / "benchmark" / "scenarios"
+LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
+MODEL_PRICING = {
+    "google/gemini-2.5-flash-lite": (0.10, 0.40),
+    "google/gemini-2.5-flash": (0.30, 2.50),
+    "gpt-4.1-mini": (0.40, 1.60),
+}
+SCAN_PROFILES: dict[str, dict[str, Any]] = {
+    "smoke": {
+        "description": "Fast local scan: deterministic and scenario-rule checks only.",
+        "include_routes": {
+            "lexicon_only",
+            "regex_with_llm_edge",
+            "scenario_rule",
+            "extract_then_corpus",
+        },
+        "llm_repetitions": 0,
+        "adaptive_repetitions": False,
+    },
+    "dev": {
+        "description": "Cheap development scan: hard gates and boundary checks with one-pass judges.",
+        "include_buckets": {"A", "B", "F"},
+        "llm_repetitions": 1,
+        "adaptive_repetitions": True,
+    },
+    "full": {
+        "description": "All checks with one-pass LLM judges and adaptive metadata.",
+        "include_all": True,
+        "llm_repetitions": 1,
+        "adaptive_repetitions": True,
+    },
+    "publish": {
+        "description": "Publication scan: all checks with configured repetitions.",
+        "include_all": True,
+        "llm_repetitions": None,
+        "adaptive_repetitions": False,
+    },
+}
+
+
+def load_scan_profile(name: str) -> dict[str, Any]:
+    try:
+        profile = deepcopy(SCAN_PROFILES[name])
+    except KeyError as exc:
+        choices = ", ".join(sorted(SCAN_PROFILES))
+        raise ValueError(f"Unknown scan profile {name!r}. Choices: {choices}") from exc
+    profile["name"] = name
+    profile.setdefault("input_tokens_per_llm_call", 2200)
+    profile.setdefault("output_tokens_per_llm_call", 250)
+    return profile
+
+
+def route_requires_llm(routing: dict[str, Any]) -> bool:
+    return str(routing.get("route") or "") in LLM_REQUIRED_ROUTES
+
+
+def _mode_matches_profile(
+    mode_id: str,
+    mode_config: dict[str, Any],
+    routing_config: dict[str, Any],
+    profile: dict[str, Any],
+) -> bool:
+    if mode_id in profile.get("exclude_modes", set()):
+        return False
+    if mode_id in profile.get("include_modes", set()):
+        return True
+    if profile.get("include_all"):
+        return True
+    if profile.get("hard_fail_only") and not mode_config.get("hard_fail"):
+        return False
+    if profile.get("include_routes") and routing_config.get("route") in profile["include_routes"]:
+        return True
+    if profile.get("include_buckets") and mode_config.get("primary_bucket") in profile["include_buckets"]:
+        return True
+    return False
+
+
+def apply_scan_profile(
+    modes: dict[str, dict[str, Any]],
+    routing: dict[str, dict[str, Any]],
+    profile: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    filtered_modes: dict[str, dict[str, Any]] = {}
+    filtered_routing: dict[str, dict[str, Any]] = {}
+
+    for mode_id, mode_config in modes.items():
+        routing_config = routing.get(mode_id)
+        if routing_config is None:
+            continue
+        if not _mode_matches_profile(mode_id, mode_config, routing_config, profile):
+            continue
+
+        filtered_modes[mode_id] = deepcopy(mode_config)
+        routed = deepcopy(routing_config)
+        if route_requires_llm(routed) and profile.get("llm_repetitions") is not None:
+            routed["repetitions"] = max(int(profile["llm_repetitions"]), 0)
+        if route_requires_llm(routed) and profile.get("adaptive_repetitions"):
+            routed["adaptive_repetitions"] = True
+        filtered_routing[mode_id] = routed
+
+    return filtered_modes, filtered_routing
+
+
+def _mode_is_eligible(scenario: dict[str, Any], mode_config: dict[str, Any]) -> bool:
+    if mode_config.get("scope") == "universal":
+        return True
+
+    explicit_modes = scenario.get("eligible_modes")
+    if isinstance(explicit_modes, list) and explicit_modes:
+        return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}
+
+    eligibility = mode_config.get("eligibility") or {}
+    required_tags = eligibility.get("scenario_tags_any") or []
+    if not required_tags or required_tags == ["any"]:
+        return True
+    return bool(collect_scenario_tags(scenario).intersection(required_tags))
+
+
+def _estimate_call_cost(
+    model: str,
+    *,
+    input_tokens: int,
+    output_tokens: int,
+) -> float | None:
+    pricing = MODEL_PRICING.get(model)
+    if pricing is None:
+        return None
+    input_per_m, output_per_m = pricing
+    return (input_tokens / 1_000_000) * input_per_m + (output_tokens / 1_000_000) * output_per_m
+
+
+def build_scan_plan(
+    scenarios: list[dict[str, Any]],
+    modes: dict[str, dict[str, Any]],
+    routing: dict[str, dict[str, Any]],
+    profile: dict[str, Any],
+    *,
+    judge_model: str,
+    llm_enabled: bool,
+) -> dict[str, Any]:
+    by_mode: dict[str, dict[str, Any]] = {}
+    eligible_checks = 0
+    planned_llm_calls = 0
+
+    for scenario in scenarios:
+        scenario_tags = collect_scenario_tags(scenario)
+        for mode_id, mode_config in modes.items():
+            routing_config = routing.get(mode_id)
+            if routing_config is None:
+                continue
+            suppressed_by = routing_config.get("safety_override_suppressed_by") or []
+            if suppressed_by and scenario_tags.intersection(suppressed_by):
+                continue
+            if not _mode_is_eligible(scenario, mode_config):
+                continue
+
+            eligible_checks += 1
+            mode_stats = by_mode.setdefault(
+                mode_id,
+                {
+                    "eligible": 0,
+                    "planned_llm_calls": 0,
+                    "route": routing_config.get("route"),
+                    "bucket": mode_config.get("primary_bucket"),
+                    "severity": mode_config.get("severity"),
+                    "repetitions": routing_config.get("repetitions", 1),
+                },
+            )
+            mode_stats["eligible"] += 1
+
+            if llm_enabled and route_requires_llm(routing_config):
+                calls = max(int(routing_config.get("repetitions", 1) or 0), 0)
+                mode_stats["planned_llm_calls"] += calls
+                planned_llm_calls += calls
+
+    call_cost = _estimate_call_cost(
+        judge_model,
+        input_tokens=int(profile["input_tokens_per_llm_call"]),
+        output_tokens=int(profile["output_tokens_per_llm_call"]),
+    )
+    estimated_cost = None if call_cost is None else call_cost * planned_llm_calls
+
+    return {
+        "profile": profile["name"],
+        "llm_enabled": llm_enabled,
+        "judge_model": judge_model,
+        "transcript_count": len(scenarios),
+        "eligible_checks": eligible_checks,
+        "planned_llm_calls": planned_llm_calls,
+        "estimated_cost_usd": estimated_cost,
+        "pricing_known": call_cost is not None,
+        "by_mode": dict(sorted(by_mode.items())),
+    }
 
 
 def load_scenario(scenario_id: str) -> dict[str, Any]:
@@ -187,6 +381,42 @@ def enrich_scenario_with_inferred_tags(scenario: dict[str, Any]) -> dict[str, An
     return scenario
 
 
+def _scan_pair(
+    pair: dict[str, Any],
+    engine: ModeEngine,
+    parallel: bool,
+    max_workers: int,
+) -> tuple[dict[str, Any], ModeEngineOutput] | None:
+    transcript = load_transcript(pair["transcript_path"])
+    if not transcript:
+        logger.warning("Empty transcript: %s", pair["transcript_path"].name)
+        return None
+
+    scenario = load_scenario(pair["scenario_id"])
+    scenario = enrich_scenario_with_inferred_tags(scenario)
+
+    try:
+        out = engine.evaluate(
+            transcript=transcript,
+            scenario=scenario,
+            parallel=parallel,
+            max_workers=max_workers,
+        )
+    except Exception as e:
+        logger.exception("Engine crash on %s: %s", pair["scenario_id"], e)
+        return None
+
+    record = {
+        "model": pair["model"],
+        "model_id": pair["model_id"],
+        "scenario_id": pair["scenario_id"],
+        "category": pair["category"],
+        "transcript_path": str(pair["transcript_path"]),
+        **out.to_dict(),
+    }
+    return record, out
+
+
 def scan_run(
     run_dir: Path,
     engine: ModeEngine,
@@ -194,6 +424,7 @@ def scan_run(
     filename_filter: str | None = None,
     parallel: bool = False,
     max_workers: int = 8,
+    transcript_workers: int = 1,
 ):
     """Run mode_engine over every transcript in a given run directory."""
     pairs = transcripts_for_run(run_dir)
@@ -210,39 +441,30 @@ def scan_run(
     outputs: list[dict[str, Any]] = []
     engine_outputs: list[ModeEngineOutput] = []
 
-    for i, pair in enumerate(pairs, 1):
-        transcript = load_transcript(pair["transcript_path"])
-        if not transcript:
-            logger.warning("Empty transcript: %s", pair["transcript_path"].name)
-            continue
+    if transcript_workers > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=transcript_workers) as executor:
+            futures = [
+                executor.submit(_scan_pair, pair, engine, parallel, max_workers)
+                for pair in pairs
+            ]
+            for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
+                result = future.result()
+                if result is not None:
+                    record, out = result
+                    outputs.append(record)
+                    engine_outputs.append(out)
+                if i % 25 == 0:
+                    logger.info("  scanned %d/%d", i, len(pairs))
+    else:
+        for i, pair in enumerate(pairs, 1):
+            result = _scan_pair(pair, engine, parallel, max_workers)
+            if result is not None:
+                record, out = result
+                outputs.append(record)
+                engine_outputs.append(out)
 
-        scenario = load_scenario(pair["scenario_id"])
-        scenario = enrich_scenario_with_inferred_tags(scenario)
-
-        try:
-            out = engine.evaluate(
-                transcript=transcript,
-                scenario=scenario,
-                parallel=parallel,
-                max_workers=max_workers,
-            )
-        except Exception as e:
-            logger.exception("Engine crash on %s: %s", pair["scenario_id"], e)
-            continue
-
-        record = {
-            "model": pair["model"],
-            "model_id": pair["model_id"],
-            "scenario_id": pair["scenario_id"],
-            "category": pair["category"],
-            "transcript_path": str(pair["transcript_path"]),
-            **out.to_dict(),
-        }
-        outputs.append(record)
-        engine_outputs.append(out)
-
-        if i % 25 == 0:
-            logger.info("  scanned %d/%d", i, len(pairs))
+            if i % 25 == 0:
+                logger.info("  scanned %d/%d", i, len(pairs))
 
     return outputs, engine_outputs
 
@@ -252,6 +474,7 @@ def write_outputs(
     outputs: list[dict[str, Any]],
     engine_outputs: list[ModeEngineOutput],
     run_dirs: list[Path],
+    scan_plan: dict[str, Any] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -266,6 +489,23 @@ def write_outputs(
     rates_path = output_dir / "blindspot_rates.json"
     with open(rates_path, "w", encoding="utf-8") as f:
         json.dump({"rates": rates, "n_runs": len(engine_outputs)}, f, indent=2)
+
+    if scan_plan is not None:
+        with open(output_dir / "scan_plan.json", "w", encoding="utf-8") as f:
+            json.dump(scan_plan, f, indent=2)
+        with open(output_dir / "cost_report.json", "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "profile": scan_plan.get("profile"),
+                    "llm_enabled": scan_plan.get("llm_enabled"),
+                    "judge_model": scan_plan.get("judge_model"),
+                    "planned_llm_calls": scan_plan.get("planned_llm_calls"),
+                    "estimated_cost_usd": scan_plan.get("estimated_cost_usd"),
+                    "pricing_known": scan_plan.get("pricing_known"),
+                },
+                f,
+                indent=2,
+            )
 
     # Per-model blindspot rates
     by_model: dict[str, list[ModeEngineOutput]] = collections.defaultdict(list)
@@ -294,6 +534,12 @@ def write_outputs(
     summary_lines.append("# V3 Blindspot Scan — Summary\n")
     summary_lines.append(f"- Source run dirs: {', '.join(str(d.name) for d in run_dirs)}")
     summary_lines.append(f"- Transcripts scanned: {len(outputs)}")
+    if scan_plan is not None:
+        estimated = scan_plan.get("estimated_cost_usd")
+        estimated_text = "unknown" if estimated is None else f"${estimated:.4f}"
+        summary_lines.append(f"- Profile: {scan_plan.get('profile')}")
+        summary_lines.append(f"- Planned verifier LLM calls: {scan_plan.get('planned_llm_calls')}")
+        summary_lines.append(f"- Estimated verifier cost: {estimated_text}")
     summary_lines.append(
         f"- Models: {', '.join(sorted(by_model.keys()))}\n"
     )
@@ -381,6 +627,16 @@ def main() -> int:
         help="Where to write scan outputs",
     )
     ap.add_argument(
+        "--profile",
+        default="publish",
+        help="Scan profile: smoke, dev, full, or publish (default: publish).",
+    )
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Write and print the scan plan without evaluating transcripts.",
+    )
+    ap.add_argument(
         "--enable-llm",
         action="store_true",
         help="Wire ModelAPIClient so LLM-primary modes run (costs tokens).",
@@ -396,12 +652,24 @@ def main() -> int:
         help="Run verifier checks concurrently within each transcript (faster, same results).",
     )
     ap.add_argument(
+        "--transcript-workers",
+        type=int,
+        default=1,
+        help="Run multiple transcripts concurrently (default: 1).",
+    )
+    ap.add_argument(
         "--max-workers",
         type=int,
         default=8,
         help="Max concurrent verifier threads when --parallel is set (default: 8).",
     )
     args = ap.parse_args()
+
+    try:
+        profile = load_scan_profile(args.profile)
+    except ValueError as e:
+        logger.error("%s", e)
+        return 2
 
     api_client = None
     if args.enable_llm:
@@ -411,7 +679,10 @@ def main() -> int:
         except (ImportError, ValueError) as e:
             logger.error("Failed to initialize ModelAPIClient: %s", e)
             logger.error("LLM modes will short-circuit to UNCLEAR / NOT_APPLICABLE.")
+
     engine = ModeEngine(llm_api_client=api_client, llm_model=args.llm_model)
+    engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)
+    logger.info("Scan profile: %s (%s)", profile["name"], profile["description"])
     logger.info("Loaded %d modes from failure_modes.yaml", len(engine.modes))
     logger.info("Loaded %d routing entries", len(engine.routing))
 
@@ -437,6 +708,61 @@ def main() -> int:
         logger.error("No run_* directories found")
         return 2
 
+    plan_scenarios: list[dict[str, Any]] = []
+    for run_dir in run_dirs:
+        pairs = transcripts_for_run(run_dir)
+        if args.filter:
+            pairs = [
+                p
+                for p in pairs
+                if args.filter.lower() in p["transcript_path"].name.lower()
+            ]
+        if args.limit:
+            pairs = pairs[: args.limit]
+        for pair in pairs:
+            scenario = load_scenario(pair["scenario_id"])
+            plan_scenarios.append(enrich_scenario_with_inferred_tags(scenario))
+
+    scan_plan_dict = build_scan_plan(
+        plan_scenarios,
+        engine.modes,
+        engine.routing,
+        profile,
+        judge_model=args.llm_model,
+        llm_enabled=bool(args.enable_llm and api_client is not None),
+    )
+
+    if args.dry_run:
+        output_dir = Path(args.output_root) / f"plan_{time.strftime('%Y%m%d_%H%M%S')}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with open(output_dir / "scan_plan.json", "w", encoding="utf-8") as f:
+            json.dump(scan_plan_dict, f, indent=2)
+        with open(output_dir / "cost_report.json", "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "profile": scan_plan_dict["profile"],
+                    "llm_enabled": scan_plan_dict["llm_enabled"],
+                    "judge_model": scan_plan_dict["judge_model"],
+                    "planned_llm_calls": scan_plan_dict["planned_llm_calls"],
+                    "estimated_cost_usd": scan_plan_dict["estimated_cost_usd"],
+                    "pricing_known": scan_plan_dict["pricing_known"],
+                },
+                f,
+                indent=2,
+            )
+        estimated = (
+            "unknown"
+            if scan_plan_dict["estimated_cost_usd"] is None
+            else f"${scan_plan_dict['estimated_cost_usd']:.4f}"
+        )
+        print(f"Scan dry run: {output_dir}")
+        print(f"Profile: {scan_plan_dict['profile']}")
+        print(f"Transcripts: {scan_plan_dict['transcript_count']}")
+        print(f"Eligible checks: {scan_plan_dict['eligible_checks']}")
+        print(f"Planned verifier LLM calls: {scan_plan_dict['planned_llm_calls']}")
+        print(f"Estimated verifier cost: {estimated}")
+        return 0
+
     all_outputs: list[dict[str, Any]] = []
     all_engine_outputs: list[ModeEngineOutput] = []
 
@@ -448,6 +774,7 @@ def main() -> int:
             filename_filter=args.filter,
             parallel=getattr(args, "parallel", False),
             max_workers=getattr(args, "max_workers", 8),
+            transcript_workers=max(args.transcript_workers, 1),
         )
         all_outputs.extend(outputs)
         all_engine_outputs.extend(engine_outputs)
@@ -457,7 +784,7 @@ def main() -> int:
         return 3
 
     output_dir = Path(args.output_root) / time.strftime("%Y%m%d_%H%M%S")
-    write_outputs(output_dir, all_outputs, all_engine_outputs, run_dirs)
+    write_outputs(output_dir, all_outputs, all_engine_outputs, run_dirs, scan_plan_dict)
 
     print(f"\nScan complete: {output_dir}")
     print(f"See {output_dir}/summary.md for top-line blindspot rates.")

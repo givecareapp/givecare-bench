@@ -213,8 +213,9 @@ Contributors with access to private scoring config can reproduce evaluations:
 
 ```bash
 uv run bench doctor                 # Validate env + runs dir
-uv run bench -m <model> -y          # Run benchmark
-uv run python scripts/run_scan.py --enable-llm <run_dir>  # Score transcripts with V3 ModeEngine
+uv run bench -m <model> --scenario-parallel 8 -y  # Run raw model benchmark faster
+uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm <run_dir>  # Plan verifier calls/cost
+uv run python scripts/run_scan.py --profile publish --enable-llm <run_dir>  # Score transcripts with V3 ModeEngine
 uv run bench stats <results_dir>    # Statistical analysis
 uv run bench runs --limit 25 --offset 0  # Paged run index
 uv run bench get <run-id>           # Read single run metadata

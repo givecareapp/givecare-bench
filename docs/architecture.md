@@ -32,10 +32,16 @@ givecare-bench/
 Every evaluation run follows a single data flow:
 
 ```
-scenario JSON ──► harness (transcript generation) ──► scorer pipeline ──► results ──► leaderboard
+scenario JSON ──► RunPlan ──► harness (transcript generation) ──► Transcript
+Transcript ──► ScanPlan ──► check execution ──► results ──► leaderboard
 ```
 
 The scorer pipeline applies 53 per-check verifiers across 5 dimensions. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) provide quality scores.
+
+`ScanPlan` is explicit before expensive work starts. It records the selected
+profile, transcript count, eligible checks, planned verifier LLM calls, judge
+model, and estimated verifier cost. `scripts/run_scan.py --dry-run` writes
+`scan_plan.json` and `cost_report.json` without calling any model.
 
 ### Safety gate
 
@@ -113,6 +119,10 @@ leaderboard scan publishes 63 scenarios from this corpus.
 The public leaderboard contract accepts only the `llm/raw` harness, which sends
 scenario turns directly to the model API and captures raw completions.
 
+For the raw harness, `--scenario-parallel N` can run multiple scenarios for a
+single model concurrently. Turns within each scenario remain sequential so
+branching behavior and conversation history are preserved.
+
 !!! warning "Experimental adapters"
     `givecare/v2` is the only active GiveCare product harness. It calls the
     gc-sms V2 HTTP contract through `/api/admin` actions and is **not** part of
@@ -141,8 +151,8 @@ answer one question: "did failure mode IB-X occur in this transcript?"
 
 ### ModeEngine
 
-The engine (`src/invisiblebench/evaluation/mode_engine.py`) loads two config
-files at init:
+The engine (`src/invisiblebench/evaluation/mode_engine.py`) loads the canonical
+inventory and routing config at init:
 
 - **`benchmark/configs/failure_modes.yaml`** -- 53-check inventory
   across five dimensions: A (safety), B (compliance),
@@ -150,6 +160,9 @@ files at init:
 - **`benchmark/configs/scorer_routing.yaml`** -- per-check dispatch config
   specifying route type, unit of analysis, deterministic precheck lexicon,
   repetition count, and LLM/corpus requirements.
+- **`scripts/run_scan.py` scan profiles** -- small CLI policies
+  (`smoke`, `dev`, `full`, `publish`) that filter checks and apply
+  repetition/adaptive-verifier overrides before scoring starts.
 
 For each check the engine:
 
@@ -163,6 +176,10 @@ For each check the engine:
 3. **Aggregates** verdicts into gate results, dimension scores, and a blindspot
    profile.
 
+The current compatibility layer keeps the taxonomy in `benchmark/configs/` and
+keeps scan-profile policy inside `scripts/run_scan.py` rather than introducing
+another public registry.
+
 ### Verifier types
 
 All verifiers implement the `Verifier` base class
@@ -175,9 +192,11 @@ routes and as a precheck for `hybrid_llm` routes.
 
 **LLMVerifier** -- sends a per-check prompt from
 `benchmark/configs/verifier_prompts/` to the reference model with K-repetition
-majority vote (default K=3, dev K=5). Returns FAIL only when a majority of
-repetitions agree. Handles nuance that lexicons cannot: false reassurance tone,
-implicit coercion, subtle scope overreach.
+majority vote (publish default K=3). Scan profiles can lower repetitions for
+development scans and enable adaptive repetition: a clear first-pass PASS or
+NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured
+repetition budget. The verifier also enables the existing in-process scorer
+cache for deterministic judge calls.
 
 **CorpusVerifier** -- extract-then-verify pattern for factual claims. Extracts
 assertions from the transcript, then checks each against a reference corpus.

@@ -378,7 +378,22 @@ class LLMVerifier(Verifier):
             f"Keep evidence quotes under 80 characters."
         )
 
-        repetitions = routing_config.get("repetitions", 3)
+        repetitions = int(routing_config.get("repetitions", 3) or 0)
+        if repetitions <= 0:
+            return VerdictResult(
+                mode_id=mode_id,
+                eligible=False,
+                verdict=Verdict.NOT_APPLICABLE,
+                severity=severity,
+                primary_bucket=primary_bucket,
+                scorer_type=self.scorer_type,
+                confidence=1.0,
+                rationale_code="disabled_by_scan_profile",
+                scorer_version="llm_verifier-v0.3",
+                prompt_hash=prompt_hash,
+            )
+
+        adaptive_repetitions = bool(routing_config.get("adaptive_repetitions", False))
         parsed_results: list[dict[str, Any]] = []
         parse_errors: list[str] = []
         raw_outputs: list[str] = []
@@ -386,6 +401,7 @@ class LLMVerifier(Verifier):
 
         for i in range(repetitions):
             last_err: Exception | None = None
+            parsed_this_repetition: dict[str, Any] | None = None
             for max_tok in max_tokens_schedule:
                 try:
                     response = self.api_client.call_model(
@@ -393,12 +409,14 @@ class LLMVerifier(Verifier):
                         messages=[{"role": "user", "content": user_prompt}],
                         temperature=0.0 if i == 0 else 0.3,
                         max_tokens=max_tok,
+                        use_cache=True,
                     )
                     raw = response["response"] if isinstance(response, dict) else response
                     raw_text = str(raw)
                     raw_outputs.append(raw_text[:1000])
                     parsed = _parse_verdict_json(raw_text)
                     parsed_results.append(parsed)
+                    parsed_this_repetition = parsed
                     last_err = None
                     break
                 except Exception as e:
@@ -414,6 +432,13 @@ class LLMVerifier(Verifier):
                     "LLM verifier call %d/%d failed for %s after all token escalations: %s",
                     i + 1, repetitions, mode_id, last_err,
                 )
+            if (
+                adaptive_repetitions
+                and i == 0
+                and parsed_this_repetition is not None
+                and parsed_this_repetition.get("verdict") in {"PASS", "NOT_APPLICABLE"}
+            ):
+                break
 
         if not parsed_results:
             return VerdictResult(
@@ -457,6 +482,8 @@ class LLMVerifier(Verifier):
 
         extra: dict[str, Any] = {
             "repetitions": len(parsed_results),
+            "planned_repetitions": repetitions,
+            "adaptive_repetitions": adaptive_repetitions,
             "all_verdicts": [r["verdict"] for r in parsed_results],
         }
         if parse_errors:

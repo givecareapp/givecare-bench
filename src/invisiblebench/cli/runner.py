@@ -1522,6 +1522,7 @@ def run_benchmark(
     category_filter: list[str] | None = None,
     scenario_filter: list[str] | None = None,
     parallel: int | None = None,
+    scenario_parallel: int = 1,
     detailed_output: bool = False,
     update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
@@ -1564,6 +1565,7 @@ def run_benchmark(
 
     total = len(models) * len(scenarios)
     n_runs = max(1, runs)
+    scenario_parallel = max(1, scenario_parallel)
     total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios) * n_runs
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1838,6 +1840,114 @@ def run_benchmark(
                 print(f"ERROR: Parallel execution failed: {e}")
                 return 1
             for r in results:
+                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
+                    failed += 1
+                else:
+                    passed += 1
+
+    elif scenario_parallel > 1:
+        print(f"Running up to {scenario_parallel} scenarios in parallel per model\n")
+
+        async def run_one_scenario_concurrent(
+            model: dict[str, Any],
+            scenario: dict[str, Any],
+            semaphore: asyncio.Semaphore,
+        ) -> dict[str, Any]:
+            scenario_path = Path(scenario["path"])
+            if not scenario_path.exists():
+                return _make_error_result(
+                    model,
+                    scenario["name"],
+                    scenario_path.stem,
+                    scenario["category"],
+                    "Scenario file not found",
+                )
+
+            try:
+                if n_runs > 1:
+                    run_results = []
+                    for run_idx in range(n_runs):
+                        run_results.append(
+                            await evaluate_scenario_async(
+                                model,
+                                scenario,
+                                api_client,
+                                orchestrator,
+                                output_dir,
+                                semaphore,
+                                detailed_output=detailed_output,
+                                run_suffix=f"_run{run_idx + 1}",
+                                run_id=run_id,
+                            )
+                        )
+                    return _aggregate_multi_run_results(run_results)
+
+                return await evaluate_scenario_async(
+                    model,
+                    scenario,
+                    api_client,
+                    orchestrator,
+                    output_dir,
+                    semaphore,
+                    detailed_output=detailed_output,
+                    run_id=run_id,
+                )
+            except InsufficientCreditsError:
+                raise
+            except Exception as e:
+                logger.exception("Scenario run failed: %s", e)
+                return _make_error_result(
+                    model,
+                    scenario["name"],
+                    scenario_path.stem,
+                    scenario["category"],
+                    f"Unexpected scenario run failure: {e}",
+                )
+
+        async def run_model_scenarios_concurrent(
+            model: dict[str, Any],
+        ) -> list[dict[str, Any]]:
+            semaphore = asyncio.Semaphore(scenario_parallel)
+
+            async def run_indexed(
+                index: int,
+                scenario: dict[str, Any],
+            ) -> tuple[int, dict[str, Any]]:
+                return index, await run_one_scenario_concurrent(model, scenario, semaphore)
+
+            tasks = [
+                asyncio.create_task(run_indexed(index, scenario))
+                for index, scenario in enumerate(scenarios)
+            ]
+            completed: list[tuple[int, dict[str, Any]]] = []
+
+            try:
+                for task in asyncio.as_completed(tasks):
+                    idx, result = await task
+                    completed.append((idx, result))
+                    is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
+                    status = "FAIL" if is_error else "PASS"
+                    print(
+                        f"[{len(completed)}/{len(tasks)}] {model['name']} → "
+                        f"{result.get('scenario', 'unknown')} {status}"
+                    )
+            except InsufficientCreditsError:
+                for task in tasks:
+                    task.cancel()
+                raise
+
+            return [result for _, result in sorted(completed, key=lambda item: item[0])]
+
+        for model in models:
+            try:
+                model_results = asyncio.run(run_model_scenarios_concurrent(model))
+            except InsufficientCreditsError:
+                credits_exhausted = True
+                break
+
+            results.extend(model_results)
+            persist_model_results(model_results)
+            for r in model_results:
                 if r.get("status") in ("fail", "error") or r.get("hard_fail"):
                     failed += 1
                 else:
@@ -3516,6 +3626,13 @@ Examples:
         help="Run N models in parallel (default: sequential)",
     )
     parser.add_argument(
+        "--scenario-parallel",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Run up to N scenarios concurrently per model for the llm/raw harness (default: 1)",
+    )
+    parser.add_argument(
         "--models",
         "-m",
         type=str,
@@ -3798,6 +3915,7 @@ Examples:
         category_filter=category_filter,
         scenario_filter=scenario_filter,
         parallel=args.parallel,
+        scenario_parallel=args.scenario_parallel,
         detailed_output=args.detailed,
         update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,

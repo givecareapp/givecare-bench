@@ -81,12 +81,14 @@ uv run ruff check .
 uv run bench --help
 uv run bench doctor                                 # validate env vars + runs dir
 uv run bench --full --dry-run
+uv run bench --full --scenario-parallel 8 -y
 uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 uv run python scripts/lint_turn_indices.py --strict
-uv run python scripts/run_scan.py results/run_... results/partial_runs/... --enable-llm  # ModeEngine scan; costs tokens
+uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm
+uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
 uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json

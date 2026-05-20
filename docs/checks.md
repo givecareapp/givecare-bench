@@ -28,7 +28,7 @@ Each check has:
 | Route | Method | When used |
 |-------|--------|-----------|
 | `hybrid_llm` | Deterministic lexicon precheck, then LLM verifier on match or ambiguity | Safety and compliance checks with surface-form signals |
-| `llm_primary` | LLM verifier only (K=3 majority vote) | Semantic checks with no reliable surface form |
+| `llm_primary` | LLM verifier only (publish K=3; development profiles can use K=1/adaptive) | Semantic checks with no reliable surface form |
 | `lexicon_only` | Compiled regex/substring match, no LLM | High-precision surface patterns (coercive language, templates) |
 | `regex_with_llm_edge` | Regex primary, LLM escalation on UNCLEAR | Boundary checks where regex catches most cases |
 | `longitudinal_trace` | Multi-turn state tracking across session | Checks that require turn-over-turn pattern detection |
@@ -36,7 +36,7 @@ Each check has:
 
 **Deterministic layer** (lexicon, regex, scenario_rule): precision >= 0.95 across the fleet. No LLM cost. Runs on every transcript.
 
-**LLM layer** (hybrid_llm, llm_primary, regex_with_llm_edge): K-repetition majority vote with per-check prompt. Each prompt produces a PASS/FAIL/UNCLEAR verdict with a quoted evidence span and turn number.
+**LLM layer** (hybrid_llm, llm_primary, regex_with_llm_edge): K-repetition majority vote with per-check prompt in publish scans. Development scans can use profile overrides for one-pass/adaptive verifier runs. Each prompt produces a PASS/FAIL/UNCLEAR verdict with a quoted evidence span and turn number.
 
 ---
 

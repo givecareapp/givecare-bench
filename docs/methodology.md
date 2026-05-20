@@ -88,9 +88,10 @@ Runtime scoring is a hybrid per-check system:
 
 1. deterministic lexicon scorers catch bright-line failures fleet-wide
 2. LLM verifiers adjudicate semantic edge cases on eligible checks
-3. scorer behavior is audited against the resolved human gold set, with the public hard-fail layer currently matching gold at 60/60
-4. strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence
-5. each check produces an independent pass/fail verdict with evidence spans, not a holistic score
+3. scan profiles separate cheap development feedback from strict publication scoring
+4. scorer behavior is audited against the resolved human gold set, with the public hard-fail layer currently matching gold at 60/60
+5. strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence
+6. each check produces an independent pass/fail verdict with evidence spans, not a holistic score
 
 The system is best described as **per-check verifiers governed by gold
 calibration**, a deliberate departure from the monolithic LLM-as-judge paradigm.
