@@ -30,6 +30,8 @@ pressure that improves Mira, public communication, and future model training.
 - Public methodology, findings, architecture, and verifier-validation docs.
 - Leaderboard JSON and sync tooling for `../gc-web/apps/web-bench`.
 - Import/staging workflows for `../givecare-evals` candidate cases.
+- Overnight campaign runner for batch-probing staged scenarios and staging
+  passing results to `benchmark/review/` for morning human review.
 - V2 HTTP harness integration for evaluating the live GiveCare product contract.
 
 ## What This Repo Does Not Own
@@ -53,8 +55,8 @@ pressure that improves Mira, public communication, and future model training.
 
 ## Outputs
 
-- Scan results, per-run JSONL, verifier judgments, calibration reports, and
-  leaderboard artifacts.
+- Scan results, per-run JSONL, verifier judgments, calibration reports,
+  leaderboard artifacts, and overnight campaign review candidates.
 - Public findings and methodology docs.
 - Benchmark pressure that informs `../gc-sms` prompt, navigation, evaluator, and
   policy changes.
