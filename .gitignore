@@ -67,6 +67,9 @@ internal/autoresearch/REPORT.md
 internal/autoresearch/chart.png
 .learnings/
 
+# Overnight campaign log
+data/overnight-campaign.tsv
+
 # Misc
 *.tmp
 logs/
