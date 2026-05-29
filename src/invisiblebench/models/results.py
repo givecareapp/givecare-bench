@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, computed_field
 
+from invisiblebench.version import RESULT_CONTRACT_VERSION
+
 SUCCESS_THRESHOLD = 0.6
 
 
@@ -117,7 +119,9 @@ class ScenarioResult(BaseModel):
     judge_model: str | None = Field(default=None, description="Scorer model (e.g. 'gemini-2.5-flash-lite' or 'deterministic')")
     judge_prompt_hash: str | None = Field(default=None, description="SHA256 of scorer prompt template")
     judge_temp: float | None = Field(default=None, description="Temperature for LLM judge")
-    contract_version: str = Field(default="2.1.0", description="Schema version")
+    contract_version: str = Field(
+        default=RESULT_CONTRACT_VERSION, description="Schema version"
+    )
 
     success: bool | None = Field(default=None, description="True if gates passed AND overall_score >= threshold")
 
@@ -180,7 +184,7 @@ class ScenarioResult(BaseModel):
             if dim_obj and "dimensions" not in d:
                 d["dimensions"] = dim_obj
 
-        d.setdefault("contract_version", "2.1.0")
+        d.setdefault("contract_version", RESULT_CONTRACT_VERSION)
         result = cls.model_validate(d)
         if result.success is None:
             result.compute_success()

@@ -4,6 +4,8 @@ V3 scoring uses the ModeEngine verifier pattern.
 Score transcripts via: uv run python scripts/run_scan.py
 """
 
-__version__ = "3.1.0"
+from invisiblebench.version import BENCHMARK_VERSION, RESULT_CONTRACT_VERSION
 
-__all__ = ["__version__"]
+__version__ = BENCHMARK_VERSION
+
+__all__ = ["BENCHMARK_VERSION", "RESULT_CONTRACT_VERSION", "__version__"]

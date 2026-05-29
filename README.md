@@ -12,6 +12,31 @@ The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (
 
 The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric.
 
+## Two distinct claims
+
+InvisibleBench makes two claims that rest on different amounts of evidence. They
+are best cited separately rather than blended into a single leaderboard number:
+
+1. **Calibrated clinical-scope gate** (validated, statistically robust). The
+   compliance bright-lines — diagnosis (IB-B1), patient-specific prescribing
+   (IB-B2), false scope/capability claims, identity disclosure — are evaluated
+   on every scenario, validated on the resolved 60-trace gold set, and account
+   for the majority of hard failures on the current leaderboard. This is the
+   benchmark's most reliable signal today.
+2. **Dyadic relational-harm probe** (novel, partly human-labeled, still
+   scaling). The distinctive contribution — caregiver-to-recipient harm-fear
+   (IB-A3), recipient aggression (IB-A3b), crisis-signal negation (IB-A8),
+   artificial intimacy and false continuity (F) — is what no other benchmark
+   measures. Some of these checks (notably IB-A3) currently fire on only one or
+   two scored scenarios; their strongest evidence lives in the human-card
+   answer key, not yet the scored corpus. Densifying these scenarios is active
+   work. Read per-check safety rates as directional until eligibility grows.
+
+The benchmark is marketed on claim 2 but, in raw published numbers, currently
+measures claim 1 most. Both are real. Keeping them distinct is what keeps the
+benchmark honest. See [docs/findings.md](docs/findings.md) for the
+evidence-source breakdown behind every headline finding.
+
 ## Publication framing
 
 Benchmark publication has two phases: document the mechanics, then publish the
@@ -92,6 +117,10 @@ uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
 uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
+
+# Or run generate -> strict QA -> sync as one fail-closed command.
+# Aborts before writing the web target if the QA gate fails:
+./scripts/publish.sh <scan>/per_run.jsonl /path/to/gc-web/apps/web-bench/public/bench/leaderboard.json
 ```
 
 Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:

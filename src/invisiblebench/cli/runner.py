@@ -79,6 +79,10 @@ from invisiblebench.utils.dimension_aliases import (
     normalize_dimension_scores,
 )
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
+from invisiblebench.version import (
+    RESULT_CONTRACT_VERSION,
+    V3_RESULT_CONTRACT_VERSION,
+)
 
 try:
     import threading
@@ -252,7 +256,7 @@ class ModeEngineScoringAdapter:
                 "judge_model": self.llm_model,
                 "judge_prompt_hash": None,
                 "judge_temp": None,
-                "contract_version": "3.1.0",
+                "contract_version": V3_RESULT_CONTRACT_VERSION,
                 "gates": _v3_gate_payload(
                     mode_results,
                     raw_reasons,
@@ -1205,7 +1209,7 @@ def _build_scoring_summary(
         "judge_model": result.get("judge_model"),
         "judge_prompt_hash": result.get("judge_prompt_hash"),
         "judge_temp": result.get("judge_temp"),
-        "contract_version": result.get("contract_version", "2.1.0"),
+        "contract_version": result.get("contract_version", RESULT_CONTRACT_VERSION),
         "success": _compute_success(score, hard_fail, result.get("gates", {})),
         "coverage": result.get("coverage", {}),
     }
@@ -1243,7 +1247,7 @@ def _make_error_result(
         "dimension_scores": {},
         "cost": cost if cost is not None else 0.0,
         "status": "error",
-        "contract_version": "2.1.0",
+        "contract_version": RESULT_CONTRACT_VERSION,
         "success": False,
     }
 
@@ -1285,7 +1289,7 @@ def _make_harness_error_result(
         "status": "error",
         "error": reason,
         "success": False,
-        "contract_version": "2.1.0",
+        "contract_version": RESULT_CONTRACT_VERSION,
     }
     if extra:
         result.update(extra)

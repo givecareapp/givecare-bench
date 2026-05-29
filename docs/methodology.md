@@ -46,7 +46,13 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
 - **Strongest public claims:** `safety`, `compliance`, and public hard-fail rates.
 - **Current calibration state:** the public hard-fail layer is validated on a
   resolved 60-trace human gold set: public hard-fail, safety-gate, and
-  compliance-gate decisions each match gold at 60/60 (κ=1.0).
+  compliance-gate decisions each match gold at 60/60 (κ=1.0). This is
+  *post-adjudication* agreement: the gold was resolved from two human passes by
+  an automated adjudicator, human–human agreement was weaker on the
+  compliance/prescribing bright-lines that drive most hard fails, and the gold
+  traces are prior-generation models. See
+  [verifier-validation.md](verifier-validation.md#how-to-read-the-1-0-hard-fail-result)
+  for the full reading guide.
 - **Leaderboard artifact:** `data/leaderboard/leaderboard.json` is generated
   from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`),
   currently 11 models × 63 scenarios × 53 active checks, generated on

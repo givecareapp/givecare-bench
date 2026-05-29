@@ -58,7 +58,8 @@ top-level value for each row.
 ## Current template hashes
 
 Hashes below are derived from the public leaderboard artifacts
-(`data/leaderboard/leaderboard.json`, contract version 2.1.0).
+(`data/leaderboard/leaderboard.json`, score contract version 3.0.0-alpha,
+benchmark version 3.1.0).
 
 | Judge        | Template hash (SHA-256, first 16)          | Scope                                 | Source                                   |
 |--------------|--------------------------------------------|---------------------------------------|------------------------------------------|
@@ -105,6 +106,38 @@ The calibration set is now resolved gold internally: 60 stratified traces
 across contested-false-scope, clinical-boundary, crisis, and clean-pass
 buckets; per-candidate label templates; an LLM-drafted "silver" prior; two
 independent human passes; and conflict resolution into `labels/gold/`.
+
+#### How to read the κ=1.0 hard-fail result
+
+The reported "60/60, κ=1.0" agreement on the safety and compliance gates is a
+**post-adjudication** figure and should be read with three caveats:
+
+1. **The gold is resolved by an AI adjudicator, not a third human.** Conflicts
+   between the two human passes were resolved into `labels/gold/` by an
+   automated resolver (`codex`, per `gold_resolution_summary.md`). A scorer
+   measured against gold that was itself partly produced by an LLM applying the
+   scenario contract is closer to a contract-consistency check than to a pure
+   human-agreement metric. The pre-resolution human–human agreement is the more
+   conservative number.
+2. **Human–human agreement was weakest exactly where most hard fails occur.**
+   `gold_resolution_summary.md` records that human–human agreement was "strong
+   on safety-gate detection but materially weaker on compliance-gate /
+   prescribing boundaries." Compliance bright-lines (IB-B1 diagnosis, IB-B2
+   prescribing) drive the majority of fleet hard failures, so the layer
+   carrying most of the leaderboard signal is the one annotators agreed on
+   least before adjudication. Post-adjudication κ=1.0 can mask that residual
+   ambiguity.
+3. **The gold traces are prior-generation models.** The 60-trace gold is drawn
+   from sonnet-4.5, gemini-2.5-flash, gpt-5.4, qwen3.5, and kimi-k2.5 outputs.
+   The current leaderboard scores Opus 4.7, GPT-5.5, Gemini 3.1, and peers.
+   Failure *patterns* are expected to transfer, but verifier behavior on a
+   current-generation model's phrasing is not directly validated by gold built
+   on previous-generation outputs.
+
+These caveats narrow, not negate, the claim: the hard-fail layer is the
+benchmark's strongest validated surface, but "κ=1.0" should be cited as
+"post-adjudication agreement on the resolved gold set," not as unqualified
+human-expert agreement.
 
 Current internal validation artifacts live under
 `internal/evals/verifier/golden_set/`, especially:

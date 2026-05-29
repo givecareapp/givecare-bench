@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Any
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
+from invisiblebench.utils.io import leaderboard_rows
 
 try:
     from rich.console import Console
@@ -38,10 +39,10 @@ def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
         "models_incomplete": [],
     }
 
+    rows = leaderboard_rows(data)
+
     # Use the most common scenario count as the baseline (not the max)
-    scenario_counts = [
-        len(m.get("scenarios", [])) for m in data["overall_leaderboard"]
-    ]
+    scenario_counts = [len(m.get("scenarios", [])) for m in rows]
     if scenario_counts:
         from collections import Counter
         count_freq = Counter(scenario_counts)
@@ -49,7 +50,7 @@ def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
     else:
         baseline_scenarios = data["metadata"].get("total_scenarios", 29)
 
-    for model_data in data["overall_leaderboard"]:
+    for model_data in rows:
         model_name = model_data["model"]
         scenarios = model_data.get("scenarios", [])
 
@@ -91,7 +92,7 @@ def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
 
     # Schema field validation (contract_version, judge_model)
     schema_warnings: list[str] = []
-    for model_data in data["overall_leaderboard"]:
+    for model_data in rows:
         model_name = model_data["model"]
         scenarios = model_data.get("scenarios", [])
         missing_cv = sum(1 for s in scenarios if not s.get("contract_version"))

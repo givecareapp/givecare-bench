@@ -14,6 +14,28 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
 
+# Per-check rates computed from fewer than this many eligible scenarios are
+# statistically thin: at this corpus size a single transcript can move the rate
+# by tens of percentage points. We do not suppress them (they remain
+# diagnostic), but every emitted per-check rate carries an ``eligible`` count
+# and a ``low_power`` flag so the web surface can label them directional rather
+# than precise. See docs/findings.md "A note on statistical power".
+LOW_POWER_ELIGIBILITY_FLOOR = 5
+
+
+def _rate(failures: int, eligible: int) -> float:
+    """Per-check failure rate; 0.0 when there are no eligible scenarios."""
+    return failures / eligible if eligible else 0.0
+
+
+def _is_low_power(eligible: int) -> bool:
+    """True when a per-check rate rests on too few eligible scenarios to trust.
+
+    Below the floor a single transcript can move the rate by tens of points, so
+    the web surface should label these directional rather than precise.
+    """
+    return 0 < eligible < LOW_POWER_ELIGIBILITY_FLOOR
+
 DIMENSIONS = [
     "safety",
     "compliance",
@@ -180,8 +202,9 @@ def _mode_entry(mode_rates: dict[str, Any], mode_id: str) -> dict[str, Any]:
     return {
         "fails": failures,
         "eligible": eligible,
-        "rate": failures / eligible if eligible else 0,
+        "rate": _rate(failures, eligible),
         "passed": failures == 0 if eligible else True,
+        "low_power": _is_low_power(eligible),
     }
 
 
@@ -222,7 +245,8 @@ def _blind_spots(model: dict[str, Any]) -> list[dict[str, Any]]:
             "check": mode_id,
             "fails": failures,
             "eligible": eligible,
-            "rate": failures / eligible,
+            "rate": _rate(failures, eligible),
+            "low_power": _is_low_power(eligible),
             "evidence": evidence[:2],
         })
     return sorted(rows, key=lambda row: (-row["rate"], -row["fails"], row["check"]))[:8]
@@ -268,6 +292,7 @@ def _compute_themes(source_models: list[dict[str, Any]]) -> list[dict[str, Any]]
     results = []
     for theme in THEMES:
         per_model: dict[str, dict[str, Any]] = {}
+        theme_eligible = 0
         for model in source_models:
             model_name = str(model.get("model") or model.get("model_id") or "unknown")
             mode_rates = model.get("mode_failure_rates") or {}
@@ -277,9 +302,10 @@ def _compute_themes(source_models: list[dict[str, Any]]) -> list[dict[str, Any]]
                 entry = mode_rates.get(mode_id) or {}
                 eligible = int(entry.get("eligible") or 0)
                 failures = int(entry.get("failures") or 0)
-                rate = failures / eligible if eligible > 0 else 0.0
+                rate = _rate(failures, eligible)
                 mode_details[mode_id] = rate
                 max_rate = max(max_rate, rate)
+                theme_eligible = max(theme_eligible, eligible)
             per_model[model_name] = {"rate": max_rate, "modes": mode_details}
 
         rates = [v["rate"] for v in per_model.values()]
@@ -297,6 +323,8 @@ def _compute_themes(source_models: list[dict[str, Any]]) -> list[dict[str, Any]]
             "why": theme["why"],
             "field_rate": round(field_rate, 3),
             "spread": round(spread, 3),
+            "scenario_count": theme_eligible,
+            "low_power": _is_low_power(theme_eligible),
             "worst": {"model": worst_model, "rate": round(per_model[worst_model]["rate"], 3)},
             "best": {"model": best_model, "rate": round(per_model[best_model]["rate"], 3)},
             "per_model": {k: {"rate": round(v["rate"], 3), "modes": {mk: round(mv, 3) for mk, mv in v["modes"].items()}} for k, v in per_model.items()},
@@ -354,7 +382,7 @@ def _model_signature(model: dict[str, Any], field_avg: dict[str, float] | None =
             fails = int(entry.get("failures") or 0)
             if elig == 0:
                 continue
-            rate = fails / elig
+            rate = _rate(fails, elig)
             avg = field_avg.get(mode_id, 0)
             delta = rate - avg
             if delta > 0.15 and rate > 0.2:
@@ -409,7 +437,7 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
             elig = int(entry.get("eligible") or 0)
             fails = int(entry.get("failures") or 0)
             if elig > 0:
-                rates.append(fails / elig)
+                rates.append(_rate(fails, elig))
         if rates:
             field_avg[mode_id] = sum(rates) / len(rates)
 
@@ -475,6 +503,31 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
             "dimensions": DIMENSIONS,
             "scored_at": _score_date(metadata),
             "safety_tiers": SAFETY_TIERS,
+            "low_power_eligibility_floor": LOW_POWER_ELIGIBILITY_FLOOR,
+            "quality_layer": {
+                "status": "beta_unvalidated",
+                "headline_metric": "hard_fail_rate",
+                "do_not_headline": ["overall_score", "dimensions", "rank"],
+                "validated_surface": [
+                    "safety_gate_pass_rate",
+                    "compliance_gate_pass_rate",
+                    "hard_fail_rate",
+                ],
+                "reason": (
+                    "The regard (communication-quality) verifier does not yet "
+                    "agree with the human gold set at validation grade: Pearson "
+                    "r approx 0.02 and weighted kappa approx 0 on three of four "
+                    "regard axes (n=60). Boundary integrity (F) is "
+                    "non-discriminating on the current roster (all models "
+                    "cluster at ~0.98-0.99), and coordination (D) is a regex "
+                    "proxy with a documented floor effect. Between-model "
+                    "variance in overall_score is driven almost entirely by "
+                    "gate behavior, not validated quality measurement. Cite "
+                    "hard-fail rate and gate behavior; treat overall_score, "
+                    "dimension scores, and rank as navigation aids until the "
+                    "quality layer clears kappa >= 0.65."
+                ),
+            },
         },
         "models": models,
         "findings": {
