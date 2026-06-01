@@ -6,8 +6,8 @@ GiveCare North Star, see `~/agents/wiki/givecare-system.md`.
 ## Purpose
 
 `gc-bench` owns InvisibleBench: GiveCare's public benchmark for measuring how AI
-systems handle caregiving safety, compliance, context, continuity, empathy, and
-confidentiality failures.
+systems handle caregiving safety, compliance, communication, coordination, and
+boundary failures.
 
 ## Role In GiveCare
 
