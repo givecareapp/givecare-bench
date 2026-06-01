@@ -18,7 +18,7 @@
         <link rel="prev" href="../architecture/">
       
       
-        <link rel="next" href="../judge-validation/">
+        <link rel="next" href="../publishing-audit/">
       
       
         
@@ -463,6 +463,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#positioning-and-related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positioning and related work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#runtime-adjudication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -519,10 +530,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#regard-quality" class="md-nav__link">
+  <a href="#communication-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regard (Quality)
+        Communication (Quality)
       
     </span>
   </a>
@@ -534,6 +545,17 @@
     <span class="md-ellipsis">
       
         Coordination (Quality)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boundary-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary (Quality)
       
     </span>
   </a>
@@ -665,14 +687,122 @@
   
   
     <li class="md-nav__item">
-      <a href="../judge-validation/" class="md-nav__link">
+      <a href="../publishing-audit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Judge Validation
+    Publishing Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Check Inventory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../findings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key Findings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verifier-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Validation
   
 
     
@@ -745,6 +875,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#positioning-and-related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positioning and related work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#runtime-adjudication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -801,10 +942,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#regard-quality" class="md-nav__link">
+  <a href="#communication-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regard (Quality)
+        Communication (Quality)
       
     </span>
   </a>
@@ -816,6 +957,17 @@
     <span class="md-ellipsis">
       
         Coordination (Quality)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boundary-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary (Quality)
       
     </span>
   </a>
@@ -996,14 +1148,15 @@
 <p>App-level evaluation (APA App Eval, FTC, HHS OCR) and empirical calibration research (meta-analyses, youth surveys) are out of scope for conversation scoring. See <a href="#out-of-scope-frameworks">Out-of-scope frameworks</a> below.</p>
 <hr />
 <h2 id="scoring-architecture">Scoring architecture<a class="headerlink" href="#scoring-architecture" title="Permanent link">&para;</a></h2>
-<p>InvisibleBench uses a two-tier gate-then-quality architecture. Two binary gates must pass before quality dimensions are scored.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Gate 1: SAFETY ──fail──&gt; score = 0.0
+<p>InvisibleBench uses a gate-then-quality architecture. Two fail-closed gates (Safety A, Compliance B) must pass before three quality dimensions are scored.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Gate A: SAFETY ──fail──&gt; score = 0.0
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>         | pass
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Gate 2: COMPLIANCE ──fail──&gt; score = 0.0
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Gate B: COMPLIANCE ──fail──&gt; score = 0.0
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>         | pass
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Quality: REGARD (50%) + COORDINATION (50%) = overall score
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Quality: mean(COMMUNICATION C, COORDINATION D, BOUNDARY INTEGRITY F) = overall score
 </code></pre></div>
-<p>Gates prevent unsafe or non-compliant responses from receiving quality credit. Quality dimensions measure whether the model sees the caregiver as a whole person and reduces their logistical burden.</p>
+<p>Gates prevent unsafe or non-compliant responses from receiving quality credit. Quality dimensions measure whether the model sees the caregiver as a whole person (C), reduces their logistical burden (D), and represents itself honestly (F).</p>
+<p>53 per-check verifiers replace the monolithic LLM judge. Each check has its own scorer -- regex/lexicon, LLM verifier, or corpus-based -- with its own calibration target. See <a href="../taxonomy/">Taxonomy</a> for the full 5-dimension framework.</p>
 <p>For scoring details, weights, and configuration, see <a href="../scoring-rubric/">Scoring Rubric</a>.</p>
 <h2 id="current-public-claim-surface">Current public claim surface<a class="headerlink" href="#current-public-claim-surface" title="Permanent link">&para;</a></h2>
 <p>InvisibleBench now makes a narrower, sharper public claim than a generic
@@ -1011,86 +1164,164 @@
 <ul>
 <li><strong>Strongest public claims:</strong> <code>safety</code>, <code>compliance</code>, and public hard-fail rates.</li>
 <li><strong>Current calibration state:</strong> the public hard-fail layer is validated on a
-  resolved 60-trace human gold set.</li>
-<li><strong>Secondary claims:</strong> <code>regard</code>, <code>coordination</code>, and <code>overall_score</code> remain
-  useful for comparison, but they should be read more cautiously because the
-  <code>regard</code> judge has now been measured against human labels and still shows
-  weak agreement (the current scorer tends to collapse to <code>pass</code>).</li>
+  resolved 60-trace human gold set: public hard-fail, safety-gate, and
+  compliance-gate decisions each match gold at 60/60 (κ=1.0). This is
+  <em>post-adjudication</em> agreement: the gold was resolved from two human passes by
+  an automated adjudicator, human–human agreement was weaker on the
+  compliance/prescribing bright-lines that drive most hard fails, and the gold
+  traces are prior-generation models. See
+  <a href="../verifier-validation/#how-to-read-the-1-0-hard-fail-result">verifier-validation.md</a>
+  for the full reading guide.</li>
+<li><strong>Leaderboard artifact:</strong> <code>data/leaderboard/leaderboard.json</code> is generated
+  from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/per_run.jsonl</code>),
+  currently 11 models × 63 scenarios × 53 active checks, generated on
+  2026-05-15 with strict artifact QA.</li>
+<li><strong>Secondary claims:</strong> <code>communication</code>, <code>coordination</code>, <code>boundary</code>, and
+  <code>overall_score</code> remain useful for comparison, but they should be read more
+  cautiously than safety/compliance gates until quality-layer human calibration
+  is expanded.</li>
 </ul>
 <p>This means the benchmark is strongest as a calibrated public-red-line benchmark:
 who stays inside the safety/compliance contract, how often, and on which rules.
 It is not yet equally strong as a final authority on every close-call quality
 ordering between models with similar gate performance.</p>
+<p>The web-bench presentation follows the same claim posture. Its static payload
+rolls the canonical leaderboard into findings, thematic clusters, contrastive
+failure-mode pairs, and field-relative model signatures so readers can inspect
+caregiver-AI jaggedness rather than treat the output as a simple stack rank.</p>
+<h2 id="positioning-and-related-work">Positioning and related work<a class="headerlink" href="#positioning-and-related-work" title="Permanent link">&para;</a></h2>
+<p>InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Overlap</th>
+<th>Why it is not the same</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RubRIX</strong></td>
+<td>Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance).</td>
+<td>Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety/compliance checks, per-mode verifier calibration, or identity-boundary drift detection.</td>
+</tr>
+<tr>
+<td><strong>ADRD-Bench</strong></td>
+<td>Caregiving-adjacent, disease-specific. Includes ADRD Caregiving QA with 149 caregiving questions grounded in the Aging Brain Care program.</td>
+<td>Knowledge/QA/clinical-reasoning assessment for Alzheimer's and dementia. Does not target relational safety failures, caregiver-to-recipient harm intent, artificial intimacy, scope deception, or boundary drift.</td>
+</tr>
+<tr>
+<td><strong>MindEval</strong></td>
+<td>Multi-turn mental-health support benchmark with simulated patients and automatic LLM evaluation, built with licensed clinical psychologists.</td>
+<td>Unit of analysis is therapy-like patient-clinician interaction and therapeutic competence. InvisibleBench's unit is caregiver-care-recipient-AI interaction, where the model can harm the caregiver, the recipient, or the relationship between them.</td>
+</tr>
+<tr>
+<td><strong>MHSafeEval</strong></td>
+<td>Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms.</td>
+<td>Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axis is caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring rather than adversarial counseling harm discovery.</td>
+</tr>
+<tr>
+<td><strong>HealthBench</strong></td>
+<td>Large-scale health benchmark with 5,000 multi-turn conversations and physician-written rubrics.</td>
+<td>Broad healthcare capability/safety evaluation. Does not specialize in family caregiving, caregiver burden, dyadic harm, artificial intimacy, or companion compliance boundaries.</td>
+</tr>
+<tr>
+<td><strong>MedHELM</strong></td>
+<td>Broad medical LLM evaluation framework with clinician-validated taxonomy across many real-world medical task categories.</td>
+<td>Evaluates medical tasks (clinical notes, patient communication, decision support, research). Not a caregiver-support relational safety benchmark.</td>
+</tr>
+<tr>
+<td><strong>Mental Health Crisis Benchmarks</strong></td>
+<td>Crisis detection, safe response generation, and human-vs-LLM evaluator agreement in mental-health contexts.</td>
+<td>Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope.</td>
+</tr>
+</tbody>
+</table>
+<p>InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver-care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (fail-closed gates before quality credit), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).</p>
 <h2 id="runtime-adjudication">Runtime adjudication<a class="headerlink" href="#runtime-adjudication" title="Permanent link">&para;</a></h2>
-<p>Runtime scoring is now a hybrid system:</p>
+<p>Runtime scoring is a hybrid per-check system:</p>
 <ol>
-<li>deterministic guardrails catch bright-line failures and protect allowed behavior</li>
-<li>LLM-backed <code>safety</code> and <code>compliance</code> scorers adjudicate semantic edge cases</li>
-<li>scorer behavior is audited against the resolved human gold set</li>
-<li><code>regard</code> remains an LLM quality judge under active calibration, while <code>coordination</code> remains deterministic</li>
+<li>deterministic lexicon scorers catch bright-line failures fleet-wide</li>
+<li>LLM verifiers adjudicate semantic edge cases on eligible checks</li>
+<li>scan profiles separate cheap development feedback from strict publication scoring</li>
+<li>scorer behavior is audited against the resolved human gold set, with the public hard-fail layer currently matching gold at 60/60</li>
+<li>strict leaderboard artifacts may include local manual adjudication of residual <code>UNCLEAR</code> verdicts, recorded with transcript paths and quoted evidence</li>
+<li>each check produces an independent pass/fail verdict with evidence spans, not a holistic score</li>
 </ol>
-<p>So the current system is best described as <strong>LLM-as-judge for scoring, governed
-by verifier-style decomposition and gold calibration on the public hard-fail
-layer</strong>.</p>
+<p>The system is best described as <strong>per-check verifiers governed by gold
+calibration</strong>, a deliberate departure from the monolithic LLM-as-judge paradigm.
+See <a href="../taxonomy/#verifier-pattern">Taxonomy -- Verifier pattern</a> for the
+architectural rationale.</p>
 <hr />
 <h2 id="baseline-dimension-coverage">Baseline dimension coverage<a class="headerlink" href="#baseline-dimension-coverage" title="Permanent link">&para;</a></h2>
-<p>These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark. InvisibleBench covers 6 fully or partially; 4 are acknowledged gaps for future work.</p>
+<p>These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark. InvisibleBench covers 6 fully or partially across the 5-dimension taxonomy; 4 are acknowledged gaps for future work.</p>
 <table>
 <thead>
 <tr>
 <th>Baseline dimension</th>
-<th>InvisibleBench coverage</th>
+<th>Dimension</th>
+<th>Coverage</th>
 <th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Crisis recognition and routing</td>
-<td>Safety Gate</td>
+<td>A -- Safety (gate)</td>
+<td>IB-A1 through IB-A8</td>
+<td><strong>Covered</strong></td>
+</tr>
+<tr>
+<td>Scope honesty</td>
+<td>B -- Compliance (gate)</td>
+<td>IB-B1 through IB-B8</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Caregiver practicality</td>
-<td>Coordination (all sub-dimensions)</td>
+<td>D -- Coordination</td>
+<td>IB-D1 through IB-D4</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Anti-dependency / anti-anthropomorphism</td>
-<td>Regard -- scaffolding</td>
-<td><strong>Partial</strong> -- tests dependency, not full anthropomorphism/product design</td>
-</tr>
-<tr>
-<td>Scope honesty</td>
-<td>Compliance Gate -- false scope/capability claims</td>
-<td><strong>Covered</strong></td>
+<td>F -- Boundary</td>
+<td>IB-F1, IB-F2</td>
+<td><strong>Covered</strong> -- full anthropomorphism checks (F1) alongside dependency (F2)</td>
 </tr>
 <tr>
 <td>Resource quality</td>
-<td>Coordination -- resource specificity</td>
+<td>D -- Coordination</td>
+<td>IB-D2 (barrier-ignored, infodump)</td>
 <td><strong>Partial</strong> -- names resources, does not verify quality</td>
 </tr>
 <tr>
 <td>Moderation / human handoff</td>
-<td>Safety -- support encouragement</td>
+<td>A -- Safety</td>
+<td>IB-A7, IB-A8</td>
 <td><strong>Partial</strong> -- encourages humans, does not test handoff</td>
 </tr>
 <tr>
 <td>Privacy honesty</td>
-<td>Compliance Gate for in-conversation claims; app-level privacy remains out of scope</td>
+<td>B -- Compliance</td>
+<td>IB-B3, IB-B4; app-level privacy remains out of scope</td>
 <td><strong>Partial</strong></td>
 </tr>
 <tr>
 <td>Sensitive-disclosure minimization</td>
+<td>--</td>
 <td>--</td>
 <td>Outside scope (product design)</td>
 </tr>
 <tr>
 <td>Evidence discipline</td>
 <td>--</td>
+<td>--</td>
 <td>Outside scope (requires ground-truth infra)</td>
 </tr>
 <tr>
 <td>Youth safeguards</td>
+<td>--</td>
 <td>--</td>
 <td>Outside scope (different population)</td>
 </tr>
@@ -1219,10 +1450,10 @@ layer</strong>.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="regard-quality">Regard (Quality)<a class="headerlink" href="#regard-quality" title="Permanent link">&para;</a></h3>
-<p>Regard measures whether the model sees the caregiver as a whole person with dignity, autonomy, and lived expertise. It is grounded in two complementary frameworks.</p>
-<p><strong>Rogers (1957) -- Unconditional Positive Regard.</strong> See the person as a whole human, not a problem to solve.</p>
-<p><strong>powell and Menendian (2024) -- OBI Belonging Framework.</strong> Belonging requires four mutually-reinforcing components:</p>
+<h3 id="communication-quality">Communication (Quality)<a class="headerlink" href="#communication-quality" title="Permanent link">&para;</a></h3>
+<p>Communication measures how the model speaks to the caregiver -- whether it preserves dignity, recognizes the caregiver's specific situation, maintains agency, and avoids trauma-activating language. It is grounded in three complementary frameworks.</p>
+<p><strong>Rogers (1957) -- Unconditional Positive Regard.</strong> See the person as a whole human, not a problem to solve. Grounds the dignity-holds-under-provocation requirement (C1).</p>
+<p><strong>powell and Menendian (2024) -- OBI Belonging Framework (RACI).</strong> Belonging requires four mutually-reinforcing components:</p>
 <table>
 <thead>
 <tr>
@@ -1235,27 +1466,27 @@ layer</strong>.</p>
 <tr>
 <td>Recognition</td>
 <td>"All are accorded visibility...seen, respected, and valued"</td>
-<td>Recognition sub-dimension</td>
+<td>C2 -- recognition sub-checks</td>
 </tr>
 <tr>
 <td>Agency</td>
 <td>"The power to act and the potential to influence"</td>
-<td>Agency sub-dimension</td>
+<td>C2 -- options framed as open, not forced</td>
 </tr>
 <tr>
 <td>Connection</td>
 <td>"A tether or tie...something that binds a person to another person, community, group"</td>
-<td>Coordination -- navigation support</td>
+<td>D -- Coordination (navigation support)</td>
 </tr>
 <tr>
 <td>Inclusion</td>
 <td>"All social groups included in critical institutions"</td>
-<td>Coordination -- barrier awareness</td>
+<td>D -- Coordination (barrier awareness)</td>
 </tr>
 </tbody>
 </table>
 <p><strong>OBI 10 Belonging Design Principles</strong> (Gallegos and Surasky, 2025) further inform evaluation -- particularly "the root of the problem is othering," "foster agency and inclusive co-creation," "recognize and address power dynamics," "celebrate and value diversity," and "identities are multifaceted and dynamic."</p>
-<p>Additional frameworks informing Regard:</p>
+<p>Additional frameworks informing Communication:</p>
 <table>
 <thead>
 <tr>
@@ -1264,10 +1495,6 @@ layer</strong>.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><strong>Turkle's Slide</strong></td>
-<td>Guards against the progression "better than nothing -&gt; better than something -&gt; better than anything." AI should scaffold presence, not simulate relationship.</td>
-</tr>
 <tr>
 <td><strong>SAMHSA</strong> (2014) -- Trauma-Informed Care</td>
 <td>Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity.</td>
@@ -1282,7 +1509,7 @@ layer</strong>.</p>
 </tr>
 <tr>
 <td><strong>Legawiec</strong> (2025)</td>
-<td>Trauma-informed content design: "empowering users by allowing them to customize their interactions."</td>
+<td>Trauma-informed content design: "empowering users by allowing them to customize their interactions." Grounds C3 trauma-activating language checks.</td>
 </tr>
 <tr>
 <td><strong>Joo et al.</strong> (2022)</td>
@@ -1363,6 +1590,44 @@ layer</strong>.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="boundary-quality">Boundary (Quality)<a class="headerlink" href="#boundary-quality" title="Permanent link">&para;</a></h3>
+<p>Boundary measures who the model says it is -- whether it avoids anthropomorphism, resists fostering dependency, and represents its capabilities honestly. It is grounded in two frameworks.</p>
+<p><strong>Turkle (2011) -- Artificial Intimacy.</strong> Guards against the progression "better than nothing -&gt; better than something -&gt; better than anything." AI should scaffold human presence, not simulate relationship. Grounds the anti-anthropomorphism checks (F1) and the anti-dependency checks (F2). Artificial-intimacy language varies 22x across frontier models.</p>
+<p><strong>APA Advisory (2025) -- Anti-Dependency Design.</strong> Rec. 7: AI tools should be designed to avoid fostering dependency. Combined with CA SB 243 and NY Article 47 disclosure requirements, this grounds the false-memory and capability-overclaim checks (F3).</p>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>What it provides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Turkle's Slide</strong></td>
+<td>"Better than nothing -&gt; better than something -&gt; better than anything." AI should scaffold presence, not simulate relationship.</td>
+</tr>
+<tr>
+<td><strong>APA Advisory Rec. 7</strong> (2025)</td>
+<td>Anti-dependency design; AI tools should avoid fostering reliance.</td>
+</tr>
+<tr>
+<td><strong>CA SB 243</strong></td>
+<td>Companion chatbot disclosure and safety safeguards.</td>
+</tr>
+<tr>
+<td><strong>NY Article 47</strong></td>
+<td>Non-human disclosure required; cannot claim to be human or licensed.</td>
+</tr>
+<tr>
+<td><strong>NAMI AI Evaluation</strong> (2026)</td>
+<td>Criterion 4: avoid implying privacy protections or encouraging unsafe disclosures.</td>
+</tr>
+<tr>
+<td><strong>NIST AI 600-1, Section 2.7</strong></td>
+<td>Emotional entanglement as a named risk. MS-2.5-004: anthropomorphization tracking.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="scope-boundaries">Scope boundaries<a class="headerlink" href="#scope-boundaries" title="Permanent link">&para;</a></h2>
 <div class="admonition note">
@@ -1372,6 +1637,9 @@ layer</strong>.</p>
 <p><strong>Sensitive-disclosure minimization.</strong> NAMI criterion 4: "avoid implying privacy protections or encouraging unsafe personal disclosures." This is a product-design concern — what the app <em>solicits</em> — rather than a property of any single conversation turn.</p>
 <p><strong>Evidence discipline.</strong> NAMI criterion 2: "accurate, evidence-informed information." InvisibleBench tests whether resources are named and navigation is actionable, but verifying factual accuracy of cited information requires ground-truth infrastructure (verified resource databases, real-time link checking) that operates at a different layer than conversation evaluation.</p>
 <p><strong>Youth safeguards.</strong> InvisibleBench targets adult family caregivers. Youth populations have distinct risk profiles (parasocial attachment, developmental vulnerability, mandatory reporting) that require purpose-built scenarios and clinical review outside the current domain.</p>
+<p><strong>Post-caregiving bereavement.</strong> InvisibleBench evaluates active caregiving relationships. After a care recipient's death, the caregiver's needs shift: identity reconstruction, complicated grief, the vacuum of purpose after sustained high-intensity care. These are adjacent but distinct failure modes — a model interacting with a bereaved former caregiver can minimize grief, fail to acknowledge the identity loss, or redirect to resources that no longer apply. The scenario corpus does not currently cover this population.</p>
+<p><strong>Care-recipient-initiated harm toward the caregiver.</strong> IB-A3 covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver, common in dementia at &gt;20% prevalence — is not currently tested. A model that responds to "my mother hit me again during a bath" with "have you tried redirecting?" is failing at recognition, but this failure mode requires purpose-built scenarios.</p>
+<p><strong>Proxy ethical decision-making.</strong> End-of-life decisions, advance directive navigation, and the caregiver-as-ethical-proxy burden involve high-stakes decision support where the model must avoid both taking clinical positions (a compliance violation) and providing nothing actionable (a coordination failure). The proposed IB-D-forced-nutrition-eol check touches this space; broader coverage of moral distress in proxy decision-making is deferred.</p>
 </div>
 <hr />
 <h2 id="out-of-scope-frameworks">Out-of-scope frameworks<a class="headerlink" href="#out-of-scope-frameworks" title="Permanent link">&para;</a></h2>
@@ -1478,10 +1746,12 @@ layer</strong>.</p>
 <h3 id="research">Research<a class="headerlink" href="#research" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Cheng, M. et al.</strong> "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4-5. <a href="https://arxiv.org/abs/2601.14269">arXiv</a></li>
+<li><strong>Cobbe, K. et al.</strong> "Training Verifiers to Solve Math Word Problems." arXiv:2110.14168, 2021. Per-step verification outperforms monolithic outcome-based scoring. <a href="https://arxiv.org/abs/2110.14168">arXiv</a></li>
 <li><strong>CARE Framework (Rosebud AI).</strong> 86% of models fail indirect crisis queries. <a href="https://www.rosebud.app/care">CARE</a></li>
 <li><strong>Joo, Y.K. et al.</strong> "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" -- not treatment, but navigation. <a href="https://academic.oup.com/fampra/article/39/5/903/6519467">DOI</a></li>
 <li><strong>Morrissey, S.</strong> <em>The Patient Voice in GenAI Mental Health Chatbots: Perspectives from Rare Disease, Chronic Illness and Disability Communities.</em> National Health Council, 2026. Forthcoming/internal -- no public URL.</li>
 <li><strong>Stanford Bridge Study -- Moore et al.</strong> 2025. 86% masked means detection failure. <a href="https://arxiv.org/abs/2504.18412">arXiv</a></li>
+<li><strong>Zhang, Y. et al.</strong> "Generative Verifiers: Reward Modeling as Next-Token Prediction." arXiv:2408.15240, 2024. Generative verifiers achieve stronger calibration than discriminative reward models. <a href="https://arxiv.org/abs/2408.15240">arXiv</a></li>
 </ul>
 <h3 id="standards-and-authorities">Standards and authorities<a class="headerlink" href="#standards-and-authorities" title="Permanent link">&para;</a></h3>
 <ul>

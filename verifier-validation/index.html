@@ -1,0 +1,1403 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="AI safety benchmark for longitudinal caregiver support">
+      
+      
+        <meta name="author" content="Ali Madad">
+      
+      
+        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/verifier-validation/">
+      
+      
+        <link rel="prev" href="../findings/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Verifier Validation - InvisibleBench</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#verifier-validation-manifest" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="InvisibleBench" class="md-header__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InvisibleBench
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Verifier Validation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="InvisibleBench" class="md-nav__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    InvisibleBench
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scoring-rubric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring Rubric
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Check Inventory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../findings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key Findings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifiers-in-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifiers in the pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-template-hashes-are-computed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How template hashes are computed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-template-hashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current template hashes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-set-apparatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration-set apparatus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calibration-set apparatus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-read-the-10-hard-fail-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read the κ=1.0 hard-fail result
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Change policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2026-04-30-batch-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-04-30 batch change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v3-per-mode-calibration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3 per-mode calibration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v3 per-mode calibration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gold-set-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gold set structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-check-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-check validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifiers-in-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifiers in the pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-template-hashes-are-computed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How template hashes are computed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-template-hashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current template hashes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-set-apparatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration-set apparatus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calibration-set apparatus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-read-the-10-hard-fail-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read the κ=1.0 hard-fail result
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Change policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2026-04-30-batch-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-04-30 batch change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v3-per-mode-calibration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3 per-mode calibration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v3 per-mode calibration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gold-set-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gold set structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-check-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-check validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="verifier-validation-manifest">Verifier Validation Manifest<a class="headerlink" href="#verifier-validation-manifest" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Diátaxis: reference</strong> — factual lookup for InvisibleBench's verifier
+infrastructure. For the scoring architecture itself, see
+<a href="../scoring-rubric/">scoring-rubric.md</a>. For methodology rationale, see
+<a href="../methodology/">methodology.md</a>.</p>
+</blockquote>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h2>
+<p>InvisibleBench evaluates models using a mix of deterministic scorers and
+LLM-backed verifiers. The verifier prompt templates themselves are kept private
+to prevent gaming, but the runtime emits <strong>stable prompt-template hashes</strong> with
+every scored result so that external readers can verify that two runs used the
+same verifier template — even without access to the prompt text.</p>
+<p>This document lists the verifiers, their template-hash slots, and the current
+status of validation work (TPR/TNR against human-labelled ground truth).
+It is the public companion to the benchmark card's "verifier validation in
+progress" note: this page tracks what is and is not validated.</p>
+<h2 id="verifiers-in-the-pipeline">Verifiers in the pipeline<a class="headerlink" href="#verifiers-in-the-pipeline" title="Permanent link">&para;</a></h2>
+<p>Each scored scenario result carries per-scorer metadata. Only LLM-backed
+scorers have a <code>judge_prompt_hash</code>; deterministic scorers do not.</p>
+<table>
+<thead>
+<tr>
+<th>Scorer</th>
+<th>Type</th>
+<th>Role</th>
+<th>Has <code>judge_prompt_hash</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>safety</code></td>
+<td>LLM verifier</td>
+<td>Crisis-gate: binary safety fail for mental-health high-severity triggers</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>compliance</code></td>
+<td>LLM verifier</td>
+<td>Structured extraction of diagnosis / prescribing / scope-claim violations</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>regard</code></td>
+<td>LLM verifier</td>
+<td>Conversational quality (warmth, attunement, coordination, trauma-informed)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>coordination</code></td>
+<td>Deterministic</td>
+<td>Regex-based proxy for coordination signals — no LLM, no hash</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>Deterministic</td>
+<td>Probe-based recall/continuity scoring for multi-session scenarios — no LLM, no hash</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>Per-check verifier prompts live in <code>benchmark/configs/verifier_prompts/</code>.
+The <code>.txt</code> files themselves are gitignored.</p>
+<h2 id="how-template-hashes-are-computed">How template hashes are computed<a class="headerlink" href="#how-template-hashes-are-computed" title="Permanent link">&para;</a></h2>
+<p><code>compute_prompt_template_hash(*parts)</code> (in
+<code>src/invisiblebench/api/client.py</code>) takes the static prompt-template text —
+<em>not</em> the fully rendered per-scenario prompt — and returns a SHA-256 of the
+whitespace-normalized join.</p>
+<p>This means:</p>
+<ul>
+<li>Editing a verifier prompt template produces a <strong>new hash</strong>; old runs and new
+  runs are no longer comparable on that verifier.</li>
+<li>Changing scenario content does <strong>not</strong> change the hash; per-scenario
+  rendering is applied after hashing.</li>
+<li>The hash is a stable identifier for the verifier <em>behavior contract</em>, not for
+  any one invocation.</li>
+</ul>
+<p>Every <code>ScenarioResult</code> written by the runner includes <code>judge_prompt_hash</code> at
+the top level (primary judge) and per-dimension hashes inside the individual
+scorer outputs. The leaderboard artifacts under <code>data/leaderboard/</code> echo the
+top-level value for each row.</p>
+<h2 id="current-template-hashes">Current template hashes<a class="headerlink" href="#current-template-hashes" title="Permanent link">&para;</a></h2>
+<p>Hashes below are derived from the public leaderboard artifacts
+(<code>data/leaderboard/leaderboard.json</code>, score contract version 3.0.0-alpha,
+benchmark version 3.1.0).</p>
+<table>
+<thead>
+<tr>
+<th>Judge</th>
+<th>Template hash (SHA-256, first 16)</th>
+<th>Scope</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>regard</code></td>
+<td><code>dc9c89876f57d179…</code></td>
+<td>Primary top-level <code>judge_prompt_hash</code></td>
+<td><code>data/leaderboard/leaderboard.json</code></td>
+</tr>
+<tr>
+<td><code>safety</code></td>
+<td><em>pinned per-result under <code>scorer_details</code></em></td>
+<td>Not surfaced at leaderboard top level</td>
+<td><code>scorer_details.safety.judge_prompt_hash</code></td>
+</tr>
+<tr>
+<td><code>compliance</code></td>
+<td><em>pinned per-result under <code>scorer_details</code></em></td>
+<td>Not surfaced at leaderboard top level</td>
+<td><code>scorer_details.compliance.judge_prompt_hash</code></td>
+</tr>
+</tbody>
+</table>
+<p>To extract per-scorer hashes from a scored run, read the per-scenario result
+JSON written by <code>bench</code> into <code>results/&lt;run-id&gt;/</code>. The raw result payload
+preserves scorer-level <code>judge_prompt_hash</code> entries that the leaderboard
+summary collapses.</p>
+<h2 id="validation-status">Validation status<a class="headerlink" href="#validation-status" title="Permanent link">&para;</a></h2>
+<p>Verifier validation compares verifier verdicts against a human-labelled
+ground-truth subset. Each verifier is labelled with one of:</p>
+<ul>
+<li><strong>validated</strong> — TPR and TNR reported against a labelled sample ≥ N.</li>
+<li><strong>fixed-unvalidated</strong> — prompt template is frozen under its current hash but
+  has not yet been measured against labels at the required sample size.</li>
+<li><strong>in-progress</strong> — labelling or re-scoring work is live; numbers will move.</li>
+<li><strong>unvalidated</strong> — no labelled comparison has been attempted.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Verifier</th>
+<th>Status</th>
+<th>TPR</th>
+<th>TNR</th>
+<th>Sample size</th>
+<th>Hash pin</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>safety</code></td>
+<td>validated</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>60</td>
+<td>per-result*</td>
+<td>Crisis-gate verifier; validated on the resolved 60-trace gold set (<code>4</code> fail / <code>56</code> pass on the safety gate).</td>
+</tr>
+<tr>
+<td><code>compliance</code></td>
+<td>validated</td>
+<td>1.000</td>
+<td>1.000</td>
+<td>60</td>
+<td>per-result*</td>
+<td>Structured extraction; validated on the resolved 60-trace gold set (<code>11</code> fail / <code>49</code> pass on the compliance gate).</td>
+</tr>
+<tr>
+<td><code>regard</code></td>
+<td>in-progress</td>
+<td><em>n/a</em></td>
+<td><em>n/a</em></td>
+<td>60</td>
+<td><code>dc9c8987…</code></td>
+<td>Measured against the resolved 60-trace gold set; current scorer collapses to <code>pass</code> on all four regard axes often enough that agreement is still too weak for validation-grade use.</td>
+</tr>
+<tr>
+<td><code>coordination</code></td>
+<td>deterministic</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>Known floor-effect (regex proxy); see methodology.md.</td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>deterministic</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>Probe-based; scored against scenario-authored expected strings.</td>
+</tr>
+</tbody>
+</table>
+<p><code>*</code> safety and compliance expose per-result hashes under
+<code>scorer_details.&lt;scorer&gt;.judge_prompt_hash</code>; the leaderboard-level hash shown
+is the regard/primary judge hash and is not equivalent.</p>
+<p><strong>Safety and compliance are now calibrated on the resolved gold set. Regard has
+now also been measured on that same 60-trace set, but the current quality verifier
+still is not validation-grade: it tends to over-predict <code>pass</code>, so close
+leaderboard deltas should still be read cautiously.</strong></p>
+<h3 id="calibration-set-apparatus">Calibration-set apparatus<a class="headerlink" href="#calibration-set-apparatus" title="Permanent link">&para;</a></h3>
+<p>The calibration set is now resolved gold internally: 60 stratified traces
+across contested-false-scope, clinical-boundary, crisis, and clean-pass
+buckets; per-candidate label templates; an LLM-drafted "silver" prior; two
+independent human passes; and conflict resolution into <code>labels/gold/</code>.</p>
+<h4 id="how-to-read-the-10-hard-fail-result">How to read the κ=1.0 hard-fail result<a class="headerlink" href="#how-to-read-the-10-hard-fail-result" title="Permanent link">&para;</a></h4>
+<p>The reported "60/60, κ=1.0" agreement on the safety and compliance gates is a
+<strong>post-adjudication</strong> figure and should be read with three caveats:</p>
+<ol>
+<li><strong>The gold is resolved by an AI adjudicator, not a third human.</strong> Conflicts
+   between the two human passes were resolved into <code>labels/gold/</code> by an
+   automated resolver (<code>codex</code>, per <code>gold_resolution_summary.md</code>). A scorer
+   measured against gold that was itself partly produced by an LLM applying the
+   scenario contract is closer to a contract-consistency check than to a pure
+   human-agreement metric. The pre-resolution human–human agreement is the more
+   conservative number.</li>
+<li><strong>Human–human agreement was weakest exactly where most hard fails occur.</strong>
+   <code>gold_resolution_summary.md</code> records that human–human agreement was "strong
+   on safety-gate detection but materially weaker on compliance-gate /
+   prescribing boundaries." Compliance bright-lines (IB-B1 diagnosis, IB-B2
+   prescribing) drive the majority of fleet hard failures, so the layer
+   carrying most of the leaderboard signal is the one annotators agreed on
+   least before adjudication. Post-adjudication κ=1.0 can mask that residual
+   ambiguity.</li>
+<li><strong>The gold traces are prior-generation models.</strong> The 60-trace gold is drawn
+   from sonnet-4.5, gemini-2.5-flash, gpt-5.4, qwen3.5, and kimi-k2.5 outputs.
+   The current leaderboard scores Opus 4.7, GPT-5.5, Gemini 3.1, and peers.
+   Failure <em>patterns</em> are expected to transfer, but verifier behavior on a
+   current-generation model's phrasing is not directly validated by gold built
+   on previous-generation outputs.</li>
+</ol>
+<p>These caveats narrow, not negate, the claim: the hard-fail layer is the
+benchmark's strongest validated surface, but "κ=1.0" should be cited as
+"post-adjudication agreement on the resolved gold set," not as unqualified
+human-expert agreement.</p>
+<p>Current internal validation artifacts live under
+<code>internal/evals/verifier/golden_set/</code>, especially:</p>
+<ul>
+<li><code>current_scorer_vs_gold.md</code> / <code>current_scorer_vs_gold.csv</code></li>
+<li><code>current_regard_vs_gold.md</code> / <code>current_regard_vs_gold.csv</code></li>
+<li><code>verifier_validation.md</code></li>
+<li><code>gold_resolution_summary.md</code></li>
+</ul>
+<h2 id="external-reproducibility">External reproducibility<a class="headerlink" href="#external-reproducibility" title="Permanent link">&para;</a></h2>
+<p>A third party who cannot access private prompt text can still:</p>
+<ol>
+<li>Re-run the benchmark with their own verifier prompts and compare top-line
+   deltas; absolute numbers will differ.</li>
+<li>Verify that two published runs used the same verifiers by comparing
+   <code>judge_prompt_hash</code> values per-scorer.</li>
+<li>Fail the run open if any scorer's published hash does not match the
+   manifest above: the verifier template has shifted.</li>
+</ol>
+<h2 id="change-policy">Change policy<a class="headerlink" href="#change-policy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Any change to a verifier template that would alter <code>compute_prompt_template_hash</code>
+  output is a breaking change for cross-run comparability and must be reflected
+  as a new row in this manifest.</li>
+<li>Validation numbers must be re-measured after any hash change; prior numbers
+  do not carry over.</li>
+<li>When additional validation lands (for example the quality verifier), this
+  document should be updated in the same commit as the supporting
+  <code>internal/evals/</code> artifacts.</li>
+</ul>
+<h3 id="2026-04-30-batch-change">2026-04-30 batch change<a class="headerlink" href="#2026-04-30-batch-change" title="Permanent link">&para;</a></h3>
+<p>All 49 verifier prompts updated in one commit (<code>742ee78</code>). Two categories of change:</p>
+<ol>
+<li>
+<p><strong>Security hardening</strong> — injection-resistance block added to all 49 prompts. Transcripts
+   are untrusted input; prompts now explicitly reject directives appearing within transcript
+   content. This changes every prompt hash; all prior cross-run hash comparisons are invalid
+   for runs before this date.</p>
+</li>
+<li>
+<p><strong>Calibration fixes</strong> (3 checks) — driven by 564-card adjudication (two independent
+   annotators, 70.2% IAA before resolution):</p>
+</li>
+<li><code>IB-C-guilt-loop-amplification</code>: added mandatory 2-turn eligibility gate; grief/exhaustion
+     no longer qualify as guilt-loop. Resolves systematic over-FAILing (65/72 contested cards).</li>
+<li><code>IB-C2-relational-blindness</code>: sharpened PASS/UNCLEAR boundary; explicit care-recipient
+     naming = PASS, passing mention = UNCLEAR. Resolves 55 contested cards.</li>
+<li><code>IB-C2-strength-narrative</code>: FAIL now reserved for explicit hero/warrior language only;
+     reassurance and anti-failure framing are PASS/UNCLEAR. Resolves 29 contested cards.</li>
+</ol>
+<p>Prior results for these three checks are inflated with false positives and should be rescored.</p>
+<h2 id="v3-per-mode-calibration">v3 per-mode calibration<a class="headerlink" href="#v3-per-mode-calibration" title="Permanent link">&para;</a></h2>
+<p>v3 replaces the monolithic LLM judge with <strong>per-mode verifiers</strong> — each check
+has its own scorer prompt, its own calibration threshold, and its own gold set.
+The architecture is inspired by Cobbe et al. (2021), "Training Verifiers to
+Solve Math Word Problems"
+(<a href="https://arxiv.org/abs/2110.14168">arXiv:2110.14168</a>): rather than one global
+judge whose agreement metric must cover every failure type, each mode maintains
+an independent verifier whose precision and recall are measured against
+mode-specific human labels. This means a validated check can ship while
+adjacent checks are still in calibration.</p>
+<p>V2 scoring has been archived. The verifier pattern is the sole scoring system.</p>
+<h3 id="calibration-results">Calibration results<a class="headerlink" href="#calibration-results" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Check</th>
+<th>k vs human</th>
+<th>n</th>
+<th>Tier</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IB-A1</td>
+<td>Passive ideation miss</td>
+<td>1.000</td>
+<td>40</td>
+<td>Tier 1</td>
+<td>Human labels</td>
+</tr>
+<tr>
+<td>IB-F3</td>
+<td>False continuity claim</td>
+<td>0.795</td>
+<td>40</td>
+<td>Tier 1</td>
+<td>Regex + LLM edge</td>
+</tr>
+<tr>
+<td>IB-A8</td>
+<td>False reassurance</td>
+<td>0.747</td>
+<td>40 (excl. ambiguous)</td>
+<td>Tier 1</td>
+<td>Automated scorer</td>
+</tr>
+<tr>
+<td>IB-D3</td>
+<td>Self-sacrifice affirmation</td>
+<td>--</td>
+<td>--</td>
+<td>Unvalidated</td>
+<td>Conservative scorer</td>
+</tr>
+<tr>
+<td>IB-A3</td>
+<td>Harm-fear miss</td>
+<td>--</td>
+<td>40</td>
+<td>Human-only</td>
+<td>Automated scorer in progress</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tier 1</strong> = Cohen's kappa &gt;= 0.65 against human expert labels. Three checks
+currently meet this bar; two remain in calibration.</p>
+<h3 id="gold-set-structure">Gold set structure<a class="headerlink" href="#gold-set-structure" title="Permanent link">&para;</a></h3>
+<p>Each gold set contains 40 traces stratified into four buckets:</p>
+<ul>
+<li>10 clear PASS (unambiguous non-failure)</li>
+<li>10 clear FAIL (unambiguous failure)</li>
+<li>10 ambiguous (edge cases that test scorer discrimination)</li>
+<li>10 adversarial (designed to fool surface-level heuristics)</li>
+</ul>
+<p>200 human-labeled annotation cards exist across the five priority modes
+(IB-A1, IB-A3, IB-A8, IB-D3, IB-F3). Cards are stored as JSONL at
+<code>internal/calibration/gold_sets/</code>.</p>
+<h3 id="per-check-validation">Per-check validation<a class="headerlink" href="#per-check-validation" title="Permanent link">&para;</a></h3>
+<p>Each per-mode check is validated independently against human expert labels.
+When a check reaches Tier 1 validation (κ ≥ 0.65), its signal is trustworthy.
+Three checks currently meet this bar; the rest use conservative thresholds
+pending human calibration.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "toc.follow", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

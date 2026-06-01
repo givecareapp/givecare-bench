@@ -12,9 +12,13 @@
         <meta name="author" content="Ali Madad">
       
       
-        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/_solutions/">
+        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/publishing-audit/">
       
       
+        <link rel="prev" href="../methodology/">
+      
+      
+        <link rel="next" href="../taxonomy/">
       
       
         
@@ -25,7 +29,7 @@
     
     
       
-        <title>Solutions log - InvisibleBench</title>
+        <title>Publishing Audit - InvisibleBench</title>
       
     
     
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#solutions-log" class="md-skip">
+        <a href="#benchmark-publishing-audit" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Solutions log
+              Publishing Audit
             
           </span>
         </div>
@@ -390,17 +394,205 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../judge-validation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing Audit
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    Judge Validation
+    Publishing Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-code-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Code Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-results-and-scoring-narrative" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Results And Scoring Narrative
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claim-posture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claim Posture
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Check Inventory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../findings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key Findings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verifier-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Validation
   
 
     
@@ -440,10 +632,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#2026-04-21-quality-holdout-builder-now-works-in-ci-without-local-run-snapshots" class="md-nav__link">
+  <a href="#phase-1-code-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2026-04-21 — Quality holdout builder now works in CI without local run snapshots
+        Phase 1: Code Documentation
       
     </span>
   </a>
@@ -451,10 +643,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2026-04-20-regard-scorer-correctness-and-robustness-fixes" class="md-nav__link">
+  <a href="#phase-2-results-and-scoring-narrative" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2026-04-20 — Regard scorer correctness and robustness fixes
+        Phase 2: Results And Scoring Narrative
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claim-posture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claim Posture
       
     </span>
   </a>
@@ -481,36 +684,91 @@
   
 
 
-<h1 id="solutions-log">Solutions log<a class="headerlink" href="#solutions-log" title="Permanent link">&para;</a></h1>
-<p>Append-only. Newest first. Format: <code>## YYYY-MM-DD — title</code>.</p>
-<hr />
-<h2 id="2026-04-21-quality-holdout-builder-now-works-in-ci-without-local-run-snapshots">2026-04-21 — Quality holdout builder now works in CI without local run snapshots<a class="headerlink" href="#2026-04-21-quality-holdout-builder-now-works-in-ci-without-local-run-snapshots" title="Permanent link">&para;</a></h2>
-<p><code>build_regard_quality_holdout.py</code> originally assumed two local <code>results/run_*</code>
-snapshots existed and always rebuilt the holdout from them. That worked on the
-operator machine but failed in CI with <code>FileNotFoundError</code> before the tests even
-reached the checked-in holdout candidates.</p>
-<p>Fix:
-- <code>scripts/build_regard_quality_holdout.py</code> now rebuilds from the source
-  snapshots only when they exist locally
-- otherwise it falls back to the checked-in
-  <code>internal/evals/verifier/quality_holdout/candidates.jsonl</code>
-- <code>benchmark/tests/unit/test_regard_workflows.py</code> now checks transcript-path
-  existence only when the source snapshots are present and adds a regression
-  test for the frozen-candidate fallback</p>
-<p>This keeps the holdout workflow reproducible for local verifier work without
-making CI depend on untracked benchmark-run artifacts.</p>
-<h2 id="2026-04-20-regard-scorer-correctness-and-robustness-fixes">2026-04-20 — Regard scorer correctness and robustness fixes<a class="headerlink" href="#2026-04-20-regard-scorer-correctness-and-robustness-fixes" title="Permanent link">&para;</a></h2>
-<p>Five issues found in code review and fixed in one batch.</p>
-<p><strong>Partial-parse silent-zero (<code>regard.py</code>)</strong>
-If the LLM returned a partial response (e.g. only 2 of 4 axis labels), <code>parsed_any</code> was <code>True</code> so <code>_score_deterministic</code> was not called, but unparsed axes stayed at their initialized <code>0.0</code> rather than a deterministic estimate. Fix: after the LLM parse loop, detect axes absent from <code>axis_labels</code> and call <code>_score_deterministic</code> for those axes, adding evidence entries prefixed <code>WARNING: LLM did not return {axis}</code>.</p>
-<p><strong>Unguarded KeyError in audit script (<code>audit_gold_regard.py</code>)</strong>
-<code>_score_candidates</code> and <code>_build_rows</code> did bare dict lookups on <code>scenario_index[candidate["scenario_id"]]</code> and <code>gold_labels[trace_id]</code> with no guard, crashing after expensive LLM calls. Fix: upfront validation collects all missing IDs and raises a descriptive <code>ValueError</code> before the scoring loop starts.</p>
-<p><strong><code>msg['turn']</code> KeyError in deterministic checks (<code>regard.py</code>)</strong>
-<code>_score_grounding_deterministic</code> and <code>_detect_othering_deterministic</code> accessed <code>msg['turn']</code> directly. Transcripts without a <code>turn</code> field (older schema, test fixtures) would raise <code>KeyError</code>. Fix: <code>msg.get('turn', '?')</code> in evidence strings, <code>msg.get('turn')</code> in <code>hard_fails</code> dicts.</p>
-<p><strong>Prompt/parser <code>_TURN</code> field mismatch (<code>regard_eval_v2.txt</code>)</strong>
-The prompt instructed the LLM to output <code>RECOGNITION_TURN</code>, <code>AGENCY_TURN</code>, etc., but the parser in <code>_score_with_llm</code> never read them — they were silently discarded, wasting tokens on every judge call. Fix: removed the four <code>_TURN</code> output lines from the prompt. Note: this changes the <code>judge_prompt_hash</code> for <code>regard_eval_v2.txt</code>.</p>
-<p><strong>Bare file handles (<code>run_pairwise_pilot.py</code>)</strong>
-Three <code>open()</code> reads were not wrapped in <code>with</code> blocks. Fixed for consistency with the <code>with open(OUT_PATH, "a")</code> pattern in the same script.</p>
+<h1 id="benchmark-publishing-audit">Benchmark Publishing Audit<a class="headerlink" href="#benchmark-publishing-audit" title="Permanent link">&para;</a></h1>
+<p>InvisibleBench publishes benchmark work in two linked phases:</p>
+<ol>
+<li><strong>Code documentation</strong> — the benchmark contract, scorer mechanics, verifier
+   routing, calibration status, and release commands are documented in the repo
+   before the results are treated as public claims.</li>
+<li><strong>Result narrative</strong> — the generated benchmark outputs are QA-gated, reduced
+   into a web payload, and presented as caregiver-centered failure-mode analysis.</li>
+</ol>
+<p>This split is intentional. The benchmark should not read as a generic stack
+rank of models. The useful claim is sharper: it shows where each model is jagged
+in caregiver-support conversations, which failures are acute safety or scope
+problems, and which weaknesses are communication or coordination patterns that
+would make a caregiver AI feel brittle in practice.</p>
+<h2 id="phase-1-code-documentation">Phase 1: Code Documentation<a class="headerlink" href="#phase-1-code-documentation" title="Permanent link">&para;</a></h2>
+<p>The code documentation phase makes the procedure inspectable:</p>
+<ul>
+<li><code>benchmark/configs/failure_modes.yaml</code> defines the active 53-check failure
+  inventory across safety, compliance, communication, coordination, and boundary
+  integrity.</li>
+<li><code>benchmark/configs/scorer_routing.yaml</code> records which checks use
+  deterministic, LLM, or corpus scorer routes.</li>
+<li><code>benchmark/configs/verifier_prompts/</code> holds the per-check verifier prompts.</li>
+<li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
+  into hard-fail, dimension, blind-spot, and overall artifacts.</li>
+<li><code>scripts/run_scan.py</code>, <code>scripts/generate_leaderboard.py</code>,
+  <code>scripts/qa_leaderboard.py</code>, and <code>scripts/sync_web_bench_leaderboard.py</code>
+  form the release path from transcripts to public web payload.</li>
+</ul>
+<p>The publication standard is evidence-bearing: each failure should preserve the
+eligible check, the verdict, the scorer route, and quoted transcript evidence.
+The code docs should make it possible to audit how a public claim was produced
+without relying on a single opaque LLM judge.</p>
+<h2 id="phase-2-results-and-scoring-narrative">Phase 2: Results And Scoring Narrative<a class="headerlink" href="#phase-2-results-and-scoring-narrative" title="Permanent link">&para;</a></h2>
+<p>The result phase starts from the canonical leaderboard artifact:</p>
+<ul>
+<li>Source: <code>data/leaderboard/leaderboard.json</code></li>
+<li>Current source artifact: <code>results/v3_scan/merged_phase2/per_run.jsonl</code></li>
+<li>Current public benchmark version: <code>3.1.0</code></li>
+<li>Current publication stage: <code>v3-alpha</code></li>
+<li>Current public scan: 11 models × 63 scenarios × 53 active checks</li>
+<li>Current generated timestamp: <code>2026-05-15T17:42:58Z</code></li>
+</ul>
+<p>The web-bench payload is a smaller projection of that artifact:</p>
+<ul>
+<li>Target: <code>../gc-web/apps/web-bench/public/bench/leaderboard.json</code></li>
+<li>Payload shape: <code>metadata</code>, <code>models</code>, and <code>findings</code></li>
+<li>Findings include A8 false reassurance, D2 infodump, hardest scenarios,
+  thematic failure clusters, contrast sets, and field-relative model signatures.</li>
+</ul>
+<p>The projected web surface should explain model differences, not flatten them.
+Its public analysis is organized around four layers:</p>
+<ol>
+<li><strong>Reading protocol</strong> — hard gates first, failure modes second, rank last.</li>
+<li><strong>Theme audit</strong> — universal, jagged, and emerging failure patterns.</li>
+<li><strong>Contrastive pairs</strong> — matched caregiver pressure with divergent model
+   behavior and quoted transcript evidence.</li>
+<li><strong>Model signatures</strong> — per-model deployment reads combining safety tier,
+   category strengths/weaknesses, hard-fail evidence, and repeating blind spots.</li>
+</ol>
+<p>Useful public analysis asks:</p>
+<ul>
+<li>Which safety or scope gates failed, and with what evidence?</li>
+<li>Which failure modes are concentrated in one model versus field-wide?</li>
+<li>Which models are safe but operationally cold, warm but boundary-risky, or
+  strong in one caregiver pattern and weak in another?</li>
+<li>Which contrast-set siblings reveal sensitivity to wording, scenario framing,
+  or caregiver-recipient relationship dynamics?</li>
+</ul>
+<p>That is the Web-bench narrative contract: expose the shape of model behavior in
+caregiver AI, especially the non-obvious jagged edges that aggregate scores hide.</p>
+<h2 id="claim-posture">Claim Posture<a class="headerlink" href="#claim-posture" title="Permanent link">&para;</a></h2>
+<p>The strongest public claims are hard-fail rates, safety/compliance gate behavior,
+and evidence-backed failure signatures. Overall score and rank are secondary
+navigation aids. They should not be the main story unless two models have similar
+hard-fail surfaces and the comparison is framed as exploratory.</p>
+<p>Avoid claims like "best caregiver model." Prefer claims like:</p>
+<ul>
+<li>"clean safety gates but weak presence-without-action behavior"</li>
+<li>"strong communication but recurring crisis-signal negation"</li>
+<li>"low hard-fail rate with a narrow recipient-aggression blind spot"</li>
+<li>"safe on direct ideation but brittle on masked caregiver-collapse language"</li>
+</ul>
+<p>This keeps the benchmark aligned with its purpose: a caregiver AI-centered audit
+of strengths, weaknesses, and deployment-relevant failure mechanics.</p>
 
 
 
