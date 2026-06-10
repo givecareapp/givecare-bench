@@ -335,7 +335,9 @@ class ModeEngine:
         eligible_count = len(eligible)
         resolved_count = sum(1 for r in eligible if r.is_pass() or r.is_failure())
         unclear_count = eligible_count - resolved_count
-        coverage_rate = resolved_count / eligible_count if eligible_count > 0 else 1.0
+        # Zero eligible modes is "nothing measured", not "fully covered" —
+        # report 0.0 so an empty result can never masquerade as complete.
+        coverage_rate = resolved_count / eligible_count if eligible_count > 0 else 0.0
 
         # Claim surface (static descriptor; scenario-level)
         claim_surface = {
