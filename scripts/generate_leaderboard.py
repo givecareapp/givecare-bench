@@ -273,6 +273,124 @@ def _artifact_validation_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return totals
 
 
+# ---------------------------------------------------------------------------
+# Leaderboard statistics (Anthropic "Adding Error Bars to Evals", 2411.00640):
+# cluster-robust standard errors (clusters = contrast-set families; scenarios
+# sharing a contrast_group are correlated draws, not independent ones),
+# 95% CIs, and paired-difference tests on the primary ranking metric that
+# yield a rank upper bound (Scale SEAL display pattern). With 63 scenarios
+# the intervals are honest, i.e. wide.
+# ---------------------------------------------------------------------------
+
+_Z95 = 1.96
+
+
+def _scenario_clusters() -> dict[str, str]:
+    """Map scenario_id -> cluster key (contrast_group when set, else itself)."""
+    clusters: dict[str, str] = {}
+    scenarios_dir = REPO_ROOT / "benchmark" / "scenarios"
+    for path in sorted(scenarios_dir.rglob("*.json")):
+        try:
+            with path.open(encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            continue
+        sid = str(data.get("scenario_id") or "")
+        if sid:
+            clusters[sid] = str(data.get("contrast_group") or sid)
+    return clusters
+
+
+def _clustered_se(values: list[tuple[str, float]]) -> float | None:
+    """Cluster-robust SE of the mean for (cluster_key, value) observations."""
+    n = len(values)
+    if n < 2:
+        return None
+    mean = sum(v for _, v in values) / n
+    by_cluster: dict[str, list[float]] = defaultdict(list)
+    for key, value in values:
+        by_cluster[key].append(value)
+    g = len(by_cluster)
+    if g < 2:
+        return None
+    variance = sum(
+        (sum(vals) - len(vals) * mean) ** 2 for vals in by_cluster.values()
+    ) * (g / (g - 1)) / (n * n)
+    return variance ** 0.5
+
+
+def _ci95(mean: float, se: float | None, *, clamp01: bool = True) -> list[float] | None:
+    if se is None:
+        return None
+    low, high = mean - _Z95 * se, mean + _Z95 * se
+    if clamp01:
+        low, high = max(0.0, low), min(1.0, high)
+    return [round(low, 4), round(high, 4)]
+
+
+def _paired_significantly_better(
+    a_by_scenario: dict[str, float],
+    b_by_scenario: dict[str, float],
+    clusters: dict[str, str],
+) -> bool:
+    """True when model A is significantly better (lower) than B on the metric,
+    using a paired, cluster-robust z-test over shared scenarios."""
+    shared = sorted(set(a_by_scenario) & set(b_by_scenario))
+    if len(shared) < 2:
+        return False
+    diffs = [(clusters.get(sid, sid), a_by_scenario[sid] - b_by_scenario[sid]) for sid in shared]
+    mean_diff = sum(d for _, d in diffs) / len(diffs)
+    se = _clustered_se(diffs)
+    if se is None:
+        return False
+    if se == 0.0:
+        # Zero variance: a uniform advantage on every scenario is decisive.
+        return mean_diff < 0
+    return mean_diff < 0 and abs(mean_diff) > _Z95 * se
+
+
+def _attach_statistics(ranked_rows: list[dict[str, Any]]) -> None:
+    """Attach SEs, CIs, and rank upper bounds in place."""
+    clusters = _scenario_clusters()
+
+    hard_fail_by_model: dict[str, dict[str, float]] = {}
+    for row in ranked_rows:
+        per_scenario: dict[str, float] = {}
+        hf_obs: list[tuple[str, float]] = []
+        score_obs: list[tuple[str, float]] = []
+        for scenario in row.get("scenarios") or []:
+            sid = str(scenario.get("scenario_id") or "")
+            cluster = clusters.get(sid, sid)
+            hf = 1.0 if scenario.get("hard_fail") else 0.0
+            per_scenario[sid] = hf
+            hf_obs.append((cluster, hf))
+            score = scenario.get("overall_score")
+            if isinstance(score, int | float):
+                score_obs.append((cluster, float(score)))
+        hard_fail_by_model[str(row["model"])] = per_scenario
+
+        hf_se = _clustered_se(hf_obs)
+        score_se = _clustered_se(score_obs)
+        row["hard_fail_rate_se"] = round(hf_se, 4) if hf_se is not None else None
+        row["hard_fail_rate_ci95"] = _ci95(float(row["hard_fail_rate"]), hf_se)
+        row["v3_overall_score_se"] = round(score_se, 4) if score_se is not None else None
+        row["v3_overall_score_ci95"] = _ci95(float(row["v3_overall_score"]), score_se)
+
+    # Rank upper bound: 1 + number of models significantly better on the
+    # primary ranking metric (per-scenario hard-fail, paired by scenario).
+    for row in ranked_rows:
+        mine = hard_fail_by_model[str(row["model"])]
+        better = sum(
+            1
+            for other in ranked_rows
+            if other is not row
+            and _paired_significantly_better(
+                hard_fail_by_model[str(other["model"])], mine, clusters
+            )
+        )
+        row["rank_upper_bound"] = 1 + better
+
+
 def compute_v3_rankings(
     rows: list[dict[str, Any]],
     *,
@@ -342,6 +460,7 @@ def compute_v3_rankings(
     )
     for rank, row in enumerate(ranked_rows, start=1):
         row["rank"] = rank
+    _attach_statistics(ranked_rows)
     return ranked_rows
 
 
@@ -384,6 +503,11 @@ def generate_leaderboard(
                     "lowest_unclear_mode_verdict_rate",
                 ],
                 "note": "Rows are generated from V3 ModeEngine outputs, not repaired V2.1 scorer rows.",
+            },
+            "statistics": {
+                "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs, paired-difference z-tests on per-scenario hard-fail for rank_upper_bound",
+                "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640); rank-upper-bound display per Scale SEAL",
+                "caveat": "63 scenarios -> wide intervals by design; treat overlapping CIs as ties. rank_upper_bound is the smallest rank consistent with the paired tests.",
             },
             "scenario_detail_policy": (
                 "Per-scenario rows include summaries plus notable FAIL/UNCLEAR/manual mode results; "

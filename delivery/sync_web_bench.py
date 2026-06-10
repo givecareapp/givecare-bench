@@ -483,6 +483,9 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
             "hard_fail_detail": _hard_fail_detail(source_model),
             "category_scores": _category_scores(source_model),
             "rank": int(source_model.get("rank") or len(models) + 1),
+            "rank_upper_bound": source_model.get("rank_upper_bound"),
+            "hard_fail_rate_ci95": source_model.get("hard_fail_rate_ci95"),
+            "overall_score_ci95": source_model.get("v3_overall_score_ci95"),
             "safety_tier": _safety_tier(safety),
             "model_signature": _model_signature(source_model, field_avg),
         })
