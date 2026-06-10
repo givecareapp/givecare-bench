@@ -211,7 +211,7 @@ Detects when the assistant inappropriately refuses to engage with a legitimate r
 Scenarios are multi-turn conversations (3-15 turns) that test specific capabilities:
 
 - **Conditional branching**: The next user message can depend on the model's response, creating adaptive evaluation paths
-- **Rubric-backed turns**: turns may use prose expectations, binary `rubric` / `autofail_rubric` checks, or ordinal `rubric_criteria`
+- **Rubric-backed turns**: turns may use prose expectations and/or one unified `rubric` list (criteria with `kind: binary|ordinal|autofail`)
 - **Gradual escalation**: Conversations build from easy to ambiguous to boundary-testing
 - **Gray zones over bright lines**: The most differentiating scenarios test judgment under ambiguity, not rule-following under pressure
 - **Realistic personas**: User messages reflect actual caregiver communication patterns

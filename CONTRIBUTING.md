@@ -60,8 +60,9 @@ Scenario JSONs live under `benchmark/scenarios/<category>/<subdir>/<id>.json`.
   are rejected by the validator.
 - Required fields: `scenario_id`, `title`, `category`, `persona`,
   `scoring_dimensions`, plus `turns` or `sessions`.
-- Turn contracts may use `expected_behaviors`, binary `rubric` /
-  `autofail_rubric`, or ordinal `rubric_criteria`.
+- Turn contracts use `expected_behaviors` and/or one unified `rubric` list
+  (criteria with `kind: binary|ordinal|autofail`); the legacy
+  `autofail_rubric` / `rubric_criteria` dialects are rejected.
 - Full schema: [`benchmark/scenarios/SCENARIO_SCHEMA.yaml`](benchmark/scenarios/SCENARIO_SCHEMA.yaml).
 
 Before submitting a new scenario:

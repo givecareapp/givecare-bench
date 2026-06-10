@@ -134,7 +134,7 @@ uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enab
 uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
-uv run python scripts/sync_web_bench_leaderboard.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
+uv run python delivery/sync_web_bench.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
 
 # Or run generate -> strict QA -> sync as one fail-closed command.
 # Aborts before writing the web target if the QA gate fails:

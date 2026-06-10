@@ -88,10 +88,10 @@ Each scenario is a JSON file containing:
 - **Conditional branches** — adaptive paths triggered by model response patterns
 - **Probes** — targeted follow-ups that test specific scorer dimensions
 
-Turn-level evaluation can be authored in three forms:
+Turn-level evaluation can be authored in two complementary forms:
 - prose expectations via `expected_behaviors` / `autofail_triggers`
-- binary rubric items via `rubric` / `autofail_rubric`
-- ordinal rubric items via `rubric_criteria`
+- one unified `rubric` list: criteria objects with
+  `kind: binary | ordinal | autofail` (ordinal criteria carry `levels`)
 
 The runtime now uses a single canonical scenario model layer in
 `src/invisiblebench/models/scenario.py`: `Scenario`, `Session`, `Turn`,
