@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from invisiblebench.cli.runner import _make_error_result
+from invisiblebench.cli.result_helpers import _make_error_result
 
 # ---------------------------------------------------------------------------
 # Unit: _make_error_result produces correct schema
