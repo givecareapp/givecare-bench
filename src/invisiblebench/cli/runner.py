@@ -54,6 +54,7 @@ from invisiblebench.api.client import (
     cost_tracker,
     resolve_scorer_model,
 )
+from invisiblebench.cli._console import make_console
 from invisiblebench.cli.agent_commands import (
     _run_doctor,
     _run_get,
@@ -116,7 +117,6 @@ from invisiblebench.version import V3_RESULT_CONTRACT_VERSION
 try:
     import threading
 
-    from rich.console import Console as _RichConsole
     from rich.live import Live
     from rich.progress import (
         BarColumn,
@@ -129,25 +129,11 @@ try:
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
-    _RichConsole = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
-
-def _no_color() -> bool:
-    """Honor NO_COLOR env var and non-tty stdout."""
-    return bool(os.environ.get("NO_COLOR")) or not sys.stdout.isatty()
-
-
-def Console(*args, **kwargs):  # type: ignore[no-redef]
-    """Wrapper around rich.console.Console that honors NO_COLOR / isatty."""
-    if _RichConsole is None:
-        return None
-    kwargs.setdefault("no_color", _no_color())
-    kwargs.setdefault("force_terminal", not _no_color())
-    kwargs.setdefault("highlight", False)
-    return _RichConsole(*args, **kwargs)
-
+# Shared NO_COLOR/isatty-honoring Console factory (returns None without rich).
+Console = make_console
 
 load_dotenv()
 

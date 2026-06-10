@@ -40,7 +40,10 @@ from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngineOutput,
     corpus_blindspot_rates,
 )
-from invisiblebench.evaluation.verifiers.base import collect_scenario_tags  # noqa: E402
+from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
+    collect_scenario_tags,
+    mode_is_eligible,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -152,21 +155,6 @@ def apply_scan_profile(
     return filtered_modes, filtered_routing
 
 
-def _mode_is_eligible(scenario: dict[str, Any], mode_config: dict[str, Any]) -> bool:
-    if mode_config.get("scope") == "universal":
-        return True
-
-    explicit_modes = scenario.get("eligible_modes")
-    if isinstance(explicit_modes, list) and explicit_modes:
-        return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}
-
-    eligibility = mode_config.get("eligibility") or {}
-    required_tags = eligibility.get("scenario_tags_any") or []
-    if not required_tags or required_tags == ["any"]:
-        return True
-    return bool(collect_scenario_tags(scenario).intersection(required_tags))
-
-
 def _estimate_call_cost(
     model: str,
     *,
@@ -202,7 +190,7 @@ def build_scan_plan(
             suppressed_by = routing_config.get("safety_override_suppressed_by") or []
             if suppressed_by and scenario_tags.intersection(suppressed_by):
                 continue
-            if not _mode_is_eligible(scenario, mode_config):
+            if not mode_is_eligible(scenario, mode_config):
                 continue
 
             eligible_checks += 1
