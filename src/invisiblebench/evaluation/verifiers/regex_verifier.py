@@ -24,7 +24,7 @@ from invisiblebench.evaluation.verifiers.base import (
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 # Lexicon registry — populated by build_lexicons() at engine init.
-# Keys match `detectors` names in failure_modes.yaml / scorer_routing.yaml.
+# Keys match `detectors` names in checks/<ID>.yaml scorer/routing blocks.
 # Values are lists of (pattern, compiled_regex) tuples.
 LEXICONS: dict[str, list[tuple[str, re.Pattern[str]]]] = {}
 

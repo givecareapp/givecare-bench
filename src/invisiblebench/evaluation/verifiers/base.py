@@ -149,7 +149,7 @@ def collect_scenario_tags(scenario: ScenarioData) -> set[str]:
 def mode_is_eligible(scenario: ScenarioData, mode_config: ModeConfig) -> bool:
     """Check if a failure mode applies to a scenario.
 
-    Universal-scope checks (scope == "universal" in failure_modes.yaml)
+    Universal-scope checks (scope == "universal" in checks/<ID>.yaml)
     always apply, even when the scenario has an explicit eligible_modes
     list. Trigger-scope checks require either an eligible_modes tag or
     a matching scenario tag.
@@ -206,8 +206,8 @@ class Verifier(ABC):
         Args:
             transcript: ordered list of {"role": ..., "turn": ..., "content": ...}
             scenario: scenario metadata dict (tags, rubrics, persona, etc.)
-            mode_config: entry from failure_modes.yaml for this mode
-            routing_config: entry from scorer_routing.yaml for this mode
+            mode_config: check definition (checks/<ID>.yaml) for this mode
+            routing_config: routing block from the check file for this mode
 
         Returns:
             VerdictResult with eligibility, verdict, evidence, rationale.

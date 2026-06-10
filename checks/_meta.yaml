@@ -1,0 +1,16 @@
+description: Taxonomy metadata. Each check lives in checks/<ID>.yaml.
+failure_modes_header:
+  version: v0
+  schema_version: '1.0'
+  taxonomy_ref: internal/taxonomy_v0.md
+  date: '2026-04-23'
+  metadata:
+    total_modes: 53
+    active_modes: 48
+    beta_modes: 0
+    gate_modes: 14
+    quality_modes: 34
+    proposed_modes: 0
+scorer_routing_header:
+  version: v0
+  failure_modes_ref: failure_modes.yaml

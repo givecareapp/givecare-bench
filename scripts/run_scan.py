@@ -671,7 +671,7 @@ def main() -> int:
     engine = ModeEngine(llm_api_client=api_client, llm_model=args.llm_model)
     engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)
     logger.info("Scan profile: %s (%s)", profile["name"], profile["description"])
-    logger.info("Loaded %d modes from failure_modes.yaml", len(engine.modes))
+    logger.info("Loaded %d checks from checks/", len(engine.modes))
     logger.info("Loaded %d routing entries", len(engine.routing))
 
     run_dirs: list[Path] = []

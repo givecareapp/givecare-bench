@@ -5,7 +5,7 @@ Additive — never overwrites scenarios that already have `failure_mode_tags`.
 Infers tags from scenario_id, category/tier, title, risk_triggers cues,
 rubric/expected_behaviors text.
 
-Tag surface matches eligibility conditions in benchmark/configs/failure_modes.yaml.
+Tag surface matches eligibility conditions in checks/<ID>.yaml.
 """
 
 from __future__ import annotations

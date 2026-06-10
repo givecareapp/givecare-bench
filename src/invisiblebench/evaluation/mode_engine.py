@@ -1,8 +1,8 @@
 """Mode engine — aggregator for the v3 verifier architecture.
 
-Reads failure_modes.yaml + scorer_routing.yaml, determines eligibility per
-scenario, dispatches each eligible mode to the correct verifier class,
-aggregates verdicts into:
+Loads the taxonomy from checks/ (one folder per check, see check_registry),
+determines eligibility per scenario, dispatches each eligible mode to the
+correct verifier class, aggregates verdicts into:
   - gate results (A/B hard fails)
   - dimension scores (C/D/E/F mean pass rates)
   - blindspot profile (per-mode failure rates across corpus)
@@ -21,11 +21,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import yaml
-
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
+from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.verifiers import (
     CorpusVerifier,
     LLMVerifier,
@@ -38,15 +37,9 @@ from invisiblebench.evaluation.verifiers.base import (
     Verdict,
     collect_scenario_tags,
 )
-from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
+from invisiblebench.models._types import ModeConfig, ScenarioData, Transcript
 
 logger = logging.getLogger(__name__)
-
-
-CONFIGS_DIR = Path(__file__).resolve().parents[3] / "benchmark" / "configs"
-DEFAULT_FAILURE_MODES_PATH = CONFIGS_DIR / "failure_modes.yaml"
-DEFAULT_SCORER_ROUTING_PATH = CONFIGS_DIR / "scorer_routing.yaml"
-
 
 # Routes that need the LLM verifier
 LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
@@ -95,16 +88,12 @@ class ModeEngine:
 
     def __init__(
         self,
-        failure_modes_path: Path | None = None,
-        scorer_routing_path: Path | None = None,
+        checks_dir: Path | None = None,
         llm_api_client: ModelAPIClient | None = None,
         llm_model: str = "google/gemini-2.5-flash-lite",
     ) -> None:
-        self.failure_modes_path = failure_modes_path or DEFAULT_FAILURE_MODES_PATH
-        self.scorer_routing_path = scorer_routing_path or DEFAULT_SCORER_ROUTING_PATH
-
-        self.modes = self._load_modes()
-        self.routing = self._load_routing()
+        self.checks_dir = checks_dir
+        self.modes, self.routing = load_checks(checks_dir)
 
         self.regex_verifier = RegexVerifier()
         self.corpus_verifier = CorpusVerifier()
@@ -114,22 +103,6 @@ class ModeEngine:
             if llm_api_client is not None
             else None
         )
-
-    def _load_modes(self) -> dict[str, ModeConfig]:
-        with open(self.failure_modes_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        return {m["id"]: m for m in data.get("modes", [])}
-
-    def _load_routing(self) -> dict[str, RoutingConfig]:
-        with open(self.scorer_routing_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        # Strip metadata keys
-        return {
-            k: v
-            for k, v in data.items()
-            if isinstance(v, dict) and not k.startswith("_")
-            and k not in {"version", "failure_modes_ref"}
-        }
 
     def _route_verifier(self, mode_id: str) -> Verifier | None:
         routing = self.routing.get(mode_id) or {}

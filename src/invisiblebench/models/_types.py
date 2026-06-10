@@ -24,10 +24,10 @@ ScenarioData = dict[str, Any]
 # -- Flat result row (one scenario x one model) as carried by results_io / stats --
 ResultRow = dict[str, Any]
 
-# -- failure_modes.yaml entry for one mode --
+# -- check definition (checks/<ID>.yaml) for one mode --
 ModeConfig = dict[str, Any]
 
-# -- scorer_routing.yaml entry for one mode --
+# -- routing block (checks/<ID>.yaml `routing:`) for one mode --
 RoutingConfig = dict[str, Any]
 
 # -- Chat message {"role": ..., "content": ...} used in API call signatures --

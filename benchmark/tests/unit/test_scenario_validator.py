@@ -5,8 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import yaml
-
+from invisiblebench.evaluation.check_registry import registered_check_ids
 from invisiblebench.loaders.scenario_loader import ScenarioValidator
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -129,9 +128,7 @@ def test_validator_requires_expected_behaviors_or_rubric_criteria() -> None:
 
 
 def test_all_scenarios_reference_registered_eligible_modes() -> None:
-    with open(REPO_ROOT / "benchmark" / "configs" / "failure_modes.yaml", encoding="utf-8") as fh:
-        modes = yaml.safe_load(fh)["modes"]
-    registered = {str(mode["id"]) for mode in modes}
+    registered = registered_check_ids()
 
     unknown: dict[str, list[str]] = {}
     for scenario_path in sorted((REPO_ROOT / "benchmark" / "scenarios").rglob("*.json")):

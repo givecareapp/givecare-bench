@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.mode_engine import ModeEngine
 from invisiblebench.evaluation.verifiers import ScenarioRuleVerifier
 from invisiblebench.evaluation.verifiers.base import Verdict, VerdictResult
@@ -135,24 +136,20 @@ def test_v3_scoring_contract_yaml_is_valid() -> None:
 
 
 def test_active_v3_modes_have_prompt_and_detector_assets() -> None:
-    modes = yaml.safe_load((REPO_ROOT / "benchmark/configs/failure_modes.yaml").read_text())["modes"]
-    routing = yaml.safe_load((REPO_ROOT / "benchmark/configs/scorer_routing.yaml").read_text())
-    prompt_dir = REPO_ROOT / "benchmark/configs/verifier_prompts"
-    routed_ids = {key for key, value in routing.items() if isinstance(value, dict)}
+    modes, routing = load_checks()
 
     missing_prompts = []
     missing_lexicons = []
-    for mode in modes:
-        mode_id = mode["id"]
-        if mode.get("status", "active") != "active" or mode_id not in routed_ids:
+    for mode_id, mode in modes.items():
+        route_cfg = routing.get(mode_id) or {}
+        if mode.get("status", "active") != "active" or not route_cfg:
             continue
 
-        prompt_name = (mode.get("scorer") or {}).get("verifier_prompt")
-        if prompt_name and not (prompt_dir / prompt_name).exists():
-            missing_prompts.append(f"{mode_id}:{prompt_name}")
+        route = route_cfg.get("route")
+        if route in {"hybrid_llm", "llm_primary", "longitudinal_trace"} and not mode.get("prompt"):
+            missing_prompts.append(mode_id)
 
-        route = routing[mode_id].get("route")
-        detector = routing[mode_id].get("deterministic_precheck")
+        detector = route_cfg.get("deterministic_precheck")
         if detector and route in {"lexicon_only", "regex_with_llm_edge"}:
             if detector not in LEXICONS:
                 missing_lexicons.append(f"{mode_id}:{detector}")

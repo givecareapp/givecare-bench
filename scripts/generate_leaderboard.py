@@ -19,6 +19,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.utils.benchmark_inventory import (
     get_benchmark_version,
     get_code_version,
@@ -26,8 +27,6 @@ from invisiblebench.utils.benchmark_inventory import (
 )
 
 SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
-FAILURE_MODES = REPO_ROOT / "benchmark" / "configs" / "failure_modes.yaml"
-SCORER_ROUTING = REPO_ROOT / "benchmark" / "configs" / "scorer_routing.yaml"
 
 FAILURE_VERDICTS = {
     "FAIL",
@@ -58,19 +57,17 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _active_mode_ids() -> list[str]:
-    modes = _load_yaml(FAILURE_MODES).get("modes") or []
-    routing = _load_yaml(SCORER_ROUTING)
-    routed = {key for key, value in routing.items() if isinstance(value, dict)}
+    modes, routing = load_checks()
     return [
-        str(mode["id"])
-        for mode in modes
-        if mode.get("status", "active") == "active" and str(mode.get("id")) in routed
+        mode_id
+        for mode_id, mode in modes.items()
+        if mode.get("status", "active") == "active" and routing.get(mode_id)
     ]
 
 
 def _mode_by_id() -> dict[str, dict[str, Any]]:
-    modes = _load_yaml(FAILURE_MODES).get("modes") or []
-    return {str(mode["id"]): mode for mode in modes if isinstance(mode, dict) and "id" in mode}
+    modes, _ = load_checks()
+    return dict(modes)
 
 
 def _hard_fail_reasons(
