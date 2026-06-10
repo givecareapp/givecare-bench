@@ -18,16 +18,16 @@ would make a caregiver AI feel brittle in practice.
 
 The code documentation phase makes the procedure inspectable:
 
-- `benchmark/configs/failure_modes.yaml` defines the active 53-check failure
+- `checks/` (one YAML per check) defines the active 53-check failure
   inventory across safety, compliance, communication, coordination, and boundary
   integrity.
-- `benchmark/configs/scorer_routing.yaml` records which checks use
+- the `routing:` block in each `checks/<ID>.yaml` records which checks use
   deterministic, LLM, or corpus scorer routes.
-- `benchmark/configs/verifier_prompts/` holds the per-check verifier prompts.
+- each check file embeds its judge prompt as a `prompt:` block.
 - `src/invisiblebench/evaluation/mode_engine.py` aggregates per-check verdicts
   into hard-fail, dimension, blind-spot, and overall artifacts.
 - `scripts/run_scan.py`, `scripts/generate_leaderboard.py`,
-  `scripts/qa_leaderboard.py`, and `scripts/sync_web_bench_leaderboard.py`
+  `scripts/qa_leaderboard.py`, and `delivery/sync_web_bench.py`
   form the release path from transcripts to public web payload.
 
 The publication standard is evidence-bearing: each failure should preserve the

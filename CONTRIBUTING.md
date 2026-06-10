@@ -21,7 +21,7 @@ valid PR looks like.
 - Edits to private scoring prompts or jurisdiction rules. These are
   gitignored by design (see the
   [private-content segregation note in CLAUDE.md](CLAUDE.md)). Public
-  verifier prompts live in `benchmark/configs/verifier_prompts/`.
+  judge prompts are embedded in `checks/<ID>.yaml` as `prompt:` blocks.
 - Benchmark version bumps without maintainer sign-off. The public contract
   version lives in `benchmark/benchmark_card.json`.
 - Changes to archived material under `archive/` — that directory is

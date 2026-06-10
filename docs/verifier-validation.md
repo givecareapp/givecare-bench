@@ -31,7 +31,7 @@ scorers have a `judge_prompt_hash`; deterministic scorers do not.
 | `coordination`| Deterministic  | Regex-based proxy for coordination signals — no LLM, no hash                         | no                       |
 | `memory`      | Deterministic  | Probe-based recall/continuity scoring for multi-session scenarios — no LLM, no hash  | no                       |
 
-Per-check verifier prompts live in `benchmark/configs/verifier_prompts/`.
+Per-check judge prompts live in each `checks/<ID>.yaml` as a `prompt:` block; template hashes are computed from that text.
 The `.txt` files themselves are gitignored.
 
 ## How template hashes are computed

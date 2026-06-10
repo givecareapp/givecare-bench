@@ -24,7 +24,7 @@ givecare-bench/
 | `benchmark/` | Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests | Rarely — versioned contract |
 | `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, provider adapters, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
-| `data/leaderboard/` | Canonical leaderboard JSON projected into public web assets by `scripts/sync_web_bench_leaderboard.py` | Generated — never hand-edited |
+| `data/leaderboard/` | Canonical leaderboard JSON projected into public web assets by `delivery/sync_web_bench.py` | Generated — never hand-edited |
 | `archive/` | Superseded docs, one-off scripts, and historical internal remediation artifacts | Rarely |
 
 ## Scoring pipeline
@@ -154,10 +154,10 @@ answer one question: "did failure mode IB-X occur in this transcript?"
 The engine (`src/invisiblebench/evaluation/mode_engine.py`) loads the canonical
 inventory and routing config at init:
 
-- **`benchmark/configs/failure_modes.yaml`** -- 53-check inventory
+- **`checks/<ID>.yaml`** -- one flat file per check: definition, routing, and judge prompt (53 checks)
   across five dimensions: A (safety), B (compliance),
   C (communication quality), D (caregiver coordination), F (boundary integrity).
-- **`benchmark/configs/scorer_routing.yaml`** -- per-check dispatch config
+- **`routing:` block per check file** -- per-check dispatch config
   specifying route type, unit of analysis, deterministic precheck lexicon,
   repetition count, and LLM/corpus requirements.
 - **`scripts/run_scan.py` scan profiles** -- small CLI policies
@@ -191,7 +191,7 @@ the full fleet without token cost. Used as the primary scorer for `lexicon_only`
 routes and as a precheck for `hybrid_llm` routes.
 
 **LLMVerifier** -- sends a per-check prompt from
-`benchmark/configs/verifier_prompts/` to the reference model with K-repetition
+the check file's embedded `prompt:` to the reference model with K-repetition
 majority vote (publish default K=3). Scan profiles can lower repetitions for
 development scans and enable adaptive repetition: a clear first-pass PASS or
 NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured
@@ -204,7 +204,7 @@ Used for checks like benefit-eligibility overclaims.
 
 ### Event-window scoping
 
-Each check declares a `unit_of_analysis` in `scorer_routing.yaml` that bounds
+Each check declares a `unit_of_analysis` in its `routing:` block that bounds
 the transcript slice the verifier receives:
 
 | Unit | Scope |
