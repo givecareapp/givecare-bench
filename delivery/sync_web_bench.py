@@ -516,6 +516,7 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
             "scored_at": _score_date(metadata),
             "safety_tiers": SAFETY_TIERS,
             "low_power_eligibility_floor": LOW_POWER_ELIGIBILITY_FLOOR,
+            "statistics": metadata.get("statistics"),
             "quality_layer": {
                 "status": "beta_unvalidated",
                 "headline_metric": "hard_fail_rate",
