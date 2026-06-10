@@ -1,37 +1,20 @@
 """Diff/comparison utilities: run reference resolution, result aggregation, and diff reporting."""
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.cli._console import make_console as _console
 from invisiblebench.run_artifacts import load_result_rows
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
 try:
-    from rich.console import Console as _RichConsole
     from rich.table import Table
 
     _RICH_AVAILABLE = True
 except ImportError:
     _RICH_AVAILABLE = False
-    _RichConsole = None  # type: ignore
     Table = None  # type: ignore
-
-
-def _no_color() -> bool:
-    return bool(os.environ.get("NO_COLOR")) or not sys.stdout.isatty()
-
-
-def _console():  # type: ignore[return]
-    if _RichConsole is None:
-        return None
-    kw: dict[str, Any] = {}
-    kw.setdefault("no_color", _no_color())
-    kw.setdefault("force_terminal", not _no_color())
-    kw.setdefault("highlight", False)
-    return _RichConsole(**kw)
 
 
 def _infer_run_dir_for_output(source: Path) -> Path:

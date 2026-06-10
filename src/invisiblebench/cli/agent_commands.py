@@ -9,30 +9,6 @@ from typing import Any
 
 from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 
-try:
-    from rich.console import Console as _RichConsole
-    from rich.table import Table
-
-    _RICH_AVAILABLE = True
-except ImportError:
-    _RICH_AVAILABLE = False
-    _RichConsole = None  # type: ignore
-    Table = None  # type: ignore
-
-
-def _no_color() -> bool:
-    return bool(os.environ.get("NO_COLOR")) or not sys.stdout.isatty()
-
-
-def _console():  # type: ignore[return]
-    if _RichConsole is None:
-        return None
-    kw: dict[str, Any] = {}
-    kw.setdefault("no_color", _no_color())
-    kw.setdefault("force_terminal", not _no_color())
-    kw.setdefault("highlight", False)
-    return _RichConsole(**kw)
-
 
 def _runs_dir() -> Path:
     """Return the canonical runs directory (results/)."""

@@ -146,6 +146,34 @@ def collect_scenario_tags(scenario: ScenarioData) -> set[str]:
     return tags
 
 
+def mode_is_eligible(scenario: ScenarioData, mode_config: ModeConfig) -> bool:
+    """Check if a failure mode applies to a scenario.
+
+    Universal-scope checks (scope == "universal" in failure_modes.yaml)
+    always apply, even when the scenario has an explicit eligible_modes
+    list. Trigger-scope checks require either an eligible_modes tag or
+    a matching scenario tag.
+
+    Single decision site for eligibility — used by the verifier classes and
+    scripts/run_scan.py so the two paths cannot drift.
+    """
+    # Universal checks always apply to every scenario.
+    if mode_config.get("scope") == "universal":
+        return True
+
+    explicit_modes = scenario.get("eligible_modes")
+    if isinstance(explicit_modes, list) and explicit_modes:
+        return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}
+
+    eligibility = mode_config.get("eligibility") or {}
+    required_tags = eligibility.get("scenario_tags_any") or []
+
+    if not required_tags or required_tags == ["any"]:
+        return True
+
+    return bool(collect_scenario_tags(scenario).intersection(required_tags))
+
+
 class Verifier(ABC):
     """Verifier contract. One verifier class per scorer type."""
 
@@ -191,25 +219,5 @@ class Verifier(ABC):
         scenario: ScenarioData,
         mode_config: ModeConfig,
     ) -> bool:
-        """Check if the mode applies to this scenario.
-
-        Universal-scope checks (scope == "universal" in failure_modes.yaml)
-        always apply, even when the scenario has an explicit eligible_modes
-        list. Trigger-scope checks require either an eligible_modes tag or
-        a matching scenario tag.
-        """
-        # Universal checks always apply to every scenario.
-        if mode_config.get("scope") == "universal":
-            return True
-
-        explicit_modes = scenario.get("eligible_modes")
-        if isinstance(explicit_modes, list) and explicit_modes:
-            return str(mode_config.get("id")) in {str(mode_id) for mode_id in explicit_modes}
-
-        eligibility = mode_config.get("eligibility") or {}
-        required_tags = eligibility.get("scenario_tags_any") or []
-
-        if not required_tags or required_tags == ["any"]:
-            return True
-
-        return bool(collect_scenario_tags(scenario).intersection(required_tags))
+        """Check if the mode applies to this scenario (see mode_is_eligible)."""
+        return mode_is_eligible(scenario, mode_config)
