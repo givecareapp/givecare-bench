@@ -51,9 +51,11 @@ generic stack rank. See [Benchmark Publishing Audit](docs/publishing-audit.md).
 
 ### Public
 These are the parts external users should rely on:
-- `benchmark/`: public benchmark data, configs, schemas, tests
+- `checks/`: the taxonomy — one YAML per check (definition, routing, judge prompt)
+- `benchmark/`: public scenario corpus, scoring contract, tests
 - `src/invisiblebench/`: runtime package, scoring, CLI, adapters
-- `scripts/`: active maintenance utilities
+- `scripts/`: benchmark pipeline (run scan, leaderboard, QA, publish, rescore gate)
+- `delivery/`: projections to consumers (web-bench sync, contrast analysis, taxonomy snapshot)
 - `docs/`: public docs
 - `data/leaderboard/`: generated public leaderboard artifact
 
@@ -75,17 +77,18 @@ These are retained for provenance, not day-to-day use:
 
 ```text
 givecare-bench/
-├── benchmark/            # public corpus, configs, contract, tests
-├── src/invisiblebench/   # runtime package
-├── scripts/              # active repo utilities
+├── checks/               # the taxonomy: one flat YAML per check
+├── benchmark/            # public scenario corpus, scoring contract, tests
+├── src/invisiblebench/   # runtime package (run / judge / publish / calibrate)
+├── scripts/              # benchmark pipeline utilities
+├── delivery/             # projections to consumers (web sync, snapshots)
 ├── docs/                 # public documentation
 ├── data/leaderboard/     # generated public artifacts
-├── internal/             # active non-public workflows
-│   ├── autoresearch/
-│   ├── evals/
-│   └── papers/
-├── archive/              # historical material only
+└── archive/              # historical material only
 ```
+
+(Local working trees also carry gitignored operator directories — intake/,
+internal/, results/ — that are not part of the public contract.)
 
 ## Public release policy
 
@@ -93,7 +96,7 @@ givecare-bench/
 - Publicly comparable runs use the raw `llm` surface.
 - GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
-- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `scripts/sync_web_bench_leaderboard.py` and QA-gated with `scripts/qa_leaderboard.py --strict`.
+- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py` and QA-gated with `scripts/qa_leaderboard.py --strict` (one fail-closed path: `scripts/publish.sh`).
 - The active public narrative surface is the synced web-bench payload: findings,
   themes, contrast sets, and model signatures. Older generated narrative
   markdown should be treated as provenance unless regenerated from the current
