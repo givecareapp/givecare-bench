@@ -2189,6 +2189,27 @@ Examples:
     diff_parser.add_argument("base_run", type=str, help="Base run reference")
     diff_parser.add_argument("new_run", type=str, help="New run reference")
 
+    # Explain subcommand
+    explain_parser = subparsers.add_parser(
+        "explain", help="Trace a leaderboard cell to its verdicts and transcript evidence"
+    )
+    explain_parser.add_argument("model", type=str, help="Model name or id (substring match)")
+    explain_parser.add_argument("scenario", type=str, help="Scenario id (substring match)")
+    explain_parser.add_argument(
+        "--check", type=str, default=None, help="Filter to checks whose id contains this"
+    )
+    explain_parser.add_argument(
+        "--failures", action="store_true", help="Show only FAIL/UNCLEAR checks"
+    )
+    explain_parser.add_argument(
+        "--scan", type=str, default=None,
+        help="Scan per_run.jsonl to read (default: leaderboard metadata.source_artifact)",
+    )
+    explain_parser.add_argument(
+        "--leaderboard", type=str, default=None,
+        help="Leaderboard JSON used to resolve the default scan artifact",
+    )
+
     # Rescore subcommand
     rescore_parser = subparsers.add_parser(
         "rescore", help="Rescore existing transcripts without re-running models"
@@ -2402,6 +2423,11 @@ Examples:
 
     if args.command == "report":
         return report_command(args)
+
+    if args.command == "explain":
+        from invisiblebench.cli.explain import explain_command
+
+        return explain_command(args)
 
     if args.command == "audit":
         return audit_command(args)
