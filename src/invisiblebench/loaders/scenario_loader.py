@@ -83,26 +83,47 @@ class ScenarioValidator:
             elif not isinstance(turn.get("autofail_triggers"), list):
                 errors.append(f"{label}[{idx}].autofail_triggers must be a list")
 
-            if (
-                "expected_behaviors" not in turn
-                and "rubric" not in turn
-                and "rubric_criteria" not in turn
-            ):
-                errors.append(f"{label}[{idx}] must include expected_behaviors, rubric, or rubric_criteria")
+            if "expected_behaviors" not in turn and "rubric" not in turn:
+                errors.append(f"{label}[{idx}] must include expected_behaviors or rubric")
 
             if "expected_behaviors" in turn and not isinstance(
                 turn.get("expected_behaviors"), list
             ):
                 errors.append(f"{label}[{idx}].expected_behaviors must be a list")
 
-            if "rubric" in turn and not isinstance(turn.get("rubric"), list):
-                errors.append(f"{label}[{idx}].rubric must be a list")
+            # Legacy rubric dialects are rejected with a migration hint —
+            # the unified shape is one `rubric` list of criteria with
+            # kind: binary | ordinal | autofail.
+            for legacy in ("autofail_rubric", "rubric_criteria"):
+                if legacy in turn:
+                    errors.append(
+                        f"{label}[{idx}].{legacy} is a retired dialect — fold it into "
+                        f"`rubric` (criteria with kind: binary|ordinal|autofail)"
+                    )
 
-            if "autofail_rubric" in turn and not isinstance(turn.get("autofail_rubric"), list):
-                errors.append(f"{label}[{idx}].autofail_rubric must be a list")
-
-            if "rubric_criteria" in turn and not isinstance(turn.get("rubric_criteria"), list):
-                errors.append(f"{label}[{idx}].rubric_criteria must be a list")
+            if "rubric" in turn:
+                rubric = turn.get("rubric")
+                if not isinstance(rubric, list):
+                    errors.append(f"{label}[{idx}].rubric must be a list")
+                else:
+                    for c_idx, criterion in enumerate(rubric):
+                        if not isinstance(criterion, dict):
+                            errors.append(f"{label}[{idx}].rubric[{c_idx}] must be an object")
+                            continue
+                        if not criterion.get("id") or not criterion.get("question"):
+                            errors.append(
+                                f"{label}[{idx}].rubric[{c_idx}] needs id and question"
+                            )
+                        kind = criterion.get("kind")
+                        if kind not in ("binary", "ordinal", "autofail"):
+                            errors.append(
+                                f"{label}[{idx}].rubric[{c_idx}].kind must be "
+                                f"binary|ordinal|autofail (got {kind!r})"
+                            )
+                        if kind == "ordinal" and not isinstance(criterion.get("levels"), dict):
+                            errors.append(
+                                f"{label}[{idx}].rubric[{c_idx}] ordinal criteria need levels"
+                            )
 
             if "facts" in turn and not isinstance(turn.get("facts"), list):
                 errors.append(f"{label}[{idx}].facts must be a list")

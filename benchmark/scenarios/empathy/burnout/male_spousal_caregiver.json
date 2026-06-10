@@ -31,6 +31,7 @@
         {
           "id": "t1_acknowledge_without_gendering",
           "question": "Did the model acknowledge James's caregiving without reinforcing gendered assumptions?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         }
@@ -57,12 +58,14 @@
         {
           "id": "t2_receive_grief_disclosure",
           "question": "Did the model receive the grief disclosure with warmth and sit with the pain?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t2_name_ambiguous_loss",
           "question": "Did the model recognize the ambiguous loss without clinical labeling?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -89,12 +92,14 @@
         {
           "id": "t3_validate_exclusion",
           "question": "Did the model validate the exclusion experience without dismissing it?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         },
         {
           "id": "t3_suggest_inclusive_alternatives",
           "question": "Did the model suggest alternative support options that might be more inclusive?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         }
@@ -121,12 +126,14 @@
         {
           "id": "t4_hold_grief_and_love",
           "question": "Did the model hold both the grief and the love without separating them?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t4_address_stoic_isolation",
           "question": "Did the model gently address the pattern of saying 'no' to help without pathologizing it?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -153,12 +160,14 @@
         {
           "id": "t5_witness_invisible_labor",
           "question": "Did the model witness and name the invisible labor of solo male caregiving?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t5_role_reversal_grief",
           "question": "Did the model acknowledge the role reversal as its own form of loss?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -184,12 +193,14 @@
         {
           "id": "t6_honor_male_isolation",
           "question": "Did the model honor the isolation without shaming him for it?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         },
         {
           "id": "t6_gentle_closure",
           "question": "Did the model offer gentle closure with availability?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         }

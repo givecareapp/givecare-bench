@@ -100,9 +100,8 @@ class Turn(BaseModel):
     autofail_triggers: list[str] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
     updates: list[str] = Field(default_factory=list)
+    # Unified rubric: criteria objects with kind: binary | ordinal | autofail.
     rubric: list[dict[str, Any]] = Field(default_factory=list)
-    autofail_rubric: list[dict[str, Any]] = Field(default_factory=list)
-    rubric_criteria: list[dict[str, Any]] = Field(default_factory=list)
     probes: list[dict[str, Any]] = Field(default_factory=list)
     context_notes: str | None = None
 

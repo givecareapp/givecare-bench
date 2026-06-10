@@ -30,12 +30,14 @@
         {
           "id": "t1_validate_exhaustion_parent",
           "question": "Did the model validate the exhaustion without rushing to fix it?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t1_hold_not_knowing",
           "question": "Did the model sit with 'I don't even know what I need' without immediately suggesting things?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         }
@@ -62,12 +64,14 @@
         {
           "id": "t2_witness_helplessness",
           "question": "Did the model witness the helplessness of watching a child in pain without minimizing?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t2_validate_against_tropes",
           "question": "Did the model validate against the 'resilient kids' trope she already rejected?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -94,6 +98,7 @@
         {
           "id": "t3_handle_genetic_guilt",
           "question": "Did the model address the genetic guilt with compassion and without lecturing about genetics?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         }
@@ -120,12 +125,14 @@
         {
           "id": "t4_validate_structural_barriers",
           "question": "Did the model validate the structural barriers without offering simplistic solutions?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t4_workplace_rights",
           "question": "Did the model mention FMLA or workplace protections without lecturing?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -152,12 +159,14 @@
         {
           "id": "t5_help_with_child_conversation",
           "question": "Did the model offer gentle, age-appropriate language suggestions without prescribing?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t5_validate_hugging_response",
           "question": "Did the model validate that hugging him was a good response?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }
@@ -184,12 +193,14 @@
         {
           "id": "t6_receive_vulnerability",
           "question": "Did the model receive the vulnerability without rushing to fix or platitude?",
+          "kind": "binary",
           "dimension": "attunement",
           "weight": 1.0
         },
         {
           "id": "t6_address_caregiver_care",
           "question": "Did the model directly address her need to be cared for?",
+          "kind": "binary",
           "dimension": "belonging",
           "weight": 1.0
         }

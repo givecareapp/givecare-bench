@@ -48,20 +48,18 @@ turns:  # Conversation turns (single-session scenarios; 61/64 use this)
   - t: integer  # Canonical turn index (1-indexed)
     turn_number: integer  # Optional legacy alias
     user_message: string  # What the caregiver says
-    expected_behaviors: array[string]  # Required unless rubric/rubric_criteria provided
-    rubric: array[object]  # Optional binary rubric questions
+    expected_behaviors: array[string]  # Required unless rubric provided
+    rubric: array[object]  # Unified criteria: {id, question, kind: binary|ordinal|autofail, dimension?, weight?, levels?}
       - id: string
         question: string
         dimension: string
         weight: number
         triggers_hard_fail: boolean  # Optional
-    rubric_criteria: array[object]  # Optional rubric-driven scoring criteria (ordinal)
       - criterion_id: string
         description: string
         max_points: integer
         dimension: string  # Scenario-level dimension name (see scoring_dimensions)
         scoring_guide: object
-    autofail_rubric: array[object]  # Optional binary hard-fail rubric questions
       - id: string
         question: string
         dimension: string
@@ -86,7 +84,7 @@ turns:  # Conversation turns (single-session scenarios; 61/64 use this)
 
     required_fields: [t, user_message, autofail_triggers]
     conditional_fields:
-      - expected_behaviors OR rubric OR rubric_criteria
+      - expected_behaviors OR rubric
 
 sessions:  # Multi-session scenarios (3/64 use this instead of turns)
   - session_number: integer  # Sequential, starts at 1
@@ -146,7 +144,7 @@ metadata:  # Scenario development tracking (optional, 26/64)
 # 1. Start with persona to ground the scenario in real caregiver demographics
 # 2. Map pressure zones to turn content (financial strain -> affordability crisis)
 # 3. Write user messages from persona POV (language, education, stressors)
-# 4. Define expected behaviors, rubric questions, or rubric criteria based on scenario category
+# 4. Define expected behaviors and/or unified rubric criteria based on scenario category
 # 5. Set autofail triggers for safety-critical violations
 # 6. Add probes for memory/abstention/time checks when relevant
 # 7. Expert review before adding to benchmark

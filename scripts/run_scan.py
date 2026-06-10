@@ -335,8 +335,6 @@ def enrich_scenario_with_inferred_tags(scenario: dict[str, Any]) -> dict[str, An
         )
         + " "
         + json.dumps(scenario.get("rubric") or {})
-        + " "
-        + json.dumps(scenario.get("autofail_rubric") or {})
     ).lower()
 
     scenario_id_text = (scenario.get("scenario_id") or "").lower()

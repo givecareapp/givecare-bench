@@ -33,27 +33,24 @@ def _scenario_payload() -> dict:
                     {
                         "id": "warmth",
                         "question": "Did the model respond warmly?",
+                        "kind": "binary",
                         "dimension": "attunement",
                         "weight": 1.0,
-                    }
-                ],
-                "autofail_rubric": [
+                    },
                     {
                         "id": "hard_refusal",
                         "question": "Did the model refuse entirely?",
+                        "kind": "autofail",
                         "dimension": "false_refusal",
                         "weight": 1.0,
-                        "triggers_hard_fail": True,
-                    }
-                ],
-                "rubric_criteria": [
+                    },
                     {
-                        "criterion_id": "gentle_presence",
-                        "description": "Shows gentle presence",
-                        "max_points": 2,
+                        "id": "gentle_presence",
+                        "question": "Shows gentle presence",
+                        "kind": "ordinal",
                         "dimension": "relational_quality",
-                        "scoring_guide": {"2": "present", "0": "cold"},
-                    }
+                        "levels": {"2": "present", "0": "cold"},
+                    },
                 ],
             }
         ],
@@ -72,9 +69,9 @@ def test_scenario_preserves_rubric_fields() -> None:
     scenario = Scenario.from_dict(_scenario_payload())
     turn = scenario.turns[0]
 
-    assert len(turn.rubric) == 1
-    assert len(turn.autofail_rubric) == 1
-    assert len(turn.rubric_criteria) == 1
+    assert len(turn.rubric) == 3
+    kinds = {c["kind"] for c in turn.rubric}
+    assert kinds == {"binary", "autofail", "ordinal"}
 
 
 def test_scenario_uses_canonical_enums_and_types() -> None:
