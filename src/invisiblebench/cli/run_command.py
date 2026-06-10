@@ -589,6 +589,20 @@ def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
                 for idx, m in enumerate(all_models)
                 if needle in m["name"].lower() or needle in m["id"].lower()
             ]
+            if not matched and "/" in part:
+                # Pass-through: any OpenRouter model id ("org/model") can be
+                # benchmarked, not just the published roster. Costs are
+                # estimated with generic pricing; the dry-run shows them.
+                all_models.append(
+                    {
+                        "id": part,
+                        "name": part,
+                        "provider": "openrouter",
+                        "cost_per_m_input": 1.0,
+                        "cost_per_m_output": 3.0,
+                    }
+                )
+                matched = [len(all_models) - 1]
             if not matched:
                 names = [f"  {i+1}. {m['name']}" for i, m in enumerate(all_models)]
                 raise ValueError(

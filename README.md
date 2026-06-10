@@ -100,6 +100,18 @@ givecare-bench/
   scan.
 - Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
 
+## Quickstart
+
+Run the benchmark against **your own model** (any OpenRouter id) in an
+afternoon: [docs/quickstart.md](docs/quickstart.md). The short version:
+
+```bash
+uv sync --extra dev && export OPENROUTER_API_KEY=...
+uv run bench -m "your-org/your-model" -y                                  # run
+uv run python scripts/run_scan.py --profile dev --enable-llm results/run_<id>   # judge (core profile)
+uv run bench explain "your-model" <scenario> --failures --scan <scan>/per_run.jsonl  # evidence
+```
+
 ## Core commands
 
 ```bash

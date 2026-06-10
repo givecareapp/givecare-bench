@@ -34,6 +34,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   - Install: install.md
   - Scoring Rubric: scoring-rubric.md
   - Architecture: architecture.md

@@ -109,3 +109,16 @@ class TestEdgeCases:
 
     def test_comma_only(self):
         assert resolve_models(",,,", CATALOG) == []
+
+
+def test_resolve_models_passes_through_unknown_openrouter_ids() -> None:
+    models = [
+        {"id": "openai/gpt-5.5", "name": "GPT-5.5", "provider": "openrouter",
+         "cost_per_m_input": 1.0, "cost_per_m_output": 3.0},
+    ]
+    indices = resolve_models("someorg/brand-new-model", models)
+
+    assert len(indices) == 1
+    added = models[indices[0]]
+    assert added["id"] == "someorg/brand-new-model"
+    assert added["provider"] == "openrouter"
