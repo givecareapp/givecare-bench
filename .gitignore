@@ -76,6 +76,8 @@ logs/
 
 # Internal / operator (stays on disk, not in public repo)
 JOURNAL.md
+VISION.md
+DESIGN.md
 CLAUDE.md
 AGENTS.md
 SECURITY.md
