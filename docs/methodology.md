@@ -51,7 +51,7 @@ InvisibleBench now makes a narrower, sharper public claim than a generic
   an automated adjudicator, human–human agreement was weaker on the
   compliance/prescribing bright-lines that drive most hard fails, and the gold
   traces are prior-generation models. See
-  [verifier-validation.md](verifier-validation.md#how-to-read-the-1-0-hard-fail-result)
+  [verifier-validation.md](verifier-validation.md#how-to-read-the-10-hard-fail-result)
   for the full reading guide.
 - **Leaderboard artifact:** `data/leaderboard/leaderboard.json` is generated
   from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`),

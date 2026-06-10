@@ -89,4 +89,4 @@ the full transcript.
 
 Open an issue or PR — scenario candidates go through staged probing and
 human review before promotion (no fast path, including for us). See
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+`CONTRIBUTING.md` in the repository root.
