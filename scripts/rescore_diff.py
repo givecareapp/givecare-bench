@@ -28,17 +28,15 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from run_scan import (  # noqa: E402
+from invisiblebench.evaluation.mode_engine import ModeEngine  # noqa: E402
+from invisiblebench.judge import (  # noqa: E402
     apply_scan_profile,
     enrich_scenario_with_inferred_tags,
     load_scan_profile,
     load_scenario,
     load_transcript,
 )
-
-from invisiblebench.evaluation.mode_engine import ModeEngine  # noqa: E402
 
 DETERMINISTIC_SCORERS = {"regex", "scenario_rule", "corpus", "lexicon"}
 
