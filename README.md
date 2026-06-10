@@ -10,7 +10,9 @@ Full docs: [givecareapp.github.io/givecare-bench](https://givecareapp.github.io/
 
 The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. 53 verifier checks across these 5 dimensions are calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
 
-The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric.
+The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric. The quality-layer judges (communication, coordination, boundary dimensions) have not yet cleared validation-grade agreement with human labels — treat `overall_score`, dimension scores, and rank as navigation aids until they do; the same caveat ships inside the leaderboard artifact's metadata.
+
+The benchmark also carries a longitudinal result: the headline relational failures measured in the 2025 legacy sweep (artificial intimacy, false continuity, identity misrepresentation) record zero scored failures on the 2026 Phase 2 roster, on the same calibrated checks — see [Key Findings](docs/findings.md) for the evidence and the honest caveats on both readings.
 
 ## Two distinct claims
 
