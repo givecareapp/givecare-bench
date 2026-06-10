@@ -41,6 +41,6 @@ fi
 uv run python scripts/qa_leaderboard.py "${qa_args[@]}"
 
 echo "[3/3] sync web-bench payload -> $WEB_TARGET"
-uv run python scripts/sync_web_bench_leaderboard.py --source "$LEADERBOARD" --target "$WEB_TARGET"
+uv run python delivery/sync_web_bench.py --source "$LEADERBOARD" --target "$WEB_TARGET"
 
 echo "publish OK: QA gate passed and web-bench payload synced"

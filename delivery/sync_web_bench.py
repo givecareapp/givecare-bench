@@ -493,6 +493,10 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
     contrasts: list[dict[str, Any]] = []
     if contrasts_path.exists():
         contrasts = json.loads(contrasts_path.read_text())
+    else:
+        # No silent caps: the payload ships an empty contrasts surface until
+        # the artifact exists (generate via delivery/contrast_analysis.py).
+        print(f"warning: contrasts artifact missing ({contrasts_path}); publishing empty contrasts")
 
     return {
         "metadata": {

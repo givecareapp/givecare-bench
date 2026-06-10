@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from scripts.sync_web_bench_leaderboard import project_leaderboard
+from delivery.sync_web_bench import project_leaderboard
 
 
 def test_project_leaderboard_strips_private_paths_and_matches_web_shape() -> None:
