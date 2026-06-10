@@ -38,6 +38,7 @@ from invisiblebench.evaluation.verifiers.base import (
     collect_scenario_tags,
 )
 from invisiblebench.models._types import ModeConfig, ScenarioData, Transcript
+from invisiblebench.version import ENGINE_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class ModeEngineOutput:
     blindspot_profile: dict[str, Any] = field(default_factory=dict)
     mode_results: list[dict[str, Any]] = field(default_factory=list)
     claim_surface: dict[str, Any] = field(default_factory=dict)
-    engine_version: str = "v0.1"
+    engine_version: str = ENGINE_VERSION
     eligible_count: int = 0
     resolved_count: int = 0  # PASS + FAIL verdicts
     unclear_count: int = 0
@@ -240,7 +241,7 @@ class ModeEngine:
                 scorer_type="unrouted",
                 confidence=0.0,
                 rationale_code="no_verifier_available",
-                scorer_version="mode_engine-v0.1",
+                scorer_version=f"mode_engine-{ENGINE_VERSION}",
             )
 
         try:
@@ -262,7 +263,7 @@ class ModeEngine:
                 confidence=0.0,
                 rationale_code=f"verifier_exception:{type(e).__name__}",
                 adjudication_required=True,
-                scorer_version="mode_engine-v0.1",
+                scorer_version=f"mode_engine-{ENGINE_VERSION}",
             )
 
     def _aggregate(

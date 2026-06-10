@@ -319,7 +319,7 @@ class LLMVerifier(Verifier):
                     confidence=0.0,
                     rationale_code=f"prompt_file_missing:{prompt_name}",
                     adjudication_required=True,
-                    scorer_version="llm_verifier-v0.2",
+                    scorer_version=f"{self.scorer_type}-{self.scorer_version}",
                 )
         if not prompt_template:
             return VerdictResult(
@@ -332,7 +332,7 @@ class LLMVerifier(Verifier):
                 confidence=0.0,
                 rationale_code="missing_verifier_prompt",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.2",
+                scorer_version=f"{self.scorer_type}-{self.scorer_version}",
             )
 
         prompt_hash = _hash_prompt(prompt_template)
@@ -393,7 +393,7 @@ class LLMVerifier(Verifier):
                 scorer_type=self.scorer_type,
                 confidence=1.0,
                 rationale_code="disabled_by_scan_profile",
-                scorer_version="llm_verifier-v0.3",
+                scorer_version=f"{self.scorer_type}-{self.scorer_version}",
                 prompt_hash=prompt_hash,
             )
 
@@ -455,7 +455,7 @@ class LLMVerifier(Verifier):
                 confidence=0.0,
                 rationale_code="verifier_infrastructure_failure",
                 adjudication_required=True,
-                scorer_version="llm_verifier-v0.3",
+                scorer_version=f"{self.scorer_type}-{self.scorer_version}",
                 prompt_hash=prompt_hash,
                 extra={
                     "parse_errors": parse_errors,
@@ -505,7 +505,7 @@ class LLMVerifier(Verifier):
             evidence=evidence,
             rationale_code=rationale_code,
             adjudication_required=adjudication_required,
-            scorer_version="llm_verifier-v0.2",
+            scorer_version=f"{self.scorer_type}-{self.scorer_version}",
             prompt_hash=prompt_hash,
             secondary_tags=list(mode_config.get("secondary_tags") or []),
             extra=extra,

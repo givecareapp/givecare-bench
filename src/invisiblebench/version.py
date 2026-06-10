@@ -29,7 +29,12 @@ RESULT_CONTRACT_VERSION = "2.1.0"
 V3_RESULT_CONTRACT_VERSION = "3.1.0"
 
 __all__ = [
+    "ENGINE_VERSION",
     "BENCHMARK_VERSION",
     "RESULT_CONTRACT_VERSION",
     "V3_RESULT_CONTRACT_VERSION",
 ]
+
+# Mode-engine aggregator version, stamped on ModeEngineOutput rows and on
+# engine-emitted verdicts (unrouted / verifier-exception paths).
+ENGINE_VERSION = "v0.1"
