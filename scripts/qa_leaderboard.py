@@ -9,34 +9,31 @@ never calls a model or external service.
 from __future__ import annotations
 
 import argparse
-import json
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
+from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
+
 GATE_BUCKETS = {"A", "B"}
+SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
 
 
-def _load_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with path.open(encoding="utf-8") as fh:
-        for line_number, line in enumerate(fh, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"{path}:{line_number}: invalid JSONL: {exc}") from exc
-    return rows
+def _scoring_contract() -> tuple[str, str]:
+    """Expected (contract_version, version_stage) from the scoring config.
 
-
-def _load_json(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as fh:
-        data = json.load(fh)
-    if not isinstance(data, dict):
-        raise ValueError(f"{path}: expected JSON object")
-    return data
+    scoring.yaml is the single owner of these values; QA defaults read it at
+    runtime so a contract bump never silently diverges from the gate.
+    """
+    data = yaml.safe_load(SCORING_CONFIG.read_text()) or {}
+    return str(data["contract_version"]), str(data["version_stage"])
 
 
 def _manual_key(record: dict[str, Any]) -> tuple[str, str, str]:
@@ -80,11 +77,15 @@ def validate_leaderboard(
     expected_rows: int | None = None,
     expected_models: int | None = None,
     expected_scenarios: int | None = None,
-    expected_contract: str = "3.0.0-alpha",
-    expected_stage: str = "v3-alpha",
+    expected_contract: str | None = None,
+    expected_stage: str | None = None,
     strict: bool = False,
 ) -> list[str]:
     """Return QA errors. Empty list means the artifact passes."""
+    if expected_contract is None or expected_stage is None:
+        contract, stage = _scoring_contract()
+        expected_contract = expected_contract or contract
+        expected_stage = expected_stage or stage
     errors: list[str] = []
     rows = _load_jsonl(scan_path)
     leaderboard = _load_json(leaderboard_path)
@@ -242,8 +243,14 @@ def main() -> int:
     parser.add_argument("--expected-rows", type=int, default=None)
     parser.add_argument("--expected-models", type=int, default=None)
     parser.add_argument("--expected-scenarios", type=int, default=None)
-    parser.add_argument("--expected-contract", default="3.0.0-alpha")
-    parser.add_argument("--expected-stage", default="v3-alpha")
+    parser.add_argument(
+        "--expected-contract", default=None,
+        help="Override; default reads contract_version from scoring.yaml",
+    )
+    parser.add_argument(
+        "--expected-stage", default=None,
+        help="Override; default reads version_stage from scoring.yaml",
+    )
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
     args = parser.parse_args()
 

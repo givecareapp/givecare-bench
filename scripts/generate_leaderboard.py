@@ -25,6 +25,7 @@ from invisiblebench.utils.benchmark_inventory import (
     get_code_version,
     load_inventory,
 )
+from invisiblebench.utils.io import load_jsonl
 
 SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
 
@@ -39,12 +40,7 @@ FAILURE_VERDICTS = {
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with path.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
+    rows = load_jsonl(path)
     if not rows:
         raise ValueError(f"No V3 scan rows found in {path}")
     return rows

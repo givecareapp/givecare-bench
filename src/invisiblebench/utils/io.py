@@ -6,13 +6,27 @@ from typing import Any
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Load a JSONL file. Parse errors report the offending line number."""
     rows: list[dict[str, Any]] = []
-    with open(path) as fh:
-        for line in fh:
+    with open(path, encoding="utf-8") as fh:
+        for line_number, line in enumerate(fh, start=1):
             line = line.strip()
-            if line:
+            if not line:
+                continue
+            try:
                 rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"{path}:{line_number}: invalid JSONL: {exc}") from exc
     return rows
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Load a JSON file that must contain an object at the top level."""
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: expected JSON object")
+    return data
 
 
 def read_text(path: Path) -> str:

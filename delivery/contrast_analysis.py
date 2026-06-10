@@ -18,6 +18,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from invisiblebench.utils.io import load_jsonl  # noqa: E402
+
 
 def load_contrast_groups(scenario_dir: Path) -> dict[str, dict[str, str]]:
     """Build map: scenario_id → {contrast_group, contrast_variable}."""
@@ -35,13 +40,7 @@ def load_contrast_groups(scenario_dir: Path) -> dict[str, dict[str, str]]:
 
 
 def load_scan_records(path: Path) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    with open(path) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                records.append(json.loads(line))
-    return records
+    return load_jsonl(path)
 
 
 def analyze(records: list[dict[str, Any]], groups: dict[str, dict[str, str]]) -> list[dict[str, Any]]:

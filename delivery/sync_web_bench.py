@@ -6,12 +6,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from invisiblebench.version import BENCHMARK_VERSION  # noqa: E402
+
 DEFAULT_SOURCE = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
 
 # Per-check rates computed from fewer than this many eligible scenarios are
@@ -500,7 +505,7 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "metadata": {
-            "benchmark_version": str(metadata.get("benchmark_version") or "3.0.0"),
+            "benchmark_version": str(metadata.get("benchmark_version") or BENCHMARK_VERSION),
             "models": len(models),
             "scenarios": int(metadata.get("total_scenarios") or max((m["scenario_count"] for m in models), default=0)),
             "checks": int(metadata.get("active_modes") or 0),
