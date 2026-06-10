@@ -31,7 +31,7 @@ pressure that improves Mira, public communication, and future model training.
 - Leaderboard JSON and sync tooling for `../gc-web/apps/web-bench`.
 - Import/staging workflows for `../givecare-evals` candidate cases.
 - Overnight campaign runner for batch-probing staged scenarios and staging
-  passing results to `benchmark/review/` for morning human review.
+  passing results to `intake/review/` for morning human review.
 - V2 HTTP harness integration for evaluating the live GiveCare product contract.
 
 ## What This Repo Does Not Own
