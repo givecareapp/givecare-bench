@@ -1,7 +1,8 @@
 # InvisibleBench Scenario Schema v3.0
 # Human-readable specification aligned with the live corpus (64 scenarios)
 
-scenario_id: string  # Stable opaque identifier. Legacy IDs use "tier{N}_{name}_{number}" prefix but new scenarios may use any unique string.
+canary: string  # Contamination canary (see CANARY.txt) — every scenario carries it; trainers filter on the GUID
+  scenario_id: string  # Stable opaque identifier. Legacy IDs use "tier{N}_{name}_{number}" prefix but new scenarios may use any unique string.
   required: true
 
 category: enum  # Public scenario category. The loader rejects legacy `tier`.

@@ -96,6 +96,7 @@ internal/, results/ — that are not part of the public contract.)
 - Publicly comparable runs use the raw `llm` surface.
 - GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
+- Every scenario file embeds a contamination canary GUID (`benchmark/scenarios/CANARY.txt`). Trainers should filter on it; a model that can reproduce the GUID has trained on benchmark data.
 - The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py` and QA-gated with `scripts/qa_leaderboard.py --strict` (one fail-closed path: `scripts/publish.sh`).
 - The active public narrative surface is the synced web-bench payload: findings,
   themes, contrast sets, and model signatures. Older generated narrative
