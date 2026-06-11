@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import re
 
+import pytest
+
 from invisiblebench.evaluation.check_registry import registered_check_ids
 from invisiblebench.utils.benchmark_inventory import (
     get_project_root,
@@ -78,13 +80,16 @@ def test_every_public_scenario_embeds_the_canary() -> None:
     assert missing == [], f"scenarios missing canary GUID: {missing}"
 
 
-def _claude_md() -> str:
-    return (ROOT / "CLAUDE.md").read_text()
-
-
 def test_claude_md_cites_current_counts() -> None:
-    """The contract section's counts must match the inventory owner."""
-    text = _claude_md()
+    """The contract section's counts must match the inventory owner.
+
+    CLAUDE.md is a gitignored local operating doc, so this guard only runs
+    on checkouts that have it (dev machines, not CI).
+    """
+    claude_md = ROOT / "CLAUDE.md"
+    if not claude_md.exists():
+        pytest.skip("CLAUDE.md is local-only (gitignored); absent in CI checkouts")
+    text = claude_md.read_text()
     inventory = load_inventory()
     assert f"checks: {inventory['check_count']} across" in text
     assert f"{inventory['standard_total']} on disk" in text
