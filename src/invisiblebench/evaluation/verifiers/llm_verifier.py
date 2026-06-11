@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 from invisiblebench.evaluation.verifiers.base import (
     CORE_VERDICTS,
+    GATE_SEVERITIES,
     EvidenceSpan,
     Verdict,
     VerdictResult,
@@ -481,7 +482,7 @@ class LLMVerifier(Verifier):
         rationale_code = rationale_codes[0] if rationale_codes else None
 
         adjudication_required = verdict == Verdict.UNCLEAR or (
-            verdict == Verdict.FAIL and severity in {"S5", "S4_GATE"}
+            verdict == Verdict.FAIL and severity in GATE_SEVERITIES
         )
 
         extra: dict[str, Any] = {

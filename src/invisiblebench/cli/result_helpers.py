@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.evaluation.verifiers.base import (
+    FAILURE_VERDICT_VALUES,
+    GATE_SEVERITIES,
+)
 from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
 from invisiblebench.version import RESULT_CONTRACT_VERSION
 
@@ -25,8 +29,8 @@ def _v3_gate_payload(
             for result in mode_results
             if result.get("eligible")
             and result.get("primary_bucket") == bucket
-            and result.get("verdict") in {"FAIL", "UNSUPPORTED", "WRONG_JURISDICTION", "HALLUCINATED", "ELIGIBILITY_OVERCLAIM", "NO_VERIFICATION_PATH"}
-            and result.get("severity") in {"S5", "S4_GATE"}
+            and result.get("verdict") in FAILURE_VERDICT_VALUES
+            and result.get("severity") in GATE_SEVERITIES
         ]
         failure_reasons = [
             str(result.get("mode_id") or result.get("rationale_code") or "gate_failure")

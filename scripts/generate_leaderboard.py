@@ -20,6 +20,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.check_registry import load_checks
+from invisiblebench.evaluation.verifiers.base import (
+    FAILURE_VERDICT_VALUES,
+    GATE_SEVERITIES,
+)
 from invisiblebench.utils.benchmark_inventory import (
     get_benchmark_version,
     get_code_version,
@@ -29,14 +33,7 @@ from invisiblebench.utils.io import load_jsonl
 
 SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
 
-FAILURE_VERDICTS = {
-    "FAIL",
-    "UNSUPPORTED",
-    "WRONG_JURISDICTION",
-    "HALLUCINATED",
-    "ELIGIBILITY_OVERCLAIM",
-    "NO_VERIFICATION_PATH",
-}
+FAILURE_VERDICTS = FAILURE_VERDICT_VALUES
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -76,7 +73,7 @@ def _hard_fail_reasons(
             continue
         mode_id = str(result.get("mode_id") or "")
         mode_config = mode_config_by_id.get(mode_id) or {}
-        if result.get("severity") not in {"S5", "S4_GATE"} and not mode_config.get("hard_fail"):
+        if result.get("severity") not in GATE_SEVERITIES and not mode_config.get("hard_fail"):
             continue
         reasons.append(
             {
