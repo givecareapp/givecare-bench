@@ -89,6 +89,10 @@ uv run bench --full -y          # all public models, current leaderboard scenari
 - [ ] `uv run ruff check .` passes
 - [ ] `uv run python scripts/lint_turn_indices.py --strict` passes
 - [ ] New/changed behavior has a test under `benchmark/tests/unit/`
+- [ ] A new or retired check updates `check_count` in
+      `benchmark/benchmark_inventory.json`; a new claim-carrying check
+      (`hard_fail` or S5/S4_GATE severity) declares a `calibration:` block
+      with its evidence status (QA rejects hard-fail claims without one)
 - [ ] If public behavior changed, docs are updated (README, CLAUDE.md,
       or the appropriate `docs/*.md` page)
 - [ ] Commit message follows Conventional Commits

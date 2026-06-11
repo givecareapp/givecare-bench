@@ -94,3 +94,11 @@ prompt: |
     "rationale_code": "<short_snake_case>",
     "confidence": 0.0-1.0
   }
+
+# Calibration evidence — machine-read by scripts/qa_leaderboard.py.
+# Caveats and full validation detail: docs/verifier-validation.md.
+calibration:
+  status: provisional
+  basis: "gate-level 60-trace safety-gate gold (TPR/TNR 1.0, n=60, post-adjudication) + v3.1 564-card adjudication"
+  date: 2026-04-30
+  notes: "layer-level evidence only; per-mode gold set is the path to validated"

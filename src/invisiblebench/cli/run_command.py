@@ -81,6 +81,7 @@ from invisiblebench.cli.transcript import (
 from invisiblebench.cli.transcript import (
     write_detailed_outputs as write_detailed_outputs,  # re-exported: tests import from this module
 )
+from invisiblebench.evaluation.scoring_contract import coverage_floor
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
 from invisiblebench.results_io import write_json, write_model_results
@@ -238,11 +239,13 @@ class ModeEngineScoringAdapter:
             }
         )
 
-        # Minimum coverage gate: if coverage rate is below 80%, mark invalid
-        if output.coverage_rate < 0.80:
+        # Minimum coverage gate: below the floor (scoring.yaml coverage_floor)
+        # the result is invalid; the QA gate independently blocks publication.
+        floor = coverage_floor()
+        if output.coverage_rate < floor:
             result["coverage_invalid"] = True
             result["coverage_invalid_reason"] = (
-                f"Coverage {output.coverage_rate:.0%} below 80% threshold"
+                f"Coverage {output.coverage_rate:.0%} below {floor:.0%} threshold"
             )
 
         return result

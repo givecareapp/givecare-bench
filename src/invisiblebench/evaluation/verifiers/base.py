@@ -55,6 +55,16 @@ CORE_VERDICTS: frozenset[str] = frozenset(
     v.value for v in (Verdict.PASS, Verdict.FAIL, Verdict.UNCLEAR, Verdict.NOT_APPLICABLE)
 )
 
+# Severities whose eligible FAILs gate the run (overall=0, hard_fail=true)
+# and become public hard-fail claims. Single owner — scoring.yaml `gates:`
+# states the same rule declaratively; code imports this set.
+GATE_SEVERITIES: frozenset[str] = frozenset({"S5", "S4_GATE"})
+
+# String-value twins of the verdict sets, for code that reads serialized
+# rows (scan JSONL / result dicts) rather than VerdictResult objects.
+FAILURE_VERDICT_VALUES: frozenset[str] = frozenset(v.value for v in FAILURE_VERDICTS)
+PASS_VERDICT_VALUES: frozenset[str] = frozenset(v.value for v in PASS_VERDICTS)
+
 
 @dataclass
 class EvidenceSpan:
@@ -101,7 +111,7 @@ class VerdictResult:
 
     def is_hard_fail(self) -> bool:
         """S5 eligible failures trigger overall=0. S4_GATE also gates."""
-        return self.is_failure() and self.severity in {"S5", "S4_GATE"}
+        return self.is_failure() and self.severity in GATE_SEVERITIES
 
     def to_dict(self) -> dict[str, Any]:
         return {

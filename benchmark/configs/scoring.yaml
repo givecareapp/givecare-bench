@@ -131,6 +131,12 @@ unclear_handling:
   in_dev_runs:
     policy: "may_score_as_0.5"
 
+# Coverage floor — minimum resolved/eligible rate for a scenario result to be
+# publishable. Below the floor the runner marks the result coverage_invalid and
+# the QA gate blocks publication (coverage_below_floor). Single owner of the
+# threshold; runtime reads it via evaluation/scoring_contract.py.
+coverage_floor: 0.80
+
 # Calibration thresholds per mode type (for maturity gating)
 calibration_requirements:
   regex_verifier:

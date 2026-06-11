@@ -14,26 +14,72 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from invisiblebench.evaluation.check_registry import load_checks  # noqa: E402
+
+# scoring.yaml is the single owner of contract/threshold values; QA reads it
+# through scoring_contract so a bump never silently diverges from the gate.
+from invisiblebench.evaluation.scoring_contract import (  # noqa: E402
+    contract_version,
+    coverage_floor,
+    version_stage,
+)
+from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
+    FAILURE_VERDICT_VALUES,
+    GATE_SEVERITIES,
+    PASS_VERDICT_VALUES,
+)
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 
 GATE_BUCKETS = {"A", "B"}
-SCORING_CONFIG = REPO_ROOT / "benchmark" / "configs" / "scoring.yaml"
+# Severities whose FAILs become public hard-fail claims (owner: base.py).
+CLAIM_SEVERITIES = GATE_SEVERITIES
+# Calibration statuses allowed to carry a published hard-fail claim.
+CALIBRATED_STATUSES = {"validated", "provisional"}
+# Resolved = the verdict classes mode_engine counts toward coverage
+# (eligible PASS-class or FAIL-class; UNCLEAR/NOT_APPLICABLE are unresolved).
+RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES
 
 
-def _scoring_contract() -> tuple[str, str]:
-    """Expected (contract_version, version_stage) from the scoring config.
+def calibration_errors(
+    rows: list[dict[str, Any]],
+    modes: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Calibration gate: uncalibrated checks cannot carry hard-fail claims.
 
-    scoring.yaml is the single owner of these values; QA defaults read it at
-    runtime so a contract bump never silently diverges from the gate.
+    Two boundaries, both unconditional:
+    - every claim-carrying check (hard_fail or S5/S4_GATE severity) must
+      declare a `calibration:` block with an evidence status;
+    - every published hard_fail_reason must come from a check whose declared
+      status is validated or provisional (i.e. has human evidence on record).
     """
-    data = yaml.safe_load(SCORING_CONFIG.read_text()) or {}
-    return str(data["contract_version"]), str(data["version_stage"])
+    errors: list[str] = []
+    claim_checks = {
+        check_id
+        for check_id, mode in modes.items()
+        if mode.get("hard_fail") or mode.get("severity") in CLAIM_SEVERITIES
+    }
+    missing = sorted(
+        check_id
+        for check_id in claim_checks
+        if not (modes[check_id].get("calibration") or {}).get("status")
+    )
+    if missing:
+        errors.append(f"claim_check_missing_calibration={missing}")
+
+    uncalibrated: Counter[str] = Counter()
+    for row in rows:
+        for reason in row.get("hard_fail_reasons") or []:
+            mode_id = str(reason.get("mode_id"))
+            calibration = (modes.get(mode_id) or {}).get("calibration") or {}
+            if calibration.get("status") not in CALIBRATED_STATUSES:
+                uncalibrated[mode_id] += 1
+    if uncalibrated:
+        errors.append(f"hard_fail_from_uncalibrated_check={dict(uncalibrated)}")
+    return errors
 
 
 def _manual_key(record: dict[str, Any]) -> tuple[str, str, str]:
@@ -80,12 +126,11 @@ def validate_leaderboard(
     expected_contract: str | None = None,
     expected_stage: str | None = None,
     strict: bool = False,
+    checks_dir: Path | None = None,
 ) -> list[str]:
     """Return QA errors. Empty list means the artifact passes."""
-    if expected_contract is None or expected_stage is None:
-        contract, stage = _scoring_contract()
-        expected_contract = expected_contract or contract
-        expected_stage = expected_stage or stage
+    expected_contract = expected_contract or contract_version()
+    expected_stage = expected_stage or version_stage()
     errors: list[str] = []
     rows = _load_jsonl(scan_path)
     leaderboard = _load_json(leaderboard_path)
@@ -163,8 +208,14 @@ def validate_leaderboard(
     gate_unclear: Counter[str] = Counter()
     all_unclear: Counter[str] = Counter()
     manual_without_evidence = 0
+    floor = coverage_floor()
+    coverage_below_floor: dict[tuple[str, str], float] = {}
+    coverage_rate_stale = 0
 
     for row in rows:
+        row_eligible = 0
+        row_resolved = 0
+
         for result in row.get("mode_results") or []:
             mode_id = str(result.get("mode_id"))
             rationale = str(result.get("rationale_code") or "")
@@ -172,6 +223,10 @@ def validate_leaderboard(
             verdict = result.get("verdict")
             evidence = result.get("evidence") or []
 
+            if eligible:
+                row_eligible += 1
+                if verdict in RESOLVED_VERDICTS:
+                    row_resolved += 1
             if eligible and rationale in {"prompt_missing", "missing_verifier_prompt"}:
                 prompt_missing += 1
             if rationale == "no_verifier_available" or rationale.startswith("prompt_file_missing:"):
@@ -187,6 +242,19 @@ def validate_leaderboard(
             if result.get("scorer_type") == "manual_adjudication" and not evidence and verdict != "NOT_APPLICABLE":
                 manual_without_evidence += 1
 
+        # Coverage floor: recomputed from mode_results so a merge that changed
+        # verdicts without restamping coverage_rate cannot slip an
+        # under-covered row past the gate. A missing stamp is tolerated (the
+        # recompute is authoritative); a present-but-wrong stamp means the
+        # artifact disagrees with itself.
+        row_coverage = row_resolved / row_eligible if row_eligible else 0.0
+        stamped = row.get("coverage_rate")
+        if stamped is not None and abs(float(stamped) - row_coverage) > 1e-9:
+            coverage_rate_stale += 1
+        if row_coverage < floor:
+            key = (str(row.get("model")), str(row.get("scenario_id")))
+            coverage_below_floor[key] = round(row_coverage, 4)
+
     if prompt_missing:
         errors.append(f"prompt_missing={prompt_missing}")
     if no_verifier:
@@ -201,6 +269,17 @@ def validate_leaderboard(
         errors.append(f"all_unclear={dict(all_unclear)}")
     if manual_without_evidence:
         errors.append(f"manual_without_evidence={manual_without_evidence}")
+    if coverage_rate_stale:
+        errors.append(f"coverage_rate_stale={coverage_rate_stale}")
+    if coverage_below_floor:
+        sample = dict(sorted(coverage_below_floor.items())[:10])
+        errors.append(
+            f"coverage_below_floor(floor={floor})="
+            f"count={len(coverage_below_floor)} sample={sample}"
+        )
+
+    modes, _routing = load_checks(checks_dir)
+    errors.extend(calibration_errors(rows, modes))
 
     manual_scan = _manual_scan_records(rows)
     if manual_adjudications_path is not None:

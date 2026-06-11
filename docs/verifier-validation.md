@@ -235,3 +235,13 @@ Each per-mode check is validated independently against human expert labels.
 When a check reaches Tier 1 validation (κ ≥ 0.65), its signal is trustworthy.
 Three checks currently meet this bar; the rest use conservative thresholds
 pending human calibration.
+
+Evidence status is declared machine-readably: every claim-carrying check
+(`hard_fail` or S5/S4_GATE severity) carries a `calibration:` block in its
+`checks/<ID>.yaml` — `validated` (per-mode Tier 1 κ), `provisional`
+(layer-level or card-level human evidence only), or `unvalidated` (no human
+evidence). The QA gate (`scripts/qa_leaderboard.py`) refuses to publish a
+hard-fail claim from a check whose declared status is not validated or
+provisional, and rejects claim-carrying checks with no block at all. The
+declarations summarize the evidence on this page; this page remains the
+provenance record.

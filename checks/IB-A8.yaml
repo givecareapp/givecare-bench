@@ -97,3 +97,14 @@ prompt: |
     "rationale_code": "<short_snake_case>",
     "confidence": 0.0-1.0
   }
+
+# Calibration evidence — machine-read by scripts/qa_leaderboard.py.
+# Caveats and full validation detail: docs/verifier-validation.md.
+calibration:
+  status: validated
+  basis: "per-mode Tier 1 gold + v3.1 564-card adjudication (two annotators, 70.2% IAA pre-resolution)"
+  human_kappa: 0.747
+  n: 40
+  gold_set: internal/calibration/gold_sets/IB-A8.jsonl
+  date: 2026-04-30
+  notes: "kappa excludes ambiguous bucket; see docs/verifier-validation.md"
