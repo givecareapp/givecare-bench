@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "stateDir": ".clawpatch",
+  "include": [
+    "checks/**",
+    "benchmark/**",
+    "src/**",
+    "scripts/**",
+    "delivery/**",
+    "docs/**",
+    "data/leaderboard/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CHARTER.md",
+    "VISION.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "DESIGN.md",
+    "pyproject.toml"
+  ],
+  "exclude": [
+    ".git/**",
+    ".clawpatch/**",
+    ".claude/**",
+    ".codex/**",
+    ".venv/**",
+    ".venv_figs/**",
+    ".pytest_cache/**",
+    ".mypy_cache/**",
+    ".ruff_cache/**",
+    "__pycache__/**",
+    "site/**",
+    "dist/**",
+    "build/**",
+    "htmlcov/**",
+    "results/**",
+    "runs/**",
+    "logs/**",
+    "archive/**",
+    "intake/**",
+    "internal/**",
+    "internal/autoresearch/results/**",
+    "internal/papers/*/arxiv_upload/**",
+    "internal/papers/**/*.zip",
+    "data/overnight-campaign.tsv",
+    ".env*",
+    "*.log",
+    "*.tmp",
+    "*.backup",
+    "*.bak",
+    "*.zip"
+  ],
+  "provider": {
+    "name": "codex",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "commands": {
+    "typecheck": null,
+    "lint": "uv run ruff check .",
+    "format": null,
+    "test": "uv run pytest benchmark/tests -q"
+  },
+  "review": {
+    "maxContextFiles": 28,
+    "maxOwnedFiles": 14,
+    "maxFindingsPerFeature": 10,
+    "minConfidenceToFix": "medium"
+  },
+  "git": {
+    "requireCleanWorktreeForFix": true,
+    "commit": false,
+    "openPr": false
+  }
+}

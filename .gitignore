@@ -54,6 +54,8 @@ adapters/givecare-orchestrator/dist/
 # Environment / Local config
 .env
 .claude/
+.clawpatch/
+.codex/
 .mcp.json
 
 # Run artifacts (user-generated, not committed)
