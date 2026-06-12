@@ -151,7 +151,24 @@ def main() -> int:
             reverse=True,
         )
     elif args.run_dirs:
-        run_dirs = [Path(run_dir).resolve() for run_dir in args.run_dirs]
+        resolved: list[Path] = []
+        for run_dir_arg in args.run_dirs:
+            p = Path(run_dir_arg).resolve()
+            # Tolerate being handed the transcripts/ subdir: if the basename is
+            # "transcripts" and the parent contains a run manifest or givecare
+            # results file, use the parent as the run dir.
+            if p.name == "transcripts" and (
+                (p.parent / "run_manifest.json").exists()
+                or (p.parent / "givecare_results.json").exists()
+                or (p.parent / "all_results.json").exists()
+            ):
+                logger.info(
+                    "Path looks like a transcripts/ subdir — using parent run dir: %s",
+                    p.parent,
+                )
+                p = p.parent
+            resolved.append(p)
+        run_dirs = resolved
     else:
         # Default: most recent run
         candidates = sorted(

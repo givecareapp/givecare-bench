@@ -374,9 +374,6 @@ def run_givecare_eval(
 
     print(f"\nGenerated {len(transcript_data)} transcript(s)")
 
-    print("\nTranscripts generated. Score with V3 ModeEngine:")
-    print(f"  uv run python scripts/run_scan.py {output_dir / 'transcripts'}")
-
     run_timestamp = datetime.now().isoformat()
     output_data = {
         "metadata": {
@@ -408,6 +405,27 @@ def run_givecare_eval(
     write_json(output_dir / "all_results.json", results)
     results_path = output_dir / "givecare_results.json"
     write_json(results_path, output_data)
+
+    # When transcripts were generated but no inline result rows exist (the normal
+    # path: V2 inline scoring was superseded by the V3 ModeEngine), skip the
+    # legacy zero-row summary and BLOCK audit printout — they are misleading.
+    # Instead emit a single actionable status line and return success.
+    if transcript_data and not results:
+        print(
+            f"\n{len(transcript_data)} transcripts generated; "
+            "inline V2 scoring is deprecated — score with: "
+            f"uv run python scripts/run_scan.py {output_dir}"
+        )
+        # Write audit artifacts for downstream contract consumers, but suppress
+        # the console summary (which would read "BLOCK | valid=no" for zero rows).
+        _write_run_audit(
+            results_path,
+            output_dir=output_dir,
+            expected_scenario_count=len(scenario_paths),
+            harness="givecare",
+            mode=harness_mode,
+        )
+        return 0
 
     audit = _write_run_audit(
         results_path,
