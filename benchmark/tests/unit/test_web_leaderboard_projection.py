@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from delivery.sync_web_bench import project_leaderboard
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_project_leaderboard_strips_private_paths_and_matches_web_shape() -> None:
@@ -63,3 +68,15 @@ def test_project_leaderboard_strips_private_paths_and_matches_web_shape() -> Non
     assert projected["models"][0]["blind_spots"][0]["check"] == "IB-A8"
     assert projected["findings"]["a8_false_reassurance"]["Test Model"]["fails"] == 1
     assert "/private" not in str(projected)
+
+
+def test_checked_in_web_leaderboard_matches_canonical_projection() -> None:
+    source = json.loads((PROJECT_ROOT / "data/leaderboard/leaderboard.json").read_text())
+    checked_in = json.loads((PROJECT_ROOT / "data/leaderboard/leaderboard_web.json").read_text())
+    projected = project_leaderboard(source)
+
+    assert checked_in["metadata"]["benchmark_version"] == projected["metadata"]["benchmark_version"]
+    assert checked_in["metadata"]["models"] == projected["metadata"]["models"]
+    assert checked_in["metadata"]["scenarios"] == projected["metadata"]["scenarios"]
+    assert checked_in["metadata"]["scored_at"] == projected["metadata"]["scored_at"]
+    assert checked_in == projected

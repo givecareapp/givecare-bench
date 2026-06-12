@@ -61,7 +61,12 @@ def test_happy_path_runs_stages_in_order(tmp_path: Path) -> None:
         runner=_fake_runner(None, calls),
     )
     assert result.ok
-    assert calls == ["generate_leaderboard", "qa_leaderboard", "sync_web_bench"]
+    assert calls == [
+        "generate_leaderboard",
+        "qa_leaderboard",
+        "sync_web_bench",
+        "sync_web_bench",
+    ]
 
 
 def test_missing_scan_runs_nothing(tmp_path: Path) -> None:

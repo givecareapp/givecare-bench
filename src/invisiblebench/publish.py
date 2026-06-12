@@ -24,6 +24,7 @@ DEFAULT_SCAN = "results/v3_scan/merged_phase2/per_run.jsonl"
 DEFAULT_WEB_TARGET = "../gc-web/apps/web-bench/public/bench/leaderboard.json"
 LEADERBOARD_DIR = "data/leaderboard"
 LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard.json"
+WEB_LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard_web.json"
 
 Runner = Callable[[Sequence[str]], int]
 
@@ -88,7 +89,18 @@ def publish(
         ),
         ("qa", qa_cmd),
         (
-            "sync",
+            "sync-local-web",
+            [
+                sys.executable,
+                "delivery/sync_web_bench.py",
+                "--source",
+                LEADERBOARD_ARTIFACT,
+                "--target",
+                WEB_LEADERBOARD_ARTIFACT,
+            ],
+        ),
+        (
+            "sync-web",
             [
                 sys.executable,
                 "delivery/sync_web_bench.py",
