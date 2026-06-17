@@ -7,7 +7,7 @@ across realistic multi-turn conversations.
 !!! warning "Key findings"
     InvisibleBench surfaces distinctive caregiver-AI failure patterns:
     hard-fail safety gaps, crisis-signal negation, artificial-intimacy variance,
-    and contrast-set brittleness. See [Key Findings](findings.md).
+    and current-roster relational quality gaps. See [Key Findings](findings.md).
 
 ## Scoring model
 
@@ -49,8 +49,10 @@ The overall quality score is the mean of the three dimension scores.
 
 The public web-bench story is a narrative audit, not a stack rank. The release
 flow first documents the benchmark mechanics, then projects the scored outputs
-into caregiver-centered findings: thematic blind spots, contrastive failure
-modes, hard-fail evidence, and model signatures. See
+into caregiver-centered findings: thematic blind spots, hard-fail evidence,
+model signatures, and optional contrastive failure modes only when the contrast
+artifact is present. The current payload marks contrast findings absent
+optional (`findings.contrasts: []`). See
 [Benchmark Publishing Audit](publishing-audit.md).
 
 ## Quick start

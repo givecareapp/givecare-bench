@@ -7,6 +7,9 @@ InvisibleBench publishes benchmark work in two linked phases:
    before the results are treated as public claims.
 2. **Result narrative** — the generated benchmark outputs are QA-gated, reduced
    into a web payload, and presented as caregiver-centered failure-mode analysis.
+   The current checked-in Phase 2 artifact is a non-strict public source until
+   residual `UNCLEAR` verdicts and coverage-below-floor rows are adjudicated or
+   regenerated and `scripts/qa_leaderboard.py --strict` passes.
 
 This split is intentional. The benchmark should not read as a generic stack
 rank of models. The useful claim is sharper: it shows where each model is jagged
@@ -44,22 +47,32 @@ The result phase starts from the canonical leaderboard artifact:
 - Current public benchmark version: `3.1.0`
 - Current publication stage: `v3-alpha`
 - Current public scan: 11 models × 63 scenarios × 53 active checks
-- Current generated timestamp: `2026-05-15T17:42:58Z`
+- Current generated timestamp: `2026-06-10T17:45:13Z`
+- Current strict QA status: not passing. The current artifact fails strict QA
+  on residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows, so
+  it must not be described as a strict-QA-passing leaderboard source.
 
 The web-bench payload is a smaller projection of that artifact:
 
 - Target: `../gc-web/apps/web-bench/public/bench/leaderboard.json`
 - Payload shape: `metadata`, `models`, and `findings`
 - Findings include A8 false reassurance, D2 infodump, hardest scenarios,
-  thematic failure clusters, contrast sets, and field-relative model signatures.
+  thematic failure clusters, optional contrast sets, and field-relative model
+  signatures.
+- Current contrast status: absent optional. `data/leaderboard_phase2/contrasts.json`
+  is not present, so the current web payload intentionally carries
+  `metadata.contrast_surface.status: absent_optional` and
+  `findings.contrasts: []`; no contrast-set findings are active for this
+  payload.
 
 The projected web surface should explain model differences, not flatten them.
 Its public analysis is organized around four layers:
 
 1. **Reading protocol** — hard gates first, failure modes second, rank last.
 2. **Theme audit** — universal, jagged, and emerging failure patterns.
-3. **Contrastive pairs** — matched caregiver pressure with divergent model
-   behavior and quoted transcript evidence.
+3. **Optional contrastive pairs** — matched caregiver pressure with divergent
+   model behavior and quoted transcript evidence only when the contrast
+   artifact is present.
 4. **Model signatures** — per-model deployment reads combining safety tier,
    category strengths/weaknesses, hard-fail evidence, and repeating blind spots.
 
@@ -69,8 +82,9 @@ Useful public analysis asks:
 - Which failure modes are concentrated in one model versus field-wide?
 - Which models are safe but operationally cold, warm but boundary-risky, or
   strong in one caregiver pattern and weak in another?
-- Which contrast-set siblings reveal sensitivity to wording, scenario framing,
-  or caregiver-recipient relationship dynamics?
+- If a contrast artifact is present, which contrast-set siblings reveal
+  sensitivity to wording, scenario framing, or caregiver-recipient relationship
+  dynamics?
 
 That is the Web-bench narrative contract: expose the shape of model behavior in
 caregiver AI, especially the non-obvious jagged edges that aggregate scores hide.

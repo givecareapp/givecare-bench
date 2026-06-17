@@ -43,9 +43,10 @@ evidence-source breakdown behind every headline finding.
 
 Benchmark publication has two phases: document the mechanics, then publish the
 scored outputs as a narrative audit. The web-bench projection is intentionally
-findings-first: themes, contrastive failure modes, hard-fail evidence, and
-model signatures explain jagged caregiver-AI behavior. It is not meant to be a
-generic stack rank. See [Benchmark Publishing Audit](docs/publishing-audit.md).
+findings-first: themes, optional contrastive failure modes when a contrast
+artifact exists, hard-fail evidence, and model signatures explain jagged
+caregiver-AI behavior. It is not meant to be a generic stack rank. See
+[Benchmark Publishing Audit](docs/publishing-audit.md).
 
 ## Public, internal, and historical
 
@@ -97,11 +98,15 @@ internal/, results/ — that are not part of the public contract.)
 - GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Every scenario file embeds a contamination canary GUID (`benchmark/scenarios/CANARY.txt`). Trainers should filter on it; a model that can reproduce the GUID has trained on benchmark data.
-- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py` and QA-gated with `scripts/qa_leaderboard.py --strict` (one fail-closed path: `scripts/publish.sh`).
+- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py`. New publication refreshes must use the strict QA gate (`scripts/qa_leaderboard.py --strict`; one fail-closed path: `scripts/publish.sh`).
+- Current Phase 2 artifact status: `data/leaderboard/leaderboard.json` is a non-strict public source. Strict QA currently fails on residual quality-mode `UNCLEAR`s and rows below the coverage floor, so this artifact must not be described as strict-QA-passing until an adjudicated or regenerated run clears that gate.
 - The active public narrative surface is the synced web-bench payload: findings,
-  themes, contrast sets, and model signatures. Older generated narrative
-  markdown should be treated as provenance unless regenerated from the current
-  scan.
+  themes, hard-fail evidence, optional contrast sets, and model signatures.
+  Contrast findings are inactive when `data/leaderboard_phase2/contrasts.json`
+  is absent; in that state the web payload carries
+  `metadata.contrast_surface.status: absent_optional` and
+  `findings.contrasts: []`. Older generated narrative markdown should be
+  treated as provenance unless regenerated from the current scan.
 - Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
 
 ## Quickstart

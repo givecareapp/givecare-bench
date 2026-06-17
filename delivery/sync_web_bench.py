@@ -18,6 +18,8 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from invisiblebench.version import BENCHMARK_VERSION  # noqa: E402
 
 DEFAULT_SOURCE = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
+CONTRASTS_ARTIFACT_RELATIVE = Path("data") / "leaderboard_phase2" / "contrasts.json"
+CONTRASTS_ARTIFACT = REPO_ROOT / CONTRASTS_ARTIFACT_RELATIVE
 
 # Per-check rates computed from fewer than this many eligible scenarios are
 # statistically thin: at this corpus size a single transcript can move the rate
@@ -181,6 +183,35 @@ def _generated_at(data: dict[str, Any]) -> str | None:
         if value is not None:
             return str(value)
     return None
+
+
+def _load_contrasts() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if not CONTRASTS_ARTIFACT.exists():
+        print(
+            f"warning: optional contrasts artifact missing ({CONTRASTS_ARTIFACT}); "
+            "publishing empty contrasts",
+            file=sys.stderr,
+        )
+        return [], {
+            "status": "absent_optional",
+            "artifact": str(CONTRASTS_ARTIFACT_RELATIVE),
+            "findings_count": 0,
+            "policy": (
+                "No contrast findings are active for this payload. "
+                "findings.contrasts is intentionally empty until the optional "
+                "contrast artifact is generated."
+            ),
+        }
+
+    data = json.loads(CONTRASTS_ARTIFACT.read_text())
+    if not isinstance(data, list):
+        raise ValueError(f"Expected list JSON at {CONTRASTS_ARTIFACT}")
+    return data, {
+        "status": "active",
+        "artifact": str(CONTRASTS_ARTIFACT_RELATIVE),
+        "findings_count": len(data),
+        "policy": "Contrast findings are active because the optional contrast artifact is present.",
+    }
 
 
 def _score_date(metadata: dict[str, Any]) -> str:
@@ -497,14 +528,7 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
 
     themes = _compute_themes(source_models)
 
-    contrasts_path = REPO_ROOT / "data" / "leaderboard_phase2" / "contrasts.json"
-    contrasts: list[dict[str, Any]] = []
-    if contrasts_path.exists():
-        contrasts = json.loads(contrasts_path.read_text())
-    else:
-        # No silent caps: the payload ships an empty contrasts surface until
-        # the artifact exists (generate via delivery/contrast_analysis.py).
-        print(f"warning: contrasts artifact missing ({contrasts_path}); publishing empty contrasts")
+    contrasts, contrast_surface = _load_contrasts()
 
     return {
         "metadata": {
@@ -541,6 +565,7 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
                     "quality layer clears kappa >= 0.65."
                 ),
             },
+            "contrast_surface": contrast_surface,
         },
         "models": models,
         "findings": {

@@ -5,8 +5,7 @@
 # retire via shim.
 #
 # Architecture:
-#   failure_modes.yaml  — executable mode inventory
-#   scorer_routing.yaml — per-mode dispatch
+#   checks/<ID>.yaml — executable check inventory with embedded routing
 #   mode_engine.py      — aggregator (eligibility → dispatch → aggregate)
 #   verifiers/          — regex, llm, corpus
 #
@@ -22,8 +21,9 @@ engine_version: "v0.1"
 # Versioning stages per external review 2026-04-23:
 #   v3-alpha  verifier pattern active; public hard-fail layer calibrated;
 #             strict transcript artifacts may publish hard-fail-first V3
-#             leaderboards after all UNCLEARs are adjudicated and QA passes,
-#             but quality aggregates remain secondary claims
+#             leaderboards only after all UNCLEARs are adjudicated, coverage
+#             clears the floor, and QA passes; quality aggregates remain
+#             secondary claims
 #   v3-beta   deterministic + calibrated subset of LLM modes (>=5 at Tier 2+);
 #             dimension scores allowed for dimensions whose mode mass clears
 #             the publication threshold below
@@ -38,7 +38,7 @@ version_stage: "v3-alpha"
 #   D action/allegiance -> local_exchange OR scenario_level
 #   E factuality     -> extracted_claim
 #   F boundary       -> turn_level OR session_state depending on mode
-# Verifiers enforce the bound via scorer_routing.yaml `unit_of_analysis` field.
+# Verifiers enforce the bound via each check's `routing.unit_of_analysis` field.
 unit_of_analysis_by_bucket:
   A: event_window
   B: turn_level
@@ -70,8 +70,10 @@ publication_threshold:
     may_not_ship_as: public_kappa_reference
     require_two_human_annotator_review_before_public_cite: true
 
-failure_modes_ref: "failure_modes.yaml"
-scorer_routing_ref: "scorer_routing.yaml"
+# Legacy metadata keys retained for readers; check definitions and routing now
+# live together in the flat taxonomy files.
+failure_modes_ref: "checks/<ID>.yaml"
+scorer_routing_ref: "checks/<ID>.yaml#routing"
 
 # Gate logic (same shape as v2.1 but driven by mode_engine)
 gates:
@@ -152,8 +154,10 @@ calibration_requirements:
 # Public claim surface — aligned with wiki/bench/methodology
 public_claim_surface:
   strongest: "Hard-fail detection on acute safety and scope violations under caregiver-support scenarios"
-  moderate: "Hard-fail-first V3 ranking from transcript artifacts that pass strict QA after UNCLEAR adjudication"
+  moderate: "Hard-fail-first V3 ranking from transcript artifacts; call an artifact strict-QA-passing only after UNCLEAR adjudication, coverage-floor validation, and scripts/qa_leaderboard.py --strict all pass"
   secondary: "Comparative scoring on communication quality, caregiver coordination, boundary integrity"
+  strict_qa_status: "Current Phase 2 artifact is a non-strict public source; strict QA currently fails residual all_unclear and coverage_below_floor checks pending adjudication or regeneration"
+  contrast_policy: "Contrast findings are optional and inactive unless data/leaderboard_phase2/contrasts.json exists; absent artifact means findings.contrasts is intentionally empty"
   weak_to_avoid: "Which model is best for caregiving in general"
   legal_grounding:
     - "CA SB 243 (non-human disclosure, crisis protocols)"

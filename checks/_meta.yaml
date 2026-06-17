@@ -1,5 +1,5 @@
-description: Taxonomy metadata. Each check lives in checks/<ID>.yaml.
-failure_modes_header:
+description: Taxonomy metadata. Each check lives in checks/<ID>.yaml with embedded routing.
+checks_header:
   version: v0
   schema_version: '1.0'
   taxonomy_ref: internal/taxonomy_v0.md
@@ -11,6 +11,6 @@ failure_modes_header:
     gate_modes: 14
     quality_modes: 34
     proposed_modes: 0
-scorer_routing_header:
+routing_header:
   version: v0
-  failure_modes_ref: failure_modes.yaml
+  checks_ref: checks/<ID>.yaml

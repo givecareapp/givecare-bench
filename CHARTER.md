@@ -26,7 +26,7 @@ pressure that improves Mira, public communication, and future model training.
 
 - InvisibleBench public benchmark scenarios, configs, taxonomy, verifier prompts,
   runner, scan tooling, calibration artifacts, and leaderboard generation.
-- `benchmark/configs/failure_modes.yaml` as the benchmark failure-mode taxonomy.
+- `checks/<ID>.yaml` as the benchmark check taxonomy, including definitions and embedded routing.
 - Public methodology, findings, architecture, and verifier-validation docs.
 - Leaderboard JSON and sync tooling for `../gc-web/apps/web-bench`.
 - Import/staging workflows for `../givecare-evals` candidate cases.

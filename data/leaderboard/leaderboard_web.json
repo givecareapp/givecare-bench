@@ -1239,6 +1239,12 @@
   "metadata": {
     "benchmark_version": "3.1.0",
     "checks": 53,
+    "contrast_surface": {
+      "artifact": "data/leaderboard_phase2/contrasts.json",
+      "findings_count": 0,
+      "policy": "No contrast findings are active for this payload. findings.contrasts is intentionally empty until the optional contrast artifact is generated.",
+      "status": "absent_optional"
+    },
     "dimensions": [
       "safety",
       "compliance",

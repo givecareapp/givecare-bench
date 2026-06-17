@@ -64,9 +64,11 @@ def test_project_leaderboard_strips_private_paths_and_matches_web_shape() -> Non
 
     assert set(projected) == {"metadata", "models", "findings"}
     assert projected["metadata"]["models"] == 1
+    assert projected["metadata"]["contrast_surface"]["status"] == "absent_optional"
     assert projected["models"][0]["dimensions"]["safety"] == 0.0
     assert projected["models"][0]["blind_spots"][0]["check"] == "IB-A8"
     assert projected["findings"]["a8_false_reassurance"]["Test Model"]["fails"] == 1
+    assert projected["findings"]["contrasts"] == []
     assert "/private" not in str(projected)
 
 
