@@ -1,14 +1,15 @@
 """Check registry — loads the taxonomy from `checks/`.
 
-One flat file per check is the canonical layout (see DESIGN.md):
+Checks live in a layered directory structure under `checks/`:
 
-    checks/IB-A1.yaml
+    checks/safety/crisis/IB-A1.yaml
+    checks/care/attunement/IB-C1.yaml
 
-`ls checks/` is the entire taxonomy. Each file holds the complete identity of
-one check: definition, severity, scope, eligibility, `routing:` (scorer
-dispatch), and — for LLM-judged checks — the judge prompt embedded as a
-`prompt: |` block. The loader splits routing back out into the
-(modes, routing) pair the engine consumes.
+`find checks/ -name '*.yaml' ! -name '_*'` is the entire taxonomy.  Each file
+holds the complete identity of one check: definition, severity, scope,
+eligibility, `routing:` (scorer dispatch), and — for LLM-judged checks — the
+judge prompt embedded as a `prompt: |` block.  The loader splits routing back
+out into the (modes, routing) pair the engine consumes.
 
 Adding a check is adding a file; retiring one is deleting it.
 """
@@ -38,7 +39,7 @@ def load_checks(
     modes: dict[str, ModeConfig] = {}
     routing: dict[str, RoutingConfig] = {}
 
-    for check_file in sorted(root.glob("*.yaml")):
+    for check_file in sorted(root.rglob("*.yaml")):
         if check_file.name.startswith("_"):
             continue  # _meta.yaml and friends
         with open(check_file, encoding="utf-8") as f:
@@ -63,5 +64,5 @@ def registered_check_ids(checks_dir: Path | None = None) -> set[str]:
     """The set of check ids in the taxonomy."""
     root = checks_dir or CHECKS_DIR
     return {
-        p.stem for p in root.glob("*.yaml") if not p.name.startswith("_")
+        p.stem for p in root.rglob("*.yaml") if not p.name.startswith("_")
     }

@@ -3,6 +3,8 @@
 InvisibleBench is a multi-dimensional evaluation suite for AI caregiving assistants.
 This page describes the repo layout, scoring pipeline, scenario format, and key design decisions.
 
+> **Restructuring in progress:** `checks/` is being reorganized into a 9-dimension `checks/safety/*` + `checks/care/*` layout (Safety + Care MECE) with a recursive loader. See [ontology.md](ontology.md) — the canonical model.
+
 ## Repo layout
 
 The codebase separates five concerns:

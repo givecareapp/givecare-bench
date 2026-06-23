@@ -2,6 +2,8 @@
 
 *Complete reference for InvisibleBench v3's failure-mode registry: 53 checks across 5 dimensions.*
 
+> **Restructuring in progress:** the registry is moving to a 9-dimension Safety + Care MECE model (50 checks, `checks/safety/*` + `checks/care/*`). See [ontology.md](ontology.md) — the canonical model. Updated at the v1 release.
+
 InvisibleBench decomposes each dimension into independent failure-mode checks. Each check has its own verifier, its own calibration target, and its own evidence format. This page is the canonical registry.
 
 The key architectural claim: **a verifier per failure mode, not a judge per dimension.** Monolithic LLM judges produce one score for an entire dimension. InvisibleBench v3 assigns each failure mode its own scorer — regex, LLM verifier, or corpus-based — so that calibration, evidence, and failure rates are attributable to specific behaviors, not aggregated away.
