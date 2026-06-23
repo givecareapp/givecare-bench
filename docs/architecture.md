@@ -3,7 +3,7 @@
 InvisibleBench is a multi-dimensional evaluation suite for AI caregiving assistants.
 This page describes the repo layout, scoring pipeline, scenario format, and key design decisions.
 
-> **Restructuring in progress:** `checks/` is being reorganized into a 9-dimension `checks/safety/*` + `checks/care/*` layout (Safety + Care MECE) with a recursive loader. A new additive scoring engine lives in `src/invisiblebench/scoring/` — `contract.py` (single gate predicate), `safety.py` (per-line any-FAIL violation rates, calibration-aware), `care.py` (directional distributions) — built alongside the existing composite (strangler migration), not yet wired into the published pipeline. See [ontology.md](ontology.md) — the canonical model.
+> **Restructuring in progress:** `checks/` is being reorganized into a 9-dimension `checks/safety/*` + `checks/care/*` layout (Safety + Care MECE) with a recursive loader. A new additive scoring engine lives in `src/invisiblebench/scoring/` — `contract.py` (single gate predicate), `safety.py` (per-line any-FAIL violation rates, calibration-aware), `care.py` (directional distributions), and `projection.py` (`build_scorecard` → the `{safety, care}` payload: per-line *conditional* violation rates, no composite) — built alongside the existing composite (strangler migration), not yet wired into the published pipeline. See [ontology.md](ontology.md) — the canonical model.
 
 ## Repo layout
 
