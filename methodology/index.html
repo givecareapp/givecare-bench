@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -270,6 +270,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -1105,6 +1186,9 @@
 
 
 <h1 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>This page reflects the v1 Safety/Care model.</strong> The current scoring output is <code>{safety, care}</code> (schema <code>safety-care/v1</code>): per-line Safety conditional violation rates + directional Care distributions, grounded in SAMHSA, Microsoft Inclusive Design, and OBI Targeted Universalism. There is no <code>overall_score</code> or composite rank. See <a href="../ontology/">ontology.md</a> for the canonical model.</p>
+</blockquote>
 <p>InvisibleBench grounds its scoring dimensions in established clinical, regulatory, and social frameworks. This page documents what we measure, why, and which authorities inform each dimension.</p>
 <hr />
 <h2 id="grounding-layers">Grounding layers<a class="headerlink" href="#grounding-layers" title="Permanent link">&para;</a></h2>
@@ -1170,12 +1254,15 @@
   an automated adjudicator, human–human agreement was weaker on the
   compliance/prescribing bright-lines that drive most hard fails, and the gold
   traces are prior-generation models. See
-  <a href="../verifier-validation/#how-to-read-the-1-0-hard-fail-result">verifier-validation.md</a>
+  <a href="../verifier-validation/#how-to-read-the-10-hard-fail-result">verifier-validation.md</a>
   for the full reading guide.</li>
 <li><strong>Leaderboard artifact:</strong> <code>data/leaderboard/leaderboard.json</code> is generated
   from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/per_run.jsonl</code>),
   currently 11 models × 63 scenarios × 53 active checks, generated on
-  2026-05-15 with strict artifact QA.</li>
+  2026-06-10 as a non-strict public source. Strict QA currently fails on
+  residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows; do
+  not describe this artifact as strict-QA-passing until those rows are
+  adjudicated or regenerated and <code>scripts/qa_leaderboard.py --strict</code> passes.</li>
 <li><strong>Secondary claims:</strong> <code>communication</code>, <code>coordination</code>, <code>boundary</code>, and
   <code>overall_score</code> remain useful for comparison, but they should be read more
   cautiously than safety/compliance gates until quality-layer human calibration
@@ -1186,9 +1273,13 @@ who stays inside the safety/compliance contract, how often, and on which rules.
 It is not yet equally strong as a final authority on every close-call quality
 ordering between models with similar gate performance.</p>
 <p>The web-bench presentation follows the same claim posture. Its static payload
-rolls the canonical leaderboard into findings, thematic clusters, contrastive
-failure-mode pairs, and field-relative model signatures so readers can inspect
-caregiver-AI jaggedness rather than treat the output as a simple stack rank.</p>
+rolls the canonical leaderboard into findings, thematic clusters, optional
+contrastive failure-mode pairs, and field-relative model signatures so readers
+can inspect caregiver-AI jaggedness rather than treat the output as a simple
+stack rank. Contrast findings are inactive when
+<code>data/leaderboard_phase2/contrasts.json</code> is absent; the current web payload
+therefore marks <code>metadata.contrast_surface.status: absent_optional</code> and emits
+<code>findings.contrasts: []</code>.</p>
 <h2 id="positioning-and-related-work">Positioning and related work<a class="headerlink" href="#positioning-and-related-work" title="Permanent link">&para;</a></h2>
 <p>InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.</p>
 <table>
@@ -1633,6 +1724,7 @@ architectural rationale.</p>
 <div class="admonition note">
 <p class="admonition-title">What InvisibleBench evaluates — and what it does not</p>
 <p>InvisibleBench evaluates <strong>conversations</strong>, not apps or products. Four dimensions from the broader AI mental health evaluation landscape fall outside this scope.</p>
+<p><strong>The scripted-user ceiling.</strong> Caregiver turns are deterministic scenario scripts with rule-based branching (substring/regex conditions on the prior assistant reply) — there is no reactive user simulator. This is a deliberate trade: determinism is what makes transcripts frozen, re-judgeable artifacts and keeps model-to-model comparisons exact. The cost is a ceiling on what longitudinal measurement can claim: a model that asks the missing question usually receives the same next caregiver message as one that did not, so omission and follow-up checks score the model's behavior <em>within the scripted window</em>, not whether the relationship trajectory actually changes. Findings are evidence about model responses to a fixed relational script — not about how the relationship would unfold with a responsive caregiver. A calibrated user simulator (persona fidelity held to the same gold-card standard as the verifiers) is the eventual path past this ceiling; it would be a new <code>benchmark_version</code>, never a quiet swap.</p>
 <p><strong>Privacy honesty.</strong> Whether an app collects, shares, or mishandles user data is an app-level concern requiring product audit, not conversation scoring. If a model makes false privacy or capability claims <em>within</em> a conversation ("everything you tell me is confidential", "I can delete everything you said", "I start fresh when you close the window"), the Compliance Gate catches it as a hard fail — but systematic product privacy evaluation still requires a different methodology.</p>
 <p><strong>Sensitive-disclosure minimization.</strong> NAMI criterion 4: "avoid implying privacy protections or encouraging unsafe personal disclosures." This is a product-design concern — what the app <em>solicits</em> — rather than a property of any single conversation turn.</p>
 <p><strong>Evidence discipline.</strong> NAMI criterion 2: "accurate, evidence-informed information." InvisibleBench tests whether resources are named and navigation is actionable, but verifying factual accuracy of cited information requires ground-truth infrastructure (verified resource databases, real-time link checking) that operates at a different layer than conversation evaluation.</p>

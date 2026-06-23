@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -270,6 +270,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -1019,6 +1100,9 @@
 <h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
 <p>InvisibleBench is a multi-dimensional evaluation suite for AI caregiving assistants.
 This page describes the repo layout, scoring pipeline, scenario format, and key design decisions.</p>
+<blockquote>
+<p><strong>This page reflects the v1 Safety/Care model.</strong> <code>checks/</code> is organized into <code>checks/safety/*</code> + <code>checks/care/*</code> (9 dimensions, recursive loader). The scoring engine in <code>src/invisiblebench/scoring/</code> contains <code>contract.py</code> (gate predicate), <code>safety.py</code> (per-line violation rates, calibration-aware), <code>care.py</code> (directional distributions), and <code>projection.py</code> (<code>build_scorecard</code> → the <code>{safety, care}</code> payload). The canonical leaderboard output is <code>data/leaderboard/leaderboard.json</code> (schema <code>safety-care/v1</code>): per-line Safety conditional violation rates + directional Care distributions, no composite. See <a href="../ontology/">ontology.md</a> for the canonical model.</p>
+</blockquote>
 <h2 id="repo-layout">Repo layout<a class="headerlink" href="#repo-layout" title="Permanent link">&para;</a></h2>
 <p>The codebase separates five concerns:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>givecare-bench/
@@ -1057,7 +1141,7 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 </tr>
 <tr>
 <td><code>data/leaderboard/</code></td>
-<td>Canonical leaderboard JSON projected into public web assets by <code>scripts/sync_web_bench_leaderboard.py</code></td>
+<td>Canonical leaderboard JSON projected into public web assets by <code>delivery/sync_web_bench.py</code></td>
 <td>Generated — never hand-edited</td>
 </tr>
 <tr>
@@ -1112,10 +1196,10 @@ hashes of fully rendered scenario-specific prompts.</p>
 <li><strong>Conditional branches</strong> — adaptive paths triggered by model response patterns</li>
 <li><strong>Probes</strong> — targeted follow-ups that test specific scorer dimensions</li>
 </ul>
-<p>Turn-level evaluation can be authored in three forms:
+<p>Turn-level evaluation can be authored in two complementary forms:
 - prose expectations via <code>expected_behaviors</code> / <code>autofail_triggers</code>
-- binary rubric items via <code>rubric</code> / <code>autofail_rubric</code>
-- ordinal rubric items via <code>rubric_criteria</code></p>
+- one unified <code>rubric</code> list: criteria objects with
+  <code>kind: binary | ordinal | autofail</code> (ordinal criteria carry <code>levels</code>)</p>
 <p>The runtime now uses a single canonical scenario model layer in
 <code>src/invisiblebench/models/scenario.py</code>: <code>Scenario</code>, <code>Session</code>, <code>Turn</code>,
 <code>Persona</code>, <code>ScenarioCategory</code>, and <code>ScoringDimension</code>. <code>invisiblebench.models</code>
@@ -1217,10 +1301,10 @@ answer one question: "did failure mode IB-X occur in this transcript?"</p>
 <p>The engine (<code>src/invisiblebench/evaluation/mode_engine.py</code>) loads the canonical
 inventory and routing config at init:</p>
 <ul>
-<li><strong><code>benchmark/configs/failure_modes.yaml</code></strong> -- 53-check inventory
+<li><strong><code>checks/&lt;ID&gt;.yaml</code></strong> -- one flat file per check: definition, routing, and judge prompt (53 checks)
   across five dimensions: A (safety), B (compliance),
   C (communication quality), D (caregiver coordination), F (boundary integrity).</li>
-<li><strong><code>benchmark/configs/scorer_routing.yaml</code></strong> -- per-check dispatch config
+<li><strong><code>routing:</code> block per check file</strong> -- per-check dispatch config
   specifying route type, unit of analysis, deterministic precheck lexicon,
   repetition count, and LLM/corpus requirements.</li>
 <li><strong><code>scripts/run_scan.py</code> scan profiles</strong> -- small CLI policies
@@ -1250,7 +1334,7 @@ word/phrase lists. Precision target is &gt;= 0.95. Runs in microseconds and cove
 the full fleet without token cost. Used as the primary scorer for <code>lexicon_only</code>
 routes and as a precheck for <code>hybrid_llm</code> routes.</p>
 <p><strong>LLMVerifier</strong> -- sends a per-check prompt from
-<code>benchmark/configs/verifier_prompts/</code> to the reference model with K-repetition
+the check file's embedded <code>prompt:</code> to the reference model with K-repetition
 majority vote (publish default K=3). Scan profiles can lower repetitions for
 development scans and enable adaptive repetition: a clear first-pass PASS or
 NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured
@@ -1260,7 +1344,7 @@ cache for deterministic judge calls.</p>
 assertions from the transcript, then checks each against a reference corpus.
 Used for checks like benefit-eligibility overclaims.</p>
 <h3 id="event-window-scoping">Event-window scoping<a class="headerlink" href="#event-window-scoping" title="Permanent link">&para;</a></h3>
-<p>Each check declares a <code>unit_of_analysis</code> in <code>scorer_routing.yaml</code> that bounds
+<p>Each check declares a <code>unit_of_analysis</code> in its <code>routing:</code> block that bounds
 the transcript slice the verifier receives:</p>
 <table>
 <thead>

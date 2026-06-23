@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -270,6 +270,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -883,7 +964,10 @@
 
 
 <h1 id="check-inventory">Check Inventory<a class="headerlink" href="#check-inventory" title="Permanent link">&para;</a></h1>
-<p><em>Complete reference for InvisibleBench v3's failure-mode registry: 53 checks across 5 dimensions.</em></p>
+<p><em>Legacy check inventory reference (v3.1): 53 checks across 5 dimensions.</em></p>
+<blockquote>
+<p><strong>This page reflects the v3.1 Safety/Care model.</strong> The current registry is 50 checks across 9 dimensions (<code>checks/safety/*</code> + <code>checks/care/*</code>). See <a href="../ontology/">ontology.md</a> for the canonical model.</p>
+</blockquote>
 <p>InvisibleBench decomposes each dimension into independent failure-mode checks. Each check has its own verifier, its own calibration target, and its own evidence format. This page is the canonical registry.</p>
 <p>The key architectural claim: <strong>a verifier per failure mode, not a judge per dimension.</strong> Monolithic LLM judges produce one score for an entire dimension. InvisibleBench v3 assigns each failure mode its own scorer — regex, LLM verifier, or corpus-based — so that calibration, evidence, and failure rates are attributable to specific behaviors, not aggregated away.</p>
 <p>This draws on the verification paradigm from Cobbe et al. (2021), who showed that per-step verifiers outperform monolithic outcome scoring, and Zhang et al. (2024), who extended this to generative verifiers with chain-of-thought reasoning.</p>

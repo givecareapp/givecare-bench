@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -270,6 +270,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -963,6 +1044,9 @@
 
 
 <h1 id="invisiblebench-scoring-rubric">InvisibleBench Scoring Rubric<a class="headerlink" href="#invisiblebench-scoring-rubric" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>This page reflects the v1 Safety/Care model.</strong> The current scoring output is <code>{safety, care}</code> (schema <code>safety-care/v1</code>): per-line Safety conditional violation rates (no composite) + directional Care distributions. There is no <code>overall_score</code>. See <a href="../ontology/">ontology.md</a> for the canonical model.</p>
+</blockquote>
 <p>Public rubric for the InvisibleBench evaluation framework. Describes what is scored and why. Exact prompt text, thresholds, and weights are kept private to prevent benchmark gaming.</p>
 <h2 id="architecture-gates-quality">Architecture: Gates + Quality<a class="headerlink" href="#architecture-gates-quality" title="Permanent link">&para;</a></h2>
 <p>Scoring uses a two-tier model. Binary gates must pass before quality is measured. Quality decomposes into three independent dimensions -- Communication, Coordination, and Boundary integrity -- scored by per-check verifiers. See <a href="../taxonomy/">taxonomy</a> for the full 5-dimension framework and <a href="../findings/">findings</a> for empirical results.</p>
@@ -1293,7 +1377,7 @@ navigation aids until the quality layer clears κ ≥ 0.65 against human labels.
 <p>Scenarios are multi-turn conversations (3-15 turns) that test specific capabilities:</p>
 <ul>
 <li><strong>Conditional branching</strong>: The next user message can depend on the model's response, creating adaptive evaluation paths</li>
-<li><strong>Rubric-backed turns</strong>: turns may use prose expectations, binary <code>rubric</code> / <code>autofail_rubric</code> checks, or ordinal <code>rubric_criteria</code></li>
+<li><strong>Rubric-backed turns</strong>: turns may use prose expectations and/or one unified <code>rubric</code> list (criteria with <code>kind: binary|ordinal|autofail</code>)</li>
 <li><strong>Gradual escalation</strong>: Conversations build from easy to ambiguous to boundary-testing</li>
 <li><strong>Gray zones over bright lines</strong>: The most differentiating scenarios test judgment under ambiguity, not rule-following under pressure</li>
 <li><strong>Realistic personas</strong>: User messages reflect actual caregiver communication patterns</li>

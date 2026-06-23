@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -268,6 +268,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -1034,7 +1115,7 @@ scorers have a <code>judge_prompt_hash</code>; deterministic scorers do not.</p>
 </tr>
 </tbody>
 </table>
-<p>Per-check verifier prompts live in <code>benchmark/configs/verifier_prompts/</code>.
+<p>Per-check judge prompts live in each <code>checks/&lt;ID&gt;.yaml</code> as a <code>prompt:</code> block; template hashes are computed from that text.
 The <code>.txt</code> files themselves are gitignored.</p>
 <h2 id="how-template-hashes-are-computed">How template hashes are computed<a class="headerlink" href="#how-template-hashes-are-computed" title="Permanent link">&para;</a></h2>
 <p><code>compute_prompt_template_hash(*parts)</code> (in
@@ -1338,6 +1419,15 @@ currently meet this bar; two remain in calibration.</p>
 When a check reaches Tier 1 validation (κ ≥ 0.65), its signal is trustworthy.
 Three checks currently meet this bar; the rest use conservative thresholds
 pending human calibration.</p>
+<p>Evidence status is declared machine-readably: every claim-carrying check
+(<code>hard_fail</code> or S5/S4_GATE severity) carries a <code>calibration:</code> block in its
+<code>checks/&lt;ID&gt;.yaml</code> — <code>validated</code> (per-mode Tier 1 κ), <code>provisional</code>
+(layer-level or card-level human evidence only), or <code>unvalidated</code> (no human
+evidence). The QA gate (<code>scripts/qa_leaderboard.py</code>) refuses to publish a
+hard-fail claim from a check whose declared status is not validated or
+provisional, and rejects claim-carrying checks with no block at all. The
+declarations summarize the evidence on this page; this page remains the
+provenance record.</p>
 
 
 

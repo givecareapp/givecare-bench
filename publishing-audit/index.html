@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -270,6 +270,87 @@
     
   
     Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Model — Safety + Care
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what-invisiblebench-owns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What InvisibleBench Owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
   
 
     
@@ -691,7 +772,10 @@
    routing, calibration status, and release commands are documented in the repo
    before the results are treated as public claims.</li>
 <li><strong>Result narrative</strong> — the generated benchmark outputs are QA-gated, reduced
-   into a web payload, and presented as caregiver-centered failure-mode analysis.</li>
+   into a web payload, and presented as caregiver-centered failure-mode analysis.
+   The current checked-in Phase 2 artifact is a non-strict public source until
+   residual <code>UNCLEAR</code> verdicts and coverage-below-floor rows are adjudicated or
+   regenerated and <code>scripts/qa_leaderboard.py --strict</code> passes.</li>
 </ol>
 <p>This split is intentional. The benchmark should not read as a generic stack
 rank of models. The useful claim is sharper: it shows where each model is jagged
@@ -701,16 +785,16 @@ would make a caregiver AI feel brittle in practice.</p>
 <h2 id="phase-1-code-documentation">Phase 1: Code Documentation<a class="headerlink" href="#phase-1-code-documentation" title="Permanent link">&para;</a></h2>
 <p>The code documentation phase makes the procedure inspectable:</p>
 <ul>
-<li><code>benchmark/configs/failure_modes.yaml</code> defines the active 53-check failure
+<li><code>checks/</code> (one YAML per check) defines the active 53-check failure
   inventory across safety, compliance, communication, coordination, and boundary
   integrity.</li>
-<li><code>benchmark/configs/scorer_routing.yaml</code> records which checks use
+<li>the <code>routing:</code> block in each <code>checks/&lt;ID&gt;.yaml</code> records which checks use
   deterministic, LLM, or corpus scorer routes.</li>
-<li><code>benchmark/configs/verifier_prompts/</code> holds the per-check verifier prompts.</li>
+<li>each check file embeds its judge prompt as a <code>prompt:</code> block.</li>
 <li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
   into hard-fail, dimension, blind-spot, and overall artifacts.</li>
 <li><code>scripts/run_scan.py</code>, <code>scripts/generate_leaderboard.py</code>,
-  <code>scripts/qa_leaderboard.py</code>, and <code>scripts/sync_web_bench_leaderboard.py</code>
+  <code>scripts/qa_leaderboard.py</code>, and <code>delivery/sync_web_bench.py</code>
   form the release path from transcripts to public web payload.</li>
 </ul>
 <p>The publication standard is evidence-bearing: each failure should preserve the
@@ -725,22 +809,32 @@ without relying on a single opaque LLM judge.</p>
 <li>Current public benchmark version: <code>3.1.0</code></li>
 <li>Current publication stage: <code>v3-alpha</code></li>
 <li>Current public scan: 11 models × 63 scenarios × 53 active checks</li>
-<li>Current generated timestamp: <code>2026-05-15T17:42:58Z</code></li>
+<li>Current generated timestamp: <code>2026-06-10T17:45:13Z</code></li>
+<li>Current strict QA status: not passing. The current artifact fails strict QA
+  on residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows, so
+  it must not be described as a strict-QA-passing leaderboard source.</li>
 </ul>
 <p>The web-bench payload is a smaller projection of that artifact:</p>
 <ul>
 <li>Target: <code>../gc-web/apps/web-bench/public/bench/leaderboard.json</code></li>
 <li>Payload shape: <code>metadata</code>, <code>models</code>, and <code>findings</code></li>
 <li>Findings include A8 false reassurance, D2 infodump, hardest scenarios,
-  thematic failure clusters, contrast sets, and field-relative model signatures.</li>
+  thematic failure clusters, optional contrast sets, and field-relative model
+  signatures.</li>
+<li>Current contrast status: absent optional. <code>data/leaderboard_phase2/contrasts.json</code>
+  is not present, so the current web payload intentionally carries
+  <code>metadata.contrast_surface.status: absent_optional</code> and
+  <code>findings.contrasts: []</code>; no contrast-set findings are active for this
+  payload.</li>
 </ul>
 <p>The projected web surface should explain model differences, not flatten them.
 Its public analysis is organized around four layers:</p>
 <ol>
 <li><strong>Reading protocol</strong> — hard gates first, failure modes second, rank last.</li>
 <li><strong>Theme audit</strong> — universal, jagged, and emerging failure patterns.</li>
-<li><strong>Contrastive pairs</strong> — matched caregiver pressure with divergent model
-   behavior and quoted transcript evidence.</li>
+<li><strong>Optional contrastive pairs</strong> — matched caregiver pressure with divergent
+   model behavior and quoted transcript evidence only when the contrast
+   artifact is present.</li>
 <li><strong>Model signatures</strong> — per-model deployment reads combining safety tier,
    category strengths/weaknesses, hard-fail evidence, and repeating blind spots.</li>
 </ol>
@@ -750,8 +844,9 @@ Its public analysis is organized around four layers:</p>
 <li>Which failure modes are concentrated in one model versus field-wide?</li>
 <li>Which models are safe but operationally cold, warm but boundary-risky, or
   strong in one caregiver pattern and weak in another?</li>
-<li>Which contrast-set siblings reveal sensitivity to wording, scenario framing,
-  or caregiver-recipient relationship dynamics?</li>
+<li>If a contrast artifact is present, which contrast-set siblings reveal
+  sensitivity to wording, scenario framing, or caregiver-recipient relationship
+  dynamics?</li>
 </ul>
 <p>That is the Web-bench narrative contract: expose the shape of model behavior in
 caregiver AI, especially the non-obvious jagged edges that aggregate scores hide.</p>
