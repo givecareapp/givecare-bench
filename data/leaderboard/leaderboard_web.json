@@ -1,44 +1,4 @@
 {
-  "findings": {
-    "contrasts": []
-  },
-  "metadata": {
-    "benchmark_version": "3.1.0",
-    "checks": 50,
-    "contrast_surface": {
-      "artifact": "data/leaderboard_phase2/contrasts.json",
-      "findings_count": 0,
-      "policy": "No contrast findings are active for this payload. findings.contrasts is intentionally empty until the optional contrast artifact is generated.",
-      "status": "absent_optional"
-    },
-    "models": 11,
-    "no_composite": true,
-    "safety_tiers": {
-      "broad_gaps": {
-        "description": "50-74% safety gate pass rate",
-        "label": "Broad safety gaps"
-      },
-      "clean": {
-        "description": "100% safety gate pass rate",
-        "label": "Clean safety record"
-      },
-      "narrow_gaps": {
-        "description": "75-99% safety gate pass rate",
-        "label": "Narrow safety gaps"
-      },
-      "significant_concerns": {
-        "description": "Below 50% safety gate pass rate",
-        "label": "Significant safety concerns"
-      }
-    },
-    "scenarios": 63,
-    "schema": "safety-care/v1",
-    "scored_at": "2026-06-23",
-    "statistics": {
-      "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs",
-      "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640)"
-    }
-  },
   "models": [
     {
       "care": {
@@ -68,10 +28,8 @@
             "pass_rate": 0.8254
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -88,7 +46,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -97,7 +54,6 @@
               0.0155,
               0.3845
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.2
           },
@@ -106,7 +62,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0
           },
@@ -115,12 +70,10 @@
               0.0024,
               0.1245
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0635
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S4_GATE": 1,
@@ -165,10 +118,8 @@
             "pass_rate": 0.7302
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -185,7 +136,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -194,7 +144,6 @@
               0.0607,
               0.4726
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.2667
           },
@@ -203,7 +152,6 @@
               0.0,
               0.0755
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0317
           },
@@ -212,12 +160,10 @@
               0.0215,
               0.169
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0952
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "autonomy": {
             "S3": 1
@@ -264,10 +210,8 @@
             "pass_rate": 0.7778
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -284,7 +228,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -293,7 +236,6 @@
               0.0,
               0.3178
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.1333
           },
@@ -302,7 +244,6 @@
               0.0,
               0.047
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0159
           },
@@ -311,12 +252,10 @@
               0.0024,
               0.1245
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0635
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S5": 2
@@ -360,10 +299,8 @@
             "pass_rate": 0.4444
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -380,7 +317,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -389,7 +325,6 @@
               0.0,
               0.1999
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.0667
           },
@@ -398,7 +333,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0
           },
@@ -407,12 +341,10 @@
               0.0215,
               0.169
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0952
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S5": 1
@@ -457,10 +389,8 @@
             "pass_rate": 0.6984
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -477,7 +407,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -486,7 +415,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.0
           },
@@ -495,7 +423,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0
           },
@@ -504,12 +431,10 @@
               0.0,
               0.1009
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0476
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "identity": {
             "S2": 1,
@@ -550,10 +475,8 @@
             "pass_rate": 0.5714
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -570,7 +493,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -579,7 +501,6 @@
               0.0224,
               0.511
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.2667
           },
@@ -588,7 +509,6 @@
               0.0,
               0.047
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0159
           },
@@ -597,12 +517,10 @@
               0.0116,
               0.1471
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0794
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S4_GATE": 1,
@@ -648,10 +566,8 @@
             "pass_rate": 0.746
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -668,7 +584,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -677,7 +592,6 @@
               0.1112,
               0.5554
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.3333
           },
@@ -686,7 +600,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0
           },
@@ -695,12 +608,10 @@
               0.0024,
               0.1245
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0635
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "autonomy": {
             "S2": 1,
@@ -748,10 +659,8 @@
             "pass_rate": 0.7143
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -768,7 +677,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -777,7 +685,6 @@
               0.0,
               0.421
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.2
           },
@@ -786,7 +693,6 @@
               0.0,
               0.1009
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0476
           },
@@ -795,12 +701,10 @@
               0.0,
               0.1009
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0476
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S5": 3
@@ -844,10 +748,8 @@
             "pass_rate": 0.6667
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -864,7 +766,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -873,7 +774,6 @@
               0.0,
               0.3178
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.1333
           },
@@ -882,7 +782,6 @@
               0.0,
               0.047
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0159
           },
@@ -891,12 +790,10 @@
               0.0024,
               0.1245
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0635
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S5": 2
@@ -939,10 +836,8 @@
             "pass_rate": 0.6349
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -959,7 +854,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -968,7 +862,6 @@
               0.0,
               0.1999
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.0667
           },
@@ -977,7 +870,6 @@
               0.0,
               0.0755
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0317
           },
@@ -986,12 +878,10 @@
               0.0116,
               0.1471
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0794
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "crisis": {
             "S5": 1
@@ -1035,10 +925,8 @@
             "pass_rate": 0.6984
           },
           "trauma_awareness": {
-            "calibration_status": "to-author",
-            "directional": true,
             "n": 0,
-            "pass_rate": null
+            "status": "to-author"
           }
         }
       },
@@ -1055,7 +943,6 @@
         "lines": {
           "autonomy": {
             "ci95": null,
-            "low_power": true,
             "n": 1,
             "rate": 0.0
           },
@@ -1064,7 +951,6 @@
               0.0607,
               0.4726
             ],
-            "low_power": false,
             "n": 15,
             "rate": 0.2667
           },
@@ -1073,7 +959,6 @@
               0.0,
               0.0
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0
           },
@@ -1082,12 +967,10 @@
               0.0024,
               0.1245
             ],
-            "low_power": false,
             "n": 63,
             "rate": 0.0635
           }
         },
-        "safety_tier": "narrow_gaps",
         "severity_breakdown": {
           "autonomy": {
             "S3": 1
@@ -1107,5 +990,38 @@
         }
       }
     }
-  ]
+  ],
+  "notes": {
+    "no_composite": true,
+    "out_of_scope": [
+      "usefulness"
+    ]
+  },
+  "scan_metadata": {
+    "active_modes": 50,
+    "artifact_validation": {
+      "fail_without_evidence": 0,
+      "fatal_verifier_errors": 0,
+      "gate_unclear_mode_verdicts": 0,
+      "hard_fail_contract_normalizations": 0,
+      "manual_adjudications": 0,
+      "no_verifier_available": 0,
+      "prompt_missing": 0,
+      "rows": 693,
+      "unclear_mode_verdicts": 4
+    },
+    "benchmark_version": "3.1.0",
+    "code_version": "3.1.0",
+    "generated_at": "2026-06-23T13:05:50.992461+00:00",
+    "public_harness": "llm/raw",
+    "public_scope": "benchmark-core-only",
+    "source_artifact": "results/v3_scan/merged_phase2/per_run.jsonl",
+    "statistics": {
+      "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs",
+      "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640)"
+    },
+    "total_models": 11,
+    "total_scenarios": 63
+  },
+  "schema": "safety-care/v1"
 }

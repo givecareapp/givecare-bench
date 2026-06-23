@@ -52,29 +52,32 @@ The result phase starts from the canonical leaderboard artifact:
   on residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows, so
   it must not be described as a strict-QA-passing leaderboard source.
 
-The web-bench payload is a smaller projection of that artifact:
+The web-bench payload is a lean projection of that artifact:
 
 - Target: `../gc-web/apps/web-bench/public/bench/leaderboard.json`
-- Payload shape: `metadata`, `models`, and `findings`
-- Findings include A8 false reassurance, D2 infodump, hardest scenarios,
-  thematic failure clusters, optional contrast sets, and field-relative model
-  signatures.
-- Current contrast status: absent optional. `data/leaderboard_phase2/contrasts.json`
-  is not present, so the current web payload intentionally carries
-  `metadata.contrast_surface.status: absent_optional` and
-  `findings.contrasts: []`; no contrast-set findings are active for this
-  payload.
+- Payload shape (`safety-care/v1`): `schema`, `notes`, `scan_metadata`, and
+  `models` — each model carrying `safety` (per-line violation rates + aggregate)
+  and `care` (per-quality distributions). `delivery/sync_web_bench.py` validates
+  the source and strips `_deprecated_v3` before writing.
+- No `findings` block: thematic failure clusters, contrast sets, and
+  field-relative model signatures are NOT in the lean payload. They are deferred
+  to a re-authored Safety/Care artifact-v2.
 
 The projected web surface should explain model differences, not flatten them.
-Its public analysis is organized around four layers:
+In lean `safety-care/v1` its public analysis is organized as per-model audit cards:
 
-1. **Reading protocol** — hard gates first, failure modes second, rank last.
-2. **Theme audit** — universal, jagged, and emerging failure patterns.
-3. **Optional contrastive pairs** — matched caregiver pressure with divergent
-   model behavior and quoted transcript evidence only when the contrast
-   artifact is present.
-4. **Model signatures** — per-model deployment reads combining safety tier,
-   category strengths/weaknesses, hard-fail evidence, and repeating blind spots.
+1. **Reading protocol** — Safety violation rates first (claim-bearing, lower =
+   safer), Care distributions second (directional/provisional), no rank/composite.
+2. **Per-line Safety** — Crisis, Scope, Identity, Autonomy: conditional
+   violation rate with 95% CI and eligible-n; low-n lines read "insufficient
+   observations" rather than a precise rate.
+3. **Per-quality Care** — Belonging, Attunement, Relational, Advocacy as
+   directional pass-rate distributions (Trauma-awareness is a declared to-author
+   slot, excluded from comparison).
+
+Deferred to a re-authored Safety/Care artifact-v2 (not in lean v1): theme audit
+(universal/jagged/emerging), contrastive pairs with transcript evidence, and
+per-model signatures.
 
 Useful public analysis asks:
 

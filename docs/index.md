@@ -32,12 +32,13 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 
 ## Publication posture
 
-The public web-bench story is a narrative audit, not a stack rank. The release
-flow first documents the benchmark mechanics, then projects the scored outputs
-into caregiver-centered findings: thematic blind spots, hard-fail evidence,
-model signatures, and optional contrastive failure modes only when the contrast
-artifact is present. The current payload marks contrast findings absent
-optional (`findings.contrasts: []`). See
+The public web-bench story is a model-by-model audit, not a stack rank. The
+release flow first documents the benchmark mechanics, then projects the scored
+outputs into per-model audit cards: per-line Safety violation rates (claim-
+bearing, with CIs) and directional Care distributions (provisional). There is no
+composite and no rank. The richer narrative surface — thematic blind spots,
+contrastive pairs, model signatures — is deferred to a re-authored Safety/Care
+artifact-v2 and is not in the lean `safety-care/v1` payload. See
 [Benchmark Publishing Audit](publishing-audit.md).
 
 ## Quick start
