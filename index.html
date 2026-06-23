@@ -835,12 +835,13 @@ and current-roster relational quality gaps. See <a href="findings/">Key Findings
 <li>Benchmark version <strong>3.1.0</strong> | Public harness: <code>llm/raw</code></li>
 </ul>
 <h2 id="publication-posture">Publication posture<a class="headerlink" href="#publication-posture" title="Permanent link">&para;</a></h2>
-<p>The public web-bench story is a narrative audit, not a stack rank. The release
-flow first documents the benchmark mechanics, then projects the scored outputs
-into caregiver-centered findings: thematic blind spots, hard-fail evidence,
-model signatures, and optional contrastive failure modes only when the contrast
-artifact is present. The current payload marks contrast findings absent
-optional (<code>findings.contrasts: []</code>). See
+<p>The public web-bench story is a model-by-model audit, not a stack rank. The
+release flow first documents the benchmark mechanics, then projects the scored
+outputs into per-model audit cards: per-line Safety violation rates (claim-
+bearing, with CIs) and directional Care distributions (provisional). There is no
+composite and no rank. The richer narrative surface — thematic blind spots,
+contrastive pairs, model signatures — is deferred to a re-authored Safety/Care
+artifact-v2 and is not in the lean <code>safety-care/v1</code> payload. See
 <a href="publishing-audit/">Benchmark Publishing Audit</a>.</p>
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># See available commands</span>

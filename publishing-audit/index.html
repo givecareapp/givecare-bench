@@ -814,30 +814,32 @@ without relying on a single opaque LLM judge.</p>
   on residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows, so
   it must not be described as a strict-QA-passing leaderboard source.</li>
 </ul>
-<p>The web-bench payload is a smaller projection of that artifact:</p>
+<p>The web-bench payload is a lean projection of that artifact:</p>
 <ul>
 <li>Target: <code>../gc-web/apps/web-bench/public/bench/leaderboard.json</code></li>
-<li>Payload shape: <code>metadata</code>, <code>models</code>, and <code>findings</code></li>
-<li>Findings include A8 false reassurance, D2 infodump, hardest scenarios,
-  thematic failure clusters, optional contrast sets, and field-relative model
-  signatures.</li>
-<li>Current contrast status: absent optional. <code>data/leaderboard_phase2/contrasts.json</code>
-  is not present, so the current web payload intentionally carries
-  <code>metadata.contrast_surface.status: absent_optional</code> and
-  <code>findings.contrasts: []</code>; no contrast-set findings are active for this
-  payload.</li>
+<li>Payload shape (<code>safety-care/v1</code>): <code>schema</code>, <code>notes</code>, <code>scan_metadata</code>, and
+  <code>models</code> — each model carrying <code>safety</code> (per-line violation rates + aggregate)
+  and <code>care</code> (per-quality distributions). <code>delivery/sync_web_bench.py</code> validates
+  the source and strips <code>_deprecated_v3</code> before writing.</li>
+<li>No <code>findings</code> block: thematic failure clusters, contrast sets, and
+  field-relative model signatures are NOT in the lean payload. They are deferred
+  to a re-authored Safety/Care artifact-v2.</li>
 </ul>
 <p>The projected web surface should explain model differences, not flatten them.
-Its public analysis is organized around four layers:</p>
+In lean <code>safety-care/v1</code> its public analysis is organized as per-model audit cards:</p>
 <ol>
-<li><strong>Reading protocol</strong> — hard gates first, failure modes second, rank last.</li>
-<li><strong>Theme audit</strong> — universal, jagged, and emerging failure patterns.</li>
-<li><strong>Optional contrastive pairs</strong> — matched caregiver pressure with divergent
-   model behavior and quoted transcript evidence only when the contrast
-   artifact is present.</li>
-<li><strong>Model signatures</strong> — per-model deployment reads combining safety tier,
-   category strengths/weaknesses, hard-fail evidence, and repeating blind spots.</li>
+<li><strong>Reading protocol</strong> — Safety violation rates first (claim-bearing, lower =
+   safer), Care distributions second (directional/provisional), no rank/composite.</li>
+<li><strong>Per-line Safety</strong> — Crisis, Scope, Identity, Autonomy: conditional
+   violation rate with 95% CI and eligible-n; low-n lines read "insufficient
+   observations" rather than a precise rate.</li>
+<li><strong>Per-quality Care</strong> — Belonging, Attunement, Relational, Advocacy as
+   directional pass-rate distributions (Trauma-awareness is a declared to-author
+   slot, excluded from comparison).</li>
 </ol>
+<p>Deferred to a re-authored Safety/Care artifact-v2 (not in lean v1): theme audit
+(universal/jagged/emerging), contrastive pairs with transcript evidence, and
+per-model signatures.</p>
 <p>Useful public analysis asks:</p>
 <ul>
 <li>Which safety or scope gates failed, and with what evidence?</li>
