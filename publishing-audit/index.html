@@ -785,14 +785,14 @@ would make a caregiver AI feel brittle in practice.</p>
 <h2 id="phase-1-code-documentation">Phase 1: Code Documentation<a class="headerlink" href="#phase-1-code-documentation" title="Permanent link">&para;</a></h2>
 <p>The code documentation phase makes the procedure inspectable:</p>
 <ul>
-<li><code>checks/</code> (one YAML per check) defines the active 53-check failure
-  inventory across safety, compliance, communication, coordination, and boundary
-  integrity.</li>
+<li><code>checks/</code> (one YAML per check, organized as <code>checks/safety/*</code> and <code>checks/care/*</code>) defines the active 50-check failure
+  inventory across 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities
+  (Belonging, Attunement, Trauma-awareness, Relational, Advocacy).</li>
 <li>the <code>routing:</code> block in each <code>checks/&lt;ID&gt;.yaml</code> records which checks use
   deterministic, LLM, or corpus scorer routes.</li>
 <li>each check file embeds its judge prompt as a <code>prompt:</code> block.</li>
 <li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
-  into hard-fail, dimension, blind-spot, and overall artifacts.</li>
+  into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.</li>
 <li><code>scripts/run_scan.py</code>, <code>scripts/generate_leaderboard.py</code>,
   <code>scripts/qa_leaderboard.py</code>, and <code>delivery/sync_web_bench.py</code>
   form the release path from transcripts to public web payload.</li>
@@ -808,7 +808,7 @@ without relying on a single opaque LLM judge.</p>
 <li>Current source artifact: <code>results/v3_scan/merged_phase2/per_run.jsonl</code></li>
 <li>Current public benchmark version: <code>3.1.0</code></li>
 <li>Current publication stage: <code>v3-alpha</code></li>
-<li>Current public scan: 11 models × 63 scenarios × 53 active checks</li>
+<li>Current public scan: 11 models × 63 scenarios × 50 active checks</li>
 <li>Current generated timestamp: <code>2026-06-10T17:45:13Z</code></li>
 <li>Current strict QA status: not passing. The current artifact fails strict QA
   on residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows, so
@@ -851,10 +851,12 @@ Its public analysis is organized around four layers:</p>
 <p>That is the Web-bench narrative contract: expose the shape of model behavior in
 caregiver AI, especially the non-obvious jagged edges that aggregate scores hide.</p>
 <h2 id="claim-posture">Claim Posture<a class="headerlink" href="#claim-posture" title="Permanent link">&para;</a></h2>
-<p>The strongest public claims are hard-fail rates, safety/compliance gate behavior,
-and evidence-backed failure signatures. Overall score and rank are secondary
-navigation aids. They should not be the main story unless two models have similar
-hard-fail surfaces and the comparison is framed as exploratory.</p>
+<p>The strongest public claims are Safety violation rates (per-line conditional,
+calibration-gated), gate behavior, and evidence-backed failure signatures. There
+is no composite score and no single rank — the leaderboard payload is
+<code>{safety, care}</code> (schema <code>safety-care/v1</code>). Care distributions are directional
+signal and should be presented as such. Model comparisons are framed by blind-spot
+overlap and jagged Safety profiles, not point rankings.</p>
 <p>Avoid claims like "best caregiver model." Prefer claims like:</p>
 <ul>
 <li>"clean safety gates but weak presence-without-action behavior"</li>

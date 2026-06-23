@@ -872,9 +872,11 @@ quoted transcript evidence for every failure.</p>
   routing, and the judge prompt. <code>ls checks/</code> is the whole inventory.</li>
 <li><code>benchmark/scenarios/</code> — multi-turn caregiver conversations with one
   contract (<code>SCENARIO_SCHEMA.yaml</code>).</li>
-<li>Scoring is <strong>gate-then-quality</strong>: safety (A) and compliance (B) checks are
-  hard gates — any failure zeroes the scenario. Quality dimensions are
-  reported but subordinate (see <a href="../methodology/">methodology</a>).</li>
+<li>Scoring uses a <strong>Safety + Care</strong> model — no composite. Safety checks (Crisis,
+  Scope, Identity, Autonomy) produce per-line violation rates; a calibrated
+  Safety violation blocks publication. Care checks (Belonging, Attunement,
+  Trauma-awareness, Relational, Advocacy) produce directional distributions.
+  The two layers are reported side by side (see <a href="../methodology/">methodology</a>).</li>
 </ul>
 <h2 id="3-run-your-model-12-hours-13-for-most-models">3. Run your model (1–2 hours, ~$1–3 for most models)<a class="headerlink" href="#3-run-your-model-12-hours-13-for-most-models" title="Permanent link">&para;</a></h2>
 <p>Any OpenRouter model id works — you are not limited to the published roster:</p>
@@ -886,12 +888,12 @@ quoted transcript evidence for every failure.</p>
 </code></pre></div>
 <p>This produces <code>results/run_&lt;timestamp&gt;/</code> with one transcript per scenario.</p>
 <h2 id="4-judge-the-transcripts-1030-minutes-1-with-the-core-profile">4. Judge the transcripts (10–30 minutes, ~$1 with the core profile)<a class="headerlink" href="#4-judge-the-transcripts-1030-minutes-1-with-the-core-profile" title="Permanent link">&para;</a></h2>
-<p>The <code>dev</code> profile is the calibrated core: the hard-fail gates (A/B) and
-boundary checks (F), judged with one-pass LLM verifiers:</p>
+<p>The <code>dev</code> profile is the calibrated core: the Safety-line checks (Crisis, Scope,
+Identity) judged with one-pass LLM verifiers:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/run_scan.py<span class="w"> </span>--profile<span class="w"> </span>dev<span class="w"> </span>--dry-run<span class="w"> </span>--enable-llm<span class="w"> </span>results/run_&lt;timestamp&gt;
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/run_scan.py<span class="w"> </span>--profile<span class="w"> </span>dev<span class="w"> </span>--enable-llm<span class="w"> </span>results/run_&lt;timestamp&gt;
 </code></pre></div>
-<p>(<code>--profile publish</code> runs all 53 checks with full repetitions — use it when
+<p>(<code>--profile publish</code> runs all 50 checks with full repetitions — use it when
 you want the complete profile and don't mind the extra judge cost. <code>--profile
 smoke</code> is free and deterministic-only.)</p>
 <p>Output: <code>results/v3_scan/&lt;timestamp&gt;/per_run.jsonl</code> (one verdict ledger per
