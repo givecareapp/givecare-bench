@@ -34,6 +34,8 @@ theme:
 
 nav:
   - Home: index.md
+  - The Model — Safety + Care: ontology.md
+  - What InvisibleBench Owns: what-invisiblebench-owns.md
   - Quickstart: quickstart.md
   - Install: install.md
   - Scoring Rubric: scoring-rubric.md
@@ -44,6 +46,10 @@ nav:
   - Check Inventory: checks.md
   - Key Findings: findings.md
   - Verifier Validation: verifier-validation.md
+
+exclude_docs: |
+  clawpatch-watchlist.md
+  paper-draft/
 
 plugins:
   - search
