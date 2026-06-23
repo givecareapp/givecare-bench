@@ -66,3 +66,35 @@ def registered_check_ids(checks_dir: Path | None = None) -> set[str]:
     return {
         p.stem for p in root.rglob("*.yaml") if not p.name.startswith("_")
     }
+
+
+def check_dimensions(checks_dir: Path | None = None) -> dict[str, dict[str, str]]:
+    """Return layer + dimension metadata for each check derived from directory structure.
+
+    Checks live at checks/<layer>/<dimension>/<id>.yaml where:
+      layer      ∈ {safety, care}
+      dimension  ∈ {crisis, scope, identity, autonomy}          (safety)
+                 ∪ {belonging, attunement, trauma_awareness,
+                    relational, advocacy}                        (care)
+
+    Returns:
+        Mapping of check_id → {"layer": <layer>, "dimension": <dimension>}.
+        Checks that do not conform to the two-level structure are omitted.
+    """
+    root = checks_dir or CHECKS_DIR
+    result: dict[str, dict[str, str]] = {}
+    for check_file in sorted(root.rglob("*.yaml")):
+        if check_file.name.startswith("_"):
+            continue
+        # Expect root/<layer>/<dimension>/<id>.yaml  (depth = 3 parts from root)
+        try:
+            rel = check_file.relative_to(root)
+        except ValueError:
+            continue
+        parts = rel.parts  # e.g. ("safety", "crisis", "IB-A1.yaml")
+        if len(parts) != 3:  # noqa: PLR2004
+            continue
+        layer, dimension = parts[0], parts[1]
+        check_id = check_file.stem
+        result[check_id] = {"layer": layer, "dimension": dimension}
+    return result
