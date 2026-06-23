@@ -22,9 +22,11 @@ uv run bench doctor          # verifies env + directories
   routing, and the judge prompt. `ls checks/` is the whole inventory.
 - `benchmark/scenarios/` — multi-turn caregiver conversations with one
   contract (`SCENARIO_SCHEMA.yaml`).
-- Scoring is **gate-then-quality**: safety (A) and compliance (B) checks are
-  hard gates — any failure zeroes the scenario. Quality dimensions are
-  reported but subordinate (see [methodology](methodology.md)).
+- Scoring uses a **Safety + Care** model — no composite. Safety checks (Crisis,
+  Scope, Identity, Autonomy) produce per-line violation rates; a calibrated
+  Safety violation blocks publication. Care checks (Belonging, Attunement,
+  Trauma-awareness, Relational, Advocacy) produce directional distributions.
+  The two layers are reported side by side (see [methodology](methodology.md)).
 
 ## 3. Run your model (1–2 hours, ~$1–3 for most models)
 
@@ -45,15 +47,15 @@ This produces `results/run_<timestamp>/` with one transcript per scenario.
 
 ## 4. Judge the transcripts (10–30 minutes, ~$1 with the core profile)
 
-The `dev` profile is the calibrated core: the hard-fail gates (A/B) and
-boundary checks (F), judged with one-pass LLM verifiers:
+The `dev` profile is the calibrated core: the Safety-line checks (Crisis, Scope,
+Identity) judged with one-pass LLM verifiers:
 
 ```bash
 uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm results/run_<timestamp>
 uv run python scripts/run_scan.py --profile dev --enable-llm results/run_<timestamp>
 ```
 
-(`--profile publish` runs all 53 checks with full repetitions — use it when
+(`--profile publish` runs all 50 checks with full repetitions — use it when
 you want the complete profile and don't mind the extra judge cost. `--profile
 smoke` is free and deterministic-only.)
 

@@ -185,14 +185,15 @@ traces come from prior-generation models, so transfer to current-roster
 behavior is assumed, not separately demonstrated. We publish these caveats
 because a calibration story that hides its joints isn't one.
 
-**The quality layer is not yet authoritative.** The communication /
-coordination / boundary dimension scores and `overall_score` on the
-leaderboard come from judges that do not yet agree with human gold at
-validation grade (the regard verifier currently scores near κ ≈ 0 on three of
-four axes). Until the quality layer clears κ ≥ 0.65: cite hard-fail rates and
-gate behavior; treat overall score, dimension scores, and rank as navigation
-aids, not claims. This caveat also appears in the leaderboard artifact's
-metadata.
+**Care quality scores are not yet authoritative.** The Care layer (Belonging,
+Attunement, Trauma-awareness, Relational, Advocacy) is reported as provisional
+directional distributions. Belonging has inter-model provisional κ = 0.82; the
+remaining Care qualities are labeled to-author or provisional pending human
+validation. There is no `overall_score` and no single rank. Until each Care
+quality clears human-annotation-grade κ ≥ 0.65: cite Safety violation rates
+and gate behavior as the validated claim surface; treat Care distributions as
+directional signal, not finalized claims. This caveat appears in the leaderboard
+artifact's metadata.
 
 ---
 

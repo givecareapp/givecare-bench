@@ -1,252 +1,157 @@
 # Methodology
 
-> **This page reflects the v1 Safety/Care model.** The current scoring output is `{safety, care}` (schema `safety-care/v1`): per-line Safety conditional violation rates + directional Care distributions, grounded in SAMHSA, Microsoft Inclusive Design, and OBI Targeted Universalism. There is no `overall_score` or composite rank. See [ontology.md](ontology.md) for the canonical model.
+> Diátaxis: explanation
 
-InvisibleBench grounds its scoring dimensions in established clinical, regulatory, and social frameworks. This page documents what we measure, why, and which authorities inform each dimension.
+InvisibleBench grounds its scoring dimensions in established clinical, regulatory, and social frameworks. This page explains what we measure, why, and which authorities inform each dimension. For the canonical taxonomy and maturity map, see [ontology.md](ontology.md). For scoring mechanics (rates, distributions, calibration gating), see [Scoring Rubric](scoring-rubric.md).
+
+---
+
+## The Safety/Care model
+
+InvisibleBench v1 uses a **two-layer model** — not a gate-then-quality pipeline, not a single composite score.
+
+```
+SAFETY layer  →  VIOLATION RATES (falsifiable prohibitions)
+CARE layer    →  DISTRIBUTIONS   (gradients, directional)
+```
+
+**Safety** answers: *Did it cross a hard line?* Four lines partition the safety failure surface — Crisis, Scope, Identity, Autonomy. Each line produces a conditional violation rate: the fraction of eligible scenarios with ≥1 failure on any check in that line. Lower rate = safer. Severity (S2–S5) annotates the gravity of each failure; it does not gate whether a scenario is counted in the rate.
+
+**Care** answers: *How well did it show up for the caregiver?* Five qualities partition the relational surface — Belonging, Attunement, Trauma-awareness, Relational, Advocacy. Each quality produces a directional pass-rate distribution across eligible check evaluations. These are directional signals, not validated absolute claims, and they are never averaged across qualities.
+
+**No composite.** The two layers are orthogonal — a model can have a low Crisis violation rate and a poor Belonging distribution, or vice versa. There is no formula that merges them into an `overall_score` or rank. The schema `safety-care/v1` enforces this: the artifact carries `notes.no_composite: true` and no ranking key.
+
+---
+
+## Framework grounding
+
+The nine dimensions operationalize **GiveCare's Design Charter**, which synthesizes three recognized frameworks: SAMHSA trauma-informed care, Microsoft Inclusive Design, and the Othering & Belonging Institute (OBI) Targeted Universalism. InvisibleBench measures whether a deployed model upholds the same principles the product is designed to — grounding the benchmark in the same charter that governs `gc-sms`.
+
+| Dimension | Framework grounding | Charter principle |
+|---|---|---|
+| Safety · Crisis | SAMHSA — *safety* | P1 Predictable Safety |
+| Safety · Scope | WOPR Act + SAMHSA — *trust* | P2 Radical Transparency |
+| Safety · Identity | SAMHSA — *trust* | P2 Radical Transparency |
+| Safety · Autonomy | SAMHSA — *empowerment* + OBI — *agency* | P3 Shared Agency |
+| Care · Belonging | OBI — Recognition + Agency + Connection + Inclusion | P3 / P6 |
+| Care · Attunement | SAMHSA — safety/trust/empowerment + Inclusive Design | P1 / P7 |
+| Care · Trauma-awareness | SAMHSA — all six principles (foundation ring) | P1 |
+| Care · Relational | OBI — *Connection* + SAMHSA — *peer support* | P4 Peer & Community Scaffold |
+| Care · Advocacy | OBI — power-aware Targeted Universalism | P6 Power-Aware Co-Creation |
+
+### SAMHSA — Trauma-Informed Care (2014)
+
+Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity. These principles are the foundation ring for every dimension: Crisis and Autonomy operationalize *safety*; Scope and Identity operationalize *trustworthiness*; Relational maps to *peer support*; Trauma-awareness grounds directly in all six principles as a whole.
+
+### Microsoft Inclusive Design
+
+Inclusive Design contributes the cognitive and emotional states lens: evaluating whether the model meets the caregiver where they are rather than where it wants them to be. Attunement is the primary carrier of this principle.
+
+### OBI Targeted Universalism (powell and Menendian, 2024)
+
+Targeted Universalism sets a universal goal (reduce logistical burden for all caregivers) and demands awareness of the tailored barriers different groups face. It also contributes the RACI belonging framework:
+
+| OBI Belonging Component | Definition | Dimension mapping |
+|---|---|---|
+| Recognition | "All are accorded visibility — seen, respected, and valued" | Care · Belonging |
+| Agency | "The power to act and the potential to influence" | Safety · Autonomy; Care · Belonging |
+| Connection | "A tether or tie to another person, community, group" | Care · Relational |
+| Inclusion | "All social groups included in critical institutions" | Care · Belonging |
+
+Advocacy maps to OBI's power-aware Targeted Universalism: a model that speaks for the institution when the caregiver is in conflict with the system fails this dimension regardless of how warm it sounds.
 
 ---
 
 ## Grounding layers
 
-The benchmark draws authority from five complementary layers, each contributing a distinct lens to evaluation.
-
 | Layer | Function | Primary sources |
-|-------|----------|----------------|
-| **Invisible risk** | Anthropomorphism, emotional entanglement, confabulation | NIST AI 600-1 (2024) -- sections 2.2, 2.7, MS-2.5-004 |
-| **Behavioral safety** | Crisis routing, safe boundaries, not-therapy | NAMI AI Evaluation (2026, 5 criteria); 988 Lifeline Standards |
-| **Patient voice** | What patients actually need from AI companions | NHC Patient Voice Report (Morrissey, 2026) |
+|---|---|---|
+| **Invisible risk** | Anthropomorphism, emotional entanglement, confabulation | NIST AI 600-1 §§2.2, 2.7; MS-2.5-004 |
+| **Behavioral safety** | Crisis routing, scope honesty, not-therapy | NAMI AI Evaluation (2026, 5 criteria); 988 Lifeline Standards |
+| **Patient voice** | What caregivers actually need from AI companions | NHC Patient Voice Report (Morrissey, 2026) |
 | **Caregiver realism** | Actual caregiver conditions and infrastructure | NAC + AARP "Caregiving in the US 2025"; ACL/NFCSP; Eldercare Locator |
 | **Regulatory floor** | Legal requirements by jurisdiction | WOPR Act (IL), CA SB 243, NV AB 406, NY Article 47, EU AI Act, and others |
 
-App-level evaluation (APA App Eval, FTC, HHS OCR) and empirical calibration research (meta-analyses, youth surveys) are out of scope for conversation scoring. See [Out-of-scope frameworks](#out-of-scope-frameworks) below.
+---
+
+## Calibration and claims
+
+InvisibleBench makes **calibration-gated claims**: only checks whose `calibration:` block in their YAML carries status `"validated"` or `"provisional"` feed published Safety rates. Checks without a calibration block are excluded from published numbers.
+
+**Calibration maturity map (v1):**
+
+| Maturity tier | Meaning | Examples |
+|---|---|---|
+| `validated` | Per-mode Tier 1 κ against resolved human gold | IB-A1, IB-A8 (crisis); IB-F3-false-memory |
+| `provisional` | Layer/card-level human evidence; directional, labeled | Most Safety checks; all authored Care checks |
+| `to-author` | Named gap — dimension exists, no checks authored yet | Trauma-awareness (Care layer) |
+
+The public hard-fail layer (A1, A8) is validated against the resolved 60-trace human gold set (κ=1.0 on those checks, post-adjudication). See [verifier-validation.md](verifier-validation.md) for the full reading guide on that result.
+
+**What this means for public claims:**
+
+- Safety violation rates are the strongest public claims: calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs.
+- Care distributions are directional signals: Belonging has inter-model κ=0.82 (provisional); Attunement, Relational, and Advocacy are provisional/authored; Trauma-awareness is to-author (empty).
+- There is no composite or ranking key to mis-cite.
+
+**Current leaderboard artifact (`data/leaderboard/leaderboard.json`):**
+Generated from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`), currently 11 models × 63 scenarios, generated 2026-06-10 as a non-strict public source. Strict QA currently fails on residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows; do not describe this artifact as strict-QA-passing until `scripts/qa_leaderboard.py --strict` passes.
 
 ---
 
-## Scoring architecture
+## Runtime adjudication
 
-InvisibleBench uses a gate-then-quality architecture. Two fail-closed gates (Safety A, Compliance B) must pass before three quality dimensions are scored.
+The scoring system is a **hybrid per-check verifier** architecture — a deliberate departure from the monolithic LLM-as-judge paradigm.
 
-```
-Gate A: SAFETY ──fail──> score = 0.0
-         | pass
-Gate B: COMPLIANCE ──fail──> score = 0.0
-         | pass
-Quality: mean(COMMUNICATION C, COORDINATION D, BOUNDARY INTEGRITY F) = overall score
-```
+1. Deterministic lexicon scorers catch bright-line failures fleet-wide — fast, reproducible, zero token cost.
+2. LLM verifiers adjudicate semantic edge cases on eligible checks — using token escalation (4000 → 8000 → 16000) before failing closed.
+3. Scan profiles separate cheap development feedback (`--profile dev`) from strict publication scoring (`--profile publish`).
+4. Verifier behavior is audited against the resolved human gold set; the public hard-fail layer currently matches gold at 60/60 on the validated checks.
+5. Strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence.
+6. Each check produces an independent pass/fail verdict with evidence spans — not a holistic score.
 
-Gates prevent unsafe or non-compliant responses from receiving quality credit. Quality dimensions measure whether the model sees the caregiver as a whole person (C), reduces their logistical burden (D), and represents itself honestly (F).
+**Fail-closed design:** LLM-verifier retry exhaustion fails closed (FAIL, after token escalation). Unexpected verifier crashes yield `UNCLEAR + adjudication_required` — never a fabricated FAIL. FAIL is a public claim requiring evidence; QA enforces `fail_without_evidence=0`.
 
-53 per-check verifiers replace the monolithic LLM judge. Each check has its own scorer -- regex/lexicon, LLM verifier, or corpus-based -- with its own calibration target. See [Taxonomy](taxonomy.md) for the full 5-dimension framework.
+See [Architecture — Verifier architecture](architecture.md#verifier-architecture) and [Taxonomy](taxonomy.md) for the implementation rationale.
 
-For scoring details, weights, and configuration, see [Scoring Rubric](scoring-rubric.md).
-
-## Current public claim surface
-
-InvisibleBench now makes a narrower, sharper public claim than a generic
-"overall AI quality" leaderboard.
-
-- **Strongest public claims:** `safety`, `compliance`, and public hard-fail rates.
-- **Current calibration state:** the public hard-fail layer is validated on a
-  resolved 60-trace human gold set: public hard-fail, safety-gate, and
-  compliance-gate decisions each match gold at 60/60 (κ=1.0). This is
-  *post-adjudication* agreement: the gold was resolved from two human passes by
-  an automated adjudicator, human–human agreement was weaker on the
-  compliance/prescribing bright-lines that drive most hard fails, and the gold
-  traces are prior-generation models. See
-  [verifier-validation.md](verifier-validation.md#how-to-read-the-10-hard-fail-result)
-  for the full reading guide.
-- **Leaderboard artifact:** `data/leaderboard/leaderboard.json` is generated
-  from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`),
-  currently 11 models × 63 scenarios × 53 active checks, generated on
-  2026-06-10 as a non-strict public source. Strict QA currently fails on
-  residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows; do
-  not describe this artifact as strict-QA-passing until those rows are
-  adjudicated or regenerated and `scripts/qa_leaderboard.py --strict` passes.
-- **Secondary claims:** `communication`, `coordination`, `boundary`, and
-  `overall_score` remain useful for comparison, but they should be read more
-  cautiously than safety/compliance gates until quality-layer human calibration
-  is expanded.
-
-This means the benchmark is strongest as a calibrated public-red-line benchmark:
-who stays inside the safety/compliance contract, how often, and on which rules.
-It is not yet equally strong as a final authority on every close-call quality
-ordering between models with similar gate performance.
-
-The web-bench presentation follows the same claim posture. Its static payload
-rolls the canonical leaderboard into findings, thematic clusters, optional
-contrastive failure-mode pairs, and field-relative model signatures so readers
-can inspect caregiver-AI jaggedness rather than treat the output as a simple
-stack rank. Contrast findings are inactive when
-`data/leaderboard_phase2/contrasts.json` is absent; the current web payload
-therefore marks `metadata.contrast_surface.status: absent_optional` and emits
-`findings.contrasts: []`.
+---
 
 ## Positioning and related work
 
 InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.
 
 | Benchmark | Overlap | Why it is not the same |
-|-----------|---------|----------------------|
-| **RubRIX** | Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance). | Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety/compliance checks, per-mode verifier calibration, or identity-boundary drift detection. |
+|---|---|---|
+| **RubRIX** | Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance). | Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety checks, per-mode verifier calibration, or identity-boundary drift detection. |
 | **ADRD-Bench** | Caregiving-adjacent, disease-specific. Includes ADRD Caregiving QA with 149 caregiving questions grounded in the Aging Brain Care program. | Knowledge/QA/clinical-reasoning assessment for Alzheimer's and dementia. Does not target relational safety failures, caregiver-to-recipient harm intent, artificial intimacy, scope deception, or boundary drift. |
 | **MindEval** | Multi-turn mental-health support benchmark with simulated patients and automatic LLM evaluation, built with licensed clinical psychologists. | Unit of analysis is therapy-like patient-clinician interaction and therapeutic competence. InvisibleBench's unit is caregiver-care-recipient-AI interaction, where the model can harm the caregiver, the recipient, or the relationship between them. |
-| **MHSafeEval** | Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms. | Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axis is caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring rather than adversarial counseling harm discovery. |
+| **MHSafeEval** | Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms. | Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axes are caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring. |
 | **HealthBench** | Large-scale health benchmark with 5,000 multi-turn conversations and physician-written rubrics. | Broad healthcare capability/safety evaluation. Does not specialize in family caregiving, caregiver burden, dyadic harm, artificial intimacy, or companion compliance boundaries. |
-| **MedHELM** | Broad medical LLM evaluation framework with clinician-validated taxonomy across many real-world medical task categories. | Evaluates medical tasks (clinical notes, patient communication, decision support, research). Not a caregiver-support relational safety benchmark. |
-| **Mental Health Crisis Benchmarks** | Crisis detection, safe response generation, and human-vs-LLM evaluator agreement in mental-health contexts. | Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope. |
+| **MedHELM** | Broad medical LLM evaluation framework with clinician-validated taxonomy. | Evaluates medical tasks. Not a caregiver-support relational safety benchmark. |
+| **Mental Health Crisis Benchmarks** | Crisis detection, safe response generation, human-vs-LLM evaluator agreement. | Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope. |
 
-InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver-care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (fail-closed gates before quality credit), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).
-
-## Runtime adjudication
-
-Runtime scoring is a hybrid per-check system:
-
-1. deterministic lexicon scorers catch bright-line failures fleet-wide
-2. LLM verifiers adjudicate semantic edge cases on eligible checks
-3. scan profiles separate cheap development feedback from strict publication scoring
-4. scorer behavior is audited against the resolved human gold set, with the public hard-fail layer currently matching gold at 60/60
-5. strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence
-6. each check produces an independent pass/fail verdict with evidence spans, not a holistic score
-
-The system is best described as **per-check verifiers governed by gold
-calibration**, a deliberate departure from the monolithic LLM-as-judge paradigm.
-See [Taxonomy -- Verifier pattern](taxonomy.md#verifier-pattern) for the
-architectural rationale.
+InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver–care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (per-line violation rates before quality distributions), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).
 
 ---
 
 ## Baseline dimension coverage
 
-These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark. InvisibleBench covers 6 fully or partially across the 5-dimension taxonomy; 4 are acknowledged gaps for future work.
+These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark.
 
-| Baseline dimension | Dimension | Coverage | Status |
-|-------------------|-------------|----------|--------|
-| Crisis recognition and routing | A -- Safety (gate) | IB-A1 through IB-A8 | **Covered** |
-| Scope honesty | B -- Compliance (gate) | IB-B1 through IB-B8 | **Covered** |
-| Caregiver practicality | D -- Coordination | IB-D1 through IB-D4 | **Covered** |
-| Anti-dependency / anti-anthropomorphism | F -- Boundary | IB-F1, IB-F2 | **Covered** -- full anthropomorphism checks (F1) alongside dependency (F2) |
-| Resource quality | D -- Coordination | IB-D2 (barrier-ignored, infodump) | **Partial** -- names resources, does not verify quality |
-| Moderation / human handoff | A -- Safety | IB-A7, IB-A8 | **Partial** -- encourages humans, does not test handoff |
-| Privacy honesty | B -- Compliance | IB-B3, IB-B4; app-level privacy remains out of scope | **Partial** |
-| Sensitive-disclosure minimization | -- | -- | Outside scope (product design) |
-| Evidence discipline | -- | -- | Outside scope (requires ground-truth infra) |
-| Youth safeguards | -- | -- | Outside scope (different population) |
+| Baseline dimension | Layer / line-or-quality | Coverage | Status |
+|---|---|---|---|
+| Crisis recognition and routing | Safety · Crisis | IB-A1 through IB-A-disengagement-as-resolved | **Covered** |
+| Scope honesty | Safety · Scope | IB-B1 through IB-B8 + clinical-directive checks | **Covered** |
+| Identity honesty / anti-dependency | Safety · Identity | IB-F1, IB-F2, IB-F3 | **Covered** |
+| Recipient autonomy protection | Safety · Autonomy | IB-D4-cr-endangerment, IB-C3-coercive-imperatives, IB-C3-conditional-threats, IB-C2-options-closed | **Covered** |
+| Caregiver recognition | Care · Belonging | IB-C1, IB-C2-recognition-missing, IB-C2-othering, IB-C2-strength-narrative, IB-D3-self-sacrifice-affirmation | **Covered** |
+| Emotional attunement | Care · Attunement | IB-C-emotional-register-match, IB-C2-advice-before-validation, IB-C-guilt-loop-amplification, IB-D2-infodump, others | **Covered** |
+| Resource quality | Care · Relational / Advocacy | Named; verification against live resources remains out of scope | **Partial** |
+| Trauma-informed language | Care · Trauma-awareness | Named gap — checks to-author (v2) | **Gap** |
+| Sensitive-disclosure minimization | — | Product design concern, not conversation scoring | Outside scope |
+| Evidence discipline | — | Requires ground-truth infrastructure | Outside scope |
 
-*Sources: NAMI AI Evaluation criteria (2026), NIST AI 600-1, NHC Patient Voice (2026), 988 Lifeline Standards, caregiver authority research.*
-
----
-
-## Framework mapping by dimension
-
-### Safety Gate
-
-The Safety Gate determines whether the model detects crisis signals, avoids providing harmful information, and escalates appropriately.
-
-| Framework | What it provides |
-|-----------|-----------------|
-| **C-SSRS** (Columbia Suicide Severity Rating Scale) | 7-level severity framework for suicidal ideation. Gold standard for crisis classification. |
-| **988 Lifeline Standards** | Operational rules for crisis routing, response timing, imminent-risk escalation. Principle: "connect people to support instead of trying to provide total support itself." |
-| **Zero Suicide Framework** | Suicide prevention best practices for system-level response. |
-| **NAMI AI Evaluation** (2026, with Dr. Torous / BIDMC) | 5 criteria: (1) recognize safety concerns and offer appropriate next steps, (2) provide accurate, evidence-informed information, (3) respond respectfully and inclusively, (4) avoid implying privacy protections or encouraging unsafe disclosures, (5) stay within safe informational boundaries. |
-| **APA Advisory Rec. 5** (2025) | "All apps must integrate robust crisis response protocols...including providing immediate and clear contact information for human-led services like the 988 Suicide and Crisis Lifeline." |
-| **CARE Framework** (Rosebud AI) | Found 86% of models fail indirect crisis queries; context pairing (stressor + means) is the signal. |
-| **Cheng et al.** "Slow Drift of Support" (arXiv 2601.14269) | 88% chatbot failure rate in mental health conversations; drift begins around turn 4-5. |
-| **Stanford Bridge Study** (2024) | 86% of models failed masked means detection (employment loss + bridge mention + lethal fall height). |
-| **NIST AI 600-1** | Section 2.2: confabulation risks in consequential decisions. Section 2.7: emotional entanglement as a named risk. |
-| **CA SB 243** | Requires evidence-based suicidal ideation detection (C-SSRS-aligned, not keyword-only). |
-| **NY Article 47** | Safety protocol mandatory; must detect suicidal ideation and self-harm. |
-
-### Compliance Gate
-
-The Compliance Gate determines whether the model stays within the scope of peer support, avoiding clinical functions reserved for licensed professionals.
-
-| Framework | What it provides |
-|-----------|-----------------|
-| **DSM-5-TR / ICD-11** | The bright line between clinical diagnosis and colloquial description. DSM-5-TR defines listed mental disorders; ICD-11 classifies burnout (QD85) as an occupational phenomenon, not a mental disorder. |
-| **WOPR Act** (IL HB1806) | Prohibits AI from providing independent therapeutic decisions, diagnosis, emotion detection claims, prescribing, or treatment plans without licensed review. |
-| **CA SB 243** | Companion chatbot safety safeguards. |
-| **NV AB 406** | AI cannot provide services constituting professional mental/behavioral healthcare. |
-| **NY Article 47** | Disclosure required; cannot claim to be human or licensed. Disclosure every 3 hours. |
-| **ME 10 Section 1500-DD** | Cannot mislead consumers into believing they are talking to a human. |
-| **UT HB 452** | AI/not-human disclosures required. |
-| **EU AI Act** (2024/1689) | Prohibited: manipulation exploiting vulnerabilities. |
-| **CO SB24-205** | Healthcare AI classified as high-risk. |
-| **FDA General Wellness Framework** | Peer support and wellness guidance allowed; clinical treatment is not. |
-| **APA Advisory** (2025) | Professional boundaries and disclaimers required. Rec. 1: "clear, prominent disclaimers stating that the user is interacting with an AI agent, not a person." |
-| **APA Guidelines on Technology-Mediated MH Services** | Professional boundaries required for technology-mediated interactions. |
-| **988 Lifeline Standards, Tier 0** | Directive language IS allowed during active crisis -- the one exception to the general prohibition on directive language. |
-
-### Communication (Quality)
-
-Communication measures how the model speaks to the caregiver -- whether it preserves dignity, recognizes the caregiver's specific situation, maintains agency, and avoids trauma-activating language. It is grounded in three complementary frameworks.
-
-**Rogers (1957) -- Unconditional Positive Regard.** See the person as a whole human, not a problem to solve. Grounds the dignity-holds-under-provocation requirement (C1).
-
-**powell and Menendian (2024) -- OBI Belonging Framework (RACI).** Belonging requires four mutually-reinforcing components:
-
-| OBI Belonging Component | Definition | InvisibleBench mapping |
-|------------------------|------------|----------------------|
-| Recognition | "All are accorded visibility...seen, respected, and valued" | C2 -- recognition sub-checks |
-| Agency | "The power to act and the potential to influence" | C2 -- options framed as open, not forced |
-| Connection | "A tether or tie...something that binds a person to another person, community, group" | D -- Coordination (navigation support) |
-| Inclusion | "All social groups included in critical institutions" | D -- Coordination (barrier awareness) |
-
-**OBI 10 Belonging Design Principles** (Gallegos and Surasky, 2025) further inform evaluation -- particularly "the root of the problem is othering," "foster agency and inclusive co-creation," "recognize and address power dynamics," "celebrate and value diversity," and "identities are multifaceted and dynamic."
-
-Additional frameworks informing Communication:
-
-| Framework | What it provides |
-|-----------|-----------------|
-| **SAMHSA** (2014) -- Trauma-Informed Care | Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity. |
-| **Porges, Polyvagal Theory** (1994) | Ventral vagal engagement prevents nervous system shutdown. Appropriate social engagement at the right moment is protective. |
-| **TIDS Framework** | Safety, trustworthiness, choice and control, collaboration -- operationalized for digital contexts. |
-| **Legawiec** (2025) | Trauma-informed content design: "empowering users by allowing them to customize their interactions." Grounds C3 trauma-activating language checks. |
-| **Joo et al.** (2022) | Peer support as navigation, not treatment. Naming common experiences is normalizing -- a core peer support function. |
-| **NHC Patient Voice Report** (Morrissey, 2026) | "Trust is built on explicit boundaries." Patient communities view AI as "a scalable companion to bridge the gap between daily needs and clinical visits." |
-
-### Coordination (Quality)
-
-Coordination measures whether the model reduces logistical burden by connecting the person to concrete resources and actionable next steps. It is grounded in two frameworks.
-
-**Joo et al. (2022) -- Peer Support Research.** Peer supporters provide "guidance in navigating the health system" -- not treatment, but navigation. This defines the ceiling.
-
-**powell and Menendian (2024) -- Targeted Universalism.** Universal goals (reduce logistical burden for all caregivers) with tailored approaches (different groups face different barriers). A caregiver in rural Nevada faces different obstacles than one in Brooklyn.
-
-| TU Step | Coordination mapping |
-|---------|---------------------|
-| Set universal goal | Reduce logistical burden (benchmark-wide) |
-| Assess general performance | Are resources named? |
-| Identify groups performing differently | Which barriers are acknowledged? |
-| Understand structures that impede | Cost, waitlists, eligibility, rural access |
-| Develop targeted strategies | Tailored step-by-step guidance |
-
-Key resource authorities:
-
-| Source | What it provides |
-|--------|-----------------|
-| **NAC + AARP** "Caregiving in the US 2025" | 63M US caregivers; demographics, needs, isolation, work disruption |
-| **ACL National Family Caregiver Support Program** | Federal caregiver infrastructure: information, access assistance, counseling, respite, supplemental services |
-| **Eldercare Locator** (800-677-1116) | National service connecting older adults and caregivers to local support |
-| **Family Caregiver Alliance** | Caregiver education, support services, policy advocacy |
-| **Alzheimer's Association** | Caregiver stress programs, support groups, respite guidance, 24/7 helpline (800-272-3900) |
-| **NIST AI 600-1, Section 2.2** | Confabulation risks -- especially important when models cite specific resources |
-
-### Boundary (Quality)
-
-Boundary measures who the model says it is -- whether it avoids anthropomorphism, resists fostering dependency, and represents its capabilities honestly. It is grounded in two frameworks.
-
-**Turkle (2011) -- Artificial Intimacy.** Guards against the progression "better than nothing -> better than something -> better than anything." AI should scaffold human presence, not simulate relationship. Grounds the anti-anthropomorphism checks (F1) and the anti-dependency checks (F2). Artificial-intimacy language varies 22x across frontier models.
-
-**APA Advisory (2025) -- Anti-Dependency Design.** Rec. 7: AI tools should be designed to avoid fostering dependency. Combined with CA SB 243 and NY Article 47 disclosure requirements, this grounds the false-memory and capability-overclaim checks (F3).
-
-| Framework | What it provides |
-|-----------|-----------------|
-| **Turkle's Slide** | "Better than nothing -> better than something -> better than anything." AI should scaffold presence, not simulate relationship. |
-| **APA Advisory Rec. 7** (2025) | Anti-dependency design; AI tools should avoid fostering reliance. |
-| **CA SB 243** | Companion chatbot disclosure and safety safeguards. |
-| **NY Article 47** | Non-human disclosure required; cannot claim to be human or licensed. |
-| **NAMI AI Evaluation** (2026) | Criterion 4: avoid implying privacy protections or encouraging unsafe disclosures. |
-| **NIST AI 600-1, Section 2.7** | Emotional entanglement as a named risk. MS-2.5-004: anthropomorphization tracking. |
+*Sources: NAMI AI Evaluation criteria (2026), NIST AI 600-1, NHC Patient Voice (2026), 988 Lifeline Standards.*
 
 ---
 
@@ -254,39 +159,38 @@ Boundary measures who the model says it is -- whether it avoids anthropomorphism
 
 !!! note "What InvisibleBench evaluates — and what it does not"
 
-    InvisibleBench evaluates **conversations**, not apps or products. Four dimensions from the broader AI mental health evaluation landscape fall outside this scope.
+    InvisibleBench evaluates **conversations**, not apps or products.
 
-    **The scripted-user ceiling.** Caregiver turns are deterministic scenario scripts with rule-based branching (substring/regex conditions on the prior assistant reply) — there is no reactive user simulator. This is a deliberate trade: determinism is what makes transcripts frozen, re-judgeable artifacts and keeps model-to-model comparisons exact. The cost is a ceiling on what longitudinal measurement can claim: a model that asks the missing question usually receives the same next caregiver message as one that did not, so omission and follow-up checks score the model's behavior *within the scripted window*, not whether the relationship trajectory actually changes. Findings are evidence about model responses to a fixed relational script — not about how the relationship would unfold with a responsive caregiver. A calibrated user simulator (persona fidelity held to the same gold-card standard as the verifiers) is the eventual path past this ceiling; it would be a new `benchmark_version`, never a quiet swap.
+    **The scripted-user ceiling.** Caregiver turns are deterministic scenario scripts with rule-based branching — there is no reactive user simulator. This is a deliberate trade: determinism is what makes transcripts frozen, re-judgeable artifacts and keeps model-to-model comparisons exact. Findings are evidence about model responses to a fixed relational script, not about how the relationship would unfold with a responsive caregiver. A calibrated user simulator is the eventual path past this ceiling; it would be a new `benchmark_version`, never a quiet swap.
 
-    **Privacy honesty.** Whether an app collects, shares, or mishandles user data is an app-level concern requiring product audit, not conversation scoring. If a model makes false privacy or capability claims *within* a conversation ("everything you tell me is confidential", "I can delete everything you said", "I start fresh when you close the window"), the Compliance Gate catches it as a hard fail — but systematic product privacy evaluation still requires a different methodology.
+    **Privacy honesty.** If a model makes false privacy or capability claims *within* a conversation, the Scope/Identity lines catch it. Systematic product privacy evaluation requires a different methodology.
 
-    **Sensitive-disclosure minimization.** NAMI criterion 4: "avoid implying privacy protections or encouraging unsafe personal disclosures." This is a product-design concern — what the app *solicits* — rather than a property of any single conversation turn.
+    **Sensitive-disclosure minimization.** What the app *solicits* is a product-design concern, not a property of any single conversation turn.
 
-    **Evidence discipline.** NAMI criterion 2: "accurate, evidence-informed information." InvisibleBench tests whether resources are named and navigation is actionable, but verifying factual accuracy of cited information requires ground-truth infrastructure (verified resource databases, real-time link checking) that operates at a different layer than conversation evaluation.
+    **Evidence discipline.** Testing whether cited resources are factually accurate requires ground-truth infrastructure that operates at a different layer than conversation evaluation.
 
-    **Youth safeguards.** InvisibleBench targets adult family caregivers. Youth populations have distinct risk profiles (parasocial attachment, developmental vulnerability, mandatory reporting) that require purpose-built scenarios and clinical review outside the current domain.
+    **Youth safeguards.** InvisibleBench targets adult family caregivers. Youth populations have distinct risk profiles requiring purpose-built scenarios and clinical review.
 
-    **Post-caregiving bereavement.** InvisibleBench evaluates active caregiving relationships. After a care recipient's death, the caregiver's needs shift: identity reconstruction, complicated grief, the vacuum of purpose after sustained high-intensity care. These are adjacent but distinct failure modes — a model interacting with a bereaved former caregiver can minimize grief, fail to acknowledge the identity loss, or redirect to resources that no longer apply. The scenario corpus does not currently cover this population.
+    **Post-caregiving bereavement.** InvisibleBench evaluates active caregiving relationships. Bereaved former caregivers have distinct needs — identity reconstruction, complicated grief — that are adjacent but not yet covered.
 
-    **Care-recipient-initiated harm toward the caregiver.** IB-A3 covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver, common in dementia at >20% prevalence — is not currently tested. A model that responds to "my mother hit me again during a bath" with "have you tried redirecting?" is failing at recognition, but this failure mode requires purpose-built scenarios.
+    **Care-recipient-initiated harm toward the caregiver.** IB-A3 covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at >20% prevalence) — is partially covered by IB-A3b but requires fuller purpose-built scenario coverage.
 
-    **Proxy ethical decision-making.** End-of-life decisions, advance directive navigation, and the caregiver-as-ethical-proxy burden involve high-stakes decision support where the model must avoid both taking clinical positions (a compliance violation) and providing nothing actionable (a coordination failure). The proposed IB-D-forced-nutrition-eol check touches this space; broader coverage of moral distress in proxy decision-making is deferred.
+    **Proxy ethical decision-making.** End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). IB-D-forced-nutrition-eol is the current single check; broader proxy ethics coverage is deferred.
 
 ---
 
 ## Out-of-scope frameworks
 
-These frameworks are relevant to the broader AI mental health ecosystem but evaluate a different unit of analysis (apps as products, not conversations as interactions) or a different population.
+These frameworks are relevant to the broader AI mental health ecosystem but evaluate a different unit of analysis or population.
 
 | Category | Source | What it provides | When to promote |
-|----------|--------|-----------------|-----------------|
-| App evaluation | APA App Evaluation Model | Hierarchical question set: background, access, privacy/security, evidence, usability, data integration | If InvisibleBench adds product-level privacy/security evaluation beyond conversational scope honesty |
+|---|---|---|---|
+| App evaluation | APA App Evaluation Model | Hierarchical question set: background, access, privacy/security, evidence, usability, data integration | If InvisibleBench adds product-level privacy/security evaluation |
 | App evaluation | MIND / MINDapps (105 questions) | Operationalized evaluation of mental health apps; public database | If InvisibleBench evaluates app-level features |
-| App evaluation | FTC Mobile Health App Tool; FTC Health Breach Notification Rule | Maps federal laws to health apps; data breach obligations | If InvisibleBench adds product-level privacy/security scenarios |
+| App evaluation | FTC Mobile Health App Tool | Maps federal laws to health apps; data breach obligations | If InvisibleBench adds product-level privacy/security scenarios |
 | Youth safeguards | Youth-Use Survey (2025) | 13.1% US youth used GenAI for MH advice; 65.5% monthly | If young caregiver scenarios are added |
 | Youth safeguards | JAMA Chatbot Safety Study (2025) | Only 36% had age verification; 46.7% of companion bots had self-harm policies | If evaluating youth-facing features |
 | Empirical calibration | 2025 Meta-Analysis | Chatbot interventions reduced distress modestly; no significant effect on psychological well-being | Calibrates expectations but does not change scoring |
-| Empirical calibration | Moderation Research | Moderated conversations improve engagement, trust, and safety | If human-handoff dimension is added |
 
 ---
 
@@ -298,13 +202,13 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 
 **Prevalence.** 63 million US adults are unpaid caregivers (NAC + AARP, 2025), providing high-intensity care that disrupts employment, increases isolation, and generates sustained emotional stress.
 
-**Co-occurring conditions.** Dementia caregivers experience depression at 16% prevalence and provide an estimated $413 billion in unpaid care annually (Alzheimer's Association, 2025). Chronic disease caregivers face elevated rates of anxiety and depression across conditions -- Parkinson's (50% depression, 40% anxiety), lupus (54% moderate-to-severe anxiety), arthritis (depression 2-10x general population).
+**Co-occurring conditions.** Dementia caregivers experience depression at 16% prevalence and provide an estimated $413 billion in unpaid care annually (Alzheimer's Association, 2025). Chronic disease caregivers face elevated rates of anxiety and depression — Parkinson's (50% depression, 40% anxiety), lupus (54% moderate-to-severe anxiety), arthritis (depression 2–10× general population).
 
-**The companion model.** Patient communities with rare and chronic diseases view AI "not as a doctor replacement, but as a scalable companion to bridge the gap between daily needs and clinical visits" -- the 98% of time outside clinical care (NHC Patient Voice, 2026).
+**The companion model.** Patient communities with rare and chronic diseases view AI "not as a doctor replacement, but as a scalable companion to bridge the gap between daily needs and clinical visits" — the 98% of time outside clinical care (NHC Patient Voice, 2026).
 
-**Design implication.** The NHC report concludes: "Prioritize continuity, availability, and contextual safety over novelty." The benchmark's meta-principle -- Turkle's Slide -- operationalizes this: AI should scaffold human presence, not simulate relationship.
+**Design implication.** The NHC report concludes: "Prioritize continuity, availability, and contextual safety over novelty." Turkle's artificial-intimacy thesis operationalizes this: AI should scaffold human presence, not simulate relationship.
 
-**Market accountability gap.** No standardized third-party evaluation exists for AI safety in mental health and caregiving contexts. Companies self-report safety measures; there is no independent verification of crisis detection capabilities or accountability for longitudinal harms (attachment, dependency, resource quality). InvisibleBench addresses this gap.
+**Market accountability gap.** No standardized third-party evaluation exists for AI safety in mental health and caregiving contexts. Companies self-report safety measures; there is no independent verification of crisis detection capabilities or accountability for longitudinal harms. InvisibleBench addresses this gap.
 
 ---
 
@@ -339,28 +243,28 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 - **Gallegos, A. and Surasky, C.** *Belonging: A Resource Guide for Belonging-Builders.* Othering and Belonging Institute, UC Berkeley, 2025. 10 Belonging Design Principles. [Guide](https://belonging.berkeley.edu/belongingdesignprinciples)
 - **powell, john a., Menendian, S., and Ake, W.** Targeted Universalism methodology. Othering and Belonging Institute, UC Berkeley. [Bibliography](https://belonging.berkeley.edu/targeted-universalism-bibliography)
 - **Legawiec, K.** Trauma-informed content design. 2025. [Guide](https://uxcontent.com/a-guide-to-trauma-informed-content-design/)
-- **TIDS Framework.** Safety, trustworthiness, choice and control, collaboration -- operationalized for digital contexts. [TIDS](https://www.tidsociety.com/)
-- **Turkle, S.** "Better than nothing -> better than something -> better than anything." AI companion progression risk. [Book](https://www.hachettebookgroup.com/titles/sherry-turkle/alone-together/9780465093656/)
+- **TIDS Framework.** Safety, trustworthiness, choice and control, collaboration — operationalized for digital contexts. [TIDS](https://www.tidsociety.com/)
+- **Turkle, S.** "Better than nothing → better than something → better than anything." AI companion progression risk. [Book](https://www.hachettebookgroup.com/titles/sherry-turkle/alone-together/9780465093656/)
 
 ### Research
 
-- **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4-5. [arXiv](https://arxiv.org/abs/2601.14269)
+- **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4–5. [arXiv](https://arxiv.org/abs/2601.14269)
 - **Cobbe, K. et al.** "Training Verifiers to Solve Math Word Problems." arXiv:2110.14168, 2021. Per-step verification outperforms monolithic outcome-based scoring. [arXiv](https://arxiv.org/abs/2110.14168)
 - **CARE Framework (Rosebud AI).** 86% of models fail indirect crisis queries. [CARE](https://www.rosebud.app/care)
-- **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" -- not treatment, but navigation. [DOI](https://academic.oup.com/fampra/article/39/5/903/6519467)
-- **Morrissey, S.** *The Patient Voice in GenAI Mental Health Chatbots: Perspectives from Rare Disease, Chronic Illness and Disability Communities.* National Health Council, 2026. Forthcoming/internal -- no public URL.
-- **Stanford Bridge Study -- Moore et al.** 2025. 86% masked means detection failure. [arXiv](https://arxiv.org/abs/2504.18412)
-- **Zhang, Y. et al.** "Generative Verifiers: Reward Modeling as Next-Token Prediction." arXiv:2408.15240, 2024. Generative verifiers achieve stronger calibration than discriminative reward models. [arXiv](https://arxiv.org/abs/2408.15240)
+- **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" — not treatment, but navigation. [DOI](https://academic.oup.com/fampra/article/39/5/903/6519467)
+- **Morrissey, S.** *The Patient Voice in GenAI Mental Health Chatbots.* National Health Council, 2026.
+- **Stanford Bridge Study — Moore et al.** 2025. 86% masked means detection failure. [arXiv](https://arxiv.org/abs/2504.18412)
+- **Zhang, Y. et al.** "Generative Verifiers: Reward Modeling as Next-Token Prediction." arXiv:2408.15240, 2024. [arXiv](https://arxiv.org/abs/2408.15240)
 
 ### Standards and authorities
 
-- **988 Suicide and Crisis Lifeline.** Digital Toolkit and operational standards. Crisis routing, response timing, imminent-risk escalation. [988 Lifeline](https://988lifeline.org/) | [Partner Toolkit](https://www.samhsa.gov/mental-health/988/partner-toolkit)
+- **988 Suicide and Crisis Lifeline.** Digital Toolkit and operational standards. [988 Lifeline](https://988lifeline.org/)
 - **ACL National Family Caregiver Support Program (NFCSP).** Federal caregiver infrastructure. [NFCSP](https://acl.gov/programs/support-caregivers/national-family-caregiver-support-program)
-- **Alzheimer's Association.** *2025 Alzheimer's Disease Facts and Figures.* Caregiver stress programs, 24/7 helpline (800-272-3900). [Facts and Figures](https://www.alz.org/alzheimers-dementia/facts-figures)
+- **Alzheimer's Association.** *2025 Alzheimer's Disease Facts and Figures.* [Facts and Figures](https://www.alz.org/alzheimers-dementia/facts-figures)
 - **APA Advisory on GenAI and Mental Health** (2025). 8 recommendations including crisis response protocols, disclaimer requirements, and anti-dependency design. [Advisory](https://www.apa.org/topics/artificial-intelligence-machine-learning/health-advisory-chatbots-wellness-apps)
-- **APA Guidelines on Technology-Mediated Mental Health Services.** Professional boundaries for technology-mediated interactions. [Guidelines](https://www.apa.org/practice/guidelines/telepsychology-revision.pdf)
-- **Eldercare Locator** (800-677-1116). National service connecting older adults and caregivers to local support. [Eldercare Locator](https://eldercare.acl.gov/)
-- **Family Caregiver Alliance.** Caregiver education, support services, policy advocacy. [FCA](https://www.caregiver.org/)
+- **APA Guidelines on Technology-Mediated Mental Health Services.** [Guidelines](https://www.apa.org/practice/guidelines/telepsychology-revision.pdf)
+- **Eldercare Locator** (800-677-1116). [Eldercare Locator](https://eldercare.acl.gov/)
+- **Family Caregiver Alliance.** [FCA](https://www.caregiver.org/)
 - **NAMI AI Evaluation** (2026, with Dr. Torous / BIDMC). 5 criteria for evaluating AI tools in mental health contexts. [NAMI](https://www.nami.org/ai-and-mental-health/)
-- **NAC + AARP.** *Caregiving in the US 2025.* 63M caregivers; demographics, needs, isolation, work disruption. [Report](https://www.aarp.org/pri/topics/ltss/family-caregiving/caregiving-in-the-us-2025/)
+- **NAC + AARP.** *Caregiving in the US 2025.* [Report](https://www.aarp.org/pri/topics/ltss/family-caregiving/caregiving-in-the-us-2025/)
 - **NIST AI 600-1** (GenAI Profile). Section 2.2: confabulation. Section 2.7: emotional entanglement. MS-2.5-004: anthropomorphization tracking. [PDF](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)

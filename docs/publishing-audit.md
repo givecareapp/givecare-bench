@@ -21,14 +21,14 @@ would make a caregiver AI feel brittle in practice.
 
 The code documentation phase makes the procedure inspectable:
 
-- `checks/` (one YAML per check) defines the active 53-check failure
-  inventory across safety, compliance, communication, coordination, and boundary
-  integrity.
+- `checks/` (one YAML per check, organized as `checks/safety/*` and `checks/care/*`) defines the active 50-check failure
+  inventory across 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities
+  (Belonging, Attunement, Trauma-awareness, Relational, Advocacy).
 - the `routing:` block in each `checks/<ID>.yaml` records which checks use
   deterministic, LLM, or corpus scorer routes.
 - each check file embeds its judge prompt as a `prompt:` block.
 - `src/invisiblebench/evaluation/mode_engine.py` aggregates per-check verdicts
-  into hard-fail, dimension, blind-spot, and overall artifacts.
+  into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.
 - `scripts/run_scan.py`, `scripts/generate_leaderboard.py`,
   `scripts/qa_leaderboard.py`, and `delivery/sync_web_bench.py`
   form the release path from transcripts to public web payload.
@@ -46,7 +46,7 @@ The result phase starts from the canonical leaderboard artifact:
 - Current source artifact: `results/v3_scan/merged_phase2/per_run.jsonl`
 - Current public benchmark version: `3.1.0`
 - Current publication stage: `v3-alpha`
-- Current public scan: 11 models × 63 scenarios × 53 active checks
+- Current public scan: 11 models × 63 scenarios × 50 active checks
 - Current generated timestamp: `2026-06-10T17:45:13Z`
 - Current strict QA status: not passing. The current artifact fails strict QA
   on residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows, so
@@ -91,10 +91,12 @@ caregiver AI, especially the non-obvious jagged edges that aggregate scores hide
 
 ## Claim Posture
 
-The strongest public claims are hard-fail rates, safety/compliance gate behavior,
-and evidence-backed failure signatures. Overall score and rank are secondary
-navigation aids. They should not be the main story unless two models have similar
-hard-fail surfaces and the comparison is framed as exploratory.
+The strongest public claims are Safety violation rates (per-line conditional,
+calibration-gated), gate behavior, and evidence-backed failure signatures. There
+is no composite score and no single rank — the leaderboard payload is
+`{safety, care}` (schema `safety-care/v1`). Care distributions are directional
+signal and should be presented as such. Model comparisons are framed by blind-spot
+overlap and jagged Safety profiles, not point rankings.
 
 Avoid claims like "best caregiver model." Prefer claims like:
 

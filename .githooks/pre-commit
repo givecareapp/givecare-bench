@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Local checks — replaces .github/workflows/ci.yml (org standard: no GitHub Actions).
+# Activate once per clone:  git config core.hooksPath .githooks
+set -e
+echo "[pre-commit] ruff";        uv run ruff check .
+echo "[pre-commit] turn-indices"; uv run python scripts/lint_turn_indices.py --strict
+echo "[pre-commit] pytest";      uv run pytest benchmark/tests -q
