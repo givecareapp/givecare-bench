@@ -57,10 +57,16 @@ def test_inventory_check_count_matches_taxonomy() -> None:
 
 def test_leaderboard_never_claims_more_scenarios_than_exist() -> None:
     leaderboard_path = ROOT / "data" / "leaderboard" / "leaderboard.json"
-    metadata = json.loads(leaderboard_path.read_text()).get("metadata") or {}
+    data = json.loads(leaderboard_path.read_text())
     inventory = load_inventory()
-    total = metadata.get("total_scenarios")
-    assert total is not None
+    # New safety-care/v1 format: total_scenarios lives in scan_metadata.
+    # Legacy V3 format: total_scenarios lives in metadata.
+    scan_meta = data.get("scan_metadata") or data.get("metadata") or {}
+    total = scan_meta.get("total_scenarios")
+    assert total is not None, (
+        "leaderboard.json must carry total_scenarios in scan_metadata "
+        "(safety-care/v1) or metadata (legacy)"
+    )
     # Published count may lag the corpus (scenarios added after the last
     # scan join at the next publish) but can never exceed it.
     assert total <= inventory["standard_total"]

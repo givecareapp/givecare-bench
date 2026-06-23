@@ -467,6 +467,19 @@ def generate_leaderboard(
     *,
     expected_scenarios: int | None = None,
 ) -> Path:
+    """Generate the canonical Safety+Care leaderboard artifact (safety-care/v1).
+
+    The primary output is a ``{models, schema, notes, scan_metadata}`` artifact
+    with per-Safety-line violation rates and per-Care-quality pass-rate
+    distributions.  No composite / overall_score / rank key appears at the top
+    level or in any model entry.
+
+    A ``_deprecated_v3`` key is also written for backward-compatibility callers
+    that need the old ``overall_leaderboard`` composite rows (e.g. legacy QA
+    scripts or tooling under migration).  New code must NOT read from that key.
+    """
+    from invisiblebench.scoring.projection import build_scorecard
+
     rows = _load_jsonl(input_jsonl)
     rows, hard_fail_normalizations = _normalize_contract_rows(rows)
     by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -478,46 +491,46 @@ def generate_leaderboard(
     generated_at = datetime.now(timezone.utc).isoformat()
     active_modes = _active_mode_ids()
 
+    # ------------------------------------------------------------------
+    # Primary: Safety+Care scorecard (safety-care/v1)
+    # ------------------------------------------------------------------
+    scorecard = build_scorecard(str(input_jsonl), calibrated_only=True)
+
+    scan_metadata = {
+        "benchmark_version": get_benchmark_version(REPO_ROOT),
+        "code_version": get_code_version(REPO_ROOT),
+        "generated_at": generated_at,
+        "source_artifact": str(input_jsonl),
+        "public_scope": inventory["public_scope"],
+        "public_harness": inventory["public_harness"],
+        "total_models": len({row.get("model") for row in rows}),
+        "total_scenarios": scenario_count,
+        "active_modes": len(active_modes),
+        "statistics": {
+            "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs",
+            "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640)",
+        },
+        "artifact_validation": {
+            **_artifact_validation_summary(rows),
+            "hard_fail_contract_normalizations": hard_fail_normalizations,
+        },
+    }
+
     payload = {
-        "metadata": {
-            "benchmark_version": get_benchmark_version(REPO_ROOT),
-            "code_version": get_code_version(REPO_ROOT),
-            "score_contract_version": scoring.get("contract_version"),
-            "publication_stage": scoring.get("version_stage"),
-            "generated_at": generated_at,
-            "source_artifact": str(input_jsonl),
-            "public_scope": inventory["public_scope"],
-            "public_harness": inventory["public_harness"],
-            "total_models": len({row.get("model") for row in rows}),
-            "total_scenarios": scenario_count,
-            "active_modes": len(active_modes),
+        **scorecard,  # models, schema, notes
+        "scan_metadata": scan_metadata,
+        # V3 composite data retained under a deprecated key for backward
+        # compatibility during the migration window.  New code must NOT
+        # read overall_score / rank from here.
+        "_deprecated_v3": {
             "ranking_basis": {
                 "kind": "v3_mode_engine_score",
-                "primary_sort": [
-                    "fewest_v3_hard_failures",
-                    "highest_v3_overall_score",
-                    "fewest_blindspot_hits",
-                    "lowest_unclear_mode_verdict_rate",
-                ],
-                "note": "Rows are generated from V3 ModeEngine outputs, not repaired V2.1 scorer rows.",
+                "note": "Deprecated. Use safety/care per-line rates instead.",
             },
-            "statistics": {
-                "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs, paired-difference z-tests on per-scenario hard-fail for rank_upper_bound",
-                "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640); rank-upper-bound display per Scale SEAL",
-                "caveat": "63 scenarios -> wide intervals by design; treat overlapping CIs as ties. rank_upper_bound is the smallest rank consistent with the paired tests.",
-            },
-            "scenario_detail_policy": (
-                "Per-scenario rows include summaries plus notable FAIL/UNCLEAR/manual mode results; "
-                "the full verifier ledger is the source_artifact scan JSONL."
-            ),
-            "artifact_validation": {
-                **_artifact_validation_summary(rows),
-                "hard_fail_contract_normalizations": hard_fail_normalizations,
-            },
-            "claim_surface": scoring.get("public_claim_surface", {}),
-            "publication_threshold": scoring.get("publication_threshold", {}),
+            "score_contract_version": scoring.get("contract_version"),
+            "publication_stage": scoring.get("version_stage"),
+            "overall_leaderboard": compute_v3_rankings(rows, expected_scenarios=scenario_count),
         },
-        "overall_leaderboard": compute_v3_rankings(rows, expected_scenarios=scenario_count),
     }
 
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -1,14 +1,15 @@
 """Check registry — loads the taxonomy from `checks/`.
 
-One flat file per check is the canonical layout (see DESIGN.md):
+Checks live in a layered directory structure under `checks/`:
 
-    checks/IB-A1.yaml
+    checks/safety/crisis/IB-A1.yaml
+    checks/care/attunement/IB-C1.yaml
 
-`ls checks/` is the entire taxonomy. Each file holds the complete identity of
-one check: definition, severity, scope, eligibility, `routing:` (scorer
-dispatch), and — for LLM-judged checks — the judge prompt embedded as a
-`prompt: |` block. The loader splits routing back out into the
-(modes, routing) pair the engine consumes.
+`find checks/ -name '*.yaml' ! -name '_*'` is the entire taxonomy.  Each file
+holds the complete identity of one check: definition, severity, scope,
+eligibility, `routing:` (scorer dispatch), and — for LLM-judged checks — the
+judge prompt embedded as a `prompt: |` block.  The loader splits routing back
+out into the (modes, routing) pair the engine consumes.
 
 Adding a check is adding a file; retiring one is deleting it.
 """
@@ -38,7 +39,7 @@ def load_checks(
     modes: dict[str, ModeConfig] = {}
     routing: dict[str, RoutingConfig] = {}
 
-    for check_file in sorted(root.glob("*.yaml")):
+    for check_file in sorted(root.rglob("*.yaml")):
         if check_file.name.startswith("_"):
             continue  # _meta.yaml and friends
         with open(check_file, encoding="utf-8") as f:
@@ -63,5 +64,37 @@ def registered_check_ids(checks_dir: Path | None = None) -> set[str]:
     """The set of check ids in the taxonomy."""
     root = checks_dir or CHECKS_DIR
     return {
-        p.stem for p in root.glob("*.yaml") if not p.name.startswith("_")
+        p.stem for p in root.rglob("*.yaml") if not p.name.startswith("_")
     }
+
+
+def check_dimensions(checks_dir: Path | None = None) -> dict[str, dict[str, str]]:
+    """Return layer + dimension metadata for each check derived from directory structure.
+
+    Checks live at checks/<layer>/<dimension>/<id>.yaml where:
+      layer      ∈ {safety, care}
+      dimension  ∈ {crisis, scope, identity, autonomy}          (safety)
+                 ∪ {belonging, attunement, trauma_awareness,
+                    relational, advocacy}                        (care)
+
+    Returns:
+        Mapping of check_id → {"layer": <layer>, "dimension": <dimension>}.
+        Checks that do not conform to the two-level structure are omitted.
+    """
+    root = checks_dir or CHECKS_DIR
+    result: dict[str, dict[str, str]] = {}
+    for check_file in sorted(root.rglob("*.yaml")):
+        if check_file.name.startswith("_"):
+            continue
+        # Expect root/<layer>/<dimension>/<id>.yaml  (depth = 3 parts from root)
+        try:
+            rel = check_file.relative_to(root)
+        except ValueError:
+            continue
+        parts = rel.parts  # e.g. ("safety", "crisis", "IB-A1.yaml")
+        if len(parts) != 3:  # noqa: PLR2004
+            continue
+        layer, dimension = parts[0], parts[1]
+        check_id = check_file.stem
+        result[check_id] = {"layer": layer, "dimension": dimension}
+    return result

@@ -1,6 +1,8 @@
 # Taxonomy
 
-*The 5-dimension failure-mode framework*
+*The 5-dimension failure-mode framework (v3.1, published).*
+
+> **Restructuring in progress:** the taxonomy is being reorganized into a 9-dimension **Safety + Care** MECE model (Safety: Crisis/Scope/Identity/Autonomy · Care: Belonging/Attunement/Trauma-awareness/Relational/Advocacy). See [ontology.md](ontology.md) — the canonical model. This page is rewritten at the v1 release.
 
 ---
 

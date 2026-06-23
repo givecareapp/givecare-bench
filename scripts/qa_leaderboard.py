@@ -19,13 +19,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.check_registry import load_checks  # noqa: E402
 
-# scoring.yaml is the single owner of contract/threshold values; QA reads it
-# through scoring_contract so a bump never silently diverges from the gate.
-from invisiblebench.evaluation.scoring_contract import (  # noqa: E402
-    contract_version,
-    coverage_floor,
-    version_stage,
-)
+# scoring.yaml is the single owner of threshold values; QA reads it through
+# scoring_contract so a bump never silently diverges from the gate.
+from invisiblebench.evaluation.scoring_contract import coverage_floor  # noqa: E402
 from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
     FAILURE_VERDICT_VALUES,
     GATE_SEVERITIES,
@@ -115,6 +111,104 @@ def _manual_scan_records(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return records
 
 
+def _validate_safety_care_artifact(
+    leaderboard: dict[str, Any],
+    effective_models: int,
+    effective_scenarios: int | None,
+    scan_path: Path,
+) -> list[str]:
+    """Validate the safety-care/v1 artifact shape. Returns a list of error strings."""
+    errors: list[str] = []
+
+    # Schema version
+    schema = leaderboard.get("schema")
+    if schema != "safety-care/v1":
+        errors.append(f"schema={schema!r} expected='safety-care/v1'")
+
+    # No composite at top level
+    for forbidden in ("overall_score", "composite", "rank", "overall_leaderboard"):
+        if forbidden in leaderboard:
+            errors.append(f"forbidden_top_level_key={forbidden!r}")
+
+    # notes.no_composite must be True
+    notes = leaderboard.get("notes") or {}
+    if not notes.get("no_composite"):
+        errors.append("notes.no_composite missing or False")
+
+    # scan_metadata: source_artifact must match scan_path
+    scan_meta = leaderboard.get("scan_metadata") or {}
+    if scan_meta.get("source_artifact") != str(scan_path):
+        errors.append(
+            "leaderboard_source_mismatch="
+            f"{scan_meta.get('source_artifact')!r} expected={str(scan_path)!r}"
+        )
+    if scan_meta.get("total_models") != effective_models:
+        errors.append(
+            f"leaderboard_total_models={scan_meta.get('total_models')} "
+            f"expected={effective_models}"
+        )
+    if effective_scenarios is not None and scan_meta.get("total_scenarios") != effective_scenarios:
+        errors.append(
+            f"leaderboard_total_scenarios={scan_meta.get('total_scenarios')} "
+            f"expected={effective_scenarios}"
+        )
+
+    # Per-model entries: safety lines + care qualities + no composite
+    models = leaderboard.get("models")
+    if not isinstance(models, list):
+        errors.append("leaderboard_missing_models_list")
+        return errors
+
+    _SAFETY_LINES = ("crisis", "scope", "identity", "autonomy")
+    _CARE_QUALITIES = ("belonging", "attunement", "relational", "advocacy", "trauma_awareness")
+
+    for entry in models:
+        name = entry.get("model", "<unnamed>")
+
+        # No composite keys in model entry
+        for forbidden in ("overall_score", "composite", "rank"):
+            if forbidden in entry:
+                errors.append(f"forbidden_model_key={forbidden!r} model={name!r}")
+
+        # Safety lines
+        safety = entry.get("safety") or {}
+        lines = safety.get("lines") or {}
+        for dim in _SAFETY_LINES:
+            if dim not in lines:
+                errors.append(f"missing_safety_line={dim!r} model={name!r}")
+            else:
+                line_entry = lines[dim]
+                if "rate" not in line_entry:
+                    errors.append(f"safety_line_missing_rate dim={dim!r} model={name!r}")
+                if "n" not in line_entry:
+                    errors.append(f"safety_line_missing_n dim={dim!r} model={name!r}")
+                if "ci95" not in line_entry:
+                    errors.append(f"safety_line_missing_ci95 dim={dim!r} model={name!r}")
+
+        # Care qualities
+        care = entry.get("care") or {}
+        qualities = care.get("qualities") or {}
+        for quality in _CARE_QUALITIES:
+            if quality not in qualities:
+                errors.append(f"missing_care_quality={quality!r} model={name!r}")
+            else:
+                q_entry = qualities[quality]
+                # trauma_awareness is a stub — only n and status required
+                if quality == "trauma_awareness":
+                    if q_entry.get("n") != 0:
+                        errors.append(
+                            f"trauma_awareness_stub_n_nonzero n={q_entry.get('n')} model={name!r}"
+                        )
+                else:
+                    if "calibration_status" not in q_entry:
+                        errors.append(
+                            f"care_quality_missing_calibration_status "
+                            f"quality={quality!r} model={name!r}"
+                        )
+
+    return errors
+
+
 def validate_leaderboard(
     scan_path: Path,
     leaderboard_path: Path,
@@ -128,13 +222,15 @@ def validate_leaderboard(
     strict: bool = False,
     checks_dir: Path | None = None,
 ) -> list[str]:
-    """Return QA errors. Empty list means the artifact passes."""
-    expected_contract = expected_contract or contract_version()
-    expected_stage = expected_stage or version_stage()
+    """Return QA errors. Empty list means the artifact passes.
+
+    Validates TWO things:
+    1. Scan JSONL quality (coverage, UNCLEAR, evidence, calibration) — unchanged.
+    2. Leaderboard artifact shape — now safety-care/v1 (no composite/rank/overall_score).
+    """
     errors: list[str] = []
     rows = _load_jsonl(scan_path)
     leaderboard = _load_json(leaderboard_path)
-    metadata = leaderboard.get("metadata") or {}
 
     if expected_rows is not None and len(rows) != expected_rows:
         errors.append(f"rows={len(rows)} expected={expected_rows}")
@@ -177,29 +273,10 @@ def validate_leaderboard(
     if duplicate_pairs:
         errors.append(f"duplicate_model_scenario_pairs={duplicate_pairs[:10]}")
 
-    if metadata.get("source_artifact") != str(scan_path):
-        errors.append(
-            "leaderboard_source_mismatch="
-            f"{metadata.get('source_artifact')!r} expected={str(scan_path)!r}"
-        )
-    if metadata.get("score_contract_version") != expected_contract:
-        errors.append(
-            "score_contract_version="
-            f"{metadata.get('score_contract_version')!r} expected={expected_contract!r}"
-        )
-    if metadata.get("publication_stage") != expected_stage:
-        errors.append(
-            f"publication_stage={metadata.get('publication_stage')!r} expected={expected_stage!r}"
-        )
-    if metadata.get("total_models") != effective_models:
-        errors.append(
-            f"leaderboard_total_models={metadata.get('total_models')} expected={effective_models}"
-        )
-    if effective_scenarios is not None and metadata.get("total_scenarios") != effective_scenarios:
-        errors.append(
-            f"leaderboard_total_scenarios={metadata.get('total_scenarios')} "
-            f"expected={effective_scenarios}"
-        )
+    # Validate safety-care/v1 artifact shape
+    errors.extend(
+        _validate_safety_care_artifact(leaderboard, effective_models, effective_scenarios, scan_path)
+    )
 
     prompt_missing = 0
     no_verifier = 0
@@ -315,20 +392,20 @@ def validate_leaderboard(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="QA V3 scan + leaderboard artifacts")
-    parser.add_argument("--scan", required=True, type=Path, help="V3 per_run.jsonl scan artifact")
-    parser.add_argument("--leaderboard", required=True, type=Path, help="Generated v3_leaderboard.json")
+    parser = argparse.ArgumentParser(description="QA scan + safety-care/v1 leaderboard artifact")
+    parser.add_argument("--scan", required=True, type=Path, help="per_run.jsonl scan artifact")
+    parser.add_argument("--leaderboard", required=True, type=Path, help="Generated leaderboard.json (safety-care/v1)")
     parser.add_argument("--manual-adjudications", type=Path, default=None)
     parser.add_argument("--expected-rows", type=int, default=None)
     parser.add_argument("--expected-models", type=int, default=None)
     parser.add_argument("--expected-scenarios", type=int, default=None)
     parser.add_argument(
         "--expected-contract", default=None,
-        help="Override; default reads contract_version from scoring.yaml",
+        help="Deprecated (V3 compat); ignored in safety-care/v1 validation",
     )
     parser.add_argument(
         "--expected-stage", default=None,
-        help="Override; default reads version_stage from scoring.yaml",
+        help="Deprecated (V3 compat); ignored in safety-care/v1 validation",
     )
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
     args = parser.parse_args()
@@ -345,12 +422,12 @@ def main() -> int:
         strict=args.strict,
     )
     if errors:
-        print("V3 leaderboard QA failed:")
+        print("Leaderboard QA failed:")
         for error in errors:
             print(f"- {error}")
         return 1
 
-    print("V3 leaderboard QA passed")
+    print("Leaderboard QA passed")
     return 0
 
 
