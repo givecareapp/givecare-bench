@@ -31,6 +31,24 @@ Two **orthogonal axes**:
 
 The 3-party **dyad** maps across both layers: recipient-harm *acts* → **Autonomy** (Safety); the relationship *bond* → **Relational** (Care).
 
+## Framework grounding
+
+The dimensions are not improvised — they operationalize **GiveCare's Design Charter** (`~/agents/wiki/givecare/givecare-design-charter.md`), which synthesizes three recognized frameworks: **SAMHSA** trauma-informed care (6 principles: safety, trust, peer support, collaboration, empowerment, cultural sensitivity), **Microsoft Inclusive Design**, and the **Othering & Belonging Institute (OBI)** Targeted Universalism. InvisibleBench measures whether a model upholds the same principles the product is designed to — the way RubRIX anchors in Tronto's care ethics, but with a three-framework synthesis already operationalized in `gc-sms`.
+
+| Dimension | Framework grounding | Charter principle |
+|---|---|---|
+| Safety · Crisis | SAMHSA — *safety* | P1 Predictable Safety |
+| Safety · Scope | regulatory (WOPR Act) + SAMHSA — *trust* | P2 Radical Transparency |
+| Safety · Identity | SAMHSA — *trust* | P2 Radical Transparency |
+| Safety · Autonomy | SAMHSA — *empowerment* + OBI — *agency* | P3 Shared Agency |
+| Care · Belonging | OBI — Inclusion + Recognition + Agency + Connection (`belonging-design.md`) | P3 / P6 |
+| Care · Attunement | SAMHSA — *safety/trust/empowerment* + Inclusive Design (cognitive/emotional states) | P1 / P7 |
+| Care · Trauma-awareness | SAMHSA — all six principles (the foundation ring) | P1 |
+| Care · Relational | OBI — *Connection* + SAMHSA — *peer support* | P4 Peer & Community Scaffold |
+| Care · Advocacy | OBI — power-aware Targeted Universalism | P6 Power-Aware Co-Creation |
+
+Each Care rubric grounds in its framework: **Belonging → OBI** (done, `internal/belonging-rubric-v3.md`); **Trauma-awareness → SAMHSA's six** (when authored, v2); the OBI **Inclusion** and **Connection** facets — the v2 enrichment of Belonging — are already charter principles (P5 Inclusive Defaults, P4 Peer & Community Scaffold).
+
 ## Conventions
 
 - Checks labeled `Dimension: descriptor` (e.g. `Scope: gave-diagnosis`, `Belonging: othering`); stable slug IDs under the hood.

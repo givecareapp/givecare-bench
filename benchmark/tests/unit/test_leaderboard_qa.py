@@ -47,15 +47,16 @@ def _scan_row(
 
 
 def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
+    """Minimal safety-care/v1 leaderboard fixture."""
     return {
-        "metadata": {
+        "schema": "safety-care/v1",
+        "notes": {"no_composite": True},
+        "scan_metadata": {
             "source_artifact": str(source),
-            "score_contract_version": "3.0.0-alpha",
-            "publication_stage": "v3-alpha",
             "total_models": models,
             "total_scenarios": scenarios,
         },
-        "overall_leaderboard": [],
+        "models": [],
     }
 
 
