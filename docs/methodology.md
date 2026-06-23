@@ -1,5 +1,7 @@
 # Methodology
 
+> **This page reflects the v1 Safety/Care model.** The current scoring output is `{safety, care}` (schema `safety-care/v1`): per-line Safety conditional violation rates + directional Care distributions, grounded in SAMHSA, Microsoft Inclusive Design, and OBI Targeted Universalism. There is no `overall_score` or composite rank. See [ontology.md](ontology.md) for the canonical model.
+
 InvisibleBench grounds its scoring dimensions in established clinical, regulatory, and social frameworks. This page documents what we measure, why, and which authorities inform each dimension.
 
 ---

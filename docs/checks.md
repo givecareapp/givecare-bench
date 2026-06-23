@@ -1,8 +1,8 @@
 # Check Inventory
 
-*Complete reference for InvisibleBench v3's failure-mode registry: 53 checks across 5 dimensions.*
+*Legacy check inventory reference (v3.1): 53 checks across 5 dimensions.*
 
-> **Restructuring in progress:** the registry is moving to a 9-dimension Safety + Care MECE model (50 checks, `checks/safety/*` + `checks/care/*`). See [ontology.md](ontology.md) — the canonical model. Updated at the v1 release.
+> **This page reflects the v3.1 Safety/Care model.** The current registry is 50 checks across 9 dimensions (`checks/safety/*` + `checks/care/*`). See [ontology.md](ontology.md) for the canonical model.
 
 InvisibleBench decomposes each dimension into independent failure-mode checks. Each check has its own verifier, its own calibration target, and its own evidence format. This page is the canonical registry.
 

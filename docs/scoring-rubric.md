@@ -1,5 +1,7 @@
 # InvisibleBench Scoring Rubric
 
+> **This page reflects the v1 Safety/Care model.** The current scoring output is `{safety, care}` (schema `safety-care/v1`): per-line Safety conditional violation rates (no composite) + directional Care distributions. There is no `overall_score`. See [ontology.md](ontology.md) for the canonical model.
+
 Public rubric for the InvisibleBench evaluation framework. Describes what is scored and why. Exact prompt text, thresholds, and weights are kept private to prevent benchmark gaming.
 
 ## Architecture: Gates + Quality

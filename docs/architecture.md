@@ -3,7 +3,7 @@
 InvisibleBench is a multi-dimensional evaluation suite for AI caregiving assistants.
 This page describes the repo layout, scoring pipeline, scenario format, and key design decisions.
 
-> **Restructuring in progress:** `checks/` is being reorganized into a 9-dimension `checks/safety/*` + `checks/care/*` layout (Safety + Care MECE) with a recursive loader. A new additive scoring engine lives in `src/invisiblebench/scoring/` — `contract.py` (single gate predicate), `safety.py` (per-line any-FAIL violation rates, calibration-aware), `care.py` (directional distributions), and `projection.py` (`build_scorecard` → the `{safety, care}` payload: per-line *conditional* violation rates, no composite) — now the **canonical leaderboard output** (`data/leaderboard/leaderboard.json`, schema `safety-care/v1` — per-line Safety rates + directional Care distributions, no composite; the old composite is retained under `_deprecated_v3` during the migration window). The judge/verdict layer is unchanged. See [ontology.md](ontology.md) — the canonical model.
+> **This page reflects the v1 Safety/Care model.** `checks/` is organized into `checks/safety/*` + `checks/care/*` (9 dimensions, recursive loader). The scoring engine in `src/invisiblebench/scoring/` contains `contract.py` (gate predicate), `safety.py` (per-line violation rates, calibration-aware), `care.py` (directional distributions), and `projection.py` (`build_scorecard` → the `{safety, care}` payload). The canonical leaderboard output is `data/leaderboard/leaderboard.json` (schema `safety-care/v1`): per-line Safety conditional violation rates + directional Care distributions, no composite. See [ontology.md](ontology.md) for the canonical model.
 
 ## Repo layout
 

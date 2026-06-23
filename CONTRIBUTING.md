@@ -48,8 +48,13 @@ uv run ruff check .
 uv run python scripts/lint_turn_indices.py --strict
 ```
 
-All three must pass. CI (`.github/workflows/ci.yml`) runs the same
-commands on every PR.
+All three must pass. Checks run via a local pre-commit hook — one-time setup:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The hook runs ruff, lint_turn_indices, and pytest automatically on commit. Docs deploy locally via `scripts/deploy-docs.sh` (mkdocs gh-deploy — no GitHub Actions).
 
 ## Scenario contract
 
@@ -88,6 +93,7 @@ uv run bench --full -y          # all public models, current leaderboard scenari
 - [ ] `uv run pytest benchmark/tests -q` passes
 - [ ] `uv run ruff check .` passes
 - [ ] `uv run python scripts/lint_turn_indices.py --strict` passes
+- [ ] Pre-commit hook is configured (`git config core.hooksPath .githooks`) and passes locally
 - [ ] New/changed behavior has a test under `benchmark/tests/unit/`
 - [ ] A new or retired check updates `check_count` in
       `benchmark/benchmark_inventory.json`; a new claim-carrying check
