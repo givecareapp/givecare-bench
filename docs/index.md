@@ -11,6 +11,8 @@ across realistic multi-turn conversations.
 
 ## Scoring model
 
+> **Restructuring in progress:** the scoring model below (single 0–1 score) is being replaced by the two-layer **Safety + Care** model — no composite; per-line Safety violation rates + directional Care distributions. Canonical: [ontology.md](ontology.md); positioning: [what-invisiblebench-owns.md](what-invisiblebench-owns.md).
+
 Every scenario produces a single score between 0.0 and 1.0, computed in two stages.
 
 ### Binary gates (pass/fail)
