@@ -186,7 +186,13 @@ majority vote (publish default K=3). Scan profiles can lower repetitions for
 development scans and enable adaptive repetition: a clear first-pass PASS or
 NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured
 repetition budget. The verifier also enables the existing in-process scorer
-cache for deterministic judge calls.
+cache for deterministic judge calls. The aggregated `rationale_code` is taken
+from a repetition matching the winning verdict (not the first repetition). A
+post-verdict consistency guard (`verifiers/consistency.py`) then converts a
+self-contradictory FAIL to UNCLEAR + adjudication -- a FAIL lacking any
+assistant-turn evidence, a scope-gate FAIL whose only evidence is a
+refusal/deferral, or a FAIL whose `rationale_code` describes a pass -- so a weak
+judge's contradictory verdict cannot carry a FAIL claim.
 
 **CorpusVerifier** -- extract-then-verify pattern for factual claims. Extracts
 assertions from the transcript, then checks each against a reference corpus.

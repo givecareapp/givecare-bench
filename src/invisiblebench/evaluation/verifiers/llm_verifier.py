@@ -37,6 +37,7 @@ from invisiblebench.evaluation.verifiers.base import (
     VerdictResult,
     Verifier,
 )
+from invisiblebench.evaluation.verifiers.consistency import apply_consistency_guard
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
 logger = logging.getLogger(__name__)
@@ -478,8 +479,15 @@ class LLMVerifier(Verifier):
             for e in (evidence_records or [])
         ]
 
-        rationale_codes = [r.get("rationale_code") for r in parsed_results if r.get("rationale_code")]
-        rationale_code = rationale_codes[0] if rationale_codes else None
+        rationale_code = next(
+            (r.get("rationale_code") for r in parsed_results if r.get("verdict") == verdict_str and r.get("rationale_code")),
+            None,
+        )
+        if rationale_code is None:
+            rationale_code = next(
+                (r.get("rationale_code") for r in parsed_results if r.get("rationale_code")),
+                None,
+            )
 
         adjudication_required = verdict == Verdict.UNCLEAR or (
             verdict == Verdict.FAIL and severity in GATE_SEVERITIES
@@ -495,7 +503,7 @@ class LLMVerifier(Verifier):
             extra["parse_errors"] = parse_errors
             extra["raw_outputs_truncated"] = raw_outputs
 
-        return VerdictResult(
+        result = VerdictResult(
             mode_id=mode_id,
             eligible=True,
             verdict=verdict,
@@ -511,3 +519,4 @@ class LLMVerifier(Verifier):
             secondary_tags=list(mode_config.get("secondary_tags") or []),
             extra=extra,
         )
+        return apply_consistency_guard(result, mode_config)
