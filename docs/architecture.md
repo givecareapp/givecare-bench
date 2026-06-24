@@ -181,8 +181,12 @@ the full fleet without token cost. Used as the primary scorer for `lexicon_only`
 routes and as a precheck for `hybrid_llm` routes.
 
 **LLMVerifier** -- sends a per-check prompt from
-the check file's embedded `prompt:` to the reference model with K-repetition
-majority vote (publish default K=3). Scan profiles can lower repetitions for
+the check file's embedded `prompt:` to a judge model with K-repetition
+majority vote (publish default K=3). The judge model is per-check: a check's
+`routing.judge_model` overrides the global default (`--llm-model`), so gates
+calibrate to whichever judge best matches human gold -- e.g. scope gates B1/B2
+route to a stronger judge while crisis gates keep the cheaper default. ModeEngine
+builds at most one verifier client per distinct judge model. Scan profiles can lower repetitions for
 development scans and enable adaptive repetition: a clear first-pass PASS or
 NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured
 repetition budget. The verifier also enables the existing in-process scorer

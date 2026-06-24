@@ -99,24 +99,47 @@ class ModeEngine:
         self.regex_verifier = RegexVerifier()
         self.corpus_verifier = CorpusVerifier()
         self.scenario_rule_verifier = ScenarioRuleVerifier()
+        # Judge model is per-check: each check's `routing.judge_model` overrides
+        # the global default (e.g. scope gates calibrate to a stronger judge,
+        # crisis gates stay on the cheaper default). `self.llm_verifier` is the
+        # default (kept assignable so callers/tests can inject one); non-default
+        # judges are built lazily and cached, at most one client per judge model.
+        self._llm_api_client = llm_api_client
+        self._default_llm_model = llm_model
+        self._llm_verifiers: dict[str, LLMVerifier] = {}
         self.llm_verifier: LLMVerifier | None = (
             LLMVerifier(api_client=llm_api_client, model=llm_model)
             if llm_api_client is not None
             else None
         )
 
+    def _llm_verifier_for(self, model: str) -> LLMVerifier | None:
+        """Return the LLM verifier for a judge model (default honors
+        self.llm_verifier; others are built lazily and cached)."""
+        if model == self._default_llm_model:
+            return self.llm_verifier
+        if self._llm_api_client is None:
+            return self.llm_verifier
+        verifier = self._llm_verifiers.get(model)
+        if verifier is None:
+            verifier = LLMVerifier(api_client=self._llm_api_client, model=model)
+            self._llm_verifiers[model] = verifier
+        return verifier
+
     def _route_verifier(self, mode_id: str) -> Verifier | None:
         routing = self.routing.get(mode_id) or {}
         route = routing.get("route")
 
         if route in LLM_REQUIRED_ROUTES:
-            if self.llm_verifier is None:
+            judge_model = routing.get("judge_model") or self._default_llm_model
+            verifier = self._llm_verifier_for(judge_model)
+            if verifier is None:
                 logger.warning(
                     "Mode %s needs LLM verifier but no api_client configured; returning UNCLEAR",
                     mode_id,
                 )
                 return None
-            return self.llm_verifier
+            return verifier
 
         if route in CORPUS_ROUTES:
             return self.corpus_verifier
