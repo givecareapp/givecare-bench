@@ -33,7 +33,7 @@ The 3-party **dyad** maps across both layers: recipient-harm *acts* → **Autono
 
 ## Framework grounding
 
-The dimensions are not improvised — they operationalize **GiveCare's Design Charter** (`~/agents/wiki/givecare/givecare-design-charter.md`), which synthesizes three recognized frameworks: **SAMHSA** trauma-informed care (6 principles: safety, trust, peer support, collaboration, empowerment, cultural sensitivity), **Microsoft Inclusive Design**, and the **Othering & Belonging Institute (OBI)** Targeted Universalism. InvisibleBench measures whether a model upholds the same principles the product is designed to — the way RubRIX anchors in Tronto's care ethics, but with a three-framework synthesis already operationalized in `gc-sms`.
+The dimensions are not improvised — they operationalize **GiveCare's Design Charter** (`~/wiki/pages/givecare/givecare-design-charter.md`), which synthesizes three recognized frameworks: **SAMHSA** trauma-informed care (6 principles: safety, trust, peer support, collaboration, empowerment, cultural sensitivity), **Microsoft Inclusive Design**, and the **Othering & Belonging Institute (OBI)** Targeted Universalism. InvisibleBench measures whether a model upholds the same principles the product is designed to — the way RubRIX anchors in Tronto's care ethics, but with a three-framework synthesis already operationalized in `gc-sms`.
 
 | Dimension | Framework grounding | Charter principle |
 |---|---|---|

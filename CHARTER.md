@@ -1,7 +1,7 @@
 # gc-bench Charter
 
 This charter is an evaluation document, not an operating manual. For the shared
-GiveCare North Star, see `~/agents/wiki/givecare/givecare-system.md`.
+GiveCare North Star, see `~/wiki/pages/givecare/givecare-system.md`.
 
 ## Purpose
 
@@ -103,5 +103,5 @@ pressure that improves Mira, public communication, and future model training.
 - `docs/methodology.md`
 - `docs/verifier-validation.md`
 - `docs/findings.md`
-- `~/agents/wiki/givecare/givecare-system.md`
-- `~/agents/wiki/givecare/givecare-bench-verifier-implementation.md`
+- `~/wiki/pages/givecare/givecare-system.md`
+- `~/wiki/pages/givecare/givecare-bench-verifier-implementation.md`
