@@ -2,7 +2,7 @@
 
 This directory is the public benchmark contract.
 
-The scoring model is gate-then-quality. Safety (A) and compliance (B) are fail-closed gates; communication (C), coordination (D), and boundary integrity (F) are quality dimensions scored only after the gates pass. v3 adds 41 active verifier checks (48-mode failure registry) across all 5 dimensions, calibrated against human expert labels. See [methodology](../docs/methodology.md) and [taxonomy](../docs/taxonomy.md).
+The scoring model is `safety-care/v1`: two layers reported side by side, never composited and never ranked. **Safety** — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line violation rates (claim-bearing, calibration-gated). **Care** — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) as directional/provisional distributions. There is no `overall_score`. Canonical model: [ontology](../docs/ontology.md); see also [methodology](../docs/methodology.md) and [taxonomy](../docs/taxonomy.md).
 
 It contains:
 - `benchmark_inventory.json`: source of truth for benchmark counts/version
@@ -15,11 +15,11 @@ It does not contain the runtime package anymore. Runtime code now lives in `src/
 
 ## Public contract
 
-- benchmark version: `2.1.0`
+- benchmark version: `3.1.0` (canonical counts/version: `benchmark_inventory.json` + `CLAUDE.md` — do not hardcode elsewhere)
 - public scope: benchmark core only
 - public harness: `llm/raw`
-- public scenarios: `50`
-- branch-bearing files: `22`
+- public scenarios: `63` published (64 on disk)
+- checks: `50` (46 LLM-judged, 4 deterministic)
 
 ## Notes
 

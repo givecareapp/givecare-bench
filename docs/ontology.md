@@ -2,13 +2,38 @@
 
 Diátaxis: explanation
 
+> **Canonical.** This page is the single source of truth for the InvisibleBench
+> output model (`safety-care/v1`). Other docs point here; they do not restate it.
+> Volatile counts (checks/scenarios/models/version) live in `CLAUDE.md` and the
+> `leaderboard.json` `scan_metadata` — never hardcode them elsewhere.
+
+## Claim posture (canonical · safety-care/v1)
+
+InvisibleBench reports a per-model **safety profile, not a ranking**. Two layers,
+never composited and never ranked:
+
+- **Safety** — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line
+  **violation rates** with 95% CIs. **Claim-bearing and calibration-gated:** the
+  published surface includes a check only where verifier↔human agreement (κ) is
+  established (`calibrated_only`). At n=63, point ranks are statistically
+  indistinguishable — cite intervals, not positions.
+- **Care** — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational,
+  Advocacy) as **directional distributions**, labeled provisional; never merged
+  with Safety.
+
+There is **no `overall_score` and no rank**; models are listed alphabetically.
+**The calibrated core *is* the benchmark.** Provisional and to-author checks are
+a named research-preview backlog — visible, but explicitly not part of the
+published claim surface until they earn a gold set. Comprehensiveness is the
+roadmap; calibration is the product.
+
 InvisibleBench measures a caregiver-AI's **Safety** (the hard lines it must not cross) and its **Care** (how it shows up for the caregiver). The name carries the thesis — surfacing what stays *invisible* everywhere else: harms a usefulness score can't see, and relational quality no other benchmark measures.
 
 The taxonomy is **MECE** — mutually exclusive (every failure-mode *type* has exactly one home) and collectively exhaustive (the nine dimensions together cover the caregiver-AI failure surface). MECE is a property of the *taxonomy*; a single response can still trip checks in several dimensions.
 
 Two **orthogonal axes**:
 - **Layer** — Safety (falsifiable prohibitions → violation **RATES**, claims) vs Care (gradients → **DISTRIBUTIONS**, directional). No composite; the two are reported side by side.
-- **Maturity** — each dimension is **calibrated** (κ → carries claims), **provisional** (directional, labeled), or **to-author** (named gap). The comprehensive structure ships now; calibration fills in over releases. This is where v1/v2 lives — not in *which dimensions exist*, but in *which cells are calibrated enough to claim*.
+- **Maturity** — each dimension is **calibrated** (κ → carries claims), **provisional** (directional, labeled), or **to-author** (named gap). The **calibrated core is the benchmark**; provisional and to-author cells are a named research-preview backlog, not part of the published claim surface until they earn a gold set. This is where v1/v2 lives — not in *which dimensions exist*, but in *which cells are calibrated enough to claim*.
 
 ## Safety — 4 lines · partition: which hard line did it cross?
 
@@ -17,7 +42,7 @@ Two **orthogonal axes**:
 | **Crisis** | miss/mishandle acute danger (caregiver *or* recipient) | partial κ (A1, A8) → else provisional |
 | **Scope** | exceed its authority — diagnose, prescribe, legal/financial directives, false credentials | provisional |
 | **Identity** | misrepresent what it is — human / memory / availability / feelings | partial κ (F3) → provisional |
-| **Autonomy** | override a person's agency — *recipient* (deception/coercion/restraint) or *caregiver* (coercion/threats/foreclosure) | to-author (thin) |
+| **Autonomy** | override a person's agency — *recipient* (deception/coercion/restraint) or *caregiver* (coercion/threats/foreclosure) | provisional (authored, not yet calibrated) |
 
 ## Care — 5 qualities · partition: which aspect of the caregiver's experience?
 
@@ -27,7 +52,7 @@ Two **orthogonal axes**:
 | **Attunement** | met in their emotional state (register/presence/depth) | provisional |
 | **Trauma-awareness** | responded trauma-informed | to-author (v2 · SAMHSA) |
 | **Relational** | honored the caregiver↔recipient bond (the dyad) | provisional (thin) |
-| **Advocacy** | took the caregiver's side vs systems/institutions | to-author (thin) |
+| **Advocacy** | took the caregiver's side vs systems/institutions | provisional (thin) |
 
 The 3-party **dyad** maps across both layers: recipient-harm *acts* → **Autonomy** (Safety); the relationship *bond* → **Relational** (Care).
 

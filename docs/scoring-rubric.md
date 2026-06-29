@@ -92,7 +92,7 @@ A model violates the Autonomy line when it overrides a person's agency — frami
 
 **Framework grounding:** SAMHSA empowerment principle, OBI Agency component of belonging.
 
-**Calibration status:** To-author (thin); provisional on existing authored checks.
+**Calibration status:** Provisional (authored, not yet calibrated) — 4 checks authored, no per-mode gold set yet.
 
 ---
 

@@ -27,17 +27,7 @@ CARE layer    →  DISTRIBUTIONS   (gradients, directional)
 
 The nine dimensions operationalize **GiveCare's Design Charter**, which synthesizes three recognized frameworks: SAMHSA trauma-informed care, Microsoft Inclusive Design, and the Othering & Belonging Institute (OBI) Targeted Universalism. InvisibleBench measures whether a deployed model upholds the same principles the product is designed to — grounding the benchmark in the same charter that governs `gc-sms`.
 
-| Dimension | Framework grounding | Charter principle |
-|---|---|---|
-| Safety · Crisis | SAMHSA — *safety* | P1 Predictable Safety |
-| Safety · Scope | WOPR Act + SAMHSA — *trust* | P2 Radical Transparency |
-| Safety · Identity | SAMHSA — *trust* | P2 Radical Transparency |
-| Safety · Autonomy | SAMHSA — *empowerment* + OBI — *agency* | P3 Shared Agency |
-| Care · Belonging | OBI — Recognition + Agency + Connection + Inclusion | P3 / P6 |
-| Care · Attunement | SAMHSA — safety/trust/empowerment + Inclusive Design | P1 / P7 |
-| Care · Trauma-awareness | SAMHSA — all six principles (foundation ring) | P1 |
-| Care · Relational | OBI — *Connection* + SAMHSA — *peer support* | P4 Peer & Community Scaffold |
-| Care · Advocacy | OBI — power-aware Targeted Universalism | P6 Power-Aware Co-Creation |
+The per-dimension grounding table (dimension → framework → charter principle) is canonical in **[ontology.md § Framework grounding](ontology.md#framework-grounding)** and is not duplicated here. The subsections below explain what each framework contributes.
 
 ### SAMHSA — Trauma-Informed Care (2014)
 
@@ -118,19 +108,7 @@ See [Architecture — Verifier architecture](architecture.md#verifier-architectu
 
 ## Positioning and related work
 
-InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.
-
-| Benchmark | Overlap | Why it is not the same |
-|---|---|---|
-| **RubRIX** | Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance). | Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety checks, per-mode verifier calibration, or identity-boundary drift detection. |
-| **ADRD-Bench** | Caregiving-adjacent, disease-specific. Includes ADRD Caregiving QA with 149 caregiving questions grounded in the Aging Brain Care program. | Knowledge/QA/clinical-reasoning assessment for Alzheimer's and dementia. Does not target relational safety failures, caregiver-to-recipient harm intent, artificial intimacy, scope deception, or boundary drift. |
-| **MindEval** | Multi-turn mental-health support benchmark with simulated patients and automatic LLM evaluation, built with licensed clinical psychologists. | Unit of analysis is therapy-like patient-clinician interaction and therapeutic competence. InvisibleBench's unit is caregiver-care-recipient-AI interaction, where the model can harm the caregiver, the recipient, or the relationship between them. |
-| **MHSafeEval** | Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms. | Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axes are caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring. |
-| **HealthBench** | Large-scale health benchmark with 5,000 multi-turn conversations and physician-written rubrics. | Broad healthcare capability/safety evaluation. Does not specialize in family caregiving, caregiver burden, dyadic harm, artificial intimacy, or companion compliance boundaries. |
-| **MedHELM** | Broad medical LLM evaluation framework with clinician-validated taxonomy. | Evaluates medical tasks. Not a caregiver-support relational safety benchmark. |
-| **Mental Health Crisis Benchmarks** | Crisis detection, safe response generation, human-vs-LLM evaluator agreement. | Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope. |
-
-InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver–care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (per-line violation rates before quality distributions), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).
+The positioning analysis, the three moats, and the related-work comparison (RubRIX, ADRD-Bench, MindEval, MHSafeEval, HealthBench, MedHELM, crisis benchmarks) live in **[what-invisiblebench-owns.md](what-invisiblebench-owns.md)** — not duplicated here.
 
 ---
 

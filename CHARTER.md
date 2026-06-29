@@ -6,8 +6,9 @@ GiveCare North Star, see `~/wiki/pages/givecare/givecare-system.md`.
 ## Purpose
 
 `gc-bench` owns InvisibleBench: GiveCare's public benchmark for measuring how AI
-systems handle caregiving safety, compliance, communication, coordination, and
-boundary failures.
+systems handle caregiving **Safety** (hard lines it must not cross) and **Care**
+(how it shows up for the caregiver). Output model: `safety-care/v1` — two layers
+reported side by side, never composited (see `docs/ontology.md`).
 
 ## Role In GiveCare
 
@@ -87,8 +88,10 @@ pressure that improves Mira, public communication, and future model training.
 
 - Publishing new claims from uncalibrated verifier behavior.
 - Blurring public benchmark scenarios with private production traces.
-- Treating `overall_score` as more authoritative than hard-fail behavior before
-  quality scorers are validated.
+- Reintroducing a composite (`overall_score`) or a model rank — the output is a
+  jagged Safety/Care profile; the layers are never combined.
+- Publishing a provisional or to-author check as part of the claim surface — the
+  calibrated core is the benchmark; everything else is research-preview backlog.
 - Adding product-specific behavior requirements directly into benchmark runtime
   code instead of testing them through harness contracts.
 - Hand-editing web-bench payloads rather than regenerating/syncing leaderboard

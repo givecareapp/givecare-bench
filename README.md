@@ -1,43 +1,52 @@
 # GiveCare Bench
 
-[![CI](https://github.com/givecareapp/givecare-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/givecareapp/givecare-bench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-blue)](https://givecareapp.github.io/givecare-bench)
 
-InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It decomposes ambiguous caregiver-support failures into atomic, evidence-bearing verifier checks across safety, compliance, communication, coordination, and boundary integrity. Unlike broad healthcare benchmarks that evaluate medical helpfulness and mental-health benchmarks that evaluate patient-counselor interaction, InvisibleBench evaluates whether an AI system can support a caregiver without endangering the care recipient, crossing clinical scope, or simulating a relationship it cannot honor.
+InvisibleBench measures relational harms in caregiver-support AI. It decomposes ambiguous caregiver-support failures into atomic, evidence-bearing verifier checks across two layers: **Safety** (the hard lines a model must not cross) and **Care** (how it shows up for the caregiver). Unlike broad healthcare benchmarks that evaluate medical helpfulness and mental-health benchmarks that evaluate patient-counselor interaction, InvisibleBench evaluates whether an AI system can support a caregiver without endangering the care recipient, crossing clinical scope, or simulating a relationship it cannot honor.
 
 Full docs: [givecareapp.github.io/givecare-bench](https://givecareapp.github.io/givecare-bench).
 
-The benchmark uses a gate-then-quality architecture. Safety (A) and compliance (B) are fail-closed gates -- any failure zeroes the score. Three quality dimensions -- communication (C), coordination (D), and boundary integrity (F) -- measure how the model speaks, what it does next, and how honestly it represents itself. 53 verifier checks across these 5 dimensions are calibrated against human expert labels. See [Taxonomy](docs/taxonomy.md) for the full framework.
+The output model is **`safety-care/v1`** — a per-model safety **profile, not a ranking**. The benchmark reports two layers, side by side, never composited and never ranked:
 
-The primary output is a **failure-mode profile**: which checks each model fails, at what rate, with quoted transcript evidence. Hard-fail rates and failure signatures are the strongest public claims; overall score is a convenience summary, not the headline metric. The quality-layer judges (communication, coordination, boundary dimensions) have not yet cleared validation-grade agreement with human labels — treat `overall_score`, dimension scores, and rank as navigation aids until they do; the same caveat ships inside the leaderboard artifact's metadata.
+- **Safety** — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line **violation rates** with 95% CIs. Claim-bearing and calibration-gated: the published surface includes a check only where verifier↔human agreement is established.
+- **Care** — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) as **directional distributions**, labeled provisional; never merged with Safety.
+
+50 verifier checks (46 LLM-judged, 4 deterministic) span these 9 dimensions. There is **no `overall_score` and no rank**; models are listed alphabetically, and at n=63 point ranks are statistically indistinguishable, so cite intervals, not positions. The canonical output model — the single source of truth — is **[docs/ontology.md](docs/ontology.md)**; see [Taxonomy](docs/taxonomy.md) for the per-check framework.
 
 The benchmark also carries a longitudinal result: the headline relational failures measured in the 2025 legacy sweep (artificial intimacy, false continuity, identity misrepresentation) record zero scored failures on the 2026 Phase 2 roster, on the same calibrated checks — see [Key Findings](docs/findings.md) for the evidence and the honest caveats on both readings.
 
-## Two distinct claims
+## The calibrated core is the benchmark
 
-InvisibleBench makes two claims that rest on different amounts of evidence. They
-are best cited separately rather than blended into a single leaderboard number:
+The published claim surface is the **calibrated core only**. Safety violation
+rates are claim-bearing where a check has cleared verifier↔human agreement
+against a gold set; Care distributions are reported as directional and labeled
+provisional. Provisional and to-author checks are a named research-preview
+backlog — visible in the taxonomy, but explicitly not part of the published
+claim surface until they earn a gold set. Comprehensiveness is the roadmap;
+calibration is the product.
 
-1. **Calibrated clinical-scope gate** (validated, statistically robust). The
-   compliance bright-lines — diagnosis (IB-B1), patient-specific prescribing
-   (IB-B2), false scope/capability claims, identity disclosure — are evaluated
-   on every scenario, validated on the resolved 60-trace gold set, and account
-   for the majority of hard failures on the current leaderboard. This is the
-   benchmark's most reliable signal today.
+Within that frame, two contributions rest on different amounts of evidence and
+are best cited separately:
+
+1. **Calibrated clinical-scope line** (the most-evidenced Safety surface today).
+   The Scope bright-lines — diagnosis (IB-B1), patient-specific prescribing
+   (IB-B2), false scope/capability claims — plus the crisis checks with per-mode
+   gold (IB-A1, IB-A8) and identity continuity (IB-F3) account for the majority
+   of scored violations on the current roster. This is the benchmark's most
+   reliable signal.
 2. **Dyadic relational-harm probe** (novel, partly human-labeled, still
-   scaling). The distinctive contribution — caregiver-to-recipient harm-fear
-   (IB-A3), recipient aggression (IB-A3b), crisis-signal negation (IB-A8),
-   artificial intimacy and false continuity (F) — is what no other benchmark
-   measures. Some of these checks (notably IB-A3) currently fire on only one or
-   two scored scenarios; their strongest evidence lives in the human-card
-   answer key, not yet the scored corpus. Densifying these scenarios is active
-   work. Read per-check safety rates as directional until eligibility grows.
+   scaling). The distinctive contribution — caregiver-to-recipient harm-fear and
+   recipient-endangerment (the Autonomy line: IB-A3/A4/A5/A6, D4-cr-endangerment)
+   — is what no other benchmark measures, and is the priority calibration
+   backlog: provisional until those checks earn per-mode gold. Read their
+   per-line rates as directional until calibration lands.
 
-The benchmark is marketed on claim 2 but, in raw published numbers, currently
-measures claim 1 most. Both are real. Keeping them distinct is what keeps the
-benchmark honest. See [docs/findings.md](docs/findings.md) for the
-evidence-source breakdown behind every headline finding.
+Both are real. Keeping them distinct — and keeping provisional signal out of the
+claim surface — is what keeps the benchmark honest. See
+[docs/findings.md](docs/findings.md) for the evidence-source breakdown behind
+every headline finding, and [docs/ontology.md](docs/ontology.md) for the full
+claim posture.
 
 ## Publication framing
 
@@ -107,7 +116,7 @@ internal/, results/ — that are not part of the public contract.)
   `metadata.contrast_surface.status: absent_optional` and
   `findings.contrasts: []`. Older generated narrative markdown should be
   treated as provenance unless regenerated from the current scan.
-- Leaderboard metadata carries a machine-readable claim surface and validation summary: the public hard-fail layer (`safety`, `compliance`, public hard-fail rate) is calibrated on the resolved 60-trace gold set; quality-mode verdicts are complete for the frozen transcript artifact but should still be described more cautiously than public gates.
+- Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only where verifier↔human agreement is established (the resolved 60-trace gold set plus per-mode gold for IB-A1, IB-A8, IB-F3, IB-B1). Care distributions are complete for the frozen transcript artifact but ship as directional/provisional, never composited with Safety.
 
 ## Quickstart
 

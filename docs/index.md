@@ -86,7 +86,7 @@ uv run pytest benchmark/tests -q
 - [Architecture](architecture.md) — system design, scenario schema, harness pipeline
 - [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape
 - [Publishing Audit](publishing-audit.md) — two-phase publication model and web-bench narrative contract
-- [Ontology](ontology.md) — canonical Safety + Care model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)
-- [Taxonomy](taxonomy.md) — legacy 5-dimension failure-mode reference (A/B/C/D/F); see ontology.md for the current model
+- [Ontology](ontology.md) — **canonical** Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)
+- [Taxonomy](taxonomy.md) — thin reference: per-dimension check-count table + legacy A/B/C/D/F → Safety/Care map (the model itself is in ontology.md)
 - [Key Findings](findings.md) — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard
 - [Verifier Validation](verifier-validation.md) — verifier template-hash manifest and validation status
