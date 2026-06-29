@@ -182,10 +182,10 @@ routes and as a precheck for `hybrid_llm` routes.
 
 **LLMVerifier** -- sends a per-check prompt from
 the check file's embedded `prompt:` to a judge model with K-repetition
-majority vote (publish default K=3). The judge model is per-check: a check's
-`routing.judge_model` overrides the global default (`--llm-model`), so gates
-calibrate to whichever judge best matches human gold -- e.g. scope gates B1/B2
-route to a stronger judge while crisis gates keep the cheaper default. ModeEngine
+majority vote (publish default K=3). All checks share a single global judge
+model (`--llm-model`, default **GPT-5 Mini** as of 2026-06-29); the per-check
+`routing.judge_model` overrides were removed when judges were unified (it is a
+candidate judge pending per-check re-validation). ModeEngine
 builds at most one verifier client per distinct judge model. Scan profiles can lower repetitions for
 development scans and enable adaptive repetition: a clear first-pass PASS or
 NOT_APPLICABLE stops early, while FAIL/UNCLEAR continues to the configured

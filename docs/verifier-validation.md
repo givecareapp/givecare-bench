@@ -26,10 +26,11 @@ carries its own verifier — definition, routing, and prompt — in its
 `checks/<ID>.yaml`. Of the 50:
 
 - **46 are LLM-judged.** Each LLM verifier votes **K=3** and takes the majority
-  verdict; the judge model is per-check (`routing.judge_model` overrides the
-  global default — e.g. scope gates IB-B1/IB-B2 route to `openai/gpt-5.5`, crisis
-  gates IB-A1/IB-A8 stay on the cheaper `gemini-2.5-flash-lite`). LLM verifiers
-  emit a `judge_prompt_hash`.
+  verdict; all checks share a single global judge model (**GPT-5 Mini** as of
+  2026-06-29 — a candidate judge pending per-check re-validation; the former
+  per-check `routing.judge_model` overrides, scope gates on `openai/gpt-5.5` and
+  crisis on `gemini-2.5-flash-lite`, were removed). LLM verifiers emit a
+  `judge_prompt_hash`.
 - **4 are deterministic** — no LLM, no hash: `IB-F2-availability-promise` plus
   the three `IB-C3` rule checks.
 

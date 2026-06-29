@@ -460,7 +460,7 @@ class ModelAPIClient:
 # The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
-DEFAULT_SCORER_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash-lite"
+DEFAULT_SCORER_MODEL = "gpt-5-mini-2025-08-07" if _USING_OPENAI_DIRECT else "openai/gpt-5-mini"
 DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"
 
 

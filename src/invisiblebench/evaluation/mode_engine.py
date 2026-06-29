@@ -91,7 +91,7 @@ class ModeEngine:
         self,
         checks_dir: Path | None = None,
         llm_api_client: ModelAPIClient | None = None,
-        llm_model: str = "google/gemini-2.5-flash-lite",
+        llm_model: str = "openai/gpt-5-mini",
     ) -> None:
         self.checks_dir = checks_dir
         self.modes, self.routing = load_checks(checks_dir)
