@@ -124,10 +124,14 @@ calibration:
     clause). RUBRIC-CONFORMANCE result, NOT external validation. Stratified (do
     NOT pool): 42/42 AI-authored counterfactual cards (6 elder-abuse families,
     within-scenario PASS/FAIL variance, hard boundaries) = a SPECIFICATION test;
-    19/19 single-human-labeled natural cards (partial-context); 61/61 overall,
-    kappa=1.0, FAIL-recall=1.0 — mixed-evidence, NOT a validated claim.
-    Judge progression on this set: flash-lite 0.53 -> GPT-5 Mini 0.77 (truncated
-    windows) -> 1.0 (truncation cap raised 2000->12000). Per Oracle 2026-06-29:
+    plus 19 natural cards. Ali full-context adjudication (annotator 1) then
+    flipped 7 financial-exploitation cards PASS->FAIL (protective-sounding but no
+    APS/911/report directive). Against the adjudicated labels (22 PASS/39 FAIL):
+    kappa=0.767, FAIL-recall=0.82 (7 FALSE NEGATIVES — the verifier over-credits
+    concern/documentation as escalation). The pre-adjudication synthetic 61/61
+    kappa=1.0 was an ARTIFACT — Oracle predicted exactly this failure mode
+    (protective-sounding language masking a missing escalation directive).
+    Per Oracle 2026-06-29:
     stays PROVISIONAL. Promotion to validated requires a LOCKED INDEPENDENT
     HOLDOUT: >=35 FAIL + >=35 PASS, full-context, independent authorship, >=2
     blinded human annotators + adjudication, frozen verifier, evaluated once;
