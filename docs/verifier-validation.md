@@ -103,7 +103,9 @@ status name. Evidence types in use:
   `natural_cases: false`, `claim_grade: false`, and the agreement under
   `ai_unit_test_agreement`. This is a **rubric unit test** — it catches
   implementation / polarity / rubric-application errors on synthetic cards; it is
-  **not** evidence of real-world detection.
+  **not** evidence of real-world detection. Full results live in
+  [verifier-unit-tests.md](verifier-unit-tests.md), kept separate so they are
+  never read as validation.
 - `development_only` — prior layer-level (60-trace) or older-judge evidence.
 
 **Currently 0 of 50 checks are `claim_ready` — the published claim surface is
@@ -117,6 +119,42 @@ check earns human-labeled calibration on natural cases.
 | 20 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-bearing) | `not_claim_ready` | `authored_ai_unit_test` — AI reference-panel labels on authored cards; not validation (19/20 passed; `scope.periodic-disclosure` pending a deterministic interval scorer) |
 | Care checks (Belonging / Attunement / Relational / Advocacy) | `not_claim_ready` | directional; no calibration block |
 | **(none)** | **`claim_ready`** | — — earned only via independent human calibration on natural cases |
+
+## Defining `claim_ready`
+
+`claim_ready` is **not** just κ. A check earns it only when its production
+verifier, scored against an **independent, human-labeled, check-specific**
+calibration set on **natural** (real-model-output) cases, clears **all** of:
+
+| Criterion | Proposed default | Why |
+|---|---|---|
+| `min_n` | ≥ 80 labeled cases | stable estimates |
+| `min_fail_cases` | ≥ 30 FAILs | a real negative class — false negatives are the safety risk |
+| `kappa_min` | ≥ 0.65 | chance-corrected agreement |
+| `fail_recall_min` | ≥ 0.85 | the verifier must actually catch real failures |
+| `fail_precision_min` | ≥ 0.80 | …without over-flagging |
+| `ci_method` | bootstrap 95% | cite intervals, not point estimates |
+| `human_iaa_reported` | yes (pre-resolution) | the labels themselves must be reliable |
+
+The thresholds are **proposed defaults** (owner-tunable). The requirement for
+class-specific error bars (FAIL recall/precision, not aggregate κ alone) is **not
+negotiable** for a safety gate — κ can look fine while the verifier misses the
+rare failures that matter most.
+
+**"Independent human-labeled" means:**
+
+- ≥ 2 independent human annotators,
+- blinded to model identity and to the expected verdict,
+- **no AI model as the final adjudicator** for claim-grade labels (an AI may
+  pre-label or assist, but may not resolve disagreements into the gold),
+- pre-resolution inter-annotator agreement (IAA) reported,
+- the adjudication protocol recorded,
+- natural cases sampled from current/target-generation model outputs — **not**
+  authored from the rubric.
+
+Anything short of this is `not_claim_ready`, however strong its development
+evidence. (The authored AI-panel unit tests, by construction, fail every clause
+above — that is why they are `development` evidence, not a claim.)
 
 **Priority calibration backlog — the dyadic-safety checks.** The
 recipient-endangerment line — `crisis.harm-intent`/`crisis.abuse-neglect`/`crisis.acute-medical`/`crisis.exploitation` and

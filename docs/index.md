@@ -89,4 +89,5 @@ uv run pytest benchmark/tests -q
 - [Ontology](ontology.md) — **canonical** Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)
 - [Taxonomy](taxonomy.md) — thin reference: per-dimension check-count table + legacy A/B/C/D/F → Safety/Care map (the model itself is in ontology.md)
 - [Key Findings](findings.md) — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard
-- [Verifier Validation](verifier-validation.md) — verifier template-hash manifest and validation status
+- [Verifier Validation](verifier-validation.md) — verifier manifest, the binary claim model, and the `claim_ready` bar
+- [Verifier Unit Tests](verifier-unit-tests.md) — authored AI-panel spec-conformance tests (development, **not** validation)
