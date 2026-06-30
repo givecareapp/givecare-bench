@@ -13,7 +13,7 @@ Validation tiers gated by these metrics before a mode is publishable.
 Usage:
     from invisiblebench.evaluation.calibration import CalibrationHarness
     harness = CalibrationHarness()
-    results = harness.run_mode_calibration(mode_id="IB-A1", verifier=llm_verifier)
+    results = harness.run_mode_calibration(mode_id="crisis.passive-ideation", verifier=llm_verifier)
 """
 
 from __future__ import annotations

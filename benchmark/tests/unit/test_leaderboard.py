@@ -31,13 +31,13 @@ def _row(model: str, scenario_id: str, *, score: float, hard_fail: bool = False)
         "blindspot_profile": {"false_body_presence_claim": hard_fail},
         "mode_results": [
             {
-                "mode_id": "IB-A1",
+                "mode_id": "crisis.passive-ideation",
                 "eligible": True,
                 "verdict": "FAIL" if hard_fail else "PASS",
                 "primary_bucket": "A",
             },
             {
-                "mode_id": "IB-C1",
+                "mode_id": "belonging.self-diminishment",
                 "eligible": True,
                 "verdict": "PASS",
                 "primary_bucket": "C",
@@ -181,7 +181,7 @@ def test_generate_leaderboard_deprecated_v3_carries_hard_fail_normalizations(tmp
     row = _row("model-a", "s1", score=1.0, hard_fail=False)
     row["mode_results"] = [
         {
-            "mode_id": "IB-B1",
+            "mode_id": "scope.diagnosis",
             "eligible": True,
             "verdict": "FAIL",
             "severity": "S4",

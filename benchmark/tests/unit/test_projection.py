@@ -84,13 +84,13 @@ def mini_scan(tmp_path: Path) -> Path:
     import json
 
     rows = [
-        # Model A: crisis FAIL (IB-A1 is the canonical safety/crisis check)
+        # Model A: crisis FAIL (crisis.passive-ideation is the canonical safety/crisis check)
         _make_row(
             model="Model A",
             scenario_id="scenario_crisis_fail",
             mode_results=[
-                _make_mode_result("IB-A1", "FAIL", "S5"),
-                _make_mode_result("IB-C1", "PASS", "S3"),  # care/belonging
+                _make_mode_result("crisis.passive-ideation", "FAIL", "S5"),
+                _make_mode_result("belonging.self-diminishment", "PASS", "S3"),  # care/belonging
             ],
         ),
         # Model A: all passing
@@ -98,9 +98,9 @@ def mini_scan(tmp_path: Path) -> Path:
             model="Model A",
             scenario_id="scenario_all_pass",
             mode_results=[
-                _make_mode_result("IB-A1", "PASS", "S5"),
-                _make_mode_result("IB-B1", "PASS", "S3"),  # scope
-                _make_mode_result("IB-C1", "PASS", "S3"),  # care/belonging
+                _make_mode_result("crisis.passive-ideation", "PASS", "S5"),
+                _make_mode_result("scope.diagnosis", "PASS", "S3"),  # scope
+                _make_mode_result("belonging.self-diminishment", "PASS", "S3"),  # care/belonging
             ],
         ),
         # Model B: scope FAIL
@@ -108,8 +108,8 @@ def mini_scan(tmp_path: Path) -> Path:
             model="Model B",
             scenario_id="scenario_scope_fail",
             mode_results=[
-                _make_mode_result("IB-B1", "FAIL", "S3"),
-                _make_mode_result("IB-C1", "FAIL", "S3"),  # care/belonging fail
+                _make_mode_result("scope.diagnosis", "FAIL", "S3"),
+                _make_mode_result("belonging.self-diminishment", "FAIL", "S3"),  # care/belonging fail
             ],
         ),
         # Model B: all passing
@@ -117,8 +117,8 @@ def mini_scan(tmp_path: Path) -> Path:
             model="Model B",
             scenario_id="scenario_all_pass_b",
             mode_results=[
-                _make_mode_result("IB-B1", "PASS", "S3"),
-                _make_mode_result("IB-C1", "PASS", "S3"),
+                _make_mode_result("scope.diagnosis", "PASS", "S3"),
+                _make_mode_result("belonging.self-diminishment", "PASS", "S3"),
             ],
         ),
     ]
@@ -276,7 +276,7 @@ class TestCareQualities:
                 )
 
     def test_belonging_pass_rate_model_a(self, mini_scan: Path) -> None:
-        """Model A: 2 PASS for IB-C1 → pass_rate=1.0."""
+        """Model A: 2 PASS for belonging.self-diminishment → pass_rate=1.0."""
         result = build_scorecard(str(mini_scan))
         model_a = next(m for m in result["models"] if m["model"] == "Model A")
         belonging = model_a["care"]["qualities"]["belonging"]
@@ -284,7 +284,7 @@ class TestCareQualities:
         assert belonging["n"] == 2  # noqa: PLR2004
 
     def test_belonging_pass_rate_model_b(self, mini_scan: Path) -> None:
-        """Model B: 1 PASS + 1 FAIL for IB-C1 → pass_rate=0.5."""
+        """Model B: 1 PASS + 1 FAIL for belonging.self-diminishment → pass_rate=0.5."""
         result = build_scorecard(str(mini_scan))
         model_b = next(m for m in result["models"] if m["model"] == "Model B")
         belonging = model_b["care"]["qualities"]["belonging"]
@@ -332,7 +332,7 @@ class TestCalibratedOnlyChangesRates:
 
     When uncalibrated Safety checks fire, the uncalibrated view (False) has
     higher or equal violation rates compared to the calibrated view (True).
-    The fixture scan includes IB-A1 which has calibration status determined
+    The fixture scan includes crisis.passive-ideation which has calibration status determined
     by the real checks/ directory.  We verify that both views produce valid
     output with the expected structural differences, and that toggling the
     parameter actually affects the reported calibrated_only flag (a proxy for

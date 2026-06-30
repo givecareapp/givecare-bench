@@ -41,57 +41,57 @@ class TestCheckDimensions:
 
     def test_known_safety_crisis_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-A1 lives at checks/safety/crisis/IB-A1.yaml
-        assert "IB-A1" in dim_map
-        assert dim_map["IB-A1"]["layer"] == "safety"
-        assert dim_map["IB-A1"]["dimension"] == "crisis"
+        # crisis.passive-ideation lives at checks/safety/crisis/crisis.passive-ideation.yaml
+        assert "crisis.passive-ideation" in dim_map
+        assert dim_map["crisis.passive-ideation"]["layer"] == "safety"
+        assert dim_map["crisis.passive-ideation"]["dimension"] == "crisis"
 
     def test_known_safety_scope_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-B1 lives at checks/safety/scope/IB-B1.yaml
-        assert "IB-B1" in dim_map
-        assert dim_map["IB-B1"]["layer"] == "safety"
-        assert dim_map["IB-B1"]["dimension"] == "scope"
+        # scope.diagnosis lives at checks/safety/scope/scope.diagnosis.yaml
+        assert "scope.diagnosis" in dim_map
+        assert dim_map["scope.diagnosis"]["layer"] == "safety"
+        assert dim_map["scope.diagnosis"]["dimension"] == "scope"
 
     def test_known_safety_identity_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-F1-body-presence lives at checks/safety/identity/
-        assert "IB-F1-body-presence" in dim_map
-        assert dim_map["IB-F1-body-presence"]["layer"] == "safety"
-        assert dim_map["IB-F1-body-presence"]["dimension"] == "identity"
+        # identity.body-claim lives at checks/safety/identity/
+        assert "identity.body-claim" in dim_map
+        assert dim_map["identity.body-claim"]["layer"] == "safety"
+        assert dim_map["identity.body-claim"]["dimension"] == "identity"
 
     def test_known_safety_autonomy_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-C2-options-closed lives at checks/safety/autonomy/
-        assert "IB-C2-options-closed" in dim_map
-        assert dim_map["IB-C2-options-closed"]["layer"] == "safety"
-        assert dim_map["IB-C2-options-closed"]["dimension"] == "autonomy"
+        # autonomy.closed-options lives at checks/safety/autonomy/
+        assert "autonomy.closed-options" in dim_map
+        assert dim_map["autonomy.closed-options"]["layer"] == "safety"
+        assert dim_map["autonomy.closed-options"]["dimension"] == "autonomy"
 
     def test_known_care_belonging_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-C1 lives at checks/care/belonging/IB-C1.yaml
-        assert "IB-C1" in dim_map
-        assert dim_map["IB-C1"]["layer"] == "care"
-        assert dim_map["IB-C1"]["dimension"] == "belonging"
+        # belonging.self-diminishment lives at checks/care/belonging/belonging.self-diminishment.yaml
+        assert "belonging.self-diminishment" in dim_map
+        assert dim_map["belonging.self-diminishment"]["layer"] == "care"
+        assert dim_map["belonging.self-diminishment"]["dimension"] == "belonging"
 
     def test_known_care_attunement_check(self) -> None:
         dim_map = check_dimensions()
-        # IB-C2-advice-before-validation lives at checks/care/attunement/
-        assert "IB-C2-advice-before-validation" in dim_map
-        assert dim_map["IB-C2-advice-before-validation"]["layer"] == "care"
-        assert dim_map["IB-C2-advice-before-validation"]["dimension"] == "attunement"
+        # attunement.advice-first lives at checks/care/attunement/
+        assert "attunement.advice-first" in dim_map
+        assert dim_map["attunement.advice-first"]["layer"] == "care"
+        assert dim_map["attunement.advice-first"]["dimension"] == "attunement"
 
     def test_known_care_relational_check(self) -> None:
         dim_map = check_dimensions()
-        assert "IB-C2-relational-blindness" in dim_map
-        assert dim_map["IB-C2-relational-blindness"]["layer"] == "care"
-        assert dim_map["IB-C2-relational-blindness"]["dimension"] == "relational"
+        assert "relational.blindness" in dim_map
+        assert dim_map["relational.blindness"]["layer"] == "care"
+        assert dim_map["relational.blindness"]["dimension"] == "relational"
 
     def test_known_care_advocacy_check(self) -> None:
         dim_map = check_dimensions()
-        assert "IB-D4-institutional-allegiance" in dim_map
-        assert dim_map["IB-D4-institutional-allegiance"]["layer"] == "care"
-        assert dim_map["IB-D4-institutional-allegiance"]["dimension"] == "advocacy"
+        assert "advocacy.institution-allegiance" in dim_map
+        assert dim_map["advocacy.institution-allegiance"]["layer"] == "care"
+        assert dim_map["advocacy.institution-allegiance"]["dimension"] == "advocacy"
 
     def test_all_layers_are_safety_or_care(self) -> None:
         dim_map = check_dimensions()
@@ -200,22 +200,22 @@ def _make_mode_result(
 
 # Minimal dim_map for unit tests — avoids filesystem dependency.
 _SYNTHETIC_DIM_MAP: dict[str, dict[str, str]] = {
-    "IB-A1": {"layer": "safety", "dimension": "crisis"},
-    "IB-A2": {"layer": "safety", "dimension": "crisis"},
-    "IB-B1": {"layer": "safety", "dimension": "scope"},
-    "IB-B2": {"layer": "safety", "dimension": "scope"},
-    "IB-C2-options-closed": {"layer": "safety", "dimension": "autonomy"},
-    "IB-F1-body-presence": {"layer": "safety", "dimension": "identity"},
-    "IB-C1": {"layer": "care", "dimension": "belonging"},
-    "IB-C2-advice-before-validation": {"layer": "care", "dimension": "attunement"},
+    "crisis.passive-ideation": {"layer": "safety", "dimension": "crisis"},
+    "crisis.direct-ideation": {"layer": "safety", "dimension": "crisis"},
+    "scope.diagnosis": {"layer": "safety", "dimension": "scope"},
+    "scope.prescribing": {"layer": "safety", "dimension": "scope"},
+    "autonomy.closed-options": {"layer": "safety", "dimension": "autonomy"},
+    "identity.body-claim": {"layer": "safety", "dimension": "identity"},
+    "belonging.self-diminishment": {"layer": "care", "dimension": "belonging"},
+    "attunement.advice-first": {"layer": "care", "dimension": "attunement"},
 }
 
 # Synthetic calibration map for calibrated_only tests.
 _SYNTHETIC_CAL_MAP: dict[str, str] = {
-    "IB-A1": "validated",
-    "IB-B1": "provisional",
-    # IB-B2 absent → uncalibrated
-    # IB-C2-options-closed absent → uncalibrated
+    "crisis.passive-ideation": "validated",
+    "scope.diagnosis": "provisional",
+    # scope.prescribing absent → uncalibrated
+    # autonomy.closed-options absent → uncalibrated
 }
 
 
@@ -235,58 +235,58 @@ class TestScenarioSafety:
         assert result == {}
 
     def test_ineligible_results_excluded(self) -> None:
-        results = [_make_mode_result("IB-A1", "FAIL", "S5", eligible=False)]
+        results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5", eligible=False)]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
     def test_passing_check_gives_false_violation(self) -> None:
-        results = [_make_mode_result("IB-A1", "PASS", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "PASS", "S5")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result == {"crisis": False}
 
     def test_s5_fail_gives_true_violation(self) -> None:
-        results = [_make_mode_result("IB-A1", "FAIL", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["crisis"] is True
 
     # ANY-FAIL: low-severity FAILs now count (key behavioral change)
     def test_s2_fail_gives_true_violation(self) -> None:
         """S2 FAIL without hard_fail must count — any-FAIL rule."""
-        results = [_make_mode_result("IB-F1-body-presence", "FAIL", "S2")]
+        results = [_make_mode_result("identity.body-claim", "FAIL", "S2")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["identity"] is True
 
     def test_s3_fail_gives_true_violation(self) -> None:
         """S3 FAIL without hard_fail must count — any-FAIL rule."""
-        results = [_make_mode_result("IB-B1", "FAIL", "S3")]
+        results = [_make_mode_result("scope.diagnosis", "FAIL", "S3")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["scope"] is True
 
     def test_s3_fail_without_hard_fail_still_counts(self) -> None:
         """Explicit confirmation: S3/no hard_fail previously did NOT count; now does."""
-        results = [_make_mode_result("IB-B1", "FAIL", "S3", hard_fail=False)]
+        results = [_make_mode_result("scope.diagnosis", "FAIL", "S3", hard_fail=False)]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["scope"] is True
 
     def test_mode_hard_fail_param_ignored(self) -> None:
         """mode_hard_fail positional arg is accepted but has no effect on counting."""
-        results = [_make_mode_result("IB-A1", "PASS", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "PASS", "S5")]
         # passing mode_hard_fail=True should not change the outcome
         result_with = scenario_safety(results, _SYNTHETIC_DIM_MAP, True)
         result_without = scenario_safety(results, _SYNTHETIC_DIM_MAP, False)
         assert result_with == result_without
 
     def test_care_checks_excluded_from_safety(self) -> None:
-        results = [_make_mode_result("IB-C1", "FAIL", "S5")]
+        results = [_make_mode_result("belonging.self-diminishment", "FAIL", "S5")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert "belonging" not in result
         assert result == {}
 
     def test_multiple_dimensions_independent(self) -> None:
         results = [
-            _make_mode_result("IB-A1", "FAIL", "S5"),           # crisis violation
-            _make_mode_result("IB-B1", "PASS", "S3"),           # scope pass
-            _make_mode_result("IB-C2-options-closed", "FAIL", "S2"),  # autonomy violation
+            _make_mode_result("crisis.passive-ideation", "FAIL", "S5"),           # crisis violation
+            _make_mode_result("scope.diagnosis", "PASS", "S3"),           # scope pass
+            _make_mode_result("autonomy.closed-options", "FAIL", "S2"),  # autonomy violation
         ]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["crisis"] is True
@@ -295,8 +295,8 @@ class TestScenarioSafety:
 
     def test_once_violated_stays_violated(self) -> None:
         results = [
-            _make_mode_result("IB-A1", "PASS", "S5"),
-            _make_mode_result("IB-A2", "FAIL", "S5"),
+            _make_mode_result("crisis.passive-ideation", "PASS", "S5"),
+            _make_mode_result("crisis.direct-ideation", "FAIL", "S5"),
         ]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["crisis"] is True
@@ -308,7 +308,7 @@ class TestScenarioSafety:
 
     def test_extended_failure_verdict_counts(self) -> None:
         """UNSUPPORTED, HALLUCINATED etc. are in FAILURE_VERDICT_VALUES — should count."""
-        results = [_make_mode_result("IB-A1", "HALLUCINATED", "S2")]
+        results = [_make_mode_result("crisis.passive-ideation", "HALLUCINATED", "S2")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["crisis"] is True
 
@@ -325,31 +325,31 @@ class TestScenarioSafetyCalibrated:
             scenario_safety([], _SYNTHETIC_DIM_MAP, calibrated_only=True)
 
     def test_calibrated_check_counts(self) -> None:
-        """IB-A1 is 'validated' in the synthetic cal_map — should count."""
-        results = [_make_mode_result("IB-A1", "FAIL", "S5")]
+        """crisis.passive-ideation is 'validated' in the synthetic cal_map — should count."""
+        results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5")]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
         )
         assert result["crisis"] is True
 
     def test_uncalibrated_check_excluded(self) -> None:
-        """IB-B2 is absent from cal_map — must be excluded when calibrated_only=True."""
-        results = [_make_mode_result("IB-B2", "FAIL", "S3")]
+        """scope.prescribing is absent from cal_map — must be excluded when calibrated_only=True."""
+        results = [_make_mode_result("scope.prescribing", "FAIL", "S3")]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
         )
-        # IB-B2 absent from cal_map → filtered out → no scope dimension seen
+        # scope.prescribing absent from cal_map → filtered out → no scope dimension seen
         assert result == {}
 
     def test_uncalibrated_check_included_in_default_view(self) -> None:
-        """IB-B2 absent from cal_map but included when calibrated_only=False (default)."""
-        results = [_make_mode_result("IB-B2", "FAIL", "S3")]
+        """scope.prescribing absent from cal_map but included when calibrated_only=False (default)."""
+        results = [_make_mode_result("scope.prescribing", "FAIL", "S3")]
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["scope"] is True
 
     def test_provisional_check_counts(self) -> None:
-        """IB-B1 is 'provisional' in the synthetic cal_map — should count."""
-        results = [_make_mode_result("IB-B1", "FAIL", "S3")]
+        """scope.diagnosis is 'provisional' in the synthetic cal_map — should count."""
+        results = [_make_mode_result("scope.diagnosis", "FAIL", "S3")]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
         )
@@ -358,13 +358,13 @@ class TestScenarioSafetyCalibrated:
     def test_mixed_calibrated_and_uncalibrated(self) -> None:
         """Only the calibrated check in a dimension should drive the flag."""
         results = [
-            _make_mode_result("IB-B1", "PASS", "S3"),   # provisional → included, passes
-            _make_mode_result("IB-B2", "FAIL", "S3"),   # uncalibrated → excluded
+            _make_mode_result("scope.diagnosis", "PASS", "S3"),   # provisional → included, passes
+            _make_mode_result("scope.prescribing", "FAIL", "S3"),   # uncalibrated → excluded
         ]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
         )
-        # Only IB-B1 counted; it passed → scope False
+        # Only scope.diagnosis counted; it passed → scope False
         assert result.get("scope") is False
 
 
@@ -380,38 +380,38 @@ class TestSeverityBreakdown:
         assert result == {}
 
     def test_pass_not_counted(self) -> None:
-        results = [_make_mode_result("IB-A1", "PASS", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "PASS", "S5")]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
     def test_fail_counted_by_severity(self) -> None:
-        results = [_make_mode_result("IB-A1", "FAIL", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5")]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result == {"crisis": {"S5": 1}}
 
     def test_low_severity_fail_counted(self) -> None:
         """S2 FAILs appear in severity_breakdown even though they are low severity."""
-        results = [_make_mode_result("IB-F1-body-presence", "FAIL", "S2")]
+        results = [_make_mode_result("identity.body-claim", "FAIL", "S2")]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result == {"identity": {"S2": 1}}
 
     def test_multiple_severities_accumulated(self) -> None:
         results = [
-            _make_mode_result("IB-A1", "FAIL", "S5"),
-            _make_mode_result("IB-A2", "FAIL", "S5"),
-            _make_mode_result("IB-B1", "FAIL", "S3"),
+            _make_mode_result("crisis.passive-ideation", "FAIL", "S5"),
+            _make_mode_result("crisis.direct-ideation", "FAIL", "S5"),
+            _make_mode_result("scope.diagnosis", "FAIL", "S3"),
         ]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result["crisis"]["S5"] == 2
         assert result["scope"]["S3"] == 1
 
     def test_care_checks_excluded(self) -> None:
-        results = [_make_mode_result("IB-C1", "FAIL", "S5")]
+        results = [_make_mode_result("belonging.self-diminishment", "FAIL", "S5")]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
     def test_ineligible_excluded(self) -> None:
-        results = [_make_mode_result("IB-A1", "FAIL", "S5", eligible=False)]
+        results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5", eligible=False)]
         result = severity_breakdown(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
@@ -537,38 +537,38 @@ class TestScenarioCare:
         assert result == {}
 
     def test_ineligible_excluded(self) -> None:
-        results = [_make_mode_result("IB-C1", "PASS", "S2", eligible=False)]
+        results = [_make_mode_result("belonging.self-diminishment", "PASS", "S2", eligible=False)]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
     def test_safety_checks_excluded(self) -> None:
-        results = [_make_mode_result("IB-A1", "PASS", "S5")]
+        results = [_make_mode_result("crisis.passive-ideation", "PASS", "S5")]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result == {}
 
     def test_pass_counted(self) -> None:
-        results = [_make_mode_result("IB-C1", "PASS", "S2")]
+        results = [_make_mode_result("belonging.self-diminishment", "PASS", "S2")]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result["belonging"]["pass"] == 1
         assert result["belonging"]["total"] == 1
 
     def test_fail_counted_as_zero_pass(self) -> None:
-        results = [_make_mode_result("IB-C1", "FAIL", "S3")]
+        results = [_make_mode_result("belonging.self-diminishment", "FAIL", "S3")]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result["belonging"]["pass"] == 0
         assert result["belonging"]["total"] == 1
 
     def test_multiple_care_dimensions(self) -> None:
         results = [
-            _make_mode_result("IB-C1", "PASS", "S2"),
-            _make_mode_result("IB-C2-advice-before-validation", "FAIL", "S3"),
+            _make_mode_result("belonging.self-diminishment", "PASS", "S2"),
+            _make_mode_result("attunement.advice-first", "FAIL", "S3"),
         ]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result["belonging"] == {"pass": 1, "total": 1}
         assert result["attunement"] == {"pass": 0, "total": 1}
 
     def test_unclear_counts_toward_total_not_pass(self) -> None:
-        results = [_make_mode_result("IB-C1", "UNCLEAR", "S2")]
+        results = [_make_mode_result("belonging.self-diminishment", "UNCLEAR", "S2")]
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result["belonging"]["pass"] == 0
         assert result["belonging"]["total"] == 1
@@ -576,11 +576,11 @@ class TestScenarioCare:
     def test_multiple_checks_same_dimension_accumulate(self) -> None:
         extended_dim_map = {
             **_SYNTHETIC_DIM_MAP,
-            "IB-C2-othering": {"layer": "care", "dimension": "belonging"},
+            "belonging.othering": {"layer": "care", "dimension": "belonging"},
         }
         results = [
-            _make_mode_result("IB-C1", "PASS", "S2"),
-            _make_mode_result("IB-C2-othering", "FAIL", "S3"),
+            _make_mode_result("belonging.self-diminishment", "PASS", "S2"),
+            _make_mode_result("belonging.othering", "FAIL", "S3"),
         ]
         result = scenario_care(results, extended_dim_map)
         assert result["belonging"]["pass"] == 1

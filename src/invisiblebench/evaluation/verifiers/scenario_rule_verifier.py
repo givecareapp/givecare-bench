@@ -85,7 +85,7 @@ class ScenarioRuleVerifier(Verifier):
         if not self.is_eligible(scenario, mode_config):
             return self.not_applicable(mode_config)
 
-        if mode_id == "IB-B5":
+        if mode_id == "scope.ai-disclosure":
             return self._verify_non_human_disclosure(transcript, mode_config)
 
         return VerdictResult(

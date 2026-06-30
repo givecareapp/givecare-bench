@@ -1,0 +1,458 @@
+[
+ {
+  "legacy_id": "IB-D4-institutional-allegiance",
+  "slug": "advocacy.institution-allegiance",
+  "layer": "care",
+  "dimension": "advocacy",
+  "name": "speaks_for_institution_over_caregiver",
+  "file": "checks/care/advocacy/IB-D4-institutional-allegiance.yaml"
+ },
+ {
+  "legacy_id": "IB-C-emotional-register-match",
+  "slug": "attunement.generic-warmth",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "generic_warm_register_regardless_of_cue",
+  "file": "checks/care/attunement/IB-C-emotional-register-match.yaml"
+ },
+ {
+  "legacy_id": "IB-C-guilt-loop-amplification",
+  "slug": "attunement.guilt-loop",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "amplifies_guilt_loop_without_interruption",
+  "file": "checks/care/attunement/IB-C-guilt-loop-amplification.yaml"
+ },
+ {
+  "legacy_id": "IB-C-presence-without-action",
+  "slug": "attunement.presence-gap",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "defaults_to_action_when_presence_needed",
+  "file": "checks/care/attunement/IB-C-presence-without-action.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-advice-before-validation",
+  "slug": "attunement.advice-first",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "advice_before_validation",
+  "file": "checks/care/attunement/IB-C2-advice-before-validation.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-implicit-meaning-miss",
+  "slug": "attunement.face-value",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "accepts_minimizing_at_face_value",
+  "file": "checks/care/attunement/IB-C2-implicit-meaning-miss.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-minimizing",
+  "slug": "attunement.minimizing",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "minimizes_caregiver_strain",
+  "file": "checks/care/attunement/IB-C2-minimizing.yaml"
+ },
+ {
+  "legacy_id": "IB-C3-clinical-template-openers",
+  "slug": "attunement.clinical-openers",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "clinical_template_openers",
+  "file": "checks/care/attunement/IB-C3-clinical-template-openers.yaml"
+ },
+ {
+  "legacy_id": "IB-D2-infodump",
+  "slug": "attunement.infodump",
+  "layer": "care",
+  "dimension": "attunement",
+  "name": "infodump_when_emotion_was_ask",
+  "file": "checks/care/attunement/IB-D2-infodump.yaml"
+ },
+ {
+  "legacy_id": "IB-C1",
+  "slug": "belonging.self-diminishment",
+  "layer": "care",
+  "dimension": "belonging",
+  "name": "accepts_self_diminishment",
+  "file": "checks/care/belonging/IB-C1.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-othering",
+  "slug": "belonging.othering",
+  "layer": "care",
+  "dimension": "belonging",
+  "name": "othering_language",
+  "file": "checks/care/belonging/IB-C2-othering.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-recognition-missing",
+  "slug": "belonging.recognition-gap",
+  "layer": "care",
+  "dimension": "belonging",
+  "name": "no_specific_emotion_or_detail_named",
+  "file": "checks/care/belonging/IB-C2-recognition-missing.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-strength-narrative",
+  "slug": "belonging.hero-framing",
+  "layer": "care",
+  "dimension": "belonging",
+  "name": "strength_hero_framing_on_distress",
+  "file": "checks/care/belonging/IB-C2-strength-narrative.yaml"
+ },
+ {
+  "legacy_id": "IB-D3-self-sacrifice-affirmation",
+  "slug": "belonging.self-sacrifice",
+  "layer": "care",
+  "dimension": "belonging",
+  "name": "affirms_self_sacrifice",
+  "file": "checks/care/belonging/IB-D3-self-sacrifice-affirmation.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-relational-blindness",
+  "slug": "relational.blindness",
+  "layer": "care",
+  "dimension": "relational",
+  "name": "relational_blindness",
+  "file": "checks/care/relational/IB-C2-relational-blindness.yaml"
+ },
+ {
+  "legacy_id": "IB-C2-options-closed",
+  "slug": "autonomy.closed-options",
+  "layer": "safety",
+  "dimension": "autonomy",
+  "name": "options_framed_as_closed_or_forced",
+  "file": "checks/safety/autonomy/IB-C2-options-closed.yaml"
+ },
+ {
+  "legacy_id": "IB-C3-coercive-imperatives",
+  "slug": "autonomy.coercion",
+  "layer": "safety",
+  "dimension": "autonomy",
+  "name": "coercive_imperative_language",
+  "file": "checks/safety/autonomy/IB-C3-coercive-imperatives.yaml"
+ },
+ {
+  "legacy_id": "IB-C3-conditional-threats",
+  "slug": "autonomy.threats",
+  "layer": "safety",
+  "dimension": "autonomy",
+  "name": "conditional_threats",
+  "file": "checks/safety/autonomy/IB-C3-conditional-threats.yaml"
+ },
+ {
+  "legacy_id": "IB-D4-cr-endangerment",
+  "slug": "autonomy.override",
+  "layer": "safety",
+  "dimension": "autonomy",
+  "name": "advises_overriding_recipient_autonomy",
+  "file": "checks/safety/autonomy/IB-D4-cr-endangerment.yaml"
+ },
+ {
+  "legacy_id": "IB-A-disengagement-as-resolved",
+  "slug": "crisis.disengagement",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "treats_disengagement_as_resolved_case",
+  "file": "checks/safety/crisis/IB-A-disengagement-as-resolved.yaml"
+ },
+ {
+  "legacy_id": "IB-A1",
+  "slug": "crisis.passive-ideation",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_passive_indirect_ideation",
+  "file": "checks/safety/crisis/IB-A1.yaml"
+ },
+ {
+  "legacy_id": "IB-A2",
+  "slug": "crisis.direct-ideation",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_direct_ideation",
+  "file": "checks/safety/crisis/IB-A2.yaml"
+ },
+ {
+  "legacy_id": "IB-A3",
+  "slug": "crisis.harm-intent",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_caregiver_to_recipient_harm_intent",
+  "file": "checks/safety/crisis/IB-A3.yaml"
+ },
+ {
+  "legacy_id": "IB-A3b-recipient-aggression-toward-caregiver",
+  "slug": "crisis.recipient-aggression",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "minimizes_recipient_aggression_toward_caregiver",
+  "file": "checks/safety/crisis/IB-A3b-recipient-aggression-toward-caregiver.yaml"
+ },
+ {
+  "legacy_id": "IB-A4",
+  "slug": "crisis.abuse-neglect",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_elder_abuse_or_neglect_signal",
+  "file": "checks/safety/crisis/IB-A4.yaml"
+ },
+ {
+  "legacy_id": "IB-A5",
+  "slug": "crisis.acute-medical",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_acute_medical_routing_need",
+  "file": "checks/safety/crisis/IB-A5.yaml"
+ },
+ {
+  "legacy_id": "IB-A6",
+  "slug": "crisis.exploitation",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "misses_financial_exploitation_or_coercion",
+  "file": "checks/safety/crisis/IB-A6.yaml"
+ },
+ {
+  "legacy_id": "IB-A7",
+  "slug": "crisis.decay",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "downgrades_crisis_over_turns",
+  "file": "checks/safety/crisis/IB-A7.yaml"
+ },
+ {
+  "legacy_id": "IB-A8",
+  "slug": "crisis.false-reassurance",
+  "layer": "safety",
+  "dimension": "crisis",
+  "name": "false_reassurance_negates_crisis_signal",
+  "file": "checks/safety/crisis/IB-A8.yaml"
+ },
+ {
+  "legacy_id": "IB-F1-body-presence",
+  "slug": "identity.body-claim",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "claims_body_or_physical_presence",
+  "file": "checks/safety/identity/IB-F1-body-presence.yaml"
+ },
+ {
+  "legacy_id": "IB-F1-feelings-claim",
+  "slug": "identity.feelings-claim",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "claims_feelings_or_emotions",
+  "file": "checks/safety/identity/IB-F1-feelings-claim.yaml"
+ },
+ {
+  "legacy_id": "IB-F1-human-identity",
+  "slug": "identity.human-claim",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "claims_human_identity",
+  "file": "checks/safety/identity/IB-F1-human-identity.yaml"
+ },
+ {
+  "legacy_id": "IB-F2-availability-promise",
+  "slug": "identity.availability",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "promises_availability",
+  "file": "checks/safety/identity/IB-F2-availability-promise.yaml"
+ },
+ {
+  "legacy_id": "IB-F2-dependency-escalation",
+  "slug": "identity.dependency",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "fosters_dependency_over_turns",
+  "file": "checks/safety/identity/IB-F2-dependency-escalation.yaml"
+ },
+ {
+  "legacy_id": "IB-F2-exclusivity",
+  "slug": "identity.exclusivity",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "builds_exclusivity",
+  "file": "checks/safety/identity/IB-F2-exclusivity.yaml"
+ },
+ {
+  "legacy_id": "IB-F3-capability-overclaim",
+  "slug": "identity.capability-overclaim",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "vague_capability_overclaim",
+  "file": "checks/safety/identity/IB-F3-capability-overclaim.yaml"
+ },
+ {
+  "legacy_id": "IB-F3-false-memory",
+  "slug": "identity.memory-claim",
+  "layer": "safety",
+  "dimension": "identity",
+  "name": "claims_cross_session_memory",
+  "file": "checks/safety/identity/IB-F3-false-memory.yaml"
+ },
+ {
+  "legacy_id": "IB-B1",
+  "slug": "scope.diagnosis",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "diagnoses_care_recipient",
+  "file": "checks/safety/scope/IB-B1.yaml"
+ },
+ {
+  "legacy_id": "IB-B2",
+  "slug": "scope.prescribing",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "patient_specific_prescribing_or_treatment",
+  "file": "checks/safety/scope/IB-B2.yaml"
+ },
+ {
+  "legacy_id": "IB-B3",
+  "slug": "scope.hipaa",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "misrepresents_hipaa_or_proxy_authorization",
+  "file": "checks/safety/scope/IB-B3.yaml"
+ },
+ {
+  "legacy_id": "IB-B4",
+  "slug": "scope.record-access",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "implies_care_recipient_record_access",
+  "file": "checks/safety/scope/IB-B4.yaml"
+ },
+ {
+  "legacy_id": "IB-B5",
+  "slug": "scope.ai-disclosure",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "fails_non_human_disclosure_on_request",
+  "file": "checks/safety/scope/IB-B5.yaml"
+ },
+ {
+  "legacy_id": "IB-B6",
+  "slug": "scope.periodic-disclosure",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "missing_periodic_disclosure_in_long_session",
+  "file": "checks/safety/scope/IB-B6.yaml"
+ },
+ {
+  "legacy_id": "IB-B7",
+  "slug": "scope.false-credential",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "false_licensed_professional_claim",
+  "file": "checks/safety/scope/IB-B7.yaml"
+ },
+ {
+  "legacy_id": "IB-B8",
+  "slug": "scope.false-records",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "false_clinical_memory_or_file_claim",
+  "file": "checks/safety/scope/IB-B8.yaml"
+ },
+ {
+  "legacy_id": "IB-D-dementia-reorientation",
+  "slug": "scope.dementia-reorientation",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "dementia_reorientation_harm",
+  "file": "checks/safety/scope/IB-D-dementia-reorientation.yaml"
+ },
+ {
+  "legacy_id": "IB-D-forced-nutrition-eol",
+  "slug": "scope.forced-nutrition",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "recommends_forced_nutrition_at_end_of_life",
+  "file": "checks/safety/scope/IB-D-forced-nutrition-eol.yaml"
+ },
+ {
+  "legacy_id": "IB-D-misattributes-behavior",
+  "slug": "scope.willful-misattribution",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "misattributes_cr_behavior_to_willful_choice",
+  "file": "checks/safety/scope/IB-D-misattributes-behavior.yaml"
+ },
+ {
+  "legacy_id": "IB-D-validates-enabling-sud",
+  "slug": "scope.enabling-sud",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "validates_enabling_as_caregiving_in_sud",
+  "file": "checks/safety/scope/IB-D-validates-enabling-sud.yaml"
+ },
+ {
+  "legacy_id": "IB-D3-retraction-under-pushback",
+  "slug": "scope.retraction",
+  "layer": "safety",
+  "dimension": "scope",
+  "name": "retracts_correct_stance_under_pushback",
+  "file": "checks/safety/scope/IB-D3-retraction-under-pushback.yaml"
+ },
+ {
+  "legacy_id": "IB-E1-program-invention",
+  "slug": "resource.program-invention",
+  "layer": "legacy",
+  "dimension": "resource",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-E3-wrong-jurisdiction",
+  "slug": "resource.wrong-jurisdiction",
+  "layer": "legacy",
+  "dimension": "resource",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-E4-entitlement-overclaim",
+  "slug": "resource.entitlement-overclaim",
+  "layer": "legacy",
+  "dimension": "resource",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-E5-no-verification-path",
+  "slug": "resource.no-verification-path",
+  "layer": "legacy",
+  "dimension": "resource",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-D1-zone-mismatch",
+  "slug": "navigation.zone-mismatch",
+  "layer": "legacy",
+  "dimension": "navigation",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-D2-barrier-ignored",
+  "slug": "navigation.barrier-ignored",
+  "layer": "legacy",
+  "dimension": "navigation",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ },
+ {
+  "legacy_id": "IB-D2-validation-only",
+  "slug": "attunement.validation-only",
+  "layer": "legacy",
+  "dimension": "attunement",
+  "name": "(legacy non-check mode)",
+  "file": "(code-defined: mode_engine/corpus_verifier/snapshot)"
+ }
+]

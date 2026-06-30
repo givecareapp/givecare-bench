@@ -30,14 +30,14 @@ Within that frame, two contributions rest on different amounts of evidence and
 are best cited separately:
 
 1. **Calibrated clinical-scope line** (the most-evidenced Safety surface today).
-   The Scope bright-lines — diagnosis (IB-B1), patient-specific prescribing
-   (IB-B2), false scope/capability claims — plus the crisis checks with per-mode
-   gold (IB-A1, IB-A8) and identity continuity (IB-F3) account for the majority
+   The Scope bright-lines — diagnosis (scope.diagnosis), patient-specific prescribing
+   (scope.prescribing), false scope/capability claims — plus the crisis checks with per-mode
+   gold (crisis.passive-ideation, crisis.false-reassurance) and identity continuity (identity.memory-claim) account for the majority
    of scored violations on the current roster. This is the benchmark's most
    reliable signal.
 2. **Dyadic relational-harm probe** (novel, partly human-labeled, still
    scaling). The distinctive contribution — caregiver-to-recipient harm-fear and
-   recipient-endangerment (the Autonomy line: IB-A3/A4/A5/A6, D4-cr-endangerment)
+   recipient-endangerment (the Autonomy line: crisis.harm-intent/A4/A5/A6, D4-cr-endangerment)
    — is what no other benchmark measures, and is the priority calibration
    backlog: provisional until those checks earn per-mode gold. Read their
    per-line rates as directional until calibration lands.
@@ -116,7 +116,7 @@ internal/, results/ — that are not part of the public contract.)
   `metadata.contrast_surface.status: absent_optional` and
   `findings.contrasts: []`. Older generated narrative markdown should be
   treated as provenance unless regenerated from the current scan.
-- Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only where verifier↔human agreement is established (the resolved 60-trace gold set plus per-mode gold for IB-A1, IB-A8, IB-F3, IB-B1). Care distributions are complete for the frozen transcript artifact but ship as directional/provisional, never composited with Safety.
+- Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only where verifier↔human agreement is established (the resolved 60-trace gold set plus per-mode gold for crisis.passive-ideation, crisis.false-reassurance, identity.memory-claim, scope.diagnosis). Care distributions are complete for the frozen transcript artifact but ship as directional/provisional, never composited with Safety.
 
 ## Quickstart
 

@@ -2,8 +2,8 @@
 
 Checks live in a layered directory structure under `checks/`:
 
-    checks/safety/crisis/IB-A1.yaml
-    checks/care/attunement/IB-C1.yaml
+    checks/safety/crisis/crisis.passive-ideation.yaml
+    checks/care/attunement/belonging.self-diminishment.yaml
 
 `find checks/ -name '*.yaml' ! -name '_*'` is the entire taxonomy.  Each file
 holds the complete identity of one check: definition, severity, scope,
@@ -91,7 +91,7 @@ def check_dimensions(checks_dir: Path | None = None) -> dict[str, dict[str, str]
             rel = check_file.relative_to(root)
         except ValueError:
             continue
-        parts = rel.parts  # e.g. ("safety", "crisis", "IB-A1.yaml")
+        parts = rel.parts  # e.g. ("safety", "crisis", "crisis.passive-ideation.yaml")
         if len(parts) != 3:  # noqa: PLR2004
             continue
         layer, dimension = parts[0], parts[1]

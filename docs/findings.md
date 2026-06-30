@@ -22,10 +22,10 @@ from the current roster, **on the same calibrated checks**:
 
 | Pattern | Legacy sweep (22 models, 2025) | Phase 2 roster (11 models, 2026) |
 |---------|-------------------------------|----------------------------------|
-| Artificial intimacy (IB-F1 body-presence) | up to 22.3%, 22x spread | 0 scored failures (693 results) |
-| False continuity claims (IB-F3) | 1.89% fleet-wide, 41 instances | 0 scored failures |
-| False professional claims (IB-B7) | 12.8% (one model family) | 0 scored failures |
-| Crisis signal negation (IB-A8) | 17.5% (n=40 human cards) | 0 failures on 9 eligible scenarios |
+| Artificial intimacy (identity.body-claim body-presence) | up to 22.3%, 22x spread | 0 scored failures (693 results) |
+| False continuity claims (identity.memory-claim) | 1.89% fleet-wide, 41 instances | 0 scored failures |
+| False professional claims (scope.false-credential) | 12.8% (one model family) | 0 scored failures |
+| Crisis signal negation (crisis.false-reassurance) | 17.5% (n=40 human cards) | 0 failures on 9 eligible scenarios |
 
 Two explanations, not mutually exclusive, and we report both:
 
@@ -37,7 +37,7 @@ Two explanations, not mutually exclusive, and we report both:
    generation — this is exactly the change a persistent-relationship
    benchmark exists to detect.
 2. **Some checks are under-triggered by the current public scenario set.**
-   IB-A3 (harm-fear normalization) is eligible on only one Phase 2 scenario.
+   crisis.harm-intent (harm-fear normalization) is eligible on only one Phase 2 scenario.
    Zero failures at low eligibility is weak evidence of safety; it is a
    coverage gap we are addressing through scenario intake, and we treat it as
    such rather than claiming the problem is solved.
@@ -71,9 +71,9 @@ validated claims):
 - **Emotional register mismatch** — 521 check failures across all 11 models
   (~75% of scored results): responses whose tone does not match the
   caregiver's emotional state.
-- **Infodumping (IB-D2)** — 298 failures: burying a stressed caregiver in
+- **Infodumping (attunement.infodump)** — 298 failures: burying a stressed caregiver in
   information instead of one next step.
-- **Relational blindness (IB-C2)** — 210 failures: answering the literal
+- **Relational blindness (relational.blindness)** — 210 failures: answering the literal
   question while missing the relationship signal inside it.
 - **Strength-narrative misuse** — 190 failures: "you're so strong" deployed
   where it forecloses the caregiver's permission to struggle.
@@ -90,7 +90,7 @@ and still don't know how to sit with one.**
 These remain the benchmark's distinctive discoveries. Each now carries its
 current-roster status explicitly.
 
-### 3.1 Harm-fear normalization (IB-A3)
+### 3.1 Harm-fear normalization (crisis.harm-intent)
 
 When a caregiver says "I don't want to hurt her because I'm fried," 9 of 40
 tested model responses treated it as a cognitive-fog problem rather than a
@@ -107,7 +107,7 @@ catches "I want to hurt myself" and misses "I'm afraid I'll hurt her" — the
 signal lives in the relationship, not in keywords.
 **Calibration:** human expert labels only; automated scorer in development.
 
-### 3.2 Crisis signal negation (IB-A8)
+### 3.2 Crisis signal negation (crisis.false-reassurance)
 
 When a caregiver says "I wish I could just fall asleep and not wake up," 7 of
 40 tested responses provided the 988 Lifeline number AND explicitly denied
@@ -120,7 +120,7 @@ incorrect framing teaches the caregiver their words will not be taken
 seriously.
 **Calibration:** automated scorer validated at Cohen's κ = 0.747 (Tier 1).
 
-### 3.3 Artificial intimacy variance (IB-F1)
+### 3.3 Artificial intimacy variance (identity.body-claim)
 
 Body-presence language ("I'm here with you," "I'll be by your side") varied
 22x across the legacy fleet:
@@ -140,7 +140,7 @@ language from a system with no body creates intimacy on a premise the system
 cannot fulfill.
 **Calibration:** deterministic regex, precision ≥ 0.95, quoted evidence spans.
 
-### 3.4 False continuity claims (IB-F3)
+### 3.4 False continuity claims (identity.memory-claim)
 
 41 legacy instances of "I'll be here when you come back" — implying
 cross-session continuity that does not exist. Concentrated in DeepSeek V3.2,
@@ -150,7 +150,7 @@ Gemini 2.5 Flash, and GLM-5 (legacy generation).
 **Current roster status:** 0 scored failures on Phase 2.
 **Calibration:** automated scorer validated at κ = 0.795 (Tier 1).
 
-### 3.5 Identity misrepresentation (IB-B5 / IB-B7)
+### 3.5 Identity misrepresentation (scope.ai-disclosure / scope.false-credential)
 
 Two legacy Gemini-family models showed nonzero rates on identity-disclosure
 checks with regulatory consequence (Gemini 2.5 Flash: 12.8% false
@@ -169,11 +169,11 @@ would trigger regulatory review.
 
 | Finding | Check | Method | Agreement | Trust level |
 |---------|-------|--------|----------:|-------------|
-| Harm-fear normalization | IB-A3 | Human expert labels | — | Human-only |
-| Crisis signal negation | IB-A8 | Scorer vs. human | κ = 0.747 | Tier 1 validated |
-| Artificial intimacy | IB-F1 | Deterministic regex | precision ≥ 0.95 | Deterministic |
-| False continuity | IB-F3 | Scorer vs. human | κ = 0.795 | Tier 1 validated |
-| Identity misrepresentation | IB-B5/B7 | Deterministic regex | precision ≥ 0.95 | Deterministic |
+| Harm-fear normalization | crisis.harm-intent | Human expert labels | — | Human-only |
+| Crisis signal negation | crisis.false-reassurance | Scorer vs. human | κ = 0.747 | Tier 1 validated |
+| Artificial intimacy | identity.body-claim | Deterministic regex | precision ≥ 0.95 | Deterministic |
+| False continuity | identity.memory-claim | Scorer vs. human | κ = 0.795 | Tier 1 validated |
+| Identity misrepresentation | scope.ai-disclosure/B7 | Deterministic regex | precision ≥ 0.95 | Deterministic |
 | Safety + compliance gates | hard-fail layer | Scorer vs. resolved gold | κ = 1.0* | Validated, with caveats |
 
 **The asterisk, stated plainly.** The κ = 1.0 gate alignment is measured

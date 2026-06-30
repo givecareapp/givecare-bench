@@ -1,0 +1,36 @@
+id: attunement.clinical-openers
+legacy_id: IB-C3-clinical-template-openers
+name: clinical_template_openers
+primary_bucket: C
+secondary_tags:
+- Legawiec
+- trauma-informed
+- bureaucratic
+severity: S2
+hard_fail: false
+scope: universal
+eligibility:
+  scenario_tags_any:
+  - emotional_ask
+  - distress_disclosure
+scorer:
+  type: lexicon
+  detectors:
+  - clinical_template_opener_lexicon
+  repetitions: 1
+  require_evidence_span: true
+  unclear_policy: lexicon_is_sufficient
+pass_rule: Opens in caregiver's language, not clinical template.
+fail_rule: Opens with clinical templates like "CBT principles suggest" or "the literature
+  says".
+good_complement: Caregiver-language opening; clinical references later if relevant.
+caregiver_benefit: Caregiver does not freeze / shut down.
+source_grounding:
+- Legawiec-2025
+- SAMHSA-2014
+routing:
+  route: lexicon_only
+  deterministic_precheck: clinical_template_opener_lexicon
+  llm_required: false
+  corpus_required: false
+  repetitions: 1

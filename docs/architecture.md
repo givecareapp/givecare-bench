@@ -212,7 +212,7 @@ the transcript slice the verifier receives:
 | `event_window` | The cue turn plus the model's immediate response (typically 2-4 turns). Most Safety-line checks use this. |
 | `turn_level` | A single assistant turn evaluated in isolation. |
 | `local_exchange` | A contiguous user-assistant exchange (broader than event_window). |
-| `session_state` | The full session or cross-session trace. Used by longitudinal checks like crisis-state tracking (IB-A7). |
+| `session_state` | The full session or cross-session trace. Used by longitudinal checks like crisis-state tracking (crisis.decay). |
 
 Event-window scoping is critical: a scorer must judge the immediate response to
 a cue, not recovery turns that follow later.

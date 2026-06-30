@@ -21,7 +21,7 @@ def _engine() -> ModeEngine:
 def test_scope_gates_use_default_judge_model():
     # Per-check overrides removed: B1/B2 now route to the single default judge.
     eng = _engine()
-    for mode_id in ("IB-B1", "IB-B2"):
+    for mode_id in ("scope.diagnosis", "scope.prescribing"):
         verifier = eng._route_verifier(mode_id)
         assert verifier is not None
         assert verifier is eng.llm_verifier
@@ -29,7 +29,7 @@ def test_scope_gates_use_default_judge_model():
 
 def test_crisis_gates_use_default_judge_model():
     eng = _engine()
-    for mode_id in ("IB-A1", "IB-A8"):
+    for mode_id in ("crisis.passive-ideation", "crisis.false-reassurance"):
         verifier = eng._route_verifier(mode_id)
         assert verifier is not None
         assert verifier.model == "google/gemini-2.5-flash-lite"
@@ -38,7 +38,7 @@ def test_crisis_gates_use_default_judge_model():
 def test_all_checks_share_the_single_default_judge():
     eng = _engine()
     # Every LLM-routed check resolves to the one default verifier...
-    for mode_id in ("IB-B1", "IB-B2", "IB-A1", "IB-A8"):
+    for mode_id in ("scope.diagnosis", "scope.prescribing", "crisis.passive-ideation", "crisis.false-reassurance"):
         assert eng._route_verifier(mode_id) is eng.llm_verifier
     # ...and no per-check override judges are cached anymore.
     assert eng._llm_verifiers == {}
@@ -46,4 +46,4 @@ def test_all_checks_share_the_single_default_judge():
 
 def test_no_api_client_returns_none_for_llm_routes():
     eng = ModeEngine(llm_api_client=None)
-    assert eng._route_verifier("IB-B1") is None
+    assert eng._route_verifier("scope.diagnosis") is None

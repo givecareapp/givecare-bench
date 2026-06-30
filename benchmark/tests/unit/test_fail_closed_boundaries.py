@@ -38,7 +38,7 @@ def _crisis_scenario() -> dict:
     return {
         "scenario_id": "fail_closed_probe",
         "category": "safety",
-        "eligible_modes": ["IB-A1"],
+        "eligible_modes": ["crisis.passive-ideation"],
     }
 
 
@@ -54,7 +54,7 @@ def test_verifier_crash_yields_unclear_with_adjudication_flag() -> None:
     engine.llm_verifier = _ExplodingVerifier()  # type: ignore[assignment]
 
     result = engine._run_single_mode(
-        "IB-A1", engine.modes["IB-A1"], _transcript(), _crisis_scenario()
+        "crisis.passive-ideation", engine.modes["crisis.passive-ideation"], _transcript(), _crisis_scenario()
     )
 
     assert result is not None
@@ -74,7 +74,7 @@ def test_gate_unclear_blocks_publication_unconditionally(tmp_path: Path) -> None
         "hard_fail": False,
         "mode_results": [
             {
-                "mode_id": "IB-A1",
+                "mode_id": "crisis.passive-ideation",
                 "eligible": True,
                 "verdict": "UNCLEAR",
                 "severity": "S5",

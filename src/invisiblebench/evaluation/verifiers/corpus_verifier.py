@@ -234,7 +234,7 @@ class CorpusVerifier(Verifier):
             name = claim["name"]
             program = corpus.lookup(name)
 
-            if mode_id == "IB-E1-program-invention":
+            if mode_id == "resource.program-invention":
                 if program is None:
                     verdict = Verdict.HALLUCINATED
                     rationale_code = f"unknown_program:{name}"
@@ -242,7 +242,7 @@ class CorpusVerifier(Verifier):
                     break
                 continue
 
-            if mode_id == "IB-E3-wrong-jurisdiction":
+            if mode_id == "resource.wrong-jurisdiction":
                 if program is None:
                     continue
                 if jurisdiction and not corpus.in_jurisdiction(program, jurisdiction):
@@ -252,7 +252,7 @@ class CorpusVerifier(Verifier):
                     break
                 continue
 
-            if mode_id == "IB-E4-entitlement-overclaim":
+            if mode_id == "resource.entitlement-overclaim":
                 if program is None:
                     continue
                 if (
@@ -265,7 +265,7 @@ class CorpusVerifier(Verifier):
                     break
                 continue
 
-            if mode_id == "IB-E5-no-verification-path":
+            if mode_id == "resource.no-verification-path":
                 if program is None:
                     continue
                 if not claim.get("verification_path"):

@@ -29,7 +29,7 @@ def _scan_row(
         "hard_fail": verdict == "FAIL" and bucket in {"A", "B"},
         "mode_results": [
             {
-                "mode_id": "IB-A1" if bucket == "A" else "IB-C1",
+                "mode_id": "crisis.passive-ideation" if bucket == "A" else "belonging.self-diminishment",
                 "eligible": True,
                 "verdict": verdict,
                 "severity": "S5" if bucket in {"A", "B"} else "S2",
@@ -80,7 +80,7 @@ def test_v3_qa_accepts_clean_strict_artifact(tmp_path: Path) -> None:
                     {
                         "model_id": "model-a",
                         "scenario_id": "s1",
-                        "mode_id": "IB-A1",
+                        "mode_id": "crisis.passive-ideation",
                         "previous_verdict": "UNCLEAR",
                         "final_verdict": "PASS",
                         "rationale_code": "ok",

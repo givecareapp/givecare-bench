@@ -72,7 +72,7 @@ InvisibleBench makes **calibration-gated claims**: only checks whose `calibratio
 
 | Maturity tier | Meaning | Examples |
 |---|---|---|
-| `validated` | Per-mode Tier 1 κ against resolved human gold | IB-A1, IB-A8 (crisis); IB-F3-false-memory |
+| `validated` | Per-mode Tier 1 κ against resolved human gold | crisis.passive-ideation, crisis.false-reassurance (crisis); identity.memory-claim |
 | `provisional` | Layer/card-level human evidence; directional, labeled | Most Safety checks; all authored Care checks |
 | `to-author` | Named gap — dimension exists, no checks authored yet | Trauma-awareness (Care layer) |
 
@@ -118,12 +118,12 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 
 | Baseline dimension | Layer / line-or-quality | Coverage | Status |
 |---|---|---|---|
-| Crisis recognition and routing | Safety · Crisis | IB-A1 through IB-A-disengagement-as-resolved | **Covered** |
-| Scope honesty | Safety · Scope | IB-B1 through IB-B8 + clinical-directive checks | **Covered** |
-| Identity honesty / anti-dependency | Safety · Identity | IB-F1, IB-F2, IB-F3 | **Covered** |
-| Recipient autonomy protection | Safety · Autonomy | IB-D4-cr-endangerment, IB-C3-coercive-imperatives, IB-C3-conditional-threats, IB-C2-options-closed | **Covered** |
-| Caregiver recognition | Care · Belonging | IB-C1, IB-C2-recognition-missing, IB-C2-othering, IB-C2-strength-narrative, IB-D3-self-sacrifice-affirmation | **Covered** |
-| Emotional attunement | Care · Attunement | IB-C-emotional-register-match, IB-C2-advice-before-validation, IB-C-guilt-loop-amplification, IB-D2-infodump, others | **Covered** |
+| Crisis recognition and routing | Safety · Crisis | crisis.passive-ideation through crisis.disengagement | **Covered** |
+| Scope honesty | Safety · Scope | scope.diagnosis through scope.false-records + clinical-directive checks | **Covered** |
+| Identity honesty / anti-dependency | Safety · Identity | identity.body-claim, identity.dependency, identity.memory-claim | **Covered** |
+| Recipient autonomy protection | Safety · Autonomy | autonomy.override, autonomy.coercion, autonomy.threats, autonomy.closed-options | **Covered** |
+| Caregiver recognition | Care · Belonging | belonging.self-diminishment, belonging.recognition-gap, belonging.othering, belonging.hero-framing, belonging.self-sacrifice | **Covered** |
+| Emotional attunement | Care · Attunement | attunement.generic-warmth, attunement.advice-first, attunement.guilt-loop, attunement.infodump, others | **Covered** |
 | Resource quality | Care · Relational / Advocacy | Named; verification against live resources remains out of scope | **Partial** |
 | Trauma-informed language | Care · Trauma-awareness | Named gap — checks to-author (v2) | **Gap** |
 | Sensitive-disclosure minimization | — | Product design concern, not conversation scoring | Outside scope |
@@ -151,9 +151,9 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 
     **Post-caregiving bereavement.** InvisibleBench evaluates active caregiving relationships. Bereaved former caregivers have distinct needs — identity reconstruction, complicated grief — that are adjacent but not yet covered.
 
-    **Care-recipient-initiated harm toward the caregiver.** IB-A3 covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at >20% prevalence) — is partially covered by IB-A3b but requires fuller purpose-built scenario coverage.
+    **Care-recipient-initiated harm toward the caregiver.** crisis.harm-intent covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at >20% prevalence) — is partially covered by crisis.harm-intentb but requires fuller purpose-built scenario coverage.
 
-    **Proxy ethical decision-making.** End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). IB-D-forced-nutrition-eol is the current single check; broader proxy ethics coverage is deferred.
+    **Proxy ethical decision-making.** End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). scope.forced-nutrition is the current single check; broader proxy ethics coverage is deferred.
 
 ---
 

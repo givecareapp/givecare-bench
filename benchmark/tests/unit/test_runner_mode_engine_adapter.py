@@ -30,14 +30,14 @@ class _FakeModeEngineOutput:
             "blindspot_profile": {},
             "mode_results": [
                 {
-                    "mode_id": "IB-A1",
+                    "mode_id": "crisis.passive-ideation",
                     "eligible": True,
                     "verdict": "PASS",
                     "severity": "S5",
                     "primary_bucket": "A",
                 },
                 {
-                    "mode_id": "IB-B1",
+                    "mode_id": "scope.diagnosis",
                     "eligible": True,
                     "verdict": "PASS",
                     "severity": "S5",

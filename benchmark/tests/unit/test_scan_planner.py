@@ -10,52 +10,52 @@ from scripts.run_scan import apply_scan_profile, build_scan_plan, load_scan_prof
 
 def test_scan_profile_filters_modes_and_overrides_repetitions() -> None:
     modes = {
-        "IB-A1": {
-            "id": "IB-A1",
+        "crisis.passive-ideation": {
+            "id": "crisis.passive-ideation",
             "primary_bucket": "A",
             "severity": "S5",
             "scope": "trigger",
             "eligibility": {"scenario_tags_any": ["passive_ideation"]},
         },
-        "IB-C1": {
-            "id": "IB-C1",
+        "belonging.self-diminishment": {
+            "id": "belonging.self-diminishment",
             "primary_bucket": "C",
             "severity": "S2",
             "scope": "universal",
         },
     }
     routing = {
-        "IB-A1": {"route": "hybrid_llm", "repetitions": 3},
-        "IB-C1": {"route": "llm_primary", "repetitions": 3},
+        "crisis.passive-ideation": {"route": "hybrid_llm", "repetitions": 3},
+        "belonging.self-diminishment": {"route": "llm_primary", "repetitions": 3},
     }
     profile = load_scan_profile("dev")
 
     filtered_modes, filtered_routing = apply_scan_profile(modes, routing, profile)
 
-    assert set(filtered_modes) == {"IB-A1"}
-    assert filtered_routing["IB-A1"]["repetitions"] == 1
-    assert filtered_routing["IB-A1"]["adaptive_repetitions"] is True
+    assert set(filtered_modes) == {"crisis.passive-ideation"}
+    assert filtered_routing["crisis.passive-ideation"]["repetitions"] == 1
+    assert filtered_routing["crisis.passive-ideation"]["adaptive_repetitions"] is True
 
 
 def test_build_scan_plan_counts_profiled_llm_calls() -> None:
     modes = {
-        "IB-A1": {
-            "id": "IB-A1",
+        "crisis.passive-ideation": {
+            "id": "crisis.passive-ideation",
             "primary_bucket": "A",
             "severity": "S5",
             "scope": "trigger",
             "eligibility": {"scenario_tags_any": ["passive_ideation"]},
         },
-        "IB-F1-human-identity": {
-            "id": "IB-F1-human-identity",
+        "identity.human-claim": {
+            "id": "identity.human-claim",
             "primary_bucket": "F",
             "severity": "S4_GATE",
             "scope": "universal",
         },
     }
     routing = {
-        "IB-A1": {"route": "hybrid_llm", "repetitions": 1},
-        "IB-F1-human-identity": {"route": "regex_with_llm_edge", "repetitions": 1},
+        "crisis.passive-ideation": {"route": "hybrid_llm", "repetitions": 1},
+        "identity.human-claim": {"route": "regex_with_llm_edge", "repetitions": 1},
     }
     profile = load_scan_profile("full")
 
@@ -71,8 +71,8 @@ def test_build_scan_plan_counts_profiled_llm_calls() -> None:
     assert plan["transcript_count"] == 1
     assert plan["eligible_checks"] == 2
     assert plan["planned_llm_calls"] == 1
-    assert plan["by_mode"]["IB-A1"]["planned_llm_calls"] == 1
-    assert plan["by_mode"]["IB-F1-human-identity"]["planned_llm_calls"] == 0
+    assert plan["by_mode"]["crisis.passive-ideation"]["planned_llm_calls"] == 1
+    assert plan["by_mode"]["identity.human-claim"]["planned_llm_calls"] == 0
 
 
 def test_run_scan_normalizes_transcripts_subdir_to_parent(
