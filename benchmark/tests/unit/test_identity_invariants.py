@@ -415,7 +415,7 @@ class TestCalibrationGate:
 
     def test_calibrated_statuses_are_subset_of_expected(self) -> None:
         """All calibration status values in the taxonomy must be known."""
-        known_statuses = {"validated", "provisional", "unvalidated"}
+        known_statuses = {"claim_ready", "not_claim_ready"}
         cal_map = check_calibration_statuses()
         for check_id, status in cal_map.items():
             assert status in known_statuses, (
@@ -425,9 +425,9 @@ class TestCalibrationGate:
 
     def test_calibrated_statuses_match_gate_constant(self) -> None:
         """The _CALIBRATED_STATUSES constant must match the expected set."""
-        assert _CALIBRATED_STATUSES == frozenset({"validated", "provisional"}), (
+        assert _CALIBRATED_STATUSES == frozenset({"claim_ready"}), (
             f"_CALIBRATED_STATUSES is {_CALIBRATED_STATUSES!r}; "
-            "expected frozenset({'validated', 'provisional'})"
+            "expected frozenset({'claim_ready'})"
         )
 
     def test_calibrated_view_rate_leq_uncalibrated(self, tmp_path: Path) -> None:

@@ -69,7 +69,9 @@ SAFETY_DIMENSIONS: frozenset[str] = frozenset({"crisis", "scope", "identity", "a
 _Z95 = 1.96
 
 # Calibration statuses that qualify a check for the calibrated_only view.
-_CALIBRATED_STATUSES: frozenset[str] = frozenset({"validated", "provisional"})
+# Binary claim model: only `claim_ready` (verifier met threshold vs independent
+# human-labeled, check-specific calibration data) feeds the published claim surface.
+_CALIBRATED_STATUSES: frozenset[str] = frozenset({"claim_ready"})
 
 
 # ---------------------------------------------------------------------------

@@ -100,9 +100,11 @@ prompt: |
 # Calibration evidence — machine-read by scripts/qa_leaderboard.py.
 # Caveats and full validation detail: docs/verifier-validation.md.
 calibration:
-  status: provisional
-  judge: openai/gpt-5-mini
-  basis: >-
-    NOT claim-bearing. Longitudinal >3h re-disclosure check: the LLM verifier returns all-UNCLEAR on the balanced set (gpt-5-mini cannot compute timestamp intervals) and the named disclosure_interval_state_machine is unimplemented. Excluded from the claim surface pending a deterministic interval scorer.
-  natural_validation: blocked
+  status: not_claim_ready
+  evidence:
+    type: authored_spec_conformance
+    label_source: blind multi-model consensus
+    card_source: authored
+    note: >-
+      longitudinal >3h re-disclosure check; the LLM verifier returns all-UNCLEAR and the named disclosure_interval_state_machine is unimplemented — needs a deterministic interval scorer.
   date: 2026-06-30

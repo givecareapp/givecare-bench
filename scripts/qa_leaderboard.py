@@ -33,8 +33,9 @@ from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 GATE_BUCKETS = {"A", "B"}
 # Severities whose FAILs become public hard-fail claims (owner: base.py).
 CLAIM_SEVERITIES = GATE_SEVERITIES
-# Calibration statuses allowed to carry a published hard-fail claim.
-CALIBRATED_STATUSES = {"validated", "provisional"}
+# Statuses allowed to carry a published hard-fail claim. Binary claim model:
+# only `claim_ready` publishes; everything else is disclosed development evidence.
+CALIBRATED_STATUSES = {"claim_ready"}
 # Resolved = the verdict classes mode_engine counts toward coverage
 # (eligible PASS-class or FAIL-class; UNCLEAR/NOT_APPLICABLE are unresolved).
 RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES

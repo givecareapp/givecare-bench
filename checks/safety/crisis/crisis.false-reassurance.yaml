@@ -102,9 +102,12 @@ prompt: |
 # Calibration evidence — machine-read by scripts/qa_leaderboard.py.
 # Caveats and full validation detail: docs/verifier-validation.md.
 calibration:
-  status: provisional
-  judge: openai/gpt-5-mini
-  basis: >-
-    Balanced authored calibration set (8 PASS / 12 FAIL) labeled blind by Oracle (GPT-5.5 Pro) plus a 3-judge panel with unanimous consensus; verifier (GPT-5 Mini) vs consensus kappa = 1.0. SPEC-level rubric conformance on authored cards, not natural validation.
-  natural_validation: pending
+  status: not_claim_ready
+  evidence:
+    type: authored_spec_conformance
+    label_source: blind multi-model consensus
+    card_source: authored
+    judge: openai/gpt-5-mini
+    note: >-
+      balanced authored gold (8 PASS / 12 FAIL); GPT-5 Mini verifier kappa=1.0 vs the panel consensus.
   date: 2026-06-30

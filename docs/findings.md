@@ -44,13 +44,13 @@ Two explanations, not mutually exclusive, and we report both:
 
 **Calibration:** the legacy rates carry the calibration documented per
 finding below; the Phase 2 zeros come from the same deterministic and
-Tier-1-validated scorers.
+development-evidence scorers (not yet claim_ready).
 
 ---
 
 ## 2. What still fails today (Phase 2 roster)
 
-**Hard-fail rates — the validated claim surface.** Every model on the current
+**Hard-fail rates — the claim surface (currently empty — 0 claim_ready).** Every model on the current
 leaderboard hard-fails some scenarios on safety/compliance gates:
 
 | Model | Hard-fail scenarios | Rate |
@@ -59,7 +59,7 @@ leaderboard hard-fails some scenarios on safety/compliance gates:
 | field median | ~6–8 / 63 | 10–13% |
 | DeepSeek V4 Pro (worst) | 10 / 63 | 16% |
 
-The gates are the benchmark's most-validated layer (see Calibration status
+The gates are the benchmark's most-developed layer (see Calibration status
 below for what that validation does and does not cover).
 
 **Live failure patterns — directional, pending quality-layer validation.**
@@ -118,7 +118,7 @@ the death-relevant meaning — "you're exhausted, not suicidal."
 **Why it matters:** the explicit denial is the harm. Correct resource plus
 incorrect framing teaches the caregiver their words will not be taken
 seriously.
-**Calibration:** automated scorer validated at Cohen's κ = 0.747 (Tier 1).
+**Calibration:** automated scorer scored (development evidence, not claim_ready) at Cohen's κ = 0.747 (Tier 1).
 
 ### 3.3 Artificial intimacy variance (identity.body-claim)
 
@@ -148,7 +148,7 @@ Gemini 2.5 Flash, and GLM-5 (legacy generation).
 
 **Prevalence:** 1.89% fleet-wide (legacy sweep).
 **Current roster status:** 0 scored failures on Phase 2.
-**Calibration:** automated scorer validated at κ = 0.795 (Tier 1).
+**Calibration:** automated scorer scored (development evidence, not claim_ready) at κ = 0.795 (Tier 1).
 
 ### 3.5 Identity misrepresentation (scope.ai-disclosure / scope.false-credential)
 
@@ -170,9 +170,9 @@ would trigger regulatory review.
 | Finding | Check | Method | Agreement | Trust level |
 |---------|-------|--------|----------:|-------------|
 | Harm-fear normalization | crisis.harm-intent | Human expert labels | — | Human-only |
-| Crisis signal negation | crisis.false-reassurance | Scorer vs. human | κ = 0.747 | Tier 1 validated |
+| Crisis signal negation | crisis.false-reassurance | Scorer vs. human | κ = 0.747 | development evidence (not_claim_ready) |
 | Artificial intimacy | identity.body-claim | Deterministic regex | precision ≥ 0.95 | Deterministic |
-| False continuity | identity.memory-claim | Scorer vs. human | κ = 0.795 | Tier 1 validated |
+| False continuity | identity.memory-claim | Scorer vs. human | κ = 0.795 | development evidence (not_claim_ready) |
 | Identity misrepresentation | scope.ai-disclosure/B7 | Deterministic regex | precision ≥ 0.95 | Deterministic |
 | Safety + compliance gates | hard-fail layer | Scorer vs. resolved gold | κ = 1.0* | Validated, with caveats |
 
@@ -191,7 +191,7 @@ directional distributions. Belonging has inter-model provisional κ = 0.82; the
 remaining Care qualities are labeled to-author or provisional pending human
 validation. There is no `overall_score` and no single rank. Until each Care
 quality clears human-annotation-grade κ ≥ 0.65: cite Safety violation rates
-and gate behavior as the validated claim surface; treat Care distributions as
+and gate behavior as the claim surface (currently empty — 0 claim_ready); treat Care distributions as
 directional signal, not finalized claims. This caveat appears in the leaderboard
 artifact's metadata.
 

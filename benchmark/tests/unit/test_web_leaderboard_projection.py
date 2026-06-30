@@ -49,25 +49,25 @@ def _minimal_source(
                             "pass_rate": belonging_pass_rate,
                             "n": 10,
                             "directional": True,
-                            "calibration_status": "provisional",
+                            "calibration_status": "not_claim_ready",
                         },
                         "attunement": {
                             "pass_rate": 0.7,
                             "n": 5,
                             "directional": True,
-                            "calibration_status": "provisional",
+                            "calibration_status": "not_claim_ready",
                         },
                         "relational": {
                             "pass_rate": None,
                             "n": 0,
                             "directional": True,
-                            "calibration_status": "provisional",
+                            "calibration_status": "not_claim_ready",
                         },
                         "advocacy": {
                             "pass_rate": None,
                             "n": 0,
                             "directional": True,
-                            "calibration_status": "provisional",
+                            "calibration_status": "not_claim_ready",
                         },
                         "trauma_awareness": {"n": 0, "status": "to-author"},
                     },
@@ -121,7 +121,7 @@ def test_project_leaderboard_care_qualities_present() -> None:
     belonging = projected["models"][0]["care"]["qualities"]["belonging"]
     assert belonging["pass_rate"] == 0.75
     assert belonging["n"] == 10
-    assert belonging["calibration_status"] == "provisional"
+    assert belonging["calibration_status"] == "not_claim_ready"
 
 
 def test_project_leaderboard_safety_lines_present() -> None:

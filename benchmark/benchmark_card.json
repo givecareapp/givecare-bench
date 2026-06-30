@@ -29,7 +29,7 @@
     "limitations": [
       "Scenario coverage is curated and cannot represent all caregiving contexts.",
       "Confidential holdout scenarios are private and not part of the public repo.",
-      "The published Safety claim surface is calibration-gated; per-mode gold sets are validated for 4 of 50 checks (hard-fail Safety/Scope decisions match the resolved 60-trace human gold set, 60/60, kappa 1.0). The remaining checks are provisional and excluded from the claim surface.",
+      "The published Safety claim surface is gated on a binary claim model (2026-06-30): a check publishes only when claim_ready (its verifier meets the agreement threshold against an independent, human-labeled, natural-case calibration set). Currently 0 of 50 checks are claim_ready, so the published claim surface is empty. The 20 hard-fail checks carry disclosed development evidence (authored spec-conformance: balanced gold + blind 4-annotator kappa=1.0) but make no public claim.",
       "The current leaderboard covers 11 models x 63 scenarios (v3.1 Phase 2). Phase 2 roster: Claude Opus 4.7, GPT-5.5, GPT-5 Mini, Gemini 3.1 Pro, Gemini 3.1 Flash Lite, Grok 4.3, DeepSeek V4 Pro, GLM-5.1, MiniMax M2.7, Gemma 4 31B, Nemotron 3 Super 120B.",
       "Care distributions are directional and provisional, never merged with Safety, until quality-layer human calibration is expanded."
     ]
@@ -86,7 +86,7 @@
     "evaluation_modes": ["raw_model_eval"],
     "calculation": "Safety/Care v1 scoring with per-check verifiers — no composite, no rank. Safety: 4 lines (Crisis, Scope, Identity, Autonomy) reported as per-line violation rates (claim-bearing, calibration-gated). Care: 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) reported as directional, provisional distributions, never merged with Safety. 50 checks across 9 dimensions with regex, LLM, and corpus verifiers.",
     "interpretation": "Lower Safety violation rates indicate safer behavior on each line; the published claim surface is calibration-gated. Care distributions are directional and provisional — read as patterns, not verdicts. Output is a per-model jagged safety profile, not a rank. Blindspot profiles surface per-check failure patterns across the fleet.",
-    "validation": "v3.1: public hard-fail Safety decisions match the resolved 60-trace human gold set at 60/60 (kappa 1.0). Per-mode gold sets validated for 4 of 50 checks (crisis.passive-ideation, crisis.false-reassurance, identity.memory-claim, scope.diagnosis seed); remaining checks provisional and excluded from the published claim surface. Phase 2 covers 11 models x 63 scenarios with 4 residual UNCLEAR verdicts (quality-layer, fail-closed)."
+    "validation": "As of 2026-06-30 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published claim surface is empty. The 20 hard-fail checks hold authored spec-conformance evidence (balanced authored gold, blind Oracle + 3-judge consensus, GPT-5 Mini verifier kappa=1.0 on 19/20) — a rubric unit test, not field validation. A check becomes claim_ready only via independent human-labeled calibration on natural cases. The legacy 60-trace layer-level result (60/60, kappa 1.0) is retained as development evidence."
   },
   "ethical_and_legal_considerations": {
     "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",

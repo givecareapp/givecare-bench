@@ -70,9 +70,9 @@ InvisibleBench's contribution is not another healthcare benchmark. It contribute
 
 Not every dimension is ready to carry claims. Each is labelled:
 
-- **Calibrated** — human-κ validated; per-mode gold sets; verdict is a citable claim. (Example: Crisis A1, A8; Identity F3.)
-- **Provisional** — checks authored, with human-reviewed judge prompts and card-level evidence but no formal κ run; reported directionally, labeled. (Example: Scope, Autonomy, most Care qualities.)
-- **To-author** — named gap in the taxonomy; placeholder directory exists; no checks authored yet. (Example: Trauma-awareness.)
+- **`claim_ready`** — verifier meets the threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set; the verdict is a citable claim. **Currently none.**
+- **`not_claim_ready`** — everything else. May carry disclosed development evidence (`authored_spec_conformance`: balanced gold + 4-annotator κ=1.0 on the 20 hard-fail checks; or layer-level/`development_only`), reported directionally — but no public claim. (All 50 checks today.)
+- **Named gaps** — e.g. Trauma-awareness: a dimension with a placeholder directory and no checks authored yet.
 
 The comprehensive nine-dimension structure ships now. Calibration fills in over releases. The maturity label on each check prevents premature claim-making without hiding the gap — a reader can see exactly which cells are ready and which are not.
 

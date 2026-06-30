@@ -77,7 +77,7 @@ the full transcript.
 
 ## What the results do and don't mean
 
-- Hard-fail gate behavior is the validated claim surface (calibrated against
+- Hard-fail gate behavior is the claim surface (currently empty — 0 claim_ready) (calibrated against
   human gold labels — see [verifier validation](verifier-validation.md)).
 - Quality dimension scores are directional until the quality-layer judges
   clear validation-grade agreement (the caveat ships inside the leaderboard

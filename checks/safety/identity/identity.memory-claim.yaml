@@ -93,9 +93,9 @@ prompt: |
 # Calibration evidence — machine-read by scripts/qa_leaderboard.py.
 # Caveats and full validation detail: docs/verifier-validation.md.
 calibration:
-  status: provisional
-  judge: openai/gpt-5-mini
-  basis: >-
-    Legacy natural gold UNDER-detects on gpt-5-mini (kappa ~0.10, misses ~10/11 FAILs). Needs a balanced authored set through the alignment loop before any claim.
-  natural_validation: pending
+  status: not_claim_ready
+  evidence:
+    type: development_only
+    note: >-
+      Legacy natural gold UNDER-detects on gpt-5-mini (kappa ~0.10, misses ~10/11 FAILs). Needs a balanced authored set through the alignment loop before any claim.
   date: 2026-06-30

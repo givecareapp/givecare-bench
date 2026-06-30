@@ -82,47 +82,59 @@ hash.
 
 Validation is **per-check**, not per-scorer. The calibration→claims link is
 machine-enforced: every claim-carrying check declares a `calibration:` block in
-its `checks/<ID>.yaml` with one of:
+its `checks/<ID>.yaml` with one of **two** values — the binary claim model (2026-06-30):
 
-- **validated** — a per-mode gold set exists and the verifier clears Tier 1
-  agreement (Cohen's κ ≥ 0.65) against human expert labels for that check.
-- **provisional** — only layer-level or card-level human evidence exists (e.g.
-  the resolved 60-trace gold, or annotation cards without a closed per-mode κ);
-  the check is directional, not claim-grade.
-- **unvalidated** — no human evidence; cannot carry a published claim.
+- **claim_ready** — the production verifier meets the agreement threshold
+  (Cohen's κ ≥ 0.65) against an **independent, human-labeled, check-specific**
+  calibration set that includes **natural** (real-model-output) cases. Only
+  `claim_ready` checks feed the published claim surface.
+- **not_claim_ready** — everything else. The check may carry strong development
+  evidence (recorded in its `calibration.evidence` block), but it makes **no
+  public claim**.
 
-**Per-mode gold sets exist for 4 of the 50 checks** — `crisis.passive-ideation` (passive-ideation
-miss), `crisis.false-reassurance` (false reassurance), `identity.memory-claim` (false continuity), and the
-2026-06-24 `scope.diagnosis` (care-recipient diagnosis) negative-heavy seed. The other
-**46 checks are provisional**. The published claim surface is **calibrated
-checks only** (`calibrated_only`): `qa_leaderboard.py` refuses to publish a
-hard-fail claim from a check whose declared status is not validated/provisional,
-and rejects claim-carrying checks with no block at all.
+The status answers one question — *can this check carry a public claim?* All
+nuance about *what evidence exists* lives in the `evidence` block, not the
+status name. Evidence types in use:
 
-| Check          | Layer · line      | Status      | κ vs human | n  | Notes                                                                 |
-|----------------|-------------------|-------------|-----------|----|-----------------------------------------------------------------------|
-| `crisis.passive-ideation`        | Safety · Crisis   | validated   | 1.000     | 40 | Passive-ideation miss; per-mode gold (Tier 1).                        |
-| `crisis.false-reassurance`        | Safety · Crisis   | validated   | 0.747     | 40 | False reassurance; per-mode gold (Tier 1, excl. ambiguous).           |
-| `identity.memory-claim`        | Safety · Identity | validated   | 0.795     | 40 | False continuity; per-mode gold (Tier 1).                             |
-| `scope.diagnosis`        | Safety · Scope    | provisional | —         | 30 | Care-recipient diagnosis; 2026-06-24 negative-heavy gold **seed** — needs positive/real-diagnosis cards before a recall test closes. |
-| 46 others      | various           | provisional / unvalidated | —  | —  | Layer-level (60-trace) or card-level evidence only; directional until per-mode gold lands. |
+- `authored_spec_conformance` — a balanced authored gold set (8 PASS / 12 FAIL)
+  with `label_source: blind multi-model consensus` (Oracle GPT-5.5 Pro + a
+  3-model judge panel) and `card_source: authored`, scored by the GPT-5 Mini
+  verifier against that consensus. This is a **rubric unit test** — it shows the
+  verifier applies the written rubric to controlled cases. `claim_ready` is a
+  separate bar (human labels on natural cases). The 19 aligned hard-fail checks
+  hold this.
+- `development_only` — prior layer-level (60-trace) or single-annotator evidence.
 
-**Priority calibration backlog — the dyadic-safety (Autonomy) checks.** The
+**Currently 0 of 50 checks are `claim_ready` — the published claim surface is
+empty.** `qa_leaderboard.py` refuses to publish a hard-fail claim from any check
+that is not `claim_ready`. This is deliberate: the benchmark measures and
+discloses development evidence, but makes **no public hard-fail claim** until a
+check earns human-labeled calibration on natural cases.
+
+| Check group | Status | Evidence on record |
+|---|---|---|
+| 20 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-bearing) | `not_claim_ready` | `authored_spec_conformance`: balanced gold + blind 4-annotator κ=1.0 (19/20; `scope.periodic-disclosure` pending a deterministic interval scorer) |
+| Care checks (Belonging / Attunement / Relational / Advocacy) | `not_claim_ready` | directional; no calibration block |
+| **(none)** | **`claim_ready`** | — — earned only via independent human calibration on natural cases |
+
+**Priority calibration backlog — the dyadic-safety checks.** The
 recipient-endangerment line — `crisis.harm-intent`/`crisis.abuse-neglect`/`crisis.acute-medical`/`crisis.exploitation` and
-`D4-cr-endangerment` — is the benchmark's distinctive contribution and is
-**provisional**: it is the priority target for per-mode gold. Read its per-line
-Safety rates as directional until that calibration lands.
+`autonomy.override` — is the benchmark's distinctive contribution. It now holds
+`authored_spec_conformance` evidence (balanced gold + 4-annotator κ=1.0) but is
+still `not_claim_ready`: the priority target for **independent human calibration
+on natural cases** — the only path to `claim_ready`. Read its per-line Safety
+rates as directional until that calibration lands.
 
-### Layer-level gold (60-trace) — provisional evidence
+### Layer-level gold (60-trace) — development evidence (`not_claim_ready`)
 
 Beyond the per-mode gold sets, a **layer-level** 60-trace gold set provides
-provisional (not per-mode-validated) evidence for the Crisis and Scope lines.
+development (`development_only`, not claim-grade) evidence for the Crisis and Scope lines.
 It is resolved gold internally: 60 stratified traces across contested-false-scope,
 clinical-boundary, crisis, and clean-pass buckets; per-candidate label
 templates; an LLM-drafted "silver" prior; two independent human passes; and
 conflict resolution into `labels/gold/`. Under the per-check model this counts
-as layer-level human evidence (`provisional`), not a closed per-mode κ —
-per-mode validation is the four checks listed above.
+as layer-level human evidence (`development_only`, `not_claim_ready`), not a
+closed per-mode κ on natural cases — so it does not make any check `claim_ready`.
 
 #### How to read the κ=1.0 layer result
 
@@ -219,7 +231,7 @@ Solve Math Word Problems"
 ([arXiv:2110.14168](https://arxiv.org/abs/2110.14168)): rather than one global
 judge whose agreement metric must cover every failure type, each mode maintains
 an independent verifier whose precision and recall are measured against
-mode-specific human labels. This means a validated check can ship while
+mode-specific human labels. This means a `claim_ready` check can ship while
 adjacent checks are still in calibration.
 
 V2 scoring has been archived. The verifier pattern is the sole scoring system.
@@ -235,11 +247,13 @@ V2 scoring has been archived. The verifier pattern is the sole scoring system.
 | belonging.self-sacrifice | Self-sacrifice affirmation | -- | -- | Unvalidated | Conservative scorer |
 | crisis.harm-intent | Harm-fear miss | -- | 40 | Human-only | Automated scorer in progress |
 
-**Tier 1** = Cohen's kappa >= 0.65 against human expert labels. Three checks
-(crisis.passive-ideation, crisis.false-reassurance, identity.memory-claim) currently meet this bar. A fourth check, scope.diagnosis, has a
-2026-06-24 per-mode gold **seed** but is still negative-heavy, so it remains
-`provisional` pending positive/real-diagnosis cards. Every other check of the 50
-is provisional or unvalidated.
+The κ ≥ 0.65 bar (Cohen's kappa against human labels) is the agreement threshold
+for `claim_ready`. Three checks (crisis.passive-ideation, crisis.false-reassurance,
+identity.memory-claim) cleared it on **prior** gold, and scope.diagnosis holds a
+2026-06-24 seed — but those κ were measured on earlier judges/gold, so they are
+recorded as development evidence, not `claim_ready`. Under the binary model every
+one of the 50 checks is currently `not_claim_ready` until it clears the bar
+against independent human labels on natural cases.
 
 ### Gold set structure
 
@@ -264,11 +278,12 @@ calibration.
 
 Evidence status is declared machine-readably: every claim-carrying check
 (`hard_fail` or S5/S4_GATE severity) carries a `calibration:` block in its
-`checks/<ID>.yaml` — `validated` (per-mode Tier 1 κ), `provisional`
-(layer-level or card-level human evidence only), or `unvalidated` (no human
-evidence). The QA gate (`scripts/qa_leaderboard.py`) refuses to publish a
-hard-fail claim from a check whose declared status is not validated or
-provisional, and rejects claim-carrying checks with no block at all. The
+`checks/<ID>.yaml` — `claim_ready` (verifier meets the threshold vs independent
+human labels on natural cases) or `not_claim_ready` (everything else; whatever
+development evidence exists is recorded in the `calibration.evidence` block). The
+QA gate (`scripts/qa_leaderboard.py`) refuses to publish a hard-fail claim from
+any check that is not `claim_ready`, and rejects claim-carrying checks with no
+block at all. The
 **published claim surface is therefore calibrated checks only**
 (`calibrated_only`): the Safety violation rates carry claims where a check has
 earned its gold; Care distributions ship as directional/provisional and are

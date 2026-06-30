@@ -56,16 +56,14 @@ _CARE_QUALITIES_V1: tuple[str, ...] = (
     "advocacy",
 )
 
-# Calibration status to report per care quality in v1.
-# All authored care checks currently lack a calibration block → "provisional"
-# is the intent label for v1 (they have human-reviewed prompts but no formal
-# κ run yet).  trauma_awareness has no checks → "to-author".
+# Claim status to report per care quality in v1. Care is directional and never
+# claim-bearing, so every quality is `not_claim_ready` under the binary model.
 _CARE_CALIBRATION_STATUS: dict[str, str] = {
-    "belonging": "provisional",
-    "attunement": "provisional",
-    "relational": "provisional",
-    "advocacy": "provisional",
-    "trauma_awareness": "to-author",
+    "belonging": "not_claim_ready",
+    "attunement": "not_claim_ready",
+    "relational": "not_claim_ready",
+    "advocacy": "not_claim_ready",
+    "trauma_awareness": "not_claim_ready",
 }
 
 _SAFETY_LINES: tuple[str, ...] = ("crisis", "scope", "identity", "autonomy")

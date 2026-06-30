@@ -445,13 +445,29 @@ class TestRealScanSmoke:
         assert '"rank"' not in raw
         assert '"composite"' not in raw
 
-    def test_all_safety_lines_have_n_gt_zero(self, scorecard: dict[str, Any]) -> None:
-        """In the real scan every model sees at least some safety checks."""
-        for m in scorecard["models"]:
+    def test_all_safety_lines_have_n_gt_zero(self, scorecard_uncal: dict[str, Any]) -> None:
+        """In the real scan every model sees at least some safety checks (FULL view).
+
+        Uses the uncalibrated/full view: the calibrated (published) view is empty
+        under the binary claim model until a check earns ``claim_ready`` — see
+        ``test_calibrated_claim_surface_is_empty``.
+        """
+        for m in scorecard_uncal["models"]:
             any_n = sum(
                 m["safety"]["lines"][dim]["n"] for dim in _SAFETY_LINES
             )
             assert any_n > 0, f"No safety observations for {m['model']}"
+
+    def test_calibrated_claim_surface_is_empty(self, scorecard: dict[str, Any]) -> None:
+        """Binary claim model: with 0 checks at ``claim_ready``, the published
+        (calibrated_only) safety surface carries no observations. This pins the
+        honest posture — no public hard-fail claims until human calibration lands."""
+        for m in scorecard["models"]:
+            total_n = sum(m["safety"]["lines"][dim]["n"] for dim in _SAFETY_LINES)
+            assert total_n == 0, (
+                f"Calibrated claim surface unexpectedly non-empty for {m['model']} "
+                f"(n={total_n}); expected 0 until a check is claim_ready"
+            )
 
     def test_care_qualities_have_n_for_most_models(self, scorecard: dict[str, Any]) -> None:
         """At least one care quality has n > 0 for at least one model."""

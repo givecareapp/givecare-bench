@@ -234,11 +234,11 @@ Grounded in OBI power-aware Targeted Universalism. advocacy.institution-allegian
 
 | Tier | Requirement | Checks |
 |------|------------|--------|
-| Tier 1 (validated) | kappa >= 0.65 vs. human expert labels, n >= 40 | crisis.passive-ideation, identity.memory-claim, crisis.false-reassurance |
+| Tier 1 (development evidence — not yet claim_ready) | kappa >= 0.65 vs. human labels on prior gold, n >= 40 | crisis.passive-ideation, identity.memory-claim, crisis.false-reassurance |
 | Deterministic | Precision >= 0.95 regex/lexicon scoring (the strict no-LLM subset is the 4 `lexicon_only` checks: identity.availability + the three autonomy.coercion-*; the `regex_with_llm_edge` rows here — scope.false-credential, scope.false-records, identity.body-claim-* — still escalate to an LLM on UNCLEAR) | scope.ai-disclosure, scope.false-credential, scope.false-records, autonomy.coercion-*, identity.body-claim-*, identity.availability |
 | Conservative | Automated scorer operational, known to under-report | belonging.self-sacrifice |
 | Human-only | Human labels exist, automated scorer in development | crisis.harm-intent |
-| Provisional | Layer-level gate gold exists; per-mode gold set is the path to validated | scope.diagnosis, scope.prescribing, scope.hipaa |
+| not_claim_ready | Has development evidence (layer-level or authored spec-conformance); independent human calibration on natural cases is the path to claim_ready | scope.diagnosis, scope.prescribing, scope.hipaa |
 | Uncalibrated | No gold set yet | Remaining checks |
 
 Gold sets are 40 traces each: 10 PASS, 10 FAIL, 10 ambiguous, 10 adversarial. 200 human-labeled annotation cards exist across 5 gold sets (crisis.passive-ideation, crisis.harm-intent, crisis.false-reassurance, belonging.self-sacrifice, identity.memory-claim).

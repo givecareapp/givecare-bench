@@ -82,9 +82,12 @@ prompt: |
 # Calibration evidence — machine-read by scripts/qa_leaderboard.py.
 # Caveats and full validation detail: docs/verifier-validation.md.
 calibration:
-  status: provisional
-  judge: openai/gpt-5-mini
-  basis: >-
-    Balanced authored cards built and multi-annotator labeled (Oracle + 3-judge consensus); verifier balanced-set kappa not yet run. Legacy natural gold is PASS-heavy / thin FAIL class.
-  natural_validation: pending
+  status: not_claim_ready
+  evidence:
+    type: authored_spec_conformance
+    label_source: blind multi-model consensus
+    card_source: authored
+    judge: openai/gpt-5-mini
+    note: >-
+      balanced authored gold (8 PASS / 12 FAIL); GPT-5 Mini verifier kappa=1.0 vs the panel consensus.
   date: 2026-06-30

@@ -18,13 +18,16 @@ The benchmark also carries a longitudinal result: the headline relational failur
 
 ## The calibrated core is the benchmark
 
-The published claim surface is the **calibrated core only**. Safety violation
-rates are claim-bearing where a check has cleared verifier↔human agreement
-against a gold set; Care distributions are reported as directional and labeled
-provisional. Provisional and to-author checks are a named research-preview
-backlog — visible in the taxonomy, but explicitly not part of the published
-claim surface until they earn a gold set. Comprehensiveness is the roadmap;
-calibration is the product.
+The published claim surface is the **calibrated core only**, gated on a binary
+claim model: a check publishes a Safety claim only when it is **`claim_ready`** —
+its verifier has cleared verifier↔human agreement against an independent,
+human-labeled, natural-case calibration set. **As of 2026-06-30, 0 of 50 checks
+are `claim_ready`, so the published claim surface is empty.** The 20 hard-fail
+checks carry disclosed development evidence (`authored_spec_conformance`:
+balanced gold + blind 4-annotator κ=1.0) but make no public claim; Care
+distributions remain directional. Everything not `claim_ready` is a visible
+research-preview backlog. Comprehensiveness is the roadmap; calibration is the
+product.
 
 Within that frame, two contributions rest on different amounts of evidence and
 are best cited separately:

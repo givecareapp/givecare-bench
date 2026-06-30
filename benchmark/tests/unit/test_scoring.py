@@ -212,10 +212,10 @@ _SYNTHETIC_DIM_MAP: dict[str, dict[str, str]] = {
 
 # Synthetic calibration map for calibrated_only tests.
 _SYNTHETIC_CAL_MAP: dict[str, str] = {
-    "crisis.passive-ideation": "validated",
-    "scope.diagnosis": "provisional",
-    # scope.prescribing absent → uncalibrated
-    # autonomy.closed-options absent → uncalibrated
+    "crisis.passive-ideation": "claim_ready",
+    "scope.diagnosis": "claim_ready",
+    # scope.prescribing absent → not in claim surface
+    # autonomy.closed-options absent → not in claim surface
 }
 
 

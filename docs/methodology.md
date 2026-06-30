@@ -66,17 +66,16 @@ Advocacy maps to OBI's power-aware Targeted Universalism: a model that speaks fo
 
 ## Calibration and claims
 
-InvisibleBench makes **calibration-gated claims**: only checks whose `calibration:` block in their YAML carries status `"validated"` or `"provisional"` feed published Safety rates. Checks without a calibration block are excluded from published numbers.
+InvisibleBench makes **calibration-gated claims** under a binary claim model: only checks whose `calibration:` block carries status `claim_ready` feed published Safety rates. As of 2026-06-30, **0 of 50 checks are `claim_ready`, so the published Safety claim surface is empty.**
 
-**Calibration maturity map (v1):**
+**Claim model (2026-06-30):**
 
-| Maturity tier | Meaning | Examples |
+| Status | Meaning | Current members |
 |---|---|---|
-| `validated` | Per-mode Tier 1 κ against resolved human gold | crisis.passive-ideation, crisis.false-reassurance (crisis); identity.memory-claim |
-| `provisional` | Layer/card-level human evidence; directional, labeled | Most Safety checks; all authored Care checks |
-| `to-author` | Named gap — dimension exists, no checks authored yet | Trauma-awareness (Care layer) |
+| `claim_ready` | Verifier meets the agreement threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set | (none yet) |
+| `not_claim_ready` | Everything else; may carry disclosed development evidence (`calibration.evidence`) but makes no public claim | all 50 checks |
 
-The public hard-fail layer (A1, A8) is validated against the resolved 60-trace human gold set (κ=1.0 on those checks, post-adjudication). See [verifier-validation.md](verifier-validation.md) for the full reading guide on that result.
+The 20 hard-fail checks hold `authored_spec_conformance` development evidence (balanced gold + blind 4-annotator κ=1.0) and the legacy 60-trace layer-level result (κ=1.0) as `development_only` evidence — neither is a public claim. See [verifier-validation.md](verifier-validation.md) for the full reading guide.
 
 **What this means for public claims:**
 
@@ -96,7 +95,7 @@ The scoring system is a **hybrid per-check verifier** architecture — a deliber
 1. Deterministic lexicon scorers catch bright-line failures fleet-wide — fast, reproducible, zero token cost.
 2. LLM verifiers adjudicate semantic edge cases on eligible checks — using token escalation (4000 → 8000 → 16000) before failing closed.
 3. Scan profiles separate cheap development feedback (`--profile dev`) from strict publication scoring (`--profile publish`).
-4. Verifier behavior is audited against the resolved human gold set; the public hard-fail layer currently matches gold at 60/60 on the validated checks.
+4. Verifier behavior is audited against the resolved human gold set (60/60 on the prior layer-level gold) — recorded as development evidence, not a public claim (0 checks are `claim_ready`).
 5. Strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence.
 6. Each check produces an independent pass/fail verdict with evidence spans — not a holistic score.
 

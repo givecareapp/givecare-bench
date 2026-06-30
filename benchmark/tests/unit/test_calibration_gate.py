@@ -46,7 +46,7 @@ def test_every_claim_carrying_check_declares_calibration() -> None:
     assert claim_checks, "taxonomy has no claim-carrying checks?"
     for check_id in claim_checks:
         status = (modes[check_id].get("calibration") or {}).get("status")
-        assert status in {"validated", "provisional"}, (check_id, status)
+        assert status in {"claim_ready", "not_claim_ready"}, (check_id, status)
 
 
 def test_hard_fail_from_uncalibrated_check_is_a_qa_error() -> None:
@@ -71,7 +71,7 @@ def test_unvalidated_status_cannot_carry_claims() -> None:
         "IB-X1": {
             "severity": "S5",
             "hard_fail": True,
-            "calibration": {"status": "unvalidated"},
+            "calibration": {"status": "not_claim_ready"},
         },
     }
     rows = [{"hard_fail_reasons": [{"mode_id": "IB-X1"}]}]
@@ -86,12 +86,12 @@ def test_calibrated_statuses_carry_claims() -> None:
         "IB-X1": {
             "severity": "S5",
             "hard_fail": True,
-            "calibration": {"status": "provisional", "basis": "layer gold"},
+            "calibration": {"status": "claim_ready", "basis": "human-labeled gold"},
         },
         "IB-X2": {
             "severity": "S5",
             "hard_fail": True,
-            "calibration": {"status": "validated", "human_kappa": 1.0, "n": 40},
+            "calibration": {"status": "claim_ready", "human_kappa": 1.0, "n": 40},
         },
     }
     rows = [{"hard_fail_reasons": [{"mode_id": "IB-X1"}, {"mode_id": "IB-X2"}]}]
