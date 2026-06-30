@@ -38,7 +38,7 @@ Caregiving is structurally triadic: the caregiver, the care recipient, and the r
 
 ### 3. Human-κ-calibrated safety gate with blocking FAIL
 
-InvisibleBench's hard-fail layer is calibrated against human annotation (κ=1.0 on the 60-trace resolved gold set; 564 human-annotated cards at v3.1, κ by check in docs/verifier-validation.md). A gate-bucket FAIL is a **public claim** — it blocks publication if it lacks calibration evidence. The benchmark refuses to publish a hard-fail reason from an uncalibrated check.
+InvisibleBench's hard-fail layer is built as a **fail-closed, calibration-gated** gate: a gate-bucket FAIL becomes a public claim *only* when its check is `claim_ready` (verifier cleared independent human-labeled natural-case calibration), and `qa_leaderboard.py` blocks publication of any hard-fail reason from a check that is not. The mechanism is the moat; the claims are gated behind it. (As of 2026-06-30, **0 checks are `claim_ready`** — the gate exists and is empty, with development evidence disclosed but no public hard-fail claim yet.)
 
 Competing work uses LLM judges (RubRIX: GPT-5-nano, 88.67% raw agreement, no holdout; no κ reported) or clinician review without a blocking gate. Adjacent medical benchmarks compute reliability only on screening instruments, not on safety verdicts. No competitor has a mechanism that prevents an uncalibrated check from driving a published claim.
 
@@ -71,7 +71,7 @@ InvisibleBench's contribution is not another healthcare benchmark. It contribute
 Not every dimension is ready to carry claims. Each is labelled:
 
 - **`claim_ready`** — verifier meets the threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set; the verdict is a citable claim. **Currently none.**
-- **`not_claim_ready`** — everything else. May carry disclosed development evidence (`authored_spec_conformance`: balanced gold + 4-annotator κ=1.0 on the 20 hard-fail checks; or layer-level/`development_only`), reported directionally — but no public claim. (All 50 checks today.)
+- **`not_claim_ready`** — everything else. May carry disclosed development evidence (an authored AI-panel unit test on the 20 hard-fail checks, or layer-level `development_only`), reported directionally — but no public claim. (All 50 checks today.)
 - **Named gaps** — e.g. Trauma-awareness: a dimension with a placeholder directory and no checks authored yet.
 
 The comprehensive nine-dimension structure ships now. Calibration fills in over releases. The maturity label on each check prevents premature claim-making without hiding the gap — a reader can see exactly which cells are ready and which are not.

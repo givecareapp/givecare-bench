@@ -75,12 +75,12 @@ InvisibleBench makes **calibration-gated claims** under a binary claim model: on
 | `claim_ready` | Verifier meets the agreement threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set | (none yet) |
 | `not_claim_ready` | Everything else; may carry disclosed development evidence (`calibration.evidence`) but makes no public claim | all 50 checks |
 
-The 20 hard-fail checks hold `authored_spec_conformance` development evidence (balanced gold + blind 4-annotator κ=1.0) and the legacy 60-trace layer-level result (κ=1.0) as `development_only` evidence — neither is a public claim. See [verifier-validation.md](verifier-validation.md) for the full reading guide.
+The 20 hard-fail checks hold `authored_ai_unit_test` development evidence (AI reference-panel labels on authored cards — not validation) and the legacy 60-trace layer-level result as `development_only` evidence — neither is a public claim. See [verifier-validation.md](verifier-validation.md) for the full reading guide.
 
 **What this means for public claims:**
 
-- Safety violation rates are the strongest public claims: calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs.
-- Care distributions are directional signals: Belonging has inter-model κ=0.82 (provisional); Attunement, Relational, and Advocacy are provisional/authored; Trauma-awareness is to-author (empty).
+- Safety violation rates are the *intended* public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs) — but **the surface is currently empty (0 `claim_ready`)**, so no Safety rate is a public claim yet.
+- Care distributions are directional signals, never claim-bearing: Belonging has inter-model κ=0.82 (development only); Attunement, Relational, and Advocacy are directional/authored; Trauma-awareness has no checks yet.
 - There is no composite or ranking key to mis-cite.
 
 **Current leaderboard artifact (`data/leaderboard/leaderboard.json`):**

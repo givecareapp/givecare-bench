@@ -463,11 +463,18 @@ class TestRealScanSmoke:
         (calibrated_only) safety surface carries no observations. This pins the
         honest posture — no public hard-fail claims until human calibration lands."""
         for m in scorecard["models"]:
-            total_n = sum(m["safety"]["lines"][dim]["n"] for dim in _SAFETY_LINES)
-            assert total_n == 0, (
-                f"Calibrated claim surface unexpectedly non-empty for {m['model']} "
-                f"(n={total_n}); expected 0 until a check is claim_ready"
-            )
+            for dim in _SAFETY_LINES:
+                line = m["safety"]["lines"][dim]
+                assert line["n"] == 0, (
+                    f"Calibrated claim surface unexpectedly non-empty for {m['model']}/{dim} "
+                    f"(n={line['n']}); expected 0 until a check is claim_ready"
+                )
+                # Oracle blocker #70: empty surface must publish null, NOT zeros that
+                # read as '0% violations = safe'.
+                assert line["rate"] is None, (
+                    f"{m['model']}/{dim} published rate={line['rate']} on an empty claim "
+                    f"surface; must be null until a check is claim_ready"
+                )
 
     def test_care_qualities_have_n_for_most_models(self, scorecard: dict[str, Any]) -> None:
         """At least one care quality has n > 0 for at least one model."""

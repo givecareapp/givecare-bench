@@ -23,8 +23,8 @@ claim model: a check publishes a Safety claim only when it is **`claim_ready`** 
 its verifier has cleared verifier↔human agreement against an independent,
 human-labeled, natural-case calibration set. **As of 2026-06-30, 0 of 50 checks
 are `claim_ready`, so the published claim surface is empty.** The 20 hard-fail
-checks carry disclosed development evidence (`authored_spec_conformance`:
-balanced gold + blind 4-annotator κ=1.0) but make no public claim; Care
+checks carry disclosed development evidence (an authored AI-panel unit test on
+synthetic cards — not validation) but make no public claim; Care
 distributions remain directional. Everything not `claim_ready` is a visible
 research-preview backlog. Comprehensiveness is the roadmap; calibration is the
 product.

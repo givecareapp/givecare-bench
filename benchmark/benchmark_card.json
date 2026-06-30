@@ -29,8 +29,8 @@
     "limitations": [
       "Scenario coverage is curated and cannot represent all caregiving contexts.",
       "Confidential holdout scenarios are private and not part of the public repo.",
-      "The published Safety claim surface is gated on a binary claim model (2026-06-30): a check publishes only when claim_ready (its verifier meets the agreement threshold against an independent, human-labeled, natural-case calibration set). Currently 0 of 50 checks are claim_ready, so the published claim surface is empty. The 20 hard-fail checks carry disclosed development evidence (authored spec-conformance: balanced gold + blind 4-annotator kappa=1.0) but make no public claim.",
-      "The current leaderboard covers 11 models x 63 scenarios (v3.1 Phase 2). Phase 2 roster: Claude Opus 4.7, GPT-5.5, GPT-5 Mini, Gemini 3.1 Pro, Gemini 3.1 Flash Lite, Grok 4.3, DeepSeek V4 Pro, GLM-5.1, MiniMax M2.7, Gemma 4 31B, Nemotron 3 Super 120B.",
+      "The published Safety claim surface is gated on a binary claim model (2026-06-30): a check publishes only when claim_ready (its verifier meets the agreement threshold against an independent, human-labeled, natural-case calibration set). Currently 0 of 50 checks are claim_ready, so the published claim surface is empty. The 20 hard-fail checks carry disclosed development evidence (an authored AI-panel unit test on synthetic cards — not validation, no human labels, no natural cases) but make no public claim.",
+      "The current leaderboard covers 11 models x 63 of the 64 scenarios (v3.1 Phase 2). Phase 2 roster: Claude Opus 4.7, GPT-5.5, GPT-5 Mini, Gemini 3.1 Pro, Gemini 3.1 Flash Lite, Grok 4.3, DeepSeek V4 Pro, GLM-5.1, MiniMax M2.7, Gemma 4 31B, Nemotron 3 Super 120B.",
       "Care distributions are directional and provisional, never merged with Safety, until quality-layer human calibration is expanded."
     ]
   },
@@ -72,7 +72,7 @@
       "Safety/Care v1 scoring with per-check verifiers (no composite, no rank)",
       "scenario-level fail-closed evaluation",
       "hard-fail rules",
-      "50 checks across 9 dimensions (4 Safety lines + 5 Care qualities)",
+      "50 checks across 8 populated dimensions (4 Safety lines + 4 of 5 Care qualities; trauma-awareness is reserved with 0 checks)",
       "regex, LLM, and corpus verifiers"
     ],
     "metrics": [
@@ -84,9 +84,9 @@
     ],
     "composite": "none — Safety and Care are reported side by side; no weighting and no overall_score (retired A/B/C/D/F aliases: see docs/ontology.md old -> new map)",
     "evaluation_modes": ["raw_model_eval"],
-    "calculation": "Safety/Care v1 scoring with per-check verifiers — no composite, no rank. Safety: 4 lines (Crisis, Scope, Identity, Autonomy) reported as per-line violation rates (claim-bearing, calibration-gated). Care: 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) reported as directional, provisional distributions, never merged with Safety. 50 checks across 9 dimensions with regex, LLM, and corpus verifiers.",
+    "calculation": "Safety/Care v1 scoring with per-check verifiers — no composite, no rank. Safety: 4 lines (Crisis, Scope, Identity, Autonomy) reported as per-line violation rates (claim-bearing, calibration-gated). Care: 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) reported as directional distributions, never merged with Safety. 50 checks across 8 populated dimensions (trauma-awareness reserved, 0 checks) with regex, LLM, and corpus verifiers.",
     "interpretation": "Lower Safety violation rates indicate safer behavior on each line; the published claim surface is calibration-gated. Care distributions are directional and provisional — read as patterns, not verdicts. Output is a per-model jagged safety profile, not a rank. Blindspot profiles surface per-check failure patterns across the fleet.",
-    "validation": "As of 2026-06-30 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published claim surface is empty. The 20 hard-fail checks hold authored spec-conformance evidence (balanced authored gold, blind Oracle + 3-judge consensus, GPT-5 Mini verifier kappa=1.0 on 19/20) — a rubric unit test, not field validation. A check becomes claim_ready only via independent human-labeled calibration on natural cases. The legacy 60-trace layer-level result (60/60, kappa 1.0) is retained as development evidence."
+    "validation": "As of 2026-06-30 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published claim surface is empty. The 20 hard-fail checks hold an authored AI-panel unit test (synthetic counterfactual cards with AI reference-panel labels; the GPT-5 Mini verifier passed it on 19/20) — a rubric unit test, NOT field validation: no independent human labels, no natural cases. A check becomes claim_ready only via independent human-labeled calibration on natural cases. The legacy 60-trace layer-level result is retained as development evidence."
   },
   "ethical_and_legal_considerations": {
     "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",
@@ -100,7 +100,7 @@
   },
   "card_info": {
     "created_at": "2026-03-25",
-    "last_updated": "2026-05-12",
+    "last_updated": "2026-06-30",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

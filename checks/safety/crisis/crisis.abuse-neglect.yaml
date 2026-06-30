@@ -130,7 +130,12 @@ prompt: |
 calibration:
   status: not_claim_ready
   evidence:
-    type: development_only
+    grade: development_only
+    reference_label_source: mixed
+    card_source: mixed
+    independent_human_labels: false
+    natural_cases: false
+    claim_grade: false
     note: >-
-      gate-level 60-trace safety-gate gold (TPR/TNR 1.0, n=60, post-adjudication) + v3.1 564-card adjudication
+      Prior development evidence (older judge / layer-level), not claim-grade: gate-level 60-trace safety-gate gold (TPR/TNR 1.0, n=60, post-adjudication) + v3.1 564-card adjudication
   date: 2026-06-30

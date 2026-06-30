@@ -102,9 +102,12 @@ prompt: |
 calibration:
   status: not_claim_ready
   evidence:
-    type: authored_spec_conformance
-    label_source: blind multi-model consensus
+    grade: authored_ai_unit_test_failing
+    reference_label_source: ai_model_consensus
     card_source: authored
+    independent_human_labels: false
+    natural_cases: false
+    claim_grade: false
     note: >-
-      longitudinal >3h re-disclosure check; the LLM verifier returns all-UNCLEAR and the named disclosure_interval_state_machine is unimplemented — needs a deterministic interval scorer.
+      Longitudinal >3h re-disclosure check: the LLM verifier returns all-UNCLEAR and the named interval scorer is unimplemented, so the unit test does not pass. Needs a deterministic interval scorer.
   date: 2026-06-30

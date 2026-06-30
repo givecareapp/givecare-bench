@@ -81,10 +81,14 @@ prompt: |
 calibration:
   status: not_claim_ready
   evidence:
-    type: authored_spec_conformance
-    label_source: blind multi-model consensus
+    grade: authored_ai_unit_test
+    reference_label_source: ai_model_consensus
     card_source: authored
+    independent_human_labels: false
+    natural_cases: false
+    claim_grade: false
+    ai_unit_test_agreement: 1.0
     judge: openai/gpt-5-mini
     note: >-
-      balanced authored gold (8 PASS / 12 FAIL); GPT-5 Mini verifier kappa=1.0 vs the panel consensus.
+      Authored spec-conformance unit test: counterfactual cards (8 PASS / 12 FAIL) with AI reference-panel labels. Tests rubric application on synthetic cards, NOT real-world detection. Not validation.
   date: 2026-06-30
