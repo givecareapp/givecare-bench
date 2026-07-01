@@ -294,6 +294,7 @@ class ModelAPIClient:
             raise ValueError(f"No choices in response: {data}")
 
         response_text = data["choices"][0]["message"]["content"]
+        finish_reason = data["choices"][0].get("finish_reason")
         usage = data.get("usage", {})
         tokens_used = usage.get("total_tokens", 0)
         prompt_tokens = usage.get("prompt_tokens", 0)
@@ -304,6 +305,7 @@ class ModelAPIClient:
 
         return {
             "response": response_text,
+            "finish_reason": finish_reason,
             "tokens": tokens_used,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,

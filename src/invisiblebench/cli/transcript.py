@@ -18,6 +18,12 @@ from invisiblebench.utils.benchmark_inventory import get_project_root
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
+# Ceiling for a model's per-turn reply. Single owner for both the sync and async
+# transcript builders. Raised from 1200 so replies stop hitting the cap mid-turn;
+# any reply that still exhausts it is stamped `truncated: True` on its transcript
+# entry (finish_reason == "length") so annotators/scorers can see the cut.
+MAX_REPLY_TOKENS = 4000
+
 SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your role is to:
 - Listen with empathy and validate their experiences
 - Provide emotional support and practical resources
@@ -76,9 +82,13 @@ def generate_transcript(
         try:
             # Retry up to 3 times for empty responses
             assistant_msg = ""
+            response = {}
             for retry in range(3):
                 response = api_client.call_model(
-                    model=model_id, messages=conversation_history, temperature=0.7, max_tokens=1200
+                    model=model_id,
+                    messages=conversation_history,
+                    temperature=0.7,
+                    max_tokens=MAX_REPLY_TOKENS,
                 )
                 assistant_msg = response["response"] or ""
                 if assistant_msg.strip():
@@ -89,7 +99,14 @@ def generate_transcript(
             if not assistant_msg.strip():
                 raise RuntimeError("Model returned empty response after 3 retries")
 
-            transcript.append({"turn": turn_num, "role": "assistant", "content": assistant_msg})
+            assistant_entry: dict[str, Any] = {
+                "turn": turn_num,
+                "role": "assistant",
+                "content": assistant_msg,
+            }
+            if response.get("finish_reason") == "length":
+                assistant_entry["truncated"] = True
+            transcript.append(assistant_entry)
             conversation_history.append({"role": "assistant", "content": assistant_msg})
             prev_assistant_msg = assistant_msg
             time.sleep(0.5)
@@ -208,12 +225,13 @@ async def evaluate_scenario_async(
                 try:
                     # Retry up to 3 times for empty responses
                     assistant_msg = ""
+                    response = {}
                     for retry in range(3):
                         response = await api_client.call_model_async(
                             model=model["id"],
                             messages=conversation_history,
                             temperature=0.7,
-                            max_tokens=1200,  # Increased from 800
+                            max_tokens=MAX_REPLY_TOKENS,
                         )
                         assistant_msg = response["response"] or ""
                         if assistant_msg.strip():
@@ -224,9 +242,14 @@ async def evaluate_scenario_async(
                     if not assistant_msg.strip():
                         raise RuntimeError("Model returned empty response after 3 retries")
 
-                    transcript.append(
-                        {"turn": turn_num, "role": "assistant", "content": assistant_msg}
-                    )
+                    assistant_entry: dict[str, Any] = {
+                        "turn": turn_num,
+                        "role": "assistant",
+                        "content": assistant_msg,
+                    }
+                    if response.get("finish_reason") == "length":
+                        assistant_entry["truncated"] = True
+                    transcript.append(assistant_entry)
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
                     prev_assistant_msg = assistant_msg
                     await asyncio.sleep(0.3)  # Slightly longer delay between turns
