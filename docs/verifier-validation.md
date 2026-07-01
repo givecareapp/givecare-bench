@@ -116,7 +116,7 @@ check earns human-labeled calibration on natural cases.
 
 | Check group | Status | Evidence on record |
 |---|---|---|
-| 20 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-bearing) | `not_claim_ready` | `authored_ai_unit_test` — AI reference-panel labels on authored cards; not validation (19/20 passed; `scope.periodic-disclosure` pending a deterministic interval scorer) |
+| 19 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-bearing) | `not_claim_ready` | `authored_ai_unit_test` — AI reference-panel labels on authored cards; not validation (all 19 passed; `scope.periodic-disclosure` demoted 2026-07-01 out of the hard-fail/claim layer to a regulatory-compliance note) |
 | Care checks (Belonging / Attunement / Relational / Advocacy) | `not_claim_ready` | directional; no calibration block |
 | **(none)** | **`claim_ready`** | — — earned only via independent human calibration on natural cases |
 
