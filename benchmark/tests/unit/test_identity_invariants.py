@@ -16,8 +16,8 @@ Invariants enforced here
    no key blends them.
 
 3. CALIBRATION-GATED CLAIMS: with ``calibrated_only=True`` only checks
-   whose calibration.status ∈ {validated, provisional} contribute (an
-   uncalibrated check's FAILs do not move the published violation rate).
+   whose calibration.status is ``claim_ready`` contribute (a
+   not-claim-ready check's FAILs do not move the published violation rate).
 
 4. STRUCTURE MATCHES ONTOLOGY: the live ``checks/`` tree has exactly the
    9 dimensions specified in docs/ontology.md —
@@ -134,11 +134,13 @@ class TestNoComposite:
                 "hard_fail_reasons": [],
                 "mode_results": [
                     {"mode_id": crisis_id, "eligible": True, "verdict": "FAIL",
-                     "severity": "S5", "primary_bucket": "A", "scorer_type": "llm_verifier",
+                     "severity": "S5", "layer": "safety", "dimension": "crisis",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                     {"mode_id": belonging_id, "eligible": True, "verdict": "PASS",
-                     "severity": "S3", "primary_bucket": "C", "scorer_type": "llm_verifier",
+                     "severity": "S3", "layer": "care", "dimension": "belonging",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                 ],
@@ -153,11 +155,13 @@ class TestNoComposite:
                 "hard_fail_reasons": [],
                 "mode_results": [
                     {"mode_id": crisis_id, "eligible": True, "verdict": "PASS",
-                     "severity": "S5", "primary_bucket": "A", "scorer_type": "llm_verifier",
+                     "severity": "S5", "layer": "safety", "dimension": "crisis",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                     {"mode_id": belonging_id, "eligible": True, "verdict": "FAIL",
-                     "severity": "S3", "primary_bucket": "C", "scorer_type": "llm_verifier",
+                     "severity": "S3", "layer": "care", "dimension": "belonging",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                 ],
@@ -267,7 +271,8 @@ class TestNoSafetyCareMerge:
             "hard_fail_reasons": [],
             "mode_results": [
                 {"mode_id": crisis_id, "eligible": True, "verdict": "PASS",
-                 "severity": "S5", "primary_bucket": "A", "scorer_type": "llm_verifier",
+                 "severity": "S5", "layer": "safety", "dimension": "crisis",
+                 "scorer_type": "llm_verifier",
                  "confidence": 1.0, "evidence": [], "rationale_code": None,
                  "adjudication_required": False},
             ],
@@ -358,7 +363,10 @@ class TestCalibrationGate:
             "hard_fail_reasons": [],
             "mode_results": [
                 {"mode_id": check_id, "eligible": True, "verdict": verdict,
-                 "severity": "S3", "primary_bucket": "A", "scorer_type": "llm_verifier",
+                 "severity": "S3",
+                 "layer": "safety" if check_id.split(".", 1)[0] in {"crisis", "scope", "identity", "autonomy"} else "care",
+                 "dimension": check_id.split(".", 1)[0],
+                 "scorer_type": "llm_verifier",
                  "confidence": 1.0, "evidence": [], "rationale_code": None,
                  "adjudication_required": False},
             ],
@@ -493,7 +501,7 @@ class TestOntologyStructure:
         )
 
     def test_trauma_awareness_has_no_authored_checks(self) -> None:
-        """trauma_awareness has no YAML check files yet (to-author maturity)."""
+        """trauma_awareness has no YAML check files yet (not_claim_ready gap)."""
         ta_dir = CHECKS_DIR / "care" / "trauma_awareness"
         yamls = [
             f for f in ta_dir.glob("*.yaml")
@@ -661,7 +669,8 @@ class TestPerLineDenominator:
                 "hard_fail_reasons": [],
                 "mode_results": [
                     {"mode_id": crisis_id, "eligible": True, "verdict": "PASS",
-                     "severity": "S5", "primary_bucket": "A", "scorer_type": "llm_verifier",
+                     "severity": "S5", "layer": "safety", "dimension": "crisis",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                 ],
@@ -676,7 +685,8 @@ class TestPerLineDenominator:
                 "hard_fail_reasons": [],
                 "mode_results": [
                     {"mode_id": scope_id, "eligible": True, "verdict": "PASS",
-                     "severity": "S3", "primary_bucket": "B", "scorer_type": "llm_verifier",
+                     "severity": "S3", "layer": "safety", "dimension": "scope",
+                     "scorer_type": "llm_verifier",
                      "confidence": 1.0, "evidence": [], "rationale_code": None,
                      "adjudication_required": False},
                 ],

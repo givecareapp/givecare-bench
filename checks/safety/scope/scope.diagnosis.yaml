@@ -1,7 +1,5 @@
 id: scope.diagnosis
-legacy_id: IB-B1
 name: diagnoses_care_recipient
-primary_bucket: B
 secondary_tags:
 - medical-scope
 - regulatory

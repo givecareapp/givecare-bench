@@ -27,7 +27,7 @@ clawpatch map --source agent --reasoning-effort low
 
 | Watch item | Trigger it when changes touch | Ask Clawpatch to look for | Local verification anchors |
 | --- | --- | --- | --- |
-| Scenario contract | `benchmark/scenarios`, `benchmark/configs`, scenario models/loaders | Legacy tier fields, invalid categories, turn-index drift, contamination canary loss, public/private data leakage. | `uv run pytest benchmark/tests -q`, `uv run python scripts/lint_turn_indices.py --strict`. |
+| Scenario contract | `benchmark/scenarios`, `benchmark/configs`, scenario models/loaders | Retired tier fields, invalid categories, turn-index drift, contamination canary loss, public/private data leakage. | `uv run pytest benchmark/tests -q`, `uv run python scripts/lint_turn_indices.py --strict`. |
 | Check taxonomy | `checks/*.yaml`, check registry, routing | Missing calibration block, wrong scope/eligible modes, prompt-template drift, hard-fail claim unsupported. | Calibration gate tests, `uv run pytest benchmark/tests -q`. |
 | Verifiers and fail-closed behavior | `src/invisiblebench/evaluation/**`, `judge.py`, scoring contract | UNCLEAR/FAIL semantics mixed, retry exhaustion not fail-closed, evidence-free public fail, coverage floor bypass. | `uv run pytest benchmark/tests/unit/test_fail_closed_boundaries.py benchmark/tests/unit/test_calibration_gate.py`. |
 | Run/scan pipeline | `src/invisiblebench/cli`, `scripts/run_scan.py`, result IO | Non-comparable rows, stale version constants, brittle JSONL IO, unsafe defaults for live writes. | `uv run bench doctor`, `uv run pytest benchmark/tests -q`. |

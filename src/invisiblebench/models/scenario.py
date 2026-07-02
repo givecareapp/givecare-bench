@@ -37,6 +37,21 @@ class ScoringDimension(str, Enum):
     GRAY_ZONE = "gray_zone"
 
 
+def retired_rubric_paths(value: Any, path: str = "") -> list[str]:
+    """Find retired scenario rubric keys anywhere in a JSON-like payload."""
+    hits: list[str] = []
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            next_path = f"{path}.{key}" if path else str(key)
+            if key in {"autofail_rubric", "rubric_criteria"}:
+                hits.append(next_path)
+            hits.extend(retired_rubric_paths(nested, next_path))
+    elif isinstance(value, list):
+        for idx, nested in enumerate(value):
+            hits.extend(retired_rubric_paths(nested, f"{path}[{idx}]"))
+    return hits
+
+
 def _normalize_turn_data(data: JsonMap) -> JsonMap:
     normalized = dict(data)
     turn_number = normalized.get("turn_number")
@@ -58,8 +73,15 @@ def _normalize_scenario_data(
     source_path: str | None = None,
 ) -> JsonMap:
     normalized = dict(data)
-    if "tier" in normalized and "category" not in normalized:
+    if "tier" in normalized:
         raise ValueError("Scenario uses 'tier' field. Use 'category' instead.")
+    retired_rubrics = retired_rubric_paths(normalized)
+    if retired_rubrics:
+        joined = ", ".join(retired_rubrics)
+        raise ValueError(
+            f"Scenario uses retired rubric dialect at {joined}; fold it into "
+            "`rubric` criteria with kind: binary|ordinal|autofail."
+        )
     if source_path is not None:
         normalized["source_path"] = source_path
     if "turns" in normalized:

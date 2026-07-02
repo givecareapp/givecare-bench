@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from invisiblebench.publish import publish
+import pytest
+
+from invisiblebench.publish import main, publish
 
 
 def _fake_runner(fail_stage: str | None, calls: list[str]):
@@ -79,3 +81,10 @@ def test_missing_scan_runs_nothing(tmp_path: Path) -> None:
     assert not result.ok
     assert calls == []
     assert "scored scan not found" in (result.error or "")
+
+
+def test_publish_cli_requires_explicit_scan_and_web_target() -> None:
+    with pytest.raises(SystemExit) as exc:
+        main([])
+
+    assert exc.value.code == 2

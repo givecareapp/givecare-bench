@@ -61,6 +61,8 @@ def scenario_care(
             continue
 
         verdict = str(result.get("verdict") or "")
+        if verdict == "NOT_APPLICABLE":
+            continue
         tallies[dimension]["total"] += 1
         if verdict in _PASS_VERDICT_VALUES:
             tallies[dimension]["pass"] += 1

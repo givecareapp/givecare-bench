@@ -10,21 +10,30 @@ import pytest
 from invisiblebench.utils.io import leaderboard_rows
 
 
-def test_leaderboard_rows_canonical_key() -> None:
-    assert leaderboard_rows({"overall_leaderboard": [{"model": "a"}]}) == [{"model": "a"}]
-
-
-def test_leaderboard_rows_projected_key() -> None:
+def test_leaderboard_rows_current_models_key() -> None:
     assert leaderboard_rows({"models": [{"model": "a"}, {"model": "b"}]}) == [
         {"model": "a"},
         {"model": "b"},
     ]
 
 
-def test_leaderboard_rows_prefers_canonical_over_projected() -> None:
-    # If both keys are present, the canonical source key wins.
+def test_leaderboard_rows_rejects_retired_overall_leaderboard_by_default() -> None:
+    with pytest.raises(ValueError, match="models"):
+        leaderboard_rows({"overall_leaderboard": [{"model": "a"}]})
+
+
+def test_leaderboard_rows_has_no_retired_shape_opt_in() -> None:
+    with pytest.raises(TypeError):
+        leaderboard_rows(  # type: ignore[call-arg]
+            {"overall_leaderboard": [{"model": "a"}]},
+            allow_legacy=True,
+        )
+
+
+def test_leaderboard_rows_prefers_current_over_retired_shape() -> None:
+    # If both keys are present, the current safety-care/v1 key wins.
     data = {"overall_leaderboard": [{"model": "canonical"}], "models": [{"model": "proj"}]}
-    assert leaderboard_rows(data) == [{"model": "canonical"}]
+    assert leaderboard_rows(data) == [{"model": "proj"}]
 
 
 def test_leaderboard_rows_missing_key_raises_valueerror() -> None:
@@ -57,3 +66,11 @@ def test_benchmark_version_single_source_of_truth() -> None:
 
     assert BENCHMARK_VERSION == inventory["benchmark_version"]
     assert BENCHMARK_VERSION == card["benchmark_details"]["version"]
+
+
+def test_scanned_row_contract_uses_current_name() -> None:
+    """Active code should use the Safety/Care scanned-row contract name."""
+    import invisiblebench.version as version
+
+    assert version.SCANNED_ROW_CONTRACT_VERSION == "3.2.0"
+    assert not hasattr(version, "V3_RESULT_CONTRACT_VERSION")

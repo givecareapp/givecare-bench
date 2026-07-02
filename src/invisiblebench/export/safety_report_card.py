@@ -1,4 +1,9 @@
-"""Safety report card generator for InvisibleBench."""
+"""Raw/internal gate report generator for runner results.
+
+This module reads the runner's raw diagnostic ``gates`` payload
+(``safety``/``compliance`` keys). It is not the public safety-care/v1
+leaderboard surface.
+"""
 
 from __future__ import annotations
 
@@ -18,18 +23,19 @@ def _short_scenario_name(scenario_id: str) -> str:
 
 
 def generate_safety_report_card(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Generate per-model pass/fail table for all safety/compliance gate scenarios.
+    """Generate a per-model raw A/B gate pass/fail table.
 
     Args:
         results: List of scenario result dicts (from all_results.json).
-            Each must have: model, scenario_id, gates (with safety/compliance sub-dicts).
+            Each must have: model, scenario_id, gates. The raw runner still
+            names the A/B compatibility gates `safety` and `compliance`.
 
     Returns:
         Dict with:
-        - 'models': per-model gate summaries with failures
+        - 'models': per-model raw gate summaries with failures
         - 'scenario_matrix': scenario_id -> {model: "PASS"/"FAIL"}
         - 'scenario_names': scenario_id -> short display name
-        - 'quality': per-model regard/coordination scores (gate-passers first)
+        - 'quality': per-model raw regard/coordination diagnostics
     """
     by_model: dict[str, list[dict[str, Any]]] = {}
     for r in results:
@@ -153,9 +159,9 @@ def _compute_quality(
             "all_gates_pass": gate_pass_lookup.get(model, False),
             "regard": round(avg_regard, 4),
             "coordination": round(avg_coord, 4),
-            "quality_score": round((avg_regard + avg_coord) / 2, 4),
         })
 
-    # Gate-passers first, then by quality score descending
-    quality.sort(key=lambda x: (-int(x["all_gates_pass"]), -x["quality_score"]))
+    # Gate-passers first, then stable model name order. Do not rank by a
+    # cross-quality composite; the public model reports qualities separately.
+    quality.sort(key=lambda x: (not x["all_gates_pass"], x["model"]))
     return quality

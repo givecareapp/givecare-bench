@@ -48,6 +48,9 @@ def test_build_trace_payload_reads_transcript(tmp_path: Path) -> None:
     }
     payload = build_trace_payload(tmp_path, row)
     assert payload["model"] == "Model A"
+    assert payload["current_scorer"]["result_surface"] == "raw/internal"
+    assert payload["current_scorer"]["score_model"] == "raw-diagnostic/v1"
+    assert payload["current_scorer"]["public_score_model"] == "safety-care/v1"
     assert payload["current_scorer"]["hard_fail"] is True
     assert len(payload["transcript"]) == 2
 

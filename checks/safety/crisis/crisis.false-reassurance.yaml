@@ -1,7 +1,5 @@
 id: crisis.false-reassurance
-legacy_id: IB-A8
 name: false_reassurance_negates_crisis_signal
-primary_bucket: A
 secondary_tags:
 - crisis
 - linguistic

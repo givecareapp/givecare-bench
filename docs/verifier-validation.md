@@ -23,7 +23,7 @@ progress" note: this page tracks what is and is not validated.
 There is no monolithic scorer set. The benchmark runs the **per-check verifier
 pattern** (`safety-care/v1`): the taxonomy is **50 checks**, and each check
 carries its own verifier — definition, routing, and prompt — in its
-`checks/<ID>.yaml`. Of the 50:
+`checks/<layer>/<dimension>/<ID>.yaml`. Of the 50:
 
 - **46 are LLM-judged.** Each LLM verifier votes **K=3** and takes the majority
   verdict; all checks share a single global judge model (**GPT-5 Mini** as of
@@ -41,7 +41,7 @@ carries its own verifier — definition, routing, and prompt — in its
 
 Each scored scenario result therefore carries a `judge_prompt_hash` for every
 LLM-judged check that fired on it; deterministic checks carry none. Per-check
-judge prompts live in each `checks/<ID>.yaml` as a `prompt:` block; template
+judge prompts live in each `checks/<layer>/<dimension>/<ID>.yaml` as a `prompt:` block; template
 hashes are computed from that text. The rendered `.txt` files are gitignored.
 
 ## How template hashes are computed
@@ -69,7 +69,7 @@ echo the per-check hashes for the checks they surface.
 
 Hashes are per-check, not per-scorer: there is no single global judge hash.
 Each LLM-judged check pins its own template hash, computed from the `prompt:`
-block in its `checks/<ID>.yaml` (benchmark version 3.1.0).
+block in its `checks/<layer>/<dimension>/<ID>.yaml` (benchmark version 3.1.0).
 
 To extract per-check hashes from a scored run, read the per-scenario result
 JSON written by `bench` into `results/<run-id>/`. The raw result payload
@@ -81,8 +81,8 @@ hash.
 ## Validation status
 
 Validation is **per-check**, not per-scorer. The calibration→claims link is
-machine-enforced: every claim-carrying check declares a `calibration:` block in
-its `checks/<ID>.yaml` with one of **two** values — the binary claim model (2026-06-30):
+machine-enforced: every claim-capable check declares a `calibration:` block in
+its `checks/<layer>/<dimension>/<ID>.yaml` with one of **two** values — the binary claim model (2026-06-30):
 
 - **claim_ready** — the production verifier meets the agreement threshold
   (Cohen's κ ≥ 0.65) against an **independent, human-labeled, check-specific**
@@ -116,7 +116,7 @@ check earns human-labeled calibration on natural cases.
 
 | Check group | Status | Evidence on record |
 |---|---|---|
-| 19 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-bearing) | `not_claim_ready` | `authored_ai_unit_test` — AI reference-panel labels on authored cards; not validation (all 19 passed; `scope.periodic-disclosure` demoted 2026-07-01 out of the hard-fail/claim layer to a regulatory-compliance note) |
+| 19 hard-fail checks (Crisis / Scope / Identity / Autonomy, claim-capable once calibrated) | `not_claim_ready` | `authored_ai_unit_test` — AI reference-panel labels on authored cards; not validation (all 19 passed; `scope.periodic-disclosure` demoted 2026-07-01 out of the hard-fail/claim layer to a regulatory-compliance note) |
 | Care checks (Belonging / Attunement / Relational / Advocacy) | `not_claim_ready` | directional; no calibration block |
 | **(none)** | **`claim_ready`** | — — earned only via independent human calibration on natural cases |
 
@@ -282,8 +282,8 @@ V2 scoring has been archived. The verifier pattern is the sole scoring system.
 | crisis.passive-ideation | Passive ideation miss | 1.000 | 40 | Tier 1 | Human labels |
 | identity.memory-claim | False continuity claim | 0.795 | 40 | Tier 1 | Regex + LLM edge |
 | crisis.false-reassurance | False reassurance | 0.747 | 40 (excl. ambiguous) | Tier 1 | Automated scorer |
-| scope.diagnosis | Care-recipient diagnosis | -- | 30 | Seed (provisional) | 2026-06-24 negative-heavy gold seed; needs positive cards for recall |
-| belonging.self-sacrifice | Self-sacrifice affirmation | -- | -- | Unvalidated | Conservative scorer |
+| scope.diagnosis | Care-recipient diagnosis | -- | 30 | Seed (`not_claim_ready`) | 2026-06-24 negative-heavy gold seed; needs positive cards for recall |
+| belonging.self-sacrifice | Self-sacrifice affirmation | -- | -- | `not_claim_ready` | Conservative scorer |
 | crisis.harm-intent | Harm-fear miss | -- | 40 | Human-only | Automated scorer in progress |
 
 The κ ≥ 0.65 bar (Cohen's kappa against human labels) is the agreement threshold
@@ -316,13 +316,13 @@ currently meets that bar** — crisis.passive-ideation, crisis.false-reassurance
 and identity.memory-claim have prior κ on older judges/gold (development
 evidence), and scope.diagnosis holds a gold seed; all remain `not_claim_ready`.
 
-Evidence status is declared machine-readably: every claim-carrying check
+Evidence status is declared machine-readably: every claim-capable check
 (`hard_fail` or S5/S4_GATE severity) carries a `calibration:` block in its
-`checks/<ID>.yaml` — `claim_ready` (verifier meets the threshold vs independent
+`checks/<layer>/<dimension>/<ID>.yaml` — `claim_ready` (verifier meets the threshold vs independent
 human labels on natural cases) or `not_claim_ready` (everything else; whatever
 development evidence exists is recorded in the `calibration.evidence` block). The
 QA gate (`scripts/qa_leaderboard.py`) refuses to publish a hard-fail claim from
-any check that is not `claim_ready`, and rejects claim-carrying checks with no
+any check that is not `claim_ready`, and rejects claim-capable checks with no
 block at all. The
 **published claim surface is `claim_ready` checks only** (`calibrated_only`) —
 **currently empty (0 checks)**, so Safety violation rates carry no public claim

@@ -24,9 +24,9 @@ Calibration-aware view
 -----------------------
 Pass ``calibrated_only=True`` (with a ``cal_map`` from
 ``check_calibration_statuses()``) to restrict counting to checks whose
-calibration status is ``"validated"`` or ``"provisional"``.  The default
-(``calibrated_only=False``) includes all Safety checks — a provisional/
-diagnostic view.
+calibration status is ``"claim_ready"``.  The default
+(``calibrated_only=False``) includes all Safety checks — a diagnostic
+development view.
 
 Usage::
 
@@ -152,8 +152,8 @@ def check_calibration_statuses(
                     the default CHECKS_DIR is used.
 
     Returns:
-        Mapping of check_id → calibration status string (e.g. ``"validated"``,
-        ``"provisional"``, ``"unvalidated"``).
+        Mapping of check_id → calibration status string (``"claim_ready"`` or
+        ``"not_claim_ready"`` under the current binary claim model).
     """
     from invisiblebench.evaluation.check_registry import load_checks
     modes, _ = load_checks(checks_dir)
@@ -193,8 +193,8 @@ def scenario_safety(
                          maps check_id → {"layer": ..., "dimension": ...}.
         mode_hard_fail:  Ignored.  Retained for backwards-compatible call sites
                          that pass ``record.get("hard_fail", False)``.
-        calibrated_only: When True, only checks whose calibration status is in
-                         ``{"validated", "provisional"}`` (per ``cal_map``)
+        calibrated_only: When True, only checks whose calibration status is
+                         ``"claim_ready"`` (per ``cal_map``)
                          contribute to the violation flags.  Requires ``cal_map``.
         cal_map:         Output of ``check_calibration_statuses()`` — maps
                          check_id → calibration status.  Required when

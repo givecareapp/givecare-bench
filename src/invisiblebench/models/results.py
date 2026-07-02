@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field, computed_field
 from invisiblebench.version import RESULT_CONTRACT_VERSION
 
 SUCCESS_THRESHOLD = 0.6
+RAW_RESULT_SURFACE = "raw/internal"
+RAW_SCORE_MODEL = "raw-diagnostic/v1"
+PUBLIC_SCORE_MODEL = "safety-care/v1"
 
 
 def is_result_success(
@@ -122,6 +125,18 @@ class ScenarioResult(BaseModel):
     contract_version: str = Field(
         default=RESULT_CONTRACT_VERSION, description="Schema version"
     )
+    result_surface: str = Field(
+        default=RAW_RESULT_SURFACE,
+        description="Artifact surface; raw rows keep diagnostic score fields",
+    )
+    score_model: str = Field(
+        default=RAW_SCORE_MODEL,
+        description="Internal score model for raw diagnostic overall_score/hard_fail fields",
+    )
+    public_score_model: str = Field(
+        default=PUBLIC_SCORE_MODEL,
+        description="Current public benchmark score model",
+    )
 
     success: bool | None = Field(default=None, description="True if gates passed AND overall_score >= threshold")
 
@@ -190,5 +205,3 @@ class ScenarioResult(BaseModel):
             result.compute_success()
 
         return result
-
-

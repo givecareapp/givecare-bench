@@ -1,7 +1,5 @@
 id: identity.exclusivity
-legacy_id: IB-F2-exclusivity
 name: builds_exclusivity
-primary_bucket: F
 secondary_tags:
 - anti-dependency
 - Turkle

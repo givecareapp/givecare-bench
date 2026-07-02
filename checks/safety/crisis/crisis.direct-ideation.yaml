@@ -1,7 +1,5 @@
 id: crisis.direct-ideation
-legacy_id: IB-A2
 name: misses_direct_ideation
-primary_bucket: A
 secondary_tags:
 - crisis
 - regulatory

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from invisiblebench.utils.verifier_corpus import (
+    CURRENT_BOARD_RAW_MODEL_RESULTS_DIR,
     build_verifier_corpus_manifest,
     build_verifier_corpus_summary,
 )
@@ -15,8 +16,12 @@ def _write_json(path: Path, data: object) -> None:
 
 
 class TestVerifierCorpusManifest:
+    def test_default_raw_model_results_dir_is_not_leaderboard_ready(self) -> None:
+        assert CURRENT_BOARD_RAW_MODEL_RESULTS_DIR == Path("results/raw_model_results")
+        assert "leaderboard_ready" not in CURRENT_BOARD_RAW_MODEL_RESULTS_DIR.parts
+
     def test_build_manifest_resolves_transcripts_and_detail_rewrites(self, tmp_path: Path) -> None:
-        leaderboard_dir = tmp_path / "results" / "leaderboard_ready"
+        raw_results_dir = tmp_path / "results" / "raw_model_results"
         transcript_dir_main = tmp_path / "results" / "run_20260330_130332" / "transcripts"
         transcript_dir_partial = (
             tmp_path / "results" / "partial_runs" / "run_20260330_033649_up_to_deepseek" / "transcripts"
@@ -38,7 +43,7 @@ class TestVerifierCorpusManifest:
         ).write_text("{}\n")
 
         _write_json(
-            leaderboard_dir / "GPT-5.4.json",
+            raw_results_dir / "GPT-5.4.json",
             {
                 "model": "GPT-5.4",
                 "model_id": "openai/gpt-5.4",
@@ -62,7 +67,7 @@ class TestVerifierCorpusManifest:
             },
         )
         _write_json(
-            leaderboard_dir / "Gemini_3.1_Pro.json",
+            raw_results_dir / "Gemini_3.1_Pro.json",
             {
                 "model": "Gemini 3.1 Pro",
                 "model_id": "google/gemini-3.1-pro",
@@ -86,7 +91,7 @@ class TestVerifierCorpusManifest:
 
         manifest = build_verifier_corpus_manifest(
             tmp_path,
-            leaderboard_dir=Path("results/leaderboard_ready"),
+            raw_results_dir=Path("results/raw_model_results"),
             transcript_dirs=(
                 Path("results/run_20260330_130332/transcripts"),
                 Path("results/partial_runs/run_20260330_033649_up_to_deepseek/transcripts"),
@@ -96,6 +101,11 @@ class TestVerifierCorpusManifest:
         assert len(manifest) == 2
 
         gpt_row = next(row for row in manifest if row["model"] == "GPT-5.4")
+        assert gpt_row["result_surface"] == "raw/internal"
+        assert gpt_row["score_model"] == "raw-diagnostic/v1"
+        assert gpt_row["public_score_model"] == "safety-care/v1"
+        assert gpt_row["raw_results_file"] == "results/raw_model_results/GPT-5.4.json"
+        assert "leaderboard_file" not in gpt_row
         assert gpt_row["transcript_found"] is True
         assert gpt_row["transcript_source_run"] == "run_20260330_130332"
         assert (

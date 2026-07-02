@@ -3,19 +3,22 @@
 VISION.md: "uncalibrated scores are caveats, not claims." The QA gate makes
 that structural rather than cultural:
 
-1. Every claim-carrying check (hard_fail or S5/S4_GATE severity) must declare
-   a machine-readable `calibration:` block in its checks/<ID>.yaml.
-2. A published hard_fail_reason from a check without calibration evidence
-   (status validated or provisional) is a QA error unconditionally.
+1. Every claim-capable check (hard_fail or S5/S4_GATE severity) must declare
+   a machine-readable `calibration:` block in its
+   checks/<layer>/<dimension>/<ID>.yaml.
+2. A published hard_fail_reason from a check that is not `claim_ready` is a QA
+   error unconditionally.
 
 Evidence statuses are declarations with provenance (docs/verifier-validation.md):
-`validated` = per-mode Tier 1 gold (κ vs human), `provisional` = layer-level or
-card-level human evidence only, `unvalidated` = no human evidence — cannot
-carry hard-fail claims.
+`claim_ready` = independent human-labeled natural-case calibration clears the
+bar; `not_claim_ready` = everything else, including development evidence.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 import yaml
 
 from invisiblebench.evaluation.check_registry import load_checks
@@ -33,7 +36,7 @@ def test_gate_severities_agree_with_scoring_yaml() -> None:
         assert declared == set(GATE_SEVERITIES), (gate_name, declared)
 
 
-def test_every_claim_carrying_check_declares_calibration() -> None:
+def test_every_claim_capable_check_declares_calibration() -> None:
     modes, _routing = load_checks()
     errors = calibration_errors([], modes)
     assert errors == [], errors
@@ -43,22 +46,49 @@ def test_every_claim_carrying_check_declares_calibration() -> None:
         for check_id, mode in modes.items()
         if mode.get("hard_fail") or mode.get("severity") in CLAIM_SEVERITIES
     ]
-    assert claim_checks, "taxonomy has no claim-carrying checks?"
+    assert claim_checks, "taxonomy has no claim-capable checks?"
     for check_id in claim_checks:
         status = (modes[check_id].get("calibration") or {}).get("status")
         assert status in {"claim_ready", "not_claim_ready"}, (check_id, status)
 
 
+def test_check_loader_rejects_retired_calibration_status(tmp_path: Path) -> None:
+    check_file = tmp_path / "retired.yaml"
+    check_file.write_text(
+        """
+id: retired
+name: Retired status
+severity: S5
+scope: scenario
+calibration:
+  status: validated
+routing:
+  scorer: regex
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unsupported calibration.status"):
+        load_checks(tmp_path)
+
+
 def test_hard_fail_from_uncalibrated_check_is_a_qa_error() -> None:
     modes = {
-        "IB-X1": {"severity": "S5", "hard_fail": True},  # no calibration block
+        "crisis.test-check": {"severity": "S5", "hard_fail": True},  # no calibration block
     }
     rows = [
         {
             "model": "M",
             "scenario_id": "s1",
             "hard_fail": True,
-            "hard_fail_reasons": [{"mode_id": "IB-X1", "bucket": "A", "severity": "S5"}],
+            "hard_fail_reasons": [
+                {
+                    "mode_id": "crisis.test-check",
+                    "layer": "safety",
+                    "dimension": "crisis",
+                    "severity": "S5",
+                }
+            ],
         }
     ]
     errors = calibration_errors(rows, modes)
@@ -66,15 +96,15 @@ def test_hard_fail_from_uncalibrated_check_is_a_qa_error() -> None:
     assert any("hard_fail_from_uncalibrated_check" in e for e in errors)
 
 
-def test_unvalidated_status_cannot_carry_claims() -> None:
+def test_not_claim_ready_status_cannot_carry_claims() -> None:
     modes = {
-        "IB-X1": {
+        "crisis.test-check": {
             "severity": "S5",
             "hard_fail": True,
             "calibration": {"status": "not_claim_ready"},
         },
     }
-    rows = [{"hard_fail_reasons": [{"mode_id": "IB-X1"}]}]
+    rows = [{"hard_fail_reasons": [{"mode_id": "crisis.test-check"}]}]
     errors = calibration_errors(rows, modes)
     # The block exists (inventory passes) but the status cannot carry a claim.
     assert not any("claim_check_missing_calibration" in e for e in errors)
@@ -83,16 +113,23 @@ def test_unvalidated_status_cannot_carry_claims() -> None:
 
 def test_calibrated_statuses_carry_claims() -> None:
     modes = {
-        "IB-X1": {
+        "crisis.test-check": {
             "severity": "S5",
             "hard_fail": True,
             "calibration": {"status": "claim_ready", "basis": "human-labeled gold"},
         },
-        "IB-X2": {
+        "scope.test-check": {
             "severity": "S5",
             "hard_fail": True,
             "calibration": {"status": "claim_ready", "human_kappa": 1.0, "n": 40},
         },
     }
-    rows = [{"hard_fail_reasons": [{"mode_id": "IB-X1"}, {"mode_id": "IB-X2"}]}]
+    rows = [
+        {
+            "hard_fail_reasons": [
+                {"mode_id": "crisis.test-check"},
+                {"mode_id": "scope.test-check"},
+            ]
+        }
+    ]
     assert calibration_errors(rows, modes) == []

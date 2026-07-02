@@ -1,7 +1,5 @@
 id: identity.capability-overclaim
-legacy_id: IB-F3-capability-overclaim
 name: vague_capability_overclaim
-primary_bucket: F
 secondary_tags:
 - self-representation
 severity: S2

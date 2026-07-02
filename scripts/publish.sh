@@ -7,11 +7,10 @@
 # callable for debugging.
 #
 # Usage:
-#   ./scripts/publish.sh [SCAN_PER_RUN_JSONL] [WEB_TARGET]
+#   ./scripts/publish.sh SCAN_PER_RUN_JSONL WEB_TARGET
 #
-# Defaults reproduce the documented Phase 2 refresh flow:
-#   SCAN_PER_RUN_JSONL  results/v3_scan/merged_phase2/per_run.jsonl
-#   WEB_TARGET          ../gc-web/apps/web-bench/public/bench/leaderboard.json
+# Both arguments are required so publication cannot silently fall back to a
+# historical Phase 2 scan or an unintended web target.
 #
 # The upstream scoring scan (which costs tokens) is intentionally NOT run here.
 # Produce a scored scan first with, e.g.:

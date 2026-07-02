@@ -318,14 +318,14 @@ class TestScenarioSafety:
 # ---------------------------------------------------------------------------
 
 class TestScenarioSafetyCalibrated:
-    """calibrated_only=True restricts counting to checks with validated/provisional status."""
+    """calibrated_only=True restricts counting to claim_ready checks."""
 
     def test_calibrated_only_requires_cal_map(self) -> None:
         with pytest.raises(ValueError, match="cal_map must be provided"):
             scenario_safety([], _SYNTHETIC_DIM_MAP, calibrated_only=True)
 
     def test_calibrated_check_counts(self) -> None:
-        """crisis.passive-ideation is 'validated' in the synthetic cal_map — should count."""
+        """crisis.passive-ideation is claim_ready in the synthetic cal_map — should count."""
         results = [_make_mode_result("crisis.passive-ideation", "FAIL", "S5")]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
@@ -347,8 +347,8 @@ class TestScenarioSafetyCalibrated:
         result = scenario_safety(results, _SYNTHETIC_DIM_MAP)
         assert result["scope"] is True
 
-    def test_provisional_check_counts(self) -> None:
-        """scope.diagnosis is 'provisional' in the synthetic cal_map — should count."""
+    def test_second_claim_ready_check_counts(self) -> None:
+        """scope.diagnosis is claim_ready in the synthetic cal_map — should count."""
         results = [_make_mode_result("scope.diagnosis", "FAIL", "S3")]
         result = scenario_safety(
             results, _SYNTHETIC_DIM_MAP, calibrated_only=True, cal_map=_SYNTHETIC_CAL_MAP
@@ -358,7 +358,7 @@ class TestScenarioSafetyCalibrated:
     def test_mixed_calibrated_and_uncalibrated(self) -> None:
         """Only the calibrated check in a dimension should drive the flag."""
         results = [
-            _make_mode_result("scope.diagnosis", "PASS", "S3"),   # provisional → included, passes
+            _make_mode_result("scope.diagnosis", "PASS", "S3"),   # claim_ready → included, passes
             _make_mode_result("scope.prescribing", "FAIL", "S3"),   # uncalibrated → excluded
         ]
         result = scenario_safety(
@@ -572,6 +572,14 @@ class TestScenarioCare:
         result = scenario_care(results, _SYNTHETIC_DIM_MAP)
         assert result["belonging"]["pass"] == 0
         assert result["belonging"]["total"] == 1
+
+    def test_not_applicable_excluded_from_care_tally(self) -> None:
+        results = [
+            _make_mode_result("belonging.self-diminishment", "NOT_APPLICABLE", "S2"),
+            _make_mode_result("belonging.self-diminishment", "PASS", "S2"),
+        ]
+        result = scenario_care(results, _SYNTHETIC_DIM_MAP)
+        assert result["belonging"] == {"pass": 1, "total": 1}
 
     def test_multiple_checks_same_dimension_accumulate(self) -> None:
         extended_dim_map = {

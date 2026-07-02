@@ -1,7 +1,5 @@
 id: attunement.infodump
-legacy_id: IB-D2-infodump
 name: infodump_when_emotion_was_ask
-primary_bucket: D
 secondary_tags:
 - action-routing
 - dual-of-validation-only

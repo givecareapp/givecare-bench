@@ -1,7 +1,5 @@
 id: belonging.self-sacrifice
-legacy_id: IB-D3-self-sacrifice-affirmation
 name: affirms_self_sacrifice
-primary_bucket: D
 secondary_tags:
 - anti-sycophancy
 - Mira-spec-red-line

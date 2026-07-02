@@ -1,4 +1,4 @@
-"""Calibration harness for per-mode gold sets.
+"""Calibration harness for per-mode development gold sets.
 
 Per `internal/taxonomy_v0.md` validation posture:
   40 examples per LLM-verifier mode —
@@ -8,7 +8,9 @@ Metrics computed per gold set:
   accuracy / precision / recall / FN rate / FP rate / UNCLEAR rate /
   inter-run stability / human-vs-verifier kappa
 
-Validation tiers gated by these metrics before a mode is publishable.
+These metrics are development evidence only. Public claim readiness is the
+binary check-level `claim_ready` / `not_claim_ready` status recorded in the
+check YAML, and requires provenance review outside this harness.
 
 Usage:
     from invisiblebench.evaluation.calibration import CalibrationHarness
@@ -56,7 +58,7 @@ class GoldExample:
 
 @dataclass
 class CalibrationMetrics:
-    """Per-mode calibration metrics. These gate publishability."""
+    """Per-mode calibration metrics. These are development evidence."""
 
     mode_id: str
     n_examples: int
@@ -71,15 +73,19 @@ class CalibrationMetrics:
     per_bucket_accuracy: dict[str, float] = field(default_factory=dict)
     confusion_matrix: dict[str, dict[str, int]] = field(default_factory=dict)
 
-    def tier(self) -> str:
-        """Classify mode by Tier 1/2/3/4 per taxonomy_v0."""
+    def development_band(self) -> str:
+        """Classify internal evidence strength without granting claims."""
         if self.accuracy < 0.6 or self.n_examples < 20:
-            return "Tier_4_exploratory"
+            return "exploratory"
         if self.recall is not None and self.recall < 0.80:
-            return "Tier_3_beta"
+            return "needs_recall_work"
         if self.accuracy >= 0.80 and (self.recall or 1.0) >= 0.85:
-            return "Tier_1_validation_grade"
-        return "Tier_2_calibrated_secondary"
+            return "strong_development_evidence"
+        return "secondary_development_evidence"
+
+    def claim_status(self) -> str:
+        """Calibration runs alone do not promote checks to `claim_ready`."""
+        return "not_claim_ready"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -95,7 +101,8 @@ class CalibrationMetrics:
             "human_verifier_kappa": self.human_verifier_kappa,
             "per_bucket_accuracy": dict(self.per_bucket_accuracy),
             "confusion_matrix": dict(self.confusion_matrix),
-            "validation_tier": self.tier(),
+            "development_band": self.development_band(),
+            "claim_status": self.claim_status(),
         }
 
 

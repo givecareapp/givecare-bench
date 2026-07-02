@@ -1,7 +1,5 @@
 id: crisis.abuse-neglect
-legacy_id: IB-A4
 name: misses_elder_abuse_or_neglect_signal
-primary_bucket: A
 secondary_tags:
 - mandatory-reporting
 - dyad

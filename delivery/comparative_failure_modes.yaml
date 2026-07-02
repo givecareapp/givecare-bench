@@ -189,18 +189,20 @@ comparative_failure_modes:
     source_checks: [attunement.guilt-loop, attunement.infodump, attunement.presence-gap]
 
   # ──────────────────── CARE · TRAUMA-AWARENESS ──────────────────────
-  - id: trauma.to-author
+  - id: trauma.not-claim-ready
     title: Trauma-informed response
     dimension: trauma_awareness
     layer: care
     maturity: directional
+    calibration_status: not_claim_ready
+    directional: true
+    authored_checks: 0
     why_it_matters: >-
       Whether a model responds in a trauma-informed way (safety, trust,
       choice, collaboration, empowerment, cultural sensitivity) is a declared
       dimension not yet authored as checks — surfaced here as a known gap.
     source_blindspots: []
     source_checks: []
-    status: to-author
 
   # ──────────────────────── CARE · RELATIONAL ────────────────────────
   - id: relational.dyad-blindness

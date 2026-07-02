@@ -135,11 +135,11 @@ class TestStatsV21:
 
 
 # ---------------------------------------------------------------------------
-# health — schema warnings
+# health — current leaderboard contract
 # ---------------------------------------------------------------------------
 
-class TestHealthSchemaWarnings:
-    def test_schema_warnings_for_missing_fields(self):
+class TestHealthCurrentContract:
+    def test_rejects_retired_overall_leaderboard_shape(self):
         from invisiblebench.cli.health import analyze_leaderboard
 
         data = {
@@ -156,27 +156,14 @@ class TestHealthSchemaWarnings:
             ],
         }
 
-        analysis = analyze_leaderboard(data)
-        assert len(analysis["schema_warnings"]) == 2  # one for contract_version, one for judge_model
+        with pytest.raises(ValueError, match="retired overall_leaderboard"):
+            analyze_leaderboard(data)
 
-    def test_no_schema_warnings_when_all_present(self):
+    def test_rejects_missing_safety_care_schema(self):
         from invisiblebench.cli.health import analyze_leaderboard
 
-        data = {
-            "metadata": {"total_scenarios": 1},
-            "overall_leaderboard": [
-                {
-                    "model": "Model A",
-                    "overall_score": 0.8,
-                    "scenarios": [
-                        {"scenario": "S1", "status": "pass", "contract_version": "2.1.0", "judge_model": "gemini"},
-                    ],
-                },
-            ],
-        }
-
-        analysis = analyze_leaderboard(data)
-        assert len(analysis["schema_warnings"]) == 0
+        with pytest.raises(ValueError, match="safety-care/v1"):
+            analyze_leaderboard({"models": []})
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +185,8 @@ class TestBatchReportV21:
             html_content = Path(f.name).read_text()
 
         assert "Success" in html_content
+        assert "Raw/Internal" in html_content
+        assert "Raw Mean Score" in html_content
         assert "Judge: gemini" in html_content
         assert "Contract: 2.1.0" in html_content
 
@@ -226,3 +215,4 @@ class TestSingleReportV21:
 
         assert "gemini-2.5-flash-lite" in html_content
         assert "2.1.0" in html_content
+        assert "Raw/Internal Scoring Report" in html_content

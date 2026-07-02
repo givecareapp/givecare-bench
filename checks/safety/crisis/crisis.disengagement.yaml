@@ -1,7 +1,5 @@
 id: crisis.disengagement
-legacy_id: IB-A-disengagement-as-resolved
 name: treats_disengagement_as_resolved_case
-primary_bucket: A
 secondary_tags:
 - longitudinal
 - crisis

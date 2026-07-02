@@ -29,8 +29,13 @@ from invisiblebench.evaluation.verifiers.base import (
     collect_scenario_tags,
     mode_is_eligible,
 )
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+)
 
-logger = logging.getLogger("v3_scan")
+logger = logging.getLogger("safety_care_scan")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -55,7 +60,7 @@ SCAN_PROFILES: dict[str, dict[str, Any]] = {
     },
     "dev": {
         "description": "Cheap development scan: hard gates and boundary checks with one-pass judges.",
-        "include_buckets": {"A", "B", "F"},
+        "include_dimensions": {"crisis", "scope", "identity"},
         "llm_repetitions": 1,
         "adaptive_repetitions": True,
     },
@@ -106,7 +111,11 @@ def _mode_matches_profile(
         return False
     if profile.get("include_routes") and routing_config.get("route") in profile["include_routes"]:
         return True
-    if profile.get("include_buckets") and mode_config.get("primary_bucket") in profile["include_buckets"]:
+    included_layers = profile.get("include_layers")
+    if included_layers and mode_config.get("layer") in included_layers:
+        return True
+    included_dimensions = profile.get("include_dimensions")
+    if included_dimensions and mode_config.get("dimension") in included_dimensions:
         return True
     return False
 
@@ -182,7 +191,8 @@ def build_scan_plan(
                     "eligible": 0,
                     "planned_llm_calls": 0,
                     "route": routing_config.get("route"),
-                    "bucket": mode_config.get("primary_bucket"),
+                    "layer": mode_config.get("layer"),
+                    "dimension": mode_config.get("dimension"),
                     "severity": mode_config.get("severity"),
                     "repetitions": routing_config.get("repetitions", 1),
                 },
@@ -228,6 +238,66 @@ def load_scenario(scenario_id: str) -> dict[str, Any]:
     return {"scenario_id": scenario_id, "category": "unknown"}
 
 
+_SCENARIO_METADATA_CACHE: dict[str, dict[str, Any]] | None = None
+
+
+def _scenario_metadata_by_id() -> dict[str, dict[str, Any]]:
+    global _SCENARIO_METADATA_CACHE
+    if _SCENARIO_METADATA_CACHE is not None:
+        return _SCENARIO_METADATA_CACHE
+
+    scenarios: dict[str, dict[str, Any]] = {}
+    for path in SCENARIOS_ROOT.rglob("*.json"):
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        scenario_id = data.get("scenario_id")
+        if isinstance(scenario_id, str) and scenario_id:
+            scenarios[scenario_id] = data
+
+    _SCENARIO_METADATA_CACHE = scenarios
+    return scenarios
+
+
+def _model_metadata_from_transcript_prefix(prefix: str) -> dict[str, str]:
+    try:
+        from invisiblebench.models.config import MODELS_FULL
+    except ImportError:
+        MODELS_FULL = []
+
+    for model in MODELS_FULL:
+        model_id = getattr(model, "id", "")
+        if model_id.replace("/", "_") == prefix:
+            return {"model_id": model_id, "model": getattr(model, "name", model_id)}
+
+    if "_" in prefix:
+        model_id = prefix.replace("_", "/", 1)
+    else:
+        model_id = prefix
+    return {"model_id": model_id or "unknown", "model": model_id or "unknown"}
+
+
+def _infer_transcript_metadata_from_stem(stem: str) -> dict[str, Any] | None:
+    scenarios = _scenario_metadata_by_id()
+    for scenario_id in sorted(scenarios, key=len, reverse=True):
+        suffix = f"_{scenario_id}"
+        if not stem.endswith(suffix):
+            continue
+        model_prefix = stem[: -len(suffix)]
+        if not model_prefix:
+            continue
+        model_metadata = _model_metadata_from_transcript_prefix(model_prefix)
+        scenario = scenarios[scenario_id]
+        return {
+            **model_metadata,
+            "scenario_id": scenario_id,
+            "category": scenario.get("category", "unknown"),
+        }
+    return None
+
+
 def load_transcript(path: Path) -> list[dict[str, Any]]:
     turns: list[dict[str, Any]] = []
     with open(path, encoding="utf-8") as f:
@@ -269,14 +339,11 @@ def transcripts_for_run(run_dir: Path) -> list[dict[str, Any]]:
                 matched = r
                 break
         if matched is None:
-            # Heuristic parse: last two underscore segments = scenario tail
-            logger.debug("No result match for %s; using heuristic", stem)
-            matched = {
-                "model": "unknown",
-                "model_id": "unknown",
-                "scenario_id": stem,
-                "category": "unknown",
-            }
+            logger.debug("No result match for %s; inferring from scenario inventory", stem)
+            matched = _infer_transcript_metadata_from_stem(stem)
+        if matched is None:
+            logger.warning("Could not infer scenario metadata for transcript %s", stem)
+            matched = {"model": "unknown", "model_id": "unknown", "scenario_id": stem, "category": "unknown"}
         pairs.append(
             {
                 "transcript_path": transcript_path,
@@ -486,6 +553,9 @@ def write_outputs(
     per_model_rates = {
         model: {
             "n_runs": len(engine_outputs_for_model),
+            "result_surface": RAW_RESULT_SURFACE,
+            "score_model": RAW_SCORE_MODEL,
+            "public_score_model": PUBLIC_SCORE_MODEL,
             "hard_fail_rate": sum(
                 1 for eo in engine_outputs_for_model if eo.hard_fail
             )
@@ -499,7 +569,7 @@ def write_outputs(
 
     # Human summary
     summary_lines: list[str] = []
-    summary_lines.append("# V3 Blindspot Scan — Summary\n")
+    summary_lines.append("# Safety/Care Scan — Summary\n")
     summary_lines.append(f"- Source run dirs: {', '.join(str(d.name) for d in run_dirs)}")
     summary_lines.append(f"- Transcripts scanned: {len(outputs)}")
     if scan_plan is not None:
@@ -536,8 +606,8 @@ def write_outputs(
             f"| {label} | {rate:.2%} | {ec['fail']} / {ec['eligible']} |"
         )
 
-    summary_lines.append("\n## Per-model hard-fail rates\n")
-    summary_lines.append("| Model | Hard-fail rate | n |")
+    summary_lines.append("\n## Per-model raw/internal hard-fail compatibility rates\n")
+    summary_lines.append("| Model | Raw/internal hard-fail rate | n |")
     summary_lines.append("|---|---:|---:|")
     for model, stats in sorted(
         per_model_rates.items(), key=lambda kv: -kv[1]["hard_fail_rate"]
@@ -547,17 +617,25 @@ def write_outputs(
         )
 
     summary_lines.append("\n## Notes\n")
-    summary_lines.append(
-        "- LLM-dependent modes returned NOT_APPLICABLE (no api_client wired in). "
-        "Regex/lexicon/corpus modes produced actionable signal."
-    )
+    if scan_plan is not None and scan_plan.get("llm_enabled"):
+        summary_lines.append(
+            "- LLM-dependent modes ran for routes included in the selected scan profile. "
+            "Routes outside the selected profile were excluded from this scan."
+        )
+    else:
+        summary_lines.append(
+            "- LLM-dependent modes returned NOT_APPLICABLE (no api_client wired in). "
+            "Regex/lexicon/corpus modes produced actionable signal."
+        )
     summary_lines.append(
         "- Scenario eligibility uses explicit `eligible_modes` when present; tag "
         "inference is the fallback for scenarios without that field."
     )
     summary_lines.append(
-        "- Hard-fail rate counts regex-detected B5/B7/B8 and F1-human-identity. "
-        "Full A-gate coverage requires LLM verifier calibration."
+        f"- Hard-fail rate is raw/internal compatibility metadata "
+        f"({RAW_RESULT_SURFACE}, {RAW_SCORE_MODEL}); public Safety/Care output "
+        f"remains `{PUBLIC_SCORE_MODEL}` and only publishes Safety claims for "
+        "`claim_ready` checks."
     )
 
     with open(output_dir / "summary.md", "w", encoding="utf-8") as f:

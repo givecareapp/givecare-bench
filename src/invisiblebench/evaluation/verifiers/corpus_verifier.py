@@ -1,4 +1,4 @@
-"""Corpus verifier — deterministic fact-checking for E bucket modes.
+"""Corpus verifier — deterministic fact-checking for resource-oriented modes.
 
 Architecture per verifier-pattern review:
   LLM extracts claims → corpus verifies claims → aggregator scores
@@ -6,7 +6,7 @@ Architecture per verifier-pattern review:
 The LLM does NOT decide factual truth from memory. It extracts structured
 claims only. The corpus (versioned benefits data) is the source of truth.
 
-Extended verdict scale for E bucket:
+Extended verdict scale for resource checks:
   SUPPORTED — claim matches corpus
   UNSUPPORTED — claim has no corpus match
   WRONG_JURISDICTION — program exists but wrong state
@@ -27,6 +27,7 @@ from invisiblebench.evaluation.verifiers.base import (
     Verdict,
     VerdictResult,
     Verifier,
+    mode_layer_dimension,
 )
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
@@ -177,7 +178,7 @@ def _extract_claims_heuristic(text: str) -> list[dict[str, Any]]:
 
 
 class CorpusVerifier(Verifier):
-    """Deterministic corpus-based verifier for E-bucket factual modes."""
+    """Deterministic corpus-based verifier for resource/factual modes."""
 
     scorer_type = "corpus_check"
 
@@ -193,7 +194,7 @@ class CorpusVerifier(Verifier):
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
-        primary_bucket = mode_config.get("primary_bucket", "E")
+        layer, dimension = mode_layer_dimension(mode_config)
 
         if not self.is_eligible(scenario, mode_config):
             return self.not_applicable(mode_config)
@@ -206,7 +207,8 @@ class CorpusVerifier(Verifier):
                 eligible=True,
                 verdict=Verdict.UNCLEAR,
                 severity=severity,
-                primary_bucket=primary_bucket,
+                layer=layer,
+                dimension=dimension,
                 scorer_type=self.scorer_type,
                 confidence=0.0,
                 rationale_code=f"corpus_not_registered:{corpus_name}",
@@ -285,7 +287,8 @@ class CorpusVerifier(Verifier):
             eligible=True,
             verdict=verdict,
             severity=severity,
-            primary_bucket=primary_bucket,
+            layer=layer,
+            dimension=dimension,
             scorer_type=self.scorer_type,
             confidence=0.9 if claims else 0.5,
             evidence=evidence,

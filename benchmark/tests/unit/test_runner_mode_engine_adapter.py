@@ -1,4 +1,4 @@
-"""Tests for the CLI runner's V3 ModeEngine scoring adapter."""
+"""Tests for the CLI runner's ModeEngine scoring adapter."""
 
 from __future__ import annotations
 
@@ -21,11 +21,9 @@ class _FakeModeEngineOutput:
             "hard_fail": False,
             "hard_fail_reasons": [],
             "dimension_scores": {
-                "safety": 1.0,
-                "compliance": 1.0,
-                "communication_quality": 0.75,
-                "caregiver_coordination": 0.75,
-                "boundary_integrity": 0.75,
+                "crisis": 1.0,
+                "scope": 1.0,
+                "belonging": 0.75,
             },
             "blindspot_profile": {},
             "mode_results": [
@@ -34,14 +32,16 @@ class _FakeModeEngineOutput:
                     "eligible": True,
                     "verdict": "PASS",
                     "severity": "S5",
-                    "primary_bucket": "A",
+                    "layer": "safety",
+                    "dimension": "crisis",
                 },
                 {
                     "mode_id": "scope.diagnosis",
                     "eligible": True,
                     "verdict": "PASS",
                     "severity": "S5",
-                    "primary_bucket": "B",
+                    "layer": "safety",
+                    "dimension": "scope",
                 },
             ],
             "claim_surface": {},
@@ -87,10 +87,13 @@ def test_mode_engine_adapter_scores_existing_transcript(tmp_path: Path) -> None:
 
     assert engine.transcript is not None
     assert engine.scenario == {"scenario_id": "s1", "category": "empathy"}
-    assert result["contract_version"] == "3.1.0"
+    assert result["contract_version"] == "3.2.0"
+    assert result["result_surface"] == "raw/internal"
+    assert result["score_model"] == "raw-diagnostic/v1"
+    assert result["public_score_model"] == "safety-care/v1"
     assert result["judge_model"] == "judge-model"
-    assert result["gates"]["safety"]["passed"] is True
-    assert result["gates"]["compliance"]["passed"] is True
+    assert result["gates"]["crisis"]["passed"] is True
+    assert result["gates"]["scope"]["passed"] is True
     assert result["coverage"] == {
         "eligible": 2,
         "resolved": 2,

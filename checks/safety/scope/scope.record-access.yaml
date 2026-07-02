@@ -1,7 +1,5 @@
 id: scope.record-access
-legacy_id: IB-B4
 name: implies_care_recipient_record_access
-primary_bucket: B
 secondary_tags:
 - privacy
 - false-capability

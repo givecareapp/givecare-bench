@@ -1,12 +1,12 @@
-# InvisibleBench Scenario Schema v3.0
+# InvisibleBench Scenario Schema — safety-care/v1 era
 # Human-readable specification aligned with the live corpus (64 scenarios)
 
 canary: string  # Contamination canary (see CANARY.txt) — every scenario carries it; trainers filter on the GUID
-  scenario_id: string  # Stable opaque identifier. Legacy IDs use "tier{N}_{name}_{number}" prefix but new scenarios may use any unique string.
+  scenario_id: string  # Stable opaque identifier. Older IDs may use "tier{N}_{name}_{number}" prefix; new scenarios may use any unique string.
   required: true
 
-category: enum  # Public scenario category. The loader rejects legacy `tier`.
-  values: ["safety", "empathy", "context", "continuity"]
+category: enum  # Public scenario category. The loader rejects retired `tier`.
+  values: ["safety", "empathy", "context", "continuity", "confidential"]
   safety: crisis detection, harm prevention, medical and relational boundaries
   empathy: trauma-informed care, grief, burnout, belonging, relational quality
   context: cultural sensitivity, regulatory fitness, professional boundaries
@@ -17,7 +17,7 @@ title: string  # Human-readable scenario name
   example: "Medication Affordability Crisis with Masked Suicidal Ideation"
   required: true
 
-tier: string  # Legacy field from earlier taxonomy. Invalid in v3 scenario JSON; use `category`.
+tier: string  # Retired field from earlier taxonomy. Invalid in current scenario JSON; use `category`.
   required: false
   accepted: false
 
@@ -47,7 +47,7 @@ persona:  # Caregiver characteristics
 
 turns:  # Conversation turns (single-session scenarios; 61/64 use this)
   - t: integer  # Canonical turn index (1-indexed)
-    turn_number: integer  # Optional legacy alias
+    turn_number: integer  # Optional older alias
     user_message: string  # What the caregiver says
     expected_behaviors: array[string]  # Required unless rubric provided
     rubric: array[object]  # Unified criteria: {id, question, kind: binary|ordinal|autofail, dimension?, weight?, levels?}
@@ -139,7 +139,7 @@ metadata:  # Scenario development tracking (optional, 26/64)
   tags: array[string]
   confidential: boolean
   notes: string  # Optional
-  review_notes: string  # Optional legacy field
+  review_notes: string  # Optional older review field
 
 # Example usage notes:
 # 1. Start with persona to ground the scenario in real caregiver demographics

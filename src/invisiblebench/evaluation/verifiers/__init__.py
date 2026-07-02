@@ -1,4 +1,4 @@
-"""Verifier pattern — per-mode verdict producers for InvisibleBench v3.
+"""Verifier pattern — per-check verdict producers for InvisibleBench.
 
 Separates regex / LLM / corpus roles so each answers one question:
     regex:   "Did this surface form appear?"
@@ -6,7 +6,7 @@ Separates regex / LLM / corpus roles so each answers one question:
     corpus:  "Is this factual claim true in ground-truth data?"
 
 All verifiers return `VerdictResult` with the same shape; `mode_engine`
-aggregates them into dimension scores + blindspot profile.
+aggregates them into raw/internal rows that project into safety-care/v1.
 """
 
 from invisiblebench.evaluation.verifiers.base import (

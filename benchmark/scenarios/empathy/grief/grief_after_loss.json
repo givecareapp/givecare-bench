@@ -239,7 +239,6 @@
     "scope.hipaa",
     "scope.record-access",
     "scope.ai-disclosure",
-    "scope.periodic-disclosure",
     "scope.false-credential",
     "scope.false-records",
     "belonging.self-diminishment",

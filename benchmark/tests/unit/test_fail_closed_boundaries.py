@@ -7,11 +7,13 @@ The contract, stated precisely (see CLAUDE.md "Current public contract"):
 2. An unexpected verifier crash yields UNCLEAR + adjudication_required —
    never a fabricated FAIL (a FAIL is a public claim that requires evidence;
    the QA gate enforces fail_without_evidence == 0).
-3. The publication boundary is where unknowns fail closed: any gate-bucket
+3. The publication boundary is where unknowns fail closed: any Safety gate
    UNCLEAR is a QA error unconditionally, and --strict rejects all UNCLEARs.
 4. Zero eligible modes reports coverage 0.0 — "nothing measured" can never
    masquerade as "fully covered".
-5. Coverage below the floor (scoring.yaml `coverage_floor`) blocks
+5. Eligible NOT_APPLICABLE is a resolved no-violation/no-current-cue decision;
+   only UNCLEAR / verifier failures are unresolved coverage.
+6. Coverage below the floor (scoring.yaml `coverage_floor`) blocks
    publication unconditionally — QA recomputes resolved/eligible from
    mode_results, so a stale stamped coverage_rate cannot slip an
    under-covered row past the gate.
@@ -78,7 +80,8 @@ def test_gate_unclear_blocks_publication_unconditionally(tmp_path: Path) -> None
                 "eligible": True,
                 "verdict": "UNCLEAR",
                 "severity": "S5",
-                "primary_bucket": "A",
+                "layer": "safety",
+                "dimension": "crisis",
                 "scorer_type": "llm_verifier",
                 "evidence": [],
             }
@@ -101,9 +104,36 @@ def test_zero_eligible_modes_reports_zero_coverage() -> None:
     assert out.coverage_rate == 0.0
 
 
+def test_eligible_not_applicable_is_resolved_coverage() -> None:
+    from invisiblebench.evaluation.verifiers.base import VerdictResult
+
+    engine = ModeEngine.__new__(ModeEngine)
+    engine.modes = {"belonging.note": {"hard_fail": False}}
+
+    out = engine._aggregate(
+        [
+            VerdictResult(
+                mode_id="belonging.note",
+                eligible=True,
+                verdict=Verdict.NOT_APPLICABLE,
+                severity="S2",
+                layer="care",
+                dimension="belonging",
+                scorer_type="test",
+                confidence=1.0,
+            )
+        ],
+        scenario={},
+    )
+
+    assert out.eligible_count == 1
+    assert out.resolved_count == 1
+    assert out.unclear_count == 0
+    assert out.coverage_rate == 1.0
+
+
 def _coverage_row(verdicts: list[str], coverage_rate: float | None) -> dict:
-    """Scan row with eligible C-bucket results — invisible to the UNCLEAR
-    gates (NOT_APPLICABLE is not UNCLEAR), so only the coverage floor can
+    """Scan row with eligible Care results — invisible to Safety gates, so only the coverage floor can
     catch under-coverage here. This mirrors the published Phase 2 rows where
     eligible checks resolved NOT_APPLICABLE."""
     row = {
@@ -114,11 +144,12 @@ def _coverage_row(verdicts: list[str], coverage_rate: float | None) -> dict:
         "hard_fail": False,
         "mode_results": [
             {
-                "mode_id": f"IB-C{i}",
+                "mode_id": f"belonging.test-{i}",
                 "eligible": True,
                 "verdict": verdict,
                 "severity": "S2",
-                "primary_bucket": "C",
+                "layer": "care",
+                "dimension": "belonging",
                 "scorer_type": "llm_verifier",
                 "evidence": ["quote"] if verdict == "FAIL" else [],
             }
@@ -141,10 +172,10 @@ def _qa_errors(tmp_path: Path, row: dict) -> list[str]:
 
 
 def test_coverage_below_floor_blocks_publication(tmp_path: Path) -> None:
-    # 3 of 5 eligible resolved -> 0.6 coverage, correctly stamped.
+    # 2 of 5 eligible resolved -> 0.4 coverage, correctly stamped.
     row = _coverage_row(
-        ["PASS", "PASS", "FAIL", "NOT_APPLICABLE", "NOT_APPLICABLE"],
-        coverage_rate=0.6,
+        ["PASS", "UNCLEAR", "FAIL", "UNCLEAR", "UNCLEAR"],
+        coverage_rate=0.4,
     )
     errors = _qa_errors(tmp_path, row)
     assert any("coverage_below_floor" in e for e in errors)
@@ -152,9 +183,9 @@ def test_coverage_below_floor_blocks_publication(tmp_path: Path) -> None:
 
 
 def test_stale_coverage_stamp_cannot_mask_under_coverage(tmp_path: Path) -> None:
-    # Stamp claims full coverage; mode_results say 0.6. Both errors fire.
+    # Stamp claims full coverage; mode_results say 0.4. Both errors fire.
     row = _coverage_row(
-        ["PASS", "PASS", "FAIL", "NOT_APPLICABLE", "NOT_APPLICABLE"],
+        ["PASS", "UNCLEAR", "FAIL", "UNCLEAR", "UNCLEAR"],
         coverage_rate=1.0,
     )
     errors = _qa_errors(tmp_path, row)
@@ -163,7 +194,10 @@ def test_stale_coverage_stamp_cannot_mask_under_coverage(tmp_path: Path) -> None
 
 
 def test_full_coverage_passes_floor(tmp_path: Path) -> None:
-    row = _coverage_row(["PASS", "PASS", "FAIL", "PASS", "PASS"], coverage_rate=1.0)
+    row = _coverage_row(
+        ["PASS", "NOT_APPLICABLE", "FAIL", "NOT_APPLICABLE", "PASS"],
+        coverage_rate=1.0,
+    )
     errors = _qa_errors(tmp_path, row)
     assert not any("coverage_below_floor" in e for e in errors)
     assert not any("coverage_rate_stale" in e for e in errors)

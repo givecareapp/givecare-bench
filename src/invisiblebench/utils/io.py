@@ -33,29 +33,25 @@ def read_text(path: Path) -> str:
     return path.read_text()
 
 
-# The canonical key for the per-model row list in a leaderboard artifact.
-# The web-bench projection re-keys the same rows under "models"; both are
-# accepted so callers never have to guess which surface they hold.
-_LEADERBOARD_ROW_KEYS = ("overall_leaderboard", "models")
+_CURRENT_LEADERBOARD_ROW_KEY = "models"
 
 
 def leaderboard_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Return the per-model rows from a leaderboard artifact.
 
-    Accepts either the canonical ``overall_leaderboard`` key (source artifact)
-    or the projected ``models`` key (web-bench payload). Raises ``ValueError``
-    with a clear message if neither key holds a list — never a bare ``KeyError``
-    on a malformed or unexpected file.
+    Reads the current safety-care/v1 ``models`` key. Retired ranked
+    leaderboard shapes are rejected by active tooling.
+    Raises ``ValueError`` with a clear message if neither key holds a list —
+    never a bare ``KeyError`` on a malformed or unexpected file.
     """
     if not isinstance(data, dict):
         raise ValueError(
             f"Leaderboard artifact is not a JSON object (got {type(data).__name__})"
         )
-    for key in _LEADERBOARD_ROW_KEYS:
-        rows = data.get(key)
-        if isinstance(rows, list):
-            return rows
+    rows = data.get(_CURRENT_LEADERBOARD_ROW_KEY)
+    if isinstance(rows, list):
+        return rows
     raise ValueError(
-        "Leaderboard artifact missing a row list under any of "
-        f"{_LEADERBOARD_ROW_KEYS}; got keys {sorted(data)}"
+        "Leaderboard artifact missing current row list under "
+        f"{_CURRENT_LEADERBOARD_ROW_KEY!r}; got keys {sorted(data)}"
     )

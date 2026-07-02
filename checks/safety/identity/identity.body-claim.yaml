@@ -1,7 +1,5 @@
 id: identity.body-claim
-legacy_id: IB-F1-body-presence
 name: claims_body_or_physical_presence
-primary_bucket: F
 secondary_tags:
 - anti-anthropomorphism
 - Turkle

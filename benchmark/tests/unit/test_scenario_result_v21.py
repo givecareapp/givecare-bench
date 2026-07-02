@@ -76,6 +76,9 @@ class TestV21Fields:
         assert result.judge_prompt_hash is None
         assert result.judge_temp is None
         assert result.contract_version == "2.1.0"
+        assert result.result_surface == "raw/internal"
+        assert result.score_model == "raw-diagnostic/v1"
+        assert result.public_score_model == "safety-care/v1"
         assert result.success is None
         assert result.uncertainty is None
 
@@ -90,6 +93,9 @@ class TestV21Fields:
         assert restored.judge_prompt_hash == result.judge_prompt_hash
         assert restored.judge_temp == result.judge_temp
         assert restored.contract_version == result.contract_version
+        assert restored.result_surface == result.result_surface
+        assert restored.score_model == result.score_model
+        assert restored.public_score_model == result.public_score_model
         assert restored.success == result.success
         assert restored.uncertainty == result.uncertainty
 
@@ -185,11 +191,11 @@ class TestFromDict:
         assert result.contract_version == "2.1.0"
         assert result.success is True
 
-    def test_from_dict_legacy_no_judge_fields(self) -> None:
-        """Old-format data (no v2.1 judge fields) should still deserialize."""
+    def test_from_dict_historical_no_judge_fields(self) -> None:
+        """Historical data (no v2.1 judge fields) should still deserialize."""
         data = {
             "scenario_id": "tier1_001",
-            "scenario": "Legacy Scenario",
+            "scenario": "Historical Scenario",
             "model": "Old Model",
             "overall_score": 0.85,
             "hard_fail": False,
@@ -209,14 +215,14 @@ class TestFromDict:
         assert result.contract_version == "2.1.0"
         assert result.run_id is None
         assert result.judge_model is None
-        # Legacy attunement/belonging normalized to regard in dimension_scores
+        # Historical attunement/belonging normalized to regard in dimension_scores
         assert result.success is True  # gates pass (no gates/no hard_fail), score >= 0.6
 
-    def test_from_dict_legacy_dimension_normalization(self) -> None:
-        """Legacy attunement/belonging/consistency keys are normalized."""
+    def test_from_dict_historical_dimension_normalization(self) -> None:
+        """Historical attunement/belonging/consistency keys are normalized."""
         data = {
-            "scenario_id": "tier1_legacy",
-            "scenario": "Legacy Dims",
+            "scenario_id": "tier1_historical",
+            "scenario": "Historical Dims",
             "model": "Model",
             "overall_score": 0.8,
             "dimension_scores": {
@@ -254,18 +260,18 @@ class TestFromDict:
 
 class TestLoadExistingResults:
     @pytest.fixture()
-    def leaderboard_dir(self) -> Path:
-        return Path("results/leaderboard_ready")
+    def raw_model_results_dir(self) -> Path:
+        return Path("results/raw_model_results")
 
     @pytest.fixture()
     def run_results_path(self) -> Path:
         return Path("results/run_20260213_000851/all_results.json")
 
-    def test_load_leaderboard_file(self, leaderboard_dir: Path) -> None:
-        """At least one leaderboard file loads through from_dict without error."""
-        files = list(leaderboard_dir.glob("*.json"))
+    def test_load_raw_model_results_file(self, raw_model_results_dir: Path) -> None:
+        """At least one raw model-results file loads through from_dict without error."""
+        files = list(raw_model_results_dir.glob("*.json"))
         if not files:
-            pytest.skip("No leaderboard files found")
+            pytest.skip("No raw model-results files found")
 
         data = json.loads(files[0].read_text())
         # Leaderboard files have a different shape (model-level with scenarios list)

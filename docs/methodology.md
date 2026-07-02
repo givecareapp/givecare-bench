@@ -66,7 +66,7 @@ Advocacy maps to OBI's power-aware Targeted Universalism: a model that speaks fo
 
 ## Calibration and claims
 
-InvisibleBench makes **calibration-gated claims** under a binary claim model: only checks whose `calibration:` block carries status `claim_ready` feed published Safety rates. As of 2026-06-30, **0 of 50 checks are `claim_ready`, so the published Safety claim surface is empty.**
+InvisibleBench makes **calibration-gated claims** under a binary claim model: only checks whose `calibration:` block carries status `claim_ready` feed published Safety rates. As of 2026-07-01, **0 of 50 checks are `claim_ready`, so the published Safety claim surface is empty.**
 
 **Claim model (2026-06-30):**
 
@@ -75,7 +75,7 @@ InvisibleBench makes **calibration-gated claims** under a binary claim model: on
 | `claim_ready` | Verifier meets the agreement threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set | (none yet) |
 | `not_claim_ready` | Everything else; may carry disclosed development evidence (`calibration.evidence`) but makes no public claim | all 50 checks |
 
-The 20 hard-fail checks hold `authored_ai_unit_test` development evidence (AI reference-panel labels on authored cards — not validation) and the legacy 60-trace layer-level result as `development_only` evidence — neither is a public claim. See [verifier-validation.md](verifier-validation.md) for the full reading guide.
+The 19 hard-fail checks hold `authored_ai_unit_test` development evidence (AI reference-panel labels on authored cards — not validation) and the historical 60-trace layer-level result as `development_only` evidence — neither is a public claim. `scope.periodic-disclosure` was demoted out of the hard-fail/claim layer on 2026-07-01. See [verifier-validation.md](verifier-validation.md) for the full reading guide.
 
 **What this means for public claims:**
 
@@ -84,7 +84,7 @@ The 20 hard-fail checks hold `authored_ai_unit_test` development evidence (AI re
 - There is no composite or ranking key to mis-cite.
 
 **Current leaderboard artifact (`data/leaderboard/leaderboard.json`):**
-Generated from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`), currently 11 models × 63 scenarios, generated 2026-06-10 as a non-strict public source. Strict QA currently fails on residual quality-mode `UNCLEAR` verdicts and coverage-below-floor rows; do not describe this artifact as strict-QA-passing until `scripts/qa_leaderboard.py --strict` passes.
+Generated from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`), currently 11 models × 63 scenarios, regenerated 2026-07-02 as a non-strict public source after the 50-check contract refresh. Non-strict QA passes after restamping coverage semantics; strict QA currently fails on one missing current scenario, 77 missing check instances, and four residual quality-mode `UNCLEAR` verdicts, so do not describe this artifact as strict-QA-passing until `scripts/qa_leaderboard.py --strict` passes. `scan_metadata.artifact_validation` records eligible `NOT_APPLICABLE` counts, unresolved verdicts, fail-without-evidence counts, verifier infrastructure counts, scorer parse errors, and bounded raw-output diagnostic samples; QA recomputes those fields from the scan. The next live `--full` run targets 15 models × 64 scenarios.
 
 ---
 
@@ -124,7 +124,7 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 | Caregiver recognition | Care · Belonging | belonging.self-diminishment, belonging.recognition-gap, belonging.othering, belonging.hero-framing, belonging.self-sacrifice | **Covered** |
 | Emotional attunement | Care · Attunement | attunement.generic-warmth, attunement.advice-first, attunement.guilt-loop, attunement.infodump, others | **Covered** |
 | Resource quality | Care · Relational / Advocacy | Named; verification against live resources remains out of scope | **Partial** |
-| Trauma-informed language | Care · Trauma-awareness | Named gap — checks to-author (v2) | **Gap** |
+| Trauma-informed language | Care · Trauma-awareness | Named gap — 0 authored checks | **Gap** |
 | Sensitive-disclosure minimization | — | Product design concern, not conversation scoring | Outside scope |
 | Evidence discipline | — | Requires ground-truth infrastructure | Outside scope |
 
@@ -150,7 +150,7 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 
     **Post-caregiving bereavement.** InvisibleBench evaluates active caregiving relationships. Bereaved former caregivers have distinct needs — identity reconstruction, complicated grief — that are adjacent but not yet covered.
 
-    **Care-recipient-initiated harm toward the caregiver.** crisis.harm-intent covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at >20% prevalence) — is partially covered by crisis.harm-intentb but requires fuller purpose-built scenario coverage.
+    **Care-recipient-initiated harm toward the caregiver.** crisis.harm-intent covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at >20% prevalence) — is partially covered by crisis.recipient-aggression but requires fuller purpose-built scenario coverage.
 
     **Proxy ethical decision-making.** End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). scope.forced-nutrition is the current single check; broader proxy ethics coverage is deferred.
 

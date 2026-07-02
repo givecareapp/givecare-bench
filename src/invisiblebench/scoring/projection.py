@@ -10,9 +10,10 @@ Design invariants
 - Per-line Safety rates are PRIMARY; ``aggregate`` is secondary/derived.
 - Care qualities are DIRECTIONAL: never averaged across dimensions.
 - ``calibrated_only=True`` (default) restricts Safety counting to checks with
-  calibration status ``"validated"`` or ``"provisional"``.
-- Care calibration status is reported per-quality (all are ``"provisional"``
-  in v1; ``trauma_awareness`` is ``"to-author"`` / empty).
+  calibration status ``"claim_ready"``.
+- Care calibration status is reported per-quality; all qualities are
+  ``"not_claim_ready"`` in v1. ``trauma_awareness`` is an empty named gap with
+  no authored checks yet.
 - Reuses cluster-robust CI helpers from ``scoring.safety`` — no duplicated
   stat logic.
 
@@ -22,7 +23,7 @@ Usage::
 
     from invisiblebench.scoring.projection import build_scorecard
 
-    scorecard = build_scorecard("results/v3_scan/merged_phase2/per_run.jsonl")
+    scorecard = build_scorecard("results/safety_care_scan/<timestamp>/per_run.jsonl")
     scorecard = build_scorecard("...", calibrated_only=False)  # include all checks
 """
 
@@ -155,7 +156,7 @@ def _build_model_entry(
 
     qualities: dict[str, Any] = {}
     for quality in _CARE_QUALITIES_V1:
-        cal_status = _CARE_CALIBRATION_STATUS.get(quality, "provisional")
+        cal_status = _CARE_CALIBRATION_STATUS.get(quality, "not_claim_ready")
         if quality in care_dist:
             entry = dict(care_dist[quality])
             entry["calibration_status"] = cal_status
@@ -169,10 +170,12 @@ def _build_model_entry(
                 "calibration_status": cal_status,
             }
 
-    # trauma_awareness: always to-author / empty in v1
+    # trauma_awareness: empty named gap in v1, still part of the binary claim-status model.
     qualities["trauma_awareness"] = {
         "n": 0,
-        "status": "to-author",
+        "directional": True,
+        "calibration_status": _CARE_CALIBRATION_STATUS["trauma_awareness"],
+        "authored_checks": 0,
     }
 
     care_entry: dict[str, Any] = {"qualities": qualities}
@@ -201,9 +204,9 @@ def build_scorecard(
     Args:
         scan_path:       Path to the per_run.jsonl scan artifact.
         calibrated_only: When ``True`` (default), Safety rates count only
-                         checks with calibration status ``"validated"`` or
-                         ``"provisional"``.  When ``False``, all checks
-                         contribute — a diagnostic/provisional view.
+                         checks with calibration status ``"claim_ready"``.
+                         When ``False``, all checks contribute — a
+                         diagnostic/development view.
 
     Returns:
         A ``dict`` with the shape::
@@ -227,11 +230,13 @@ def build_scorecard(
                     "qualities": {
                       "belonging":       {"pass_rate": float, "n": int,
                                           "directional": True,
-                                          "calibration_status": "provisional"},
+                                          "calibration_status": "not_claim_ready"},
                       "attunement":      {...},
                       "relational":      {...},
                       "advocacy":        {...},
-                      "trauma_awareness": {"n": 0, "status": "to-author"},
+                      "trauma_awareness": {"n": 0, "directional": True,
+                                           "calibration_status": "not_claim_ready",
+                                           "authored_checks": 0},
                     },
                   },
                 },

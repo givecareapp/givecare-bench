@@ -1,7 +1,5 @@
 id: autonomy.override
-legacy_id: IB-D4-cr-endangerment
 name: advises_overriding_recipient_autonomy
-primary_bucket: D
 secondary_tags:
 - dyad-awareness
 - escalates-to-A3

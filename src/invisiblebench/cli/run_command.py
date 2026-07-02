@@ -71,8 +71,9 @@ from invisiblebench.cli.result_helpers import (
 from invisiblebench.cli.result_helpers import (
     _make_error_result,
     _make_harness_error_result,
+    _raw_gate_payload,
+    _raw_score_metadata,
     _safe_load_scenario_data,
-    _v3_gate_payload,
 )
 from invisiblebench.cli.transcript import (
     _run_single_scenario,
@@ -83,7 +84,13 @@ from invisiblebench.cli.transcript import (
 )
 from invisiblebench.evaluation.scoring_contract import coverage_floor
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
-from invisiblebench.models.results import SUCCESS_THRESHOLD, is_result_success
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+    SUCCESS_THRESHOLD,
+    is_result_success,
+)
 from invisiblebench.results_io import write_json, write_model_results
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.benchmark_inventory import (
@@ -97,7 +104,7 @@ from invisiblebench.utils.dimension_aliases import (
     normalize_dimension_scores,
 )
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
-from invisiblebench.version import V3_RESULT_CONTRACT_VERSION
+from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION
 
 try:
     import threading
@@ -121,6 +128,29 @@ logger = logging.getLogger(__name__)
 Console = make_console
 
 load_dotenv()
+
+
+def _raw_score_percent(score: float) -> str:
+    """Format an overall_score value as raw/internal diagnostic text."""
+    return f"raw {int(score * 100)}%"
+
+
+def _raw_score_range(
+    score: float,
+    *,
+    min_score: float,
+    max_score: float,
+    pass_rate: int | None = None,
+) -> str:
+    """Format multi-run raw/internal score summary text."""
+    base = (
+        f"{_raw_score_percent(score)} "
+        f"[raw {int(min_score * 100)}-{int(max_score * 100)}%]"
+    )
+    if pass_rate is None:
+        return base
+    return f"{base} pass@1={pass_rate}%"
+
 
 # Token estimates per category for cost calculation
 # Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
@@ -169,12 +199,12 @@ def _load_transcript_jsonl(transcript_path: Path) -> list[dict[str, Any]]:
     return transcript
 
 
-# _v3_gate_payload, _compute_success, _build_scoring_summary, _make_error_result,
+# _raw_gate_payload, _compute_success, _build_scoring_summary, _make_error_result,
 # _make_harness_error_result, _safe_load_scenario_data moved to result_helpers.py
 
 
 class ModeEngineScoringAdapter:
-    """Adapter exposing the runner's .score(...) contract on top of V3 ModeEngine."""
+    """Adapter exposing the runner's .score(...) contract on top of ModeEngine."""
 
     def __init__(
         self,
@@ -223,8 +253,8 @@ class ModeEngineScoringAdapter:
                 "judge_model": self.llm_model,
                 "judge_prompt_hash": None,
                 "judge_temp": None,
-                "contract_version": V3_RESULT_CONTRACT_VERSION,
-                "gates": _v3_gate_payload(
+                "contract_version": SCANNED_ROW_CONTRACT_VERSION,
+                "gates": _raw_gate_payload(
                     mode_results,
                     raw_reasons,
                 ),
@@ -236,6 +266,7 @@ class ModeEngineScoringAdapter:
                     "unclear": output.unclear_count,
                     "rate": output.coverage_rate,
                 },
+                **_raw_score_metadata(),
             }
         )
 
@@ -407,8 +438,8 @@ def run_givecare_eval(
     write_json(results_path, output_data)
 
     # When transcripts were generated but no inline result rows exist (the normal
-    # path: V2 inline scoring was superseded by the V3 ModeEngine), skip the
-    # legacy zero-row summary and BLOCK audit printout — they are misleading.
+    # path: V2 inline scoring was superseded by the ModeEngine), skip the
+    # raw zero-row summary and BLOCK audit printout — they are misleading.
     # Instead emit a single actionable status line and return success.
     if transcript_data and not results:
         print(
@@ -446,7 +477,8 @@ def run_givecare_eval(
     print(f"Scenarios: {len(results)}")
     print(f"Passed:    {passed}")
     print(f"Failed:    {failed}")
-    print(f"Average:   {avg_score:.1f}%")
+    print(f"Surface:   {RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); public model {PUBLIC_SCORE_MODEL}")
+    print(f"Average:   {avg_score:.1f}% raw diagnostic score")
     print(f"{'='*50}")
     print(f"Saved: {results_path}")
 
@@ -472,9 +504,10 @@ def run_givecare_eval(
 
     if update_leaderboard:
         print(
-            "Skipping leaderboard update: public leaderboard accepts only benchmark-core "
-            "(llm/raw) runs. GiveCare harnesses remain experimental/internal."
+            "--update-leaderboard is retired for safety-care/v1; no leaderboard was written. "
+            "Use scripts/publish.sh <scan>/per_run.jsonl <web-target> after strict QA."
         )
+        return 1
 
     return 0 if failed == 0 else 1
 
@@ -529,11 +562,21 @@ def get_scenarios(
         category_filter=category_filter,
         include_confidential=include_confidential,
     ):
+        scenario_id = path.stem
+        title = path.stem.replace("_", " ").title()
+        try:
+            with path.open(encoding="utf-8") as fh:
+                scenario_data = json.load(fh)
+            scenario_id = str(scenario_data.get("scenario_id") or scenario_id)
+            title = str(scenario_data.get("title") or title)
+        except (OSError, json.JSONDecodeError):
+            pass
         scenarios.append(
             {
                 "category": scenario_category_for_path(path, private_confidential_dir),
                 "path": str(path),
-                "name": path.stem.replace("_", " ").title(),
+                "name": title,
+                "scenario_id": scenario_id,
             }
         )
 
@@ -730,10 +773,12 @@ def _aggregate_multi_run_results(run_results: list[dict[str, Any]]) -> dict[str,
 
 
 def _update_leaderboard(results_path: Path) -> None:
-    """Add results to leaderboard (merges with existing canonical files)."""
-    from invisiblebench.cli.leaderboard import add_results
-
-    add_results(results_path)
+    """Retired: run artifacts no longer write the public leaderboard directly."""
+    raise RuntimeError(
+        f"--update-leaderboard is retired for safety-care/v1; {results_path} was not "
+        "published. Use scripts/publish.sh <scan>/per_run.jsonl <web-target> "
+        "or python -m invisiblebench.publish with a scored scan JSONL."
+    )
 
 
 def _write_run_audit(
@@ -827,31 +872,6 @@ def run_benchmark(
     scenario_parallel = max(1, scenario_parallel)
     total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios) * n_runs
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Write reproducibility manifest
-    root = get_project_root()
-    manifest = generate_manifest(
-        project_root=root,
-        model_ids=[m["id"] for m in models],
-        harness="llm",
-        mode="raw",
-        include_confidential=include_confidential,
-    )
-    write_manifest(manifest, output_dir)
-    model_results_dir = output_dir / "model_results"
-
-    def persist_model_results(model_rows: list[dict[str, Any]]) -> None:
-        if not model_rows:
-            return
-        write_model_results(
-            model_rows,
-            model_results_dir,
-            benchmark_version=manifest.get("benchmark_version", "unknown"),
-            mode="benchmark",
-            run_metadata={"run_id": run_id, "provider": "openrouter"},
-        )
-
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
         if n_runs > 1:
@@ -916,6 +936,27 @@ def run_benchmark(
     orchestrator = ModeEngineScoringAdapter(api_client)
 
     run_id = str(uuid.uuid4())
+    manifest = generate_manifest(
+        project_root=root,
+        model_ids=[m["id"] for m in models],
+        run_id=run_id,
+        harness="llm",
+        mode="raw",
+        include_confidential=include_confidential,
+    )
+    write_manifest(manifest, output_dir)
+    model_results_dir = output_dir / "model_results"
+
+    def persist_model_results(model_rows: list[dict[str, Any]]) -> None:
+        if not model_rows:
+            return
+        write_model_results(
+            model_rows,
+            model_results_dir,
+            benchmark_version=manifest.get("benchmark_version", "unknown"),
+            mode="benchmark",
+            run_metadata={"run_id": run_id, "provider": "openrouter"},
+        )
 
     results = []
     start_time = time.time()
@@ -1303,15 +1344,20 @@ def run_benchmark(
                         score_display = ""
                         if "run_stats" in final:
                             stats = final["run_stats"]
-                            lo = int(stats["min"] * 100)
-                            hi = int(stats["max"] * 100)
                             pass_rate = int(stats["pass_rate"] * 100)
                             if pass_rate == 100:
-                                score_display = f"{int(score * 100)}% [{lo}-{hi}%] pass@1"
+                                score_display = _raw_score_range(
+                                    score,
+                                    min_score=stats["min"],
+                                    max_score=stats["max"],
+                                    pass_rate=pass_rate,
+                                )
                             else:
-                                score_display = (
-                                    f"{int(score * 100)}% [{lo}-{hi}%] "
-                                    f"pass@1={pass_rate}%"
+                                score_display = _raw_score_range(
+                                    score,
+                                    min_score=stats["min"],
+                                    max_score=stats["max"],
+                                    pass_rate=pass_rate,
                                 )
                         display.set_complete(
                             scenario["path"],
@@ -1419,14 +1465,13 @@ def run_benchmark(
                 if "run_stats" in final:
                     stats = final["run_stats"]
                     print(
-                        f"{'FAIL' if not is_pass else 'PASS'} ({int(score_val * 100)}% "
-                        f"[{int(stats['min'] * 100)}-{int(stats['max'] * 100)}%], "
-                        f"pass@1={int(stats['pass_rate'] * 100)}%)"
+                        f"{'FAIL' if not is_pass else 'PASS'} ("
+                        f"{_raw_score_range(score_val, min_score=stats['min'], max_score=stats['max'], pass_rate=int(stats['pass_rate'] * 100))})"
                     )
                 elif is_pass:
-                    print(f"PASS ({int(score_val * 100)}%)")
+                    print(f"PASS ({_raw_score_percent(score_val)})")
                 else:
-                    print(f"FAIL ({int(score_val * 100)}%)")
+                    print(f"FAIL ({_raw_score_percent(score_val)})")
 
                 if is_pass:
                     passed += 1
@@ -1562,12 +1607,17 @@ def run_benchmark(
             logger.debug("Success rate table rendering failed: %s", _e)
 
         console.print()
+        console.print(
+            "[dim]Surface: "
+            f"{RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); "
+            f"public model {PUBLIC_SCORE_MODEL}[/dim]"
+        )
         if credits_exhausted:
             completed = len(results)
             console.print(
                 f"[bold yellow]⚠ Partial[/bold yellow]  "
                 f"{completed}/{total} scenarios  "
-                f"[bold]{avg_score:.0f}%[/bold]  "
+                f"[bold]raw avg {avg_score:.0f}%[/bold]  "
                 f"[green]{passed}[/green]/[red]{failed}[/red]  "
                 f"[magenta]${actual_total:.3f}[/magenta]  "
                 f"[dim]{elapsed_str}[/dim]"
@@ -1579,7 +1629,7 @@ def run_benchmark(
         else:
             console.print(
                 f"[bold green]✓ Done[/bold green]  "
-                f"[bold]{avg_score:.0f}%[/bold]  "
+                f"[bold]raw avg {avg_score:.0f}%[/bold]  "
                 f"[green]{passed}[/green]/[red]{failed}[/red]  "
                 f"[magenta]${actual_total:.3f}[/magenta]  "
                 f"[dim]{elapsed_str}[/dim]"
@@ -1603,7 +1653,8 @@ def run_benchmark(
             for f in failures:
                 score_pct = int(f["overall_score"] * 100)
                 console.print(
-                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] [dim]{f.get('category', '')}[/dim]  {score_pct}%"
+                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] "
+                    f"[dim]{f.get('category', '')}[/dim]  raw {score_pct}%"
                 )
 
                 # Show run stats if multi-run
@@ -1611,8 +1662,9 @@ def run_benchmark(
                     stats = f["run_stats"]
                     console.print(
                         f"    [dim]Runs: {stats['n']}×  "
-                        f"[{int(stats['min']*100)}-{int(stats['max']*100)}%]  "
-                        f"pass@1={int(stats['pass_rate']*100)}%  hard_fail@1={int(stats['hard_fail_rate']*100)}%[/dim]"
+                        f"[raw {int(stats['min']*100)}-{int(stats['max']*100)}%]  "
+                        f"pass@1={int(stats['pass_rate']*100)}%  "
+                        f"hard_fail_diag@1={int(stats['hard_fail_rate']*100)}%[/dim]"
                     )
 
                 # Show hard fail reasons
@@ -1632,7 +1684,7 @@ def run_benchmark(
                 # Show gate status
                 gates = f.get("gates", {})
                 gate_parts = []
-                for gate_name in ("safety", "compliance"):
+                for gate_name in ("crisis", "scope", "identity", "autonomy"):
                     gate = gates.get(gate_name, {})
                     if gate.get("passed") is False:
                         gate_parts.append(f"[red]{gate_name}:FAIL[/red]")
@@ -1654,18 +1706,19 @@ def run_benchmark(
                 if dim_parts:
                     console.print(f"    Quality: {' '.join(dim_parts)}")
 
-        # Safety report card + quality leaderboard
+        # Raw/internal gate report for compatibility runner results. Public
+        # leaderboard output is generated separately as safety-care/v1.
         try:
             from invisiblebench.export.safety_report_card import generate_safety_report_card
 
             report_card = generate_safety_report_card(results)
             if report_card["models"]:
                 # --- Gate summary table ---
-                console.print("\n[bold]SAFETY REPORT CARD[/bold]")
+                console.print("\n[bold]RAW GATE REPORT[/bold]")
                 card_table = Table(show_header=True, show_lines=False, pad_edge=False)
                 card_table.add_column("Model", style="bold")
-                card_table.add_column("Safety", justify="right")
-                card_table.add_column("Compliance", justify="right")
+                card_table.add_column("A gate", justify="right")
+                card_table.add_column("B gate", justify="right")
                 card_table.add_column("Status")
 
                 for m in report_card["models"]:
@@ -1714,30 +1767,31 @@ def run_benchmark(
 
                     console.print(mtx_table)
 
-                # --- Quality leaderboard ---
+                # --- Raw quality diagnostics ---
                 quality = report_card.get("quality", [])
                 if quality:
                     passers = [q for q in quality if q["all_gates_pass"]]
                     failers = [q for q in quality if not q["all_gates_pass"]]
 
                     if passers:
-                        console.print("\n[bold]QUALITY LEADERBOARD[/bold] [dim](passed safety gate)[/dim]")
+                        console.print(
+                            "\n[bold]RAW QUALITY DIAGNOSTIC[/bold] "
+                            "[dim](passed raw Safety gates; not ranked)[/dim]"
+                        )
                         q_table = Table(show_header=True, show_lines=False, pad_edge=False)
                         q_table.add_column("Model", style="bold")
                         q_table.add_column("Regard", justify="right")
                         q_table.add_column("Coordination", justify="right")
-                        q_table.add_column("Overall", justify="right")
                         for q in passers:
                             q_table.add_row(
                                 q["model"],
                                 f"{q['regard']:.2f}",
                                 f"{q['coordination']:.2f}",
-                                f"[bold]{q['quality_score']:.2f}[/bold]",
                             )
                         console.print(q_table)
 
                     if failers:
-                        console.print("\n[bold red]FAILED SAFETY GATE[/bold red]")
+                        console.print("\n[bold red]FAILED RAW GATE[/bold red]")
                         # Show each failer with their specific failure reasons
                         fail_lookup = {m["model"]: m["failures"] for m in report_card["models"]}
                         for q in failers:
@@ -1762,6 +1816,11 @@ def run_benchmark(
             console.print(f"[dim]{diag_path}[/dim]")
     else:
         actual_total = cost_tracker.total
+        print(
+            "\nSurface: "
+            f"{RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); "
+            f"public model {PUBLIC_SCORE_MODEL}"
+        )
         if credits_exhausted:
             print(f"\nPartial: {len(results)}/{total} scenarios  {passed} passed, {failed} failed  ${actual_total:.3f}")
             print("Credits exhausted. Add credits at https://openrouter.ai/settings/credits")
@@ -1779,42 +1838,14 @@ def run_benchmark(
         print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
 
     if update_leaderboard:
-        if not audit.get("publishable", False):
-            msg = (
-                "Skipping leaderboard update: run audit marked this run as not publishable "
-                f"(owner={audit.get('primary_owner', 'benchmark')})."
-            )
-            if RICH_AVAILABLE and console:
-                console.print(f"[yellow]{msg}[/yellow]")
-            else:
-                print(msg)
-            return 0
         try:
             _update_leaderboard(results_path)
-            msg = "Leaderboard updated: data/leaderboard/leaderboard.json"
-            if RICH_AVAILABLE and console:
-                console.print(f"[bold green]✓[/bold green] {msg}")
-            else:
-                print(msg)
-
-            # Auto-run health check after leaderboard update
-            try:
-                from invisiblebench.cli.health import run_health
-
-                run_health(verbose=False)
-            except (ImportError, FileNotFoundError) as he:
-                if RICH_AVAILABLE and console:
-                    console.print(f"[dim]Health check skipped: {he}[/dim]")
-
-
-        except (OSError, json.JSONDecodeError, ValueError, RuntimeError) as e:
-            detail = getattr(e, "stderr", "") or ""
-            msg = f"Warning: Could not update leaderboard: {e}"
-            if detail:
-                msg += f"\n{detail.strip()}"
+        except RuntimeError as e:
+            msg = str(e)
             if RICH_AVAILABLE and console:
                 console.print(f"[yellow]{msg}[/yellow]")
             else:
                 print(msg)
+            return 1
 
     return 0

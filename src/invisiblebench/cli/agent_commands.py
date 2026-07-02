@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
+from invisiblebench.utils.io import leaderboard_rows
 
 
 def _runs_dir() -> Path:
@@ -141,6 +142,7 @@ def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
         "scenarios": info.get("scenarios", 0),
         "size_mb": round(info.get("size_mb", 0.0), 2),
         "has_results": info.get("has_results", False),
+        "artifact_state": info.get("artifact_state", "unknown"),
         "manifest": manifest,
     }
 
@@ -180,8 +182,11 @@ def _run_leaderboard_status_json(out_path: str | None = None) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         emit_json(status="error", command="leaderboard", error=str(exc))
         return 1
-    rows = data.get("overall_leaderboard") if isinstance(data, dict) else None
-    record_count = len(rows) if isinstance(rows, list) else 1
+    try:
+        rows = leaderboard_rows(data) if isinstance(data, dict) else []
+    except ValueError:
+        rows = []
+    record_count = len(rows) if rows else 1
     return _emit_or_write_json(
         command="leaderboard",
         data=data,
@@ -204,23 +209,23 @@ def _read_leaderboard_json() -> tuple[dict[str, Any] | None, str | None]:
 
 
 def _run_leaderboard_mutation_json(action: str, results_path: str | None) -> int:
-    """Run leaderboard add/rebuild with stdout redirected, then emit JSON envelope.
+    """Run retired leaderboard add/rebuild with stdout redirected, then emit JSON envelope.
 
     Suppresses Rich table output on stdout so the `{status, command, data}`
-    envelope is the only line on stdout. Human-facing status messages are
-    redirected to stderr. The envelope payload always includes the current
-    leaderboard.json (when present) so agents see state on both success and
-    failure. A nonzero exit from the underlying call is surfaced as
-    `data.exit_code`; status=error is set only if the exit code is nonzero
-    or leaderboard.json cannot be read.
+    envelope is the only line on stdout. Human-facing status messages are kept
+    on stderr. Retired/error paths intentionally avoid attaching the current
+    leaderboard.json so stale state cannot be mistaken for a successful
+    mutation result.
     """
     import contextlib
+    import io
 
     from invisiblebench.cli.leaderboard import run_leaderboard
 
     rc: int
+    buffer = io.StringIO()
     try:
-        with contextlib.redirect_stdout(sys.stderr):
+        with contextlib.redirect_stdout(buffer):
             rc = run_leaderboard(
                 action=action,
                 results_path=results_path,
@@ -229,6 +234,23 @@ def _run_leaderboard_mutation_json(action: str, results_path: str | None) -> int
     except (OSError, json.JSONDecodeError, ValueError, RuntimeError) as exc:
         emit_json(status="error", command="leaderboard", error=f"{action}: {exc}")
         return 1
+
+    message = buffer.getvalue().strip()
+    if message:
+        print(message, file=sys.stderr)
+
+    if rc != 0:
+        concise_message = (
+            f"bench leaderboard {action} is retired for safety-care/v1; "
+            "use python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>"
+        )
+        emit_json(
+            status="error",
+            command="leaderboard",
+            data={"action": action, "exit_code": rc, "message": concise_message},
+            error=f"{action} exited {rc}; see stderr for details",
+        )
+        return rc
 
     data, err = _read_leaderboard_json()
     payload: dict[str, Any] = {
@@ -244,13 +266,5 @@ def _run_leaderboard_mutation_json(action: str, results_path: str | None) -> int
             error=f"{action}: {err}",
         )
         return rc or 1
-    if rc != 0:
-        emit_json(
-            status="error",
-            command="leaderboard",
-            data=payload,
-            error=f"{action} exited {rc}; see stderr for details",
-        )
-        return rc
     emit_json(command="leaderboard", data=payload)
     return 0

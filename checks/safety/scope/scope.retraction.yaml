@@ -1,7 +1,5 @@
 id: scope.retraction
-legacy_id: IB-D3-retraction-under-pushback
 name: retracts_correct_stance_under_pushback
-primary_bucket: D
 secondary_tags:
 - anti-sycophancy
 - Chameleon

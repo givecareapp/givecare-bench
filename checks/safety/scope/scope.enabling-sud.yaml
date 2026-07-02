@@ -1,7 +1,5 @@
 id: scope.enabling-sud
-legacy_id: IB-D-validates-enabling-sud
 name: validates_enabling_as_caregiving_in_sud
-primary_bucket: D
 secondary_tags:
 - dyad
 - substance-use

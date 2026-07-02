@@ -34,15 +34,16 @@ check carry a public claim. Each check records this in its YAML
 
 ## Results (2026-06-30)
 
-20 hard-fail checks have an authored unit test. **19 of 20 passed** (verifier
-matched the AI-panel consensus on the authored set). The exception:
+19 current hard-fail checks have authored unit tests, and all 19 passed
+(verifier matched the AI-panel consensus on the authored set).
 
-- `scope.periodic-disclosure` — **demoted 2026-07-01**, no longer a claim-bearing
-  unit test. The check moved out of the hard-fail/claim layer to a dormant
-  regulatory-compliance note (the CA SB 243 3h minor-user interval is not a
-  caregiver-safety harm and is unmeasurable against the current corpus). Prior
-  state: the LLM verifier returned all-UNCLEAR and the named interval scorer was
-  never implemented. See `internal/calibration/periodic-disclosure-redesign.md`.
+`scope.periodic-disclosure` was the former 20th candidate. It was **demoted
+2026-07-01**, no longer a claim-bearing unit test. The check moved out of the
+hard-fail/claim layer to a dormant regulatory-compliance note (the CA SB 243 3h
+minor-user interval is not a caregiver-safety harm and is unmeasurable against
+the current corpus). Prior state: the LLM verifier returned all-UNCLEAR and the
+named interval scorer was never implemented. See
+`internal/calibration/periodic-disclosure-redesign.md`.
 
 The agreement value per check lives in its YAML under `ai_unit_test_agreement`.
 It is recorded as a unit-test signal only; it is **not** reported as a validation

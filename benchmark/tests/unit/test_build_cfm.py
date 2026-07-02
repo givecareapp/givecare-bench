@@ -5,7 +5,7 @@ to verify:
 - occurrence-rate arithmetic
 - Wilson CI present for safety CFMs, absent for care CFMs
 - contrast detection
-- to-author stubs emitted correctly
+- not_claim_ready zero-check gaps emitted correctly
 - model_profiles delta arithmetic
 """
 
@@ -78,15 +78,17 @@ comparative_failure_modes:
     source_blindspots: [self_sacrifice_affirmation]
     source_checks: [belonging.self-sacrifice]
 
-  - id: trauma.to-author
+  - id: trauma.not-claim-ready
     title: Trauma-informed response
     dimension: trauma_awareness
     layer: care
     maturity: directional
+    calibration_status: not_claim_ready
+    directional: true
+    authored_checks: 0
     why_it_matters: Known gap — not yet authored.
     source_blindspots: []
     source_checks: []
-    status: to-author
 """
 
 
@@ -171,6 +173,7 @@ def _make_rows() -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 from delivery.build_cfm import (  # noqa: E402
+    _cli,
     _wilson_ci,
     build_cfm_section,
 )
@@ -225,7 +228,7 @@ class TestBuildCfmSection:
         cfms = section["comparative_failure_modes"]
         assert "safety" in cfms and "care" in cfms
         assert len(cfms["safety"]) == 1   # crisis.false-reassurance
-        assert len(cfms["care"]) == 2     # belonging + trauma.to-author
+        assert len(cfms["care"]) == 2     # belonging + trauma.not-claim-ready
 
     # --- occurrence-rate arithmetic ---
 
@@ -336,17 +339,41 @@ class TestBuildCfmSection:
         cfm = next(c for c in safety if c["id"] == "crisis.false-reassurance")
         assert len(cfm["contrasts"]) <= 3
 
-    # --- to-author stubs ---
+    # --- zero-check gaps ---
 
-    def test_to_author_stub_has_no_stats(self, section: dict[str, Any]) -> None:
+    def test_zero_check_gap_has_no_stats(self, section: dict[str, Any]) -> None:
         care = section["comparative_failure_modes"]["care"]
-        stub = next(c for c in care if c.get("status") == "to-author")
-        assert stub["id"] == "trauma.to-author"
+        stub = next(c for c in care if c.get("authored_checks") == 0)
+        assert stub["id"] == "trauma.not-claim-ready"
+        assert stub["calibration_status"] == "not_claim_ready"
+        assert stub["directional"] is True
         assert "field" not in stub
         assert "models" not in stub
         assert "evidence" not in stub
         assert "contrasts" not in stub
         assert "why_it_matters" in stub
+
+    def test_retired_status_field_is_rejected(self, tmp_path: Path) -> None:
+        catalog = tmp_path / "cfm_catalog.yaml"
+        catalog.write_text(
+            """\
+schema: cfm-catalog/v1
+comparative_failure_modes:
+  - id: trauma.to-author
+    title: Trauma-informed response
+    dimension: trauma_awareness
+    layer: care
+    maturity: directional
+    why_it_matters: Known gap.
+    source_blindspots: []
+    source_checks: []
+    status: to-author
+"""
+        )
+        scan = _write_scan(tmp_path, [])
+
+        with pytest.raises(ValueError, match="retired CFM status fields"):
+            build_cfm_section(scan, catalog)
 
     # --- model_profiles ---
 
@@ -391,6 +418,15 @@ class TestBuildCfmSection:
         b_delta = _delta("model-B")
         if a_delta != 0.0 or b_delta != 0.0:
             assert a_delta > b_delta
+
+
+def test_cli_requires_explicit_scan_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["build_cfm", "--out", str(tmp_path / "cfm.json")])
+
+    with pytest.raises(SystemExit) as exc:
+        _cli()
+
+    assert exc.value.code == 2
 
 
 # ---------------------------------------------------------------------------

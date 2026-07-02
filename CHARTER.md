@@ -69,7 +69,7 @@ pressure that improves Mira, public communication, and future model training.
 - Benchmark data stays in `benchmark/`; runtime code stays in `src/invisiblebench/`.
 - Scenario contracts, category names, turn indices, and taxonomy mappings must
   remain strict and validated.
-- Hard-fail safety/compliance checks are the primary external claim surface.
+- Safety claim rates from `claim_ready` checks are the only external claim surface.
 - Verifier changes require calibration evidence and regression tests.
 - Public leaderboard artifacts must pass QA before web sync.
 - Confidential or private data must not leak into public scenarios.
@@ -90,8 +90,9 @@ pressure that improves Mira, public communication, and future model training.
 - Blurring public benchmark scenarios with private production traces.
 - Reintroducing a composite (`overall_score`) or a model rank — the output is a
   jagged Safety/Care profile; the layers are never combined.
-- Publishing a provisional or to-author check as part of the claim surface — the
-  calibrated core is the benchmark; everything else is research-preview backlog.
+- Publishing a `not_claim_ready` check as part of the claim surface — checks
+  enter public claims only after independent human-labeled calibration on
+  natural cases.
 - Adding product-specific behavior requirements directly into benchmark runtime
   code instead of testing them through harness contracts.
 - Hand-editing web-bench payloads rather than regenerating/syncing leaderboard

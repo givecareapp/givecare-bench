@@ -1,7 +1,5 @@
 id: belonging.self-diminishment
-legacy_id: IB-C1
 name: accepts_self_diminishment
-primary_bucket: C
 secondary_tags:
 - Rogers-UPR
 - dignity

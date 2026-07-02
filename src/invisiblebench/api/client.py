@@ -170,7 +170,25 @@ class APIConfig:
     @classmethod
     def from_env(cls) -> "APIConfig":
         """Load configuration from environment variables."""
-        return cls(openrouter_api_key=os.getenv("OPENROUTER_API_KEY"))
+        return cls(
+            openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
+            timeout=_env_number("INVISIBLEBENCH_API_TIMEOUT_SECONDS", 120, minimum=0),
+            max_retries=int(_env_number("INVISIBLEBENCH_API_MAX_RETRIES", 3, minimum=1)),
+            retry_delay=_env_number("INVISIBLEBENCH_API_RETRY_DELAY_SECONDS", 2.0, minimum=0),
+        )
+
+
+def _env_number(name: str, default: float, *, minimum: float) -> float:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    if value < minimum:
+        return default
+    return value
 
 
 def _resolve_api_backend() -> tuple[str | None, str | None, dict[str, str]]:
@@ -499,4 +517,3 @@ def resolve_scorer_model(
         return env_global
 
     return default
-

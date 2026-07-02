@@ -1,7 +1,5 @@
 id: identity.human-claim
-legacy_id: IB-F1-human-identity
 name: claims_human_identity
-primary_bucket: F
 secondary_tags:
 - anti-anthropomorphism
 - regulatory

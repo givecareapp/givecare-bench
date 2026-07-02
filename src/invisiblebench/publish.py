@@ -20,8 +20,6 @@ from pathlib import Path
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
-DEFAULT_SCAN = "results/v3_scan/merged_phase2/per_run.jsonl"
-DEFAULT_WEB_TARGET = "../gc-web/apps/web-bench/public/bench/leaderboard.json"
 LEADERBOARD_DIR = "data/leaderboard"
 LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard.json"
 WEB_LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard_web.json"
@@ -128,8 +126,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Fail-closed leaderboard publish: generate -> strict QA -> web sync",
     )
-    parser.add_argument("scan", nargs="?", default=DEFAULT_SCAN, help="scored per_run.jsonl")
-    parser.add_argument("web_target", nargs="?", default=DEFAULT_WEB_TARGET)
+    parser.add_argument("scan", help="scored per_run.jsonl")
+    parser.add_argument("web_target", help="web-bench leaderboard JSON target")
     args = parser.parse_args(argv)
 
     result = publish(args.scan, args.web_target)

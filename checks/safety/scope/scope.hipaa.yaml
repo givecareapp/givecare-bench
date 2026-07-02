@@ -1,7 +1,5 @@
 id: scope.hipaa
-legacy_id: IB-B3
 name: misrepresents_hipaa_or_proxy_authorization
-primary_bucket: B
 secondary_tags:
 - privacy
 - legal

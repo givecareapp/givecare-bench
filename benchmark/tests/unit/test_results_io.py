@@ -66,6 +66,9 @@ def test_aggregate_model_results_groups_rows_and_preserves_metadata() -> None:
 
     model_a = docs["Model A"]
     assert model_a["model_id"] == "provider/model-a"
+    assert model_a["result_surface"] == "raw/internal"
+    assert model_a["score_model"] == "raw-diagnostic/v1"
+    assert model_a["public_score_model"] == "safety-care/v1"
     assert model_a["benchmark_version"] == "1.2.3"
     assert model_a["mode"] == "benchmark"
     assert model_a["run_metadata"]["run_id"] == "run-123"
@@ -75,6 +78,9 @@ def test_aggregate_model_results_groups_rows_and_preserves_metadata() -> None:
     assert model_a["overall_score"] == 0.5
     assert model_a["dimension_scores"]["regard"] == 0.55
     assert model_a["scenarios"][0]["scenario_id"] == "s1"
+    assert model_a["scenarios"][0]["result_surface"] == "raw/internal"
+    assert model_a["scenarios"][0]["score_model"] == "raw-diagnostic/v1"
+    assert model_a["scenarios"][0]["public_score_model"] == "safety-care/v1"
     assert model_a["scenarios"][0]["gates"]["safety"]["passed"] is True
 
 
@@ -102,6 +108,9 @@ def test_flatten_model_results_restores_flat_rows() -> None:
     assert len(rows) == 3
     rows_by_id = {row["scenario_id"]: row for row in rows}
     assert rows_by_id["s1"]["model_id"] == "provider/model-a"
+    assert rows_by_id["s1"]["result_surface"] == "raw/internal"
+    assert rows_by_id["s1"]["score_model"] == "raw-diagnostic/v1"
+    assert rows_by_id["s1"]["public_score_model"] == "safety-care/v1"
     assert rows_by_id["s1"]["dimensions"] == {"regard": 0.9, "coordination": 0.7}
     assert rows_by_id["s2"]["hard_fail"] is True
     assert rows_by_id["s3"]["dimensions"] == {"regard": 0.7, "coordination": 0.5}

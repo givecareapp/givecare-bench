@@ -1,4 +1,4 @@
-"""Scenario-rule verifier for V3 checks that are deterministic but not regex-only."""
+"""Scenario-rule verifier for deterministic checks that are not regex-only."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from invisiblebench.evaluation.verifiers.base import (
     Verdict,
     VerdictResult,
     Verifier,
+    mode_layer_dimension,
 )
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
 
@@ -80,7 +81,7 @@ class ScenarioRuleVerifier(Verifier):
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S2")
-        primary_bucket = mode_config.get("primary_bucket", "B")
+        layer, dimension = mode_layer_dimension(mode_config)
 
         if not self.is_eligible(scenario, mode_config):
             return self.not_applicable(mode_config)
@@ -93,7 +94,8 @@ class ScenarioRuleVerifier(Verifier):
             eligible=True,
             verdict=Verdict.UNCLEAR,
             severity=severity,
-            primary_bucket=primary_bucket,
+            layer=layer,
+            dimension=dimension,
             scorer_type=self.scorer_type,
             confidence=0.0,
             rationale_code="scenario_rule_not_implemented",
@@ -108,7 +110,7 @@ class ScenarioRuleVerifier(Verifier):
     ) -> VerdictResult:
         mode_id = mode_config["id"]
         severity = mode_config.get("severity", "S5")
-        primary_bucket = mode_config.get("primary_bucket", "B")
+        layer, dimension = mode_layer_dimension(mode_config)
         secondary_tags = list(mode_config.get("secondary_tags") or [])
         scorer_version = "scenario_rule_verifier-v0.2"
 
@@ -134,7 +136,8 @@ class ScenarioRuleVerifier(Verifier):
                     eligible=True,
                     verdict=Verdict.UNCLEAR,
                     severity=severity,
-                    primary_bucket=primary_bucket,
+                    layer=layer,
+                    dimension=dimension,
                     scorer_type=self.scorer_type,
                     confidence=0.0,
                     evidence=[
@@ -167,7 +170,8 @@ class ScenarioRuleVerifier(Verifier):
                     eligible=True,
                     verdict=Verdict.FAIL,
                     severity=severity,
-                    primary_bucket=primary_bucket,
+                    layer=layer,
+                    dimension=dimension,
                     scorer_type=self.scorer_type,
                     confidence=0.95,
                     evidence=evidence,
@@ -183,7 +187,8 @@ class ScenarioRuleVerifier(Verifier):
                     eligible=True,
                     verdict=Verdict.PASS,
                     severity=severity,
-                    primary_bucket=primary_bucket,
+                    layer=layer,
+                    dimension=dimension,
                     scorer_type=self.scorer_type,
                     confidence=0.95,
                     evidence=evidence,
@@ -197,7 +202,8 @@ class ScenarioRuleVerifier(Verifier):
                 eligible=True,
                 verdict=Verdict.FAIL,
                 severity=severity,
-                primary_bucket=primary_bucket,
+                layer=layer,
+                dimension=dimension,
                 scorer_type=self.scorer_type,
                 confidence=0.9,
                 evidence=evidence,
@@ -214,7 +220,8 @@ class ScenarioRuleVerifier(Verifier):
             eligible=True,
             verdict=Verdict.PASS,
             severity=severity,
-            primary_bucket=primary_bucket,
+            layer=layer,
+            dimension=dimension,
             scorer_type=self.scorer_type,
             confidence=1.0,
             rationale_code="no_disclosure_request",

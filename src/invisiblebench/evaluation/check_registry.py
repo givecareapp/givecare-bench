@@ -3,7 +3,7 @@
 Checks live in a layered directory structure under `checks/`:
 
     checks/safety/crisis/crisis.passive-ideation.yaml
-    checks/care/attunement/belonging.self-diminishment.yaml
+    checks/care/belonging/belonging.self-diminishment.yaml
 
 `find checks/ -name '*.yaml' ! -name '_*'` is the entire taxonomy.  Each file
 holds the complete identity of one check: definition, severity, scope,
@@ -23,6 +23,67 @@ import yaml
 from invisiblebench.models._types import ModeConfig, RoutingConfig
 
 CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
+CALIBRATION_STATUSES = {"claim_ready", "not_claim_ready"}
+SAFETY_DIMENSIONS = {"crisis", "scope", "identity", "autonomy"}
+CARE_DIMENSIONS = {"belonging", "attunement", "trauma_awareness", "relational", "advocacy"}
+
+
+def _check_identity(check_file: Path, root: Path, check_id: str) -> tuple[str, str]:
+    try:
+        rel = check_file.relative_to(root)
+    except ValueError:
+        rel = check_file
+    parts = rel.parts
+    if len(parts) >= 3:  # noqa: PLR2004
+        layer, dimension = parts[-3], parts[-2]
+    else:
+        dimension = check_id.split(".", 1)[0]
+        if dimension in SAFETY_DIMENSIONS:
+            layer = "safety"
+        elif dimension in CARE_DIMENSIONS:
+            layer = "care"
+        else:
+            raise ValueError(f"{check_file} has unknown Safety/Care dimension {dimension!r}")
+
+    if layer == "safety" and dimension not in SAFETY_DIMENSIONS:
+        raise ValueError(f"{check_file} has invalid safety dimension {dimension!r}")
+    if layer == "care" and dimension not in CARE_DIMENSIONS:
+        raise ValueError(f"{check_file} has invalid care dimension {dimension!r}")
+    if layer not in {"safety", "care"}:
+        raise ValueError(f"{check_file} has invalid check layer {layer!r}")
+    return layer, dimension
+
+
+def _normalize_check_config(data: dict, check_file: Path, root: Path) -> dict:
+    """Normalize check YAML into the runtime mode config.
+
+    The source taxonomy is Safety/Care by directory path. Retired bucket and
+    IB-code metadata stay out of active check YAMLs and new scan rows.
+    """
+    mode = dict(data)
+
+    for retired_field in ("primary_bucket", "legacy_bucket", "legacy_id"):
+        if retired_field not in mode:
+            continue
+        raise ValueError(
+            f"{check_file} uses retired source field {retired_field}; "
+            "active checks are identified by checks/<layer>/<dimension>/<ID>.yaml."
+        )
+
+    calibration = mode.get("calibration")
+    if isinstance(calibration, dict) and calibration.get("status") is not None:
+        status = str(calibration["status"])
+        if status not in CALIBRATION_STATUSES:
+            raise ValueError(
+                f"{check_file} has unsupported calibration.status {status!r}; "
+                f"expected one of {sorted(CALIBRATION_STATUSES)}"
+            )
+
+    check_id = str(mode.get("id") or check_file.stem)
+    layer, dimension = _check_identity(check_file, root, check_id)
+    mode["layer"] = layer
+    mode["dimension"] = dimension
+    return mode
 
 
 def load_checks(
@@ -33,7 +94,7 @@ def load_checks(
     if not root.is_dir():
         raise FileNotFoundError(
             f"checks directory not found: {root}. "
-            "The taxonomy lives in checks/<ID>.yaml (see DESIGN.md)."
+            "The taxonomy lives in checks/<layer>/<dimension>/<ID>.yaml."
         )
 
     modes: dict[str, ModeConfig] = {}
@@ -50,7 +111,7 @@ def load_checks(
                 f"check id {check_id!r} does not match its filename "
                 f"{check_file.stem!r} ({check_file})"
             )
-        mode = dict(data)
+        mode = _normalize_check_config(data, check_file, root)
         route = mode.pop("routing", {}) or {}
         modes[check_id] = mode
         routing[check_id] = route

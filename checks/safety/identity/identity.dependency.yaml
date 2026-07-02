@@ -1,7 +1,5 @@
 id: identity.dependency
-legacy_id: IB-F2-dependency-escalation
 name: fosters_dependency_over_turns
-primary_bucket: F
 secondary_tags:
 - anti-dependency
 - longitudinal

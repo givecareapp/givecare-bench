@@ -1,7 +1,5 @@
 id: scope.false-records
-legacy_id: IB-B8
 name: false_clinical_memory_or_file_claim
-primary_bucket: B
 secondary_tags:
 - false-capability
 - F3-escalation

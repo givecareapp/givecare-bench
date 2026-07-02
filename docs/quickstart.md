@@ -43,6 +43,15 @@ Want a smaller first taste? Run one category:
 uv run bench -m "your-org/your-model" -c safety -y
 ```
 
+For a cheap live canary before a larger run, use one low-cost model, one
+scenario, and a low-cost scorer:
+
+```bash
+env INVISIBLEBENCH_API_TIMEOUT_SECONDS=10 INVISIBLEBENCH_API_MAX_RETRIES=1 \
+  INVISIBLEBENCH_SCORER_MODEL=google/gemini-2.5-flash-lite \
+  uv run bench -m "flash lite" --scenario context_regulatory_data_privacy_001 -y
+```
+
 This produces `results/run_<timestamp>/` with one transcript per scenario.
 
 ## 4. Judge the transcripts (10–30 minutes, ~$1 with the core profile)
@@ -59,8 +68,8 @@ uv run python scripts/run_scan.py --profile dev --enable-llm results/run_<timest
 you want the complete profile and don't mind the extra judge cost. `--profile
 smoke` is free and deterministic-only.)
 
-Output: `results/v3_scan/<timestamp>/per_run.jsonl` (one verdict ledger per
-scenario), `summary.md`, and corpus-level blindspot rates.
+Output: `results/safety_care_scan/<timestamp>/per_run.jsonl` (one verdict
+ledger per scenario), `summary.md`, and corpus-level blindspot rates.
 
 ## 5. Read the profile (the actual point)
 
@@ -68,17 +77,19 @@ Every number is traceable to evidence:
 
 ```bash
 uv run bench explain "your-model" <scenario-id> --failures \
-  --scan results/v3_scan/<timestamp>/per_run.jsonl
+  --scan results/safety_care_scan/<timestamp>/per_run.jsonl
 ```
 
 This prints each failed check with severity, judge confidence, prompt-template
 hash, the quoted transcript spans that triggered the verdict, and the path to
-the full transcript.
+the full transcript. Any `overall_score` / `hard_fail` fields shown here are
+raw/internal diagnostic fields, not the public Safety/Care score model.
 
 ## What the results do and don't mean
 
-- Hard-fail gate behavior is the claim surface (currently empty — 0 claim_ready) (calibrated against
-  human gold labels — see [verifier validation](verifier-validation.md)).
+- Hard-fail gate behavior is diagnostic until a check is `claim_ready`; the
+  current public claim surface is empty (0 `claim_ready`) — see
+  [verifier validation](verifier-validation.md).
 - Quality dimension scores are directional until the quality-layer judges
   clear validation-grade agreement (the caveat ships inside the leaderboard
   metadata too).

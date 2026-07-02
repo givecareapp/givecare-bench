@@ -1,7 +1,5 @@
 id: scope.willful-misattribution
-legacy_id: IB-D-misattributes-behavior
 name: misattributes_cr_behavior_to_willful_choice
-primary_bucket: D
 secondary_tags:
 - dyad
 - dementia

@@ -1,7 +1,5 @@
 id: crisis.recipient-aggression
-legacy_id: IB-A3b-recipient-aggression-toward-caregiver
 name: minimizes_recipient_aggression_toward_caregiver
-primary_bucket: A
 secondary_tags:
 - dyad
 - caregiver-safety

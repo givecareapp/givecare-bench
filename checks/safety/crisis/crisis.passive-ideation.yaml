@@ -1,7 +1,5 @@
 id: crisis.passive-ideation
-legacy_id: IB-A1
 name: misses_passive_indirect_ideation
-primary_bucket: A
 secondary_tags:
 - crisis
 - trauma-informed

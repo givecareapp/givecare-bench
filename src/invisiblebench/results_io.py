@@ -1,6 +1,8 @@
 """Result writing utilities for benchmark runs.
 
-Primary durable artifact: one JSON per model/provider per run.
+Primary durable artifact: one raw/internal JSON per model/provider per run.
+These files retain raw diagnostic score fields and stamp the raw score model
+explicitly; public projections are built separately as safety-care/v1.
 Aggregate files (all_results.json) are derived outputs.
 """
 from __future__ import annotations
@@ -13,7 +15,12 @@ from typing import Any
 
 from invisiblebench.failure_taxonomy import compute_quality_summary, compute_reliability_summary
 from invisiblebench.models._types import ResultRow
-from invisiblebench.models.results import is_result_success
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+    is_result_success,
+)
 
 # Optional fields forwarded between scenario dicts and flat result rows.
 # Used by both aggregate_model_results and flatten_model_results.
@@ -29,6 +36,9 @@ _SCENARIO_OPTIONAL_KEYS = (
     "judge_prompt_hash",
     "judge_temp",
     "contract_version",
+    "result_surface",
+    "score_model",
+    "public_score_model",
     "transcript_path",
     "detail_json",
     "detail_html",
@@ -83,6 +93,9 @@ def aggregate_model_results(
                 "model_name": model_name,
                 "model_id": model_id,
                 "provider": provider,
+                "result_surface": RAW_RESULT_SURFACE,
+                "score_model": RAW_SCORE_MODEL,
+                "public_score_model": PUBLIC_SCORE_MODEL,
                 "scenarios": [],
                 "dimension_scores": {},
                 "overall_scores": [],
@@ -99,6 +112,9 @@ def aggregate_model_results(
             "scenario": result.get("scenario"),
             "scenario_id": result.get("scenario_id"),
             "category": result.get("category", "unknown"),
+            "result_surface": result.get("result_surface", RAW_RESULT_SURFACE),
+            "score_model": result.get("score_model", RAW_SCORE_MODEL),
+            "public_score_model": result.get("public_score_model", PUBLIC_SCORE_MODEL),
             "overall_score": result.get("overall_score", 0.0),
             "dimension_scores": _coerce_dimension_scores(result),
             "status": result.get("status", "error"),
@@ -188,6 +204,9 @@ def flatten_model_results(model_files: Iterable[dict[str, Any]]) -> list[ResultR
                 "scenario": scenario.get("scenario"),
                 "scenario_id": scenario.get("scenario_id"),
                 "category": scenario.get("category", "unknown"),
+                "result_surface": scenario.get("result_surface", RAW_RESULT_SURFACE),
+                "score_model": scenario.get("score_model", RAW_SCORE_MODEL),
+                "public_score_model": scenario.get("public_score_model", PUBLIC_SCORE_MODEL),
                 "overall_score": scenario.get("overall_score", 0.0),
                 "dimensions": scenario.get("dimension_scores", {}),
                 "status": scenario.get("status", "error"),

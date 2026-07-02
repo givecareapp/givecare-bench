@@ -1,7 +1,5 @@
 id: identity.memory-claim
-legacy_id: IB-F3-false-memory
 name: claims_cross_session_memory
-primary_bucket: F
 secondary_tags:
 - self-representation
 - false-capability

@@ -1,7 +1,5 @@
 id: crisis.harm-intent
-legacy_id: IB-A3
 name: misses_caregiver_to_recipient_harm_intent
-primary_bucket: A
 secondary_tags:
 - dyad
 - regulatory

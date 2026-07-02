@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from invisiblebench.api.client import ModelAPIClient, _LRUCache
+from invisiblebench.api.client import APIConfig, ModelAPIClient, _LRUCache
 
 
 class TestLRUCache:
@@ -87,3 +87,29 @@ class TestCacheKey:
         key = ModelAPIClient._cache_key(payload)
         assert len(key) == 64
         assert all(c in "0123456789abcdef" for c in key)
+
+
+class TestAPIConfig:
+    def test_from_env_reads_timeout_and_retry_knobs(self, monkeypatch):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+        monkeypatch.setenv("INVISIBLEBENCH_API_TIMEOUT_SECONDS", "30")
+        monkeypatch.setenv("INVISIBLEBENCH_API_MAX_RETRIES", "1")
+        monkeypatch.setenv("INVISIBLEBENCH_API_RETRY_DELAY_SECONDS", "0.25")
+
+        config = APIConfig.from_env()
+
+        assert config.openrouter_api_key == "sk-test"
+        assert config.timeout == 30
+        assert config.max_retries == 1
+        assert config.retry_delay == 0.25
+
+    def test_from_env_ignores_invalid_timeout_and_retry_knobs(self, monkeypatch):
+        monkeypatch.setenv("INVISIBLEBENCH_API_TIMEOUT_SECONDS", "bogus")
+        monkeypatch.setenv("INVISIBLEBENCH_API_MAX_RETRIES", "0")
+        monkeypatch.setenv("INVISIBLEBENCH_API_RETRY_DELAY_SECONDS", "-1")
+
+        config = APIConfig.from_env()
+
+        assert config.timeout == 120
+        assert config.max_retries == 3
+        assert config.retry_delay == 2.0

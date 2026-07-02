@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""QA gate for V3 leaderboard artifacts.
+"""QA gate for safety-care/v1 leaderboard artifacts.
 
-Checks the scan JSONL and generated V3 leaderboard agree on source and meet
+Checks the scan JSONL and generated leaderboard agree on source and meet
 publication hygiene requirements. This script is intentionally local-only; it
 never calls a model or external service.
 """
@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter, defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -26,19 +27,45 @@ from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
     FAILURE_VERDICT_VALUES,
     GATE_SEVERITIES,
     PASS_VERDICT_VALUES,
+    Verdict,
 )
+from invisiblebench.utils.artifact_validation import (  # noqa: E402
+    artifact_issue_policy,
+    scan_artifact_validation_diagnostics,
+    scan_artifact_validation_summary,
+    scan_current_contract_validation_diagnostics,
+    scan_current_contract_validation_summary,
+)
+from invisiblebench.utils.benchmark_inventory import collect_public_scenario_ids  # noqa: E402
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 
-GATE_BUCKETS = {"A", "B"}
 # Severities whose FAILs become public hard-fail claims (owner: base.py).
 CLAIM_SEVERITIES = GATE_SEVERITIES
 # Statuses allowed to carry a published hard-fail claim. Binary claim model:
 # only `claim_ready` publishes; everything else is disclosed development evidence.
 CALIBRATED_STATUSES = {"claim_ready"}
-# Resolved = the verdict classes mode_engine counts toward coverage
-# (eligible PASS-class or FAIL-class; UNCLEAR/NOT_APPLICABLE are unresolved).
-RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES
+# Resolved = the verdict classes mode_engine counts toward coverage. Eligible
+# NOT_APPLICABLE means the verifier found no current cue/obligation for this
+# check; it is resolved coverage, while UNCLEAR remains unresolved.
+RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES | {Verdict.NOT_APPLICABLE.value}
+
+
+@lru_cache(maxsize=1)
+def _gate_check_ids() -> frozenset[str]:
+    modes, _routing = load_checks()
+    return frozenset(
+        check_id
+        for check_id, mode in modes.items()
+        if mode.get("hard_fail") or mode.get("severity") in GATE_SEVERITIES
+    )
+
+
+def _is_gate_result(result: dict[str, Any]) -> bool:
+    check_id = str(result.get("mode_id") or "")
+    if check_id in _gate_check_ids():
+        return True
+    return result.get("layer") == "safety" and result.get("severity") in GATE_SEVERITIES
 
 
 def calibration_errors(
@@ -51,7 +78,7 @@ def calibration_errors(
     - every claim-carrying check (hard_fail or S5/S4_GATE severity) must
       declare a `calibration:` block with an evidence status;
     - every published hard_fail_reason must come from a check whose declared
-      status is validated or provisional (i.e. has human evidence on record).
+      status is `claim_ready`.
     """
     errors: list[str] = []
     claim_checks = {
@@ -127,7 +154,13 @@ def _validate_safety_care_artifact(
         errors.append(f"schema={schema!r} expected='safety-care/v1'")
 
     # No composite at top level
-    for forbidden in ("overall_score", "composite", "rank", "overall_leaderboard"):
+    for forbidden in (
+        "overall_score",
+        "composite",
+        "rank",
+        "overall_leaderboard",
+        "_deprecated_v3",
+    ):
         if forbidden in leaderboard:
             errors.append(f"forbidden_top_level_key={forbidden!r}")
 
@@ -153,6 +186,12 @@ def _validate_safety_care_artifact(
             f"leaderboard_total_scenarios={scan_meta.get('total_scenarios')} "
             f"expected={effective_scenarios}"
         )
+    if not isinstance(scan_meta.get("artifact_validation"), dict):
+        errors.append("scan_metadata.artifact_validation missing or not an object")
+    if not isinstance(scan_meta.get("artifact_diagnostics"), dict):
+        errors.append("scan_metadata.artifact_diagnostics missing or not an object")
+    if scan_meta.get("artifact_issue_policy") != artifact_issue_policy():
+        errors.append("scan_metadata.artifact_issue_policy missing or mismatch")
 
     # Per-model entries: safety lines + care qualities + no composite
     models = leaderboard.get("models")
@@ -207,6 +246,109 @@ def _validate_safety_care_artifact(
                             f"quality={quality!r} model={name!r}"
                         )
 
+    return errors
+
+
+def _validate_artifact_validation_metadata(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> list[str]:
+    errors: list[str] = []
+    artifact_validation = (leaderboard.get("scan_metadata") or {}).get("artifact_validation")
+    if not isinstance(artifact_validation, dict):
+        return errors
+
+    expected = scan_artifact_validation_summary(rows)
+    for field, expected_value in expected.items():
+        actual = artifact_validation.get(field)
+        if actual != expected_value:
+            errors.append(f"artifact_validation.{field}={actual} expected={expected_value}")
+    return errors
+
+
+def _validate_artifact_diagnostics_metadata(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> list[str]:
+    errors: list[str] = []
+    diagnostics = (leaderboard.get("scan_metadata") or {}).get("artifact_diagnostics")
+    if not isinstance(diagnostics, dict):
+        return errors
+
+    expected = scan_artifact_validation_diagnostics(rows)
+    for field, expected_value in expected.items():
+        actual = diagnostics.get(field)
+        if actual != expected_value:
+            errors.append(f"artifact_diagnostics.{field} mismatch")
+    return errors
+
+
+def _active_mode_ids(checks_dir: Path | None = None) -> list[str]:
+    modes, routing = load_checks(checks_dir)
+    return sorted(
+        mode_id
+        for mode_id, mode in modes.items()
+        if mode.get("status", "active") == "active" and routing.get(mode_id)
+    )
+
+
+def _validate_current_contract_metadata(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    checks_dir: Path | None,
+) -> list[str]:
+    errors: list[str] = []
+    scan_meta = leaderboard.get("scan_metadata") or {}
+    validation = scan_meta.get("current_contract_validation")
+    diagnostics = scan_meta.get("current_contract_diagnostics")
+
+    if validation is None and diagnostics is None:
+        return errors
+    if not isinstance(validation, dict):
+        errors.append("scan_metadata.current_contract_validation missing or not an object")
+        return errors
+    if not isinstance(diagnostics, dict):
+        errors.append("scan_metadata.current_contract_diagnostics missing or not an object")
+        return errors
+
+    expected_scenario_ids = collect_public_scenario_ids(REPO_ROOT)
+    expected_check_ids = _active_mode_ids(checks_dir)
+    expected_validation = scan_current_contract_validation_summary(
+        rows,
+        expected_scenario_ids=expected_scenario_ids,
+        expected_check_ids=expected_check_ids,
+    )
+    for field, expected_value in expected_validation.items():
+        actual = validation.get(field)
+        if actual != expected_value:
+            errors.append(f"current_contract_validation.{field}={actual} expected={expected_value}")
+
+    expected_diagnostics = scan_current_contract_validation_diagnostics(
+        rows,
+        expected_scenario_ids=expected_scenario_ids,
+        expected_check_ids=expected_check_ids,
+    )
+    for field, expected_value in expected_diagnostics.items():
+        actual = diagnostics.get(field)
+        if actual != expected_value:
+            errors.append(f"current_contract_diagnostics.{field} mismatch")
+    return errors
+
+
+def _strict_current_contract_errors(validation: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for field in (
+        "missing_scenarios",
+        "extra_scenarios",
+        "rows_with_missing_checks",
+        "missing_check_instances",
+        "rows_with_extra_checks",
+        "extra_check_instances",
+    ):
+        value = validation.get(field)
+        if value:
+            errors.append(f"current_contract_{field}={value}")
     return errors
 
 
@@ -278,6 +420,14 @@ def validate_leaderboard(
     errors.extend(
         _validate_safety_care_artifact(leaderboard, effective_models, effective_scenarios, scan_path)
     )
+    errors.extend(_validate_artifact_validation_metadata(leaderboard, rows))
+    errors.extend(_validate_artifact_diagnostics_metadata(leaderboard, rows))
+    errors.extend(_validate_current_contract_metadata(leaderboard, rows, checks_dir=checks_dir))
+    current_contract_validation = (leaderboard.get("scan_metadata") or {}).get(
+        "current_contract_validation"
+    )
+    if strict and isinstance(current_contract_validation, dict):
+        errors.extend(_strict_current_contract_errors(current_contract_validation))
 
     prompt_missing = 0
     no_verifier = 0
@@ -315,7 +465,7 @@ def validate_leaderboard(
                 fail_without_evidence += 1
             if eligible and verdict == "UNCLEAR":
                 all_unclear[mode_id] += 1
-                if result.get("primary_bucket") in GATE_BUCKETS:
+                if _is_gate_result(result):
                     gate_unclear[mode_id] += 1
             if result.get("scorer_type") == "manual_adjudication" and not evidence and verdict != "NOT_APPLICABLE":
                 manual_without_evidence += 1
@@ -361,6 +511,9 @@ def validate_leaderboard(
 
     manual_scan = _manual_scan_records(rows)
     if manual_adjudications_path is not None:
+        if not manual_adjudications_path.exists():
+            errors.append(f"manual_adjudications_file_missing={manual_adjudications_path}")
+            return errors
         manual_payload = _load_json(manual_adjudications_path)
         manual_file = manual_payload.get("manual_adjudications") or []
         if not isinstance(manual_file, list):
@@ -402,11 +555,11 @@ def main() -> int:
     parser.add_argument("--expected-scenarios", type=int, default=None)
     parser.add_argument(
         "--expected-contract", default=None,
-        help="Deprecated (V3 compat); ignored in safety-care/v1 validation",
+        help="Retired compatibility option; ignored in safety-care/v1 validation",
     )
     parser.add_argument(
         "--expected-stage", default=None,
-        help="Deprecated (V3 compat); ignored in safety-care/v1 validation",
+        help="Retired compatibility option; ignored in safety-care/v1 validation",
     )
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
     args = parser.parse_args()

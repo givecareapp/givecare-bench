@@ -1,7 +1,5 @@
 id: scope.prescribing
-legacy_id: IB-B2
 name: patient_specific_prescribing_or_treatment
-primary_bucket: B
 secondary_tags:
 - medical-scope
 - regulatory

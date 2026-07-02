@@ -1,10 +1,15 @@
-"""Diff/comparison utilities: run reference resolution, result aggregation, and diff reporting."""
+"""Raw/internal diff utilities for runner score artifacts."""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
 from invisiblebench.cli._console import make_console as _console
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+)
 from invisiblebench.run_artifacts import load_result_rows
 from invisiblebench.utils.benchmark_inventory import get_project_root
 
@@ -101,8 +106,16 @@ def load_run_results(results_path: Path) -> list[dict[str, Any]]:
     return [row for row in load_result_rows(results_path) if isinstance(row, dict)]
 
 
+def _raw_score_contract() -> dict[str, str]:
+    return {
+        "result_surface": RAW_RESULT_SURFACE,
+        "score_model": RAW_SCORE_MODEL,
+        "public_score_model": PUBLIC_SCORE_MODEL,
+    }
+
+
 def aggregate_results_by_model(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Aggregate per-model average overall score and status counts."""
+    """Aggregate raw/internal per-model overall score and status counts."""
     by_model: dict[str, dict[str, Any]] = {}
 
     for row in results:
@@ -137,6 +150,7 @@ def aggregate_results_by_model(results: list[dict[str, Any]]) -> dict[str, dict[
         model_stats["hard_failure_count"] = (
             model_stats["status_counts"]["fail"] + model_stats["status_counts"]["error"]
         )
+        model_stats.update(_raw_score_contract())
         del model_stats["score_sum"]
         del model_stats["score_count"]
 
@@ -174,6 +188,7 @@ def compute_run_diff(
         comparisons.append(
             {
                 "model": model,
+                **_raw_score_contract(),
                 "base_avg_overall_score": base_avg,
                 "new_avg_overall_score": new_avg,
                 "delta_avg_overall_score": delta,
@@ -211,9 +226,9 @@ def _print_diff_table(comparisons: list[dict[str, Any]]) -> None:
     """Print per-model diff table with regression indicators."""
     headers = [
         "Model",
-        "Base Avg",
-        "New Avg",
-        "Delta",
+        "Base Raw Avg",
+        "New Raw Avg",
+        "Raw Delta",
         "Base P/F/E",
         "New P/F/E",
         "Reg",
@@ -221,11 +236,11 @@ def _print_diff_table(comparisons: list[dict[str, Any]]) -> None:
 
     if _RICH_AVAILABLE:
         console = _console()
-        table = Table(title="Benchmark Diff (per model)")
+        table = Table(title="Raw/Internal Score Diff (per model)")
         table.add_column("Model", no_wrap=True)
-        table.add_column("Base Avg", justify="right")
-        table.add_column("New Avg", justify="right")
-        table.add_column("Delta", justify="right")
+        table.add_column("Base Raw Avg", justify="right")
+        table.add_column("New Raw Avg", justify="right")
+        table.add_column("Raw Delta", justify="right")
         table.add_column("Base P/F/E", justify="right")
         table.add_column("New P/F/E", justify="right")
         table.add_column("Reg", justify="center")
@@ -308,6 +323,10 @@ def diff_command(args) -> int:
 
     print(f"Base run: {base_results}")
     print(f"New run:  {new_results}")
+    print(
+        "Surface: raw/internal compatibility analytics "
+        f"({RAW_SCORE_MODEL}); not the public safety-care/v1 leaderboard."
+    )
     _print_diff_table(comparisons)
     print(f"Compared {len(comparisons)} model(s).")
     return 0

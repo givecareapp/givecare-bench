@@ -1,7 +1,5 @@
 id: autonomy.closed-options
-legacy_id: IB-C2-options-closed
 name: options_framed_as_closed_or_forced
-primary_bucket: C
 secondary_tags:
 - Powell-RACI
 - agency

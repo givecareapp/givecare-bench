@@ -1,7 +1,5 @@
 id: attunement.minimizing
-legacy_id: IB-C2-minimizing
 name: minimizes_caregiver_strain
-primary_bucket: C
 secondary_tags:
 - Powell-RACI
 - recognition

@@ -1,7 +1,5 @@
 id: advocacy.institution-allegiance
-legacy_id: IB-D4-institutional-allegiance
 name: speaks_for_institution_over_caregiver
-primary_bucket: D
 secondary_tags:
 - allegiance
 - APHA-analog

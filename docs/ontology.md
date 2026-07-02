@@ -14,18 +14,18 @@ never composited and never ranked:
 
 - **Safety** — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line
   **violation rates** with 95% CIs. **Claim-bearing and calibration-gated:** the
-  published surface includes a check only where verifier↔human agreement (κ) is
-  established (`calibrated_only`). At n=63, point ranks are statistically
-  indistinguishable — cite intervals, not positions.
+  published surface includes only `claim_ready` checks. Currently 0 of 50 checks
+  are `claim_ready`, so the public claim surface is empty. At n=63, point ranks
+  are statistically indistinguishable — cite intervals, not positions.
 - **Care** — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational,
-  Advocacy) as **directional distributions**, labeled provisional; never merged
-  with Safety.
+  Advocacy) as **directional distributions**, labeled `not_claim_ready`; never
+  merged with Safety.
 
 There is **no `overall_score` and no rank**; models are listed alphabetically.
-**The calibrated core *is* the benchmark.** Provisional and to-author checks are
-a named research-preview backlog — visible, but explicitly not part of the
-published claim surface until they earn a gold set. Comprehensiveness is the
-roadmap; calibration is the product.
+**The calibrated core *is* the benchmark.** `not_claim_ready` checks and
+zero-check named gaps are visible, but explicitly not part of the published
+claim surface until they earn independent human calibration.
+Comprehensiveness is the roadmap; calibration is the product.
 
 InvisibleBench measures a caregiver-AI's **Safety** (the hard lines it must not cross) and its **Care** (how it shows up for the caregiver). The name carries the thesis — surfacing what stays *invisible* everywhere else: harms a usefulness score can't see, and relational quality no other benchmark measures.
 
@@ -33,26 +33,26 @@ The taxonomy is **MECE** — mutually exclusive (every failure-mode *type* has e
 
 Two **orthogonal axes**:
 - **Layer** — Safety (falsifiable prohibitions → violation **RATES**, claims) vs Care (gradients → **DISTRIBUTIONS**, directional). No composite; the two are reported side by side.
-- **Maturity** — each dimension is **claim_ready** (κ vs independent human labels on natural cases → carries claims) or **not_claim_ready** (directional / development evidence) (named gap). The **calibrated core is the benchmark**; provisional and to-author cells are a named research-preview backlog, not part of the published claim surface until they earn a gold set. This is where v1/v2 lives — not in *which dimensions exist*, but in *which cells are calibrated enough to claim*.
+- **Maturity** — each check is **claim_ready** (κ vs independent human labels on natural cases → carries claims) or **not_claim_ready** (directional / development evidence). Zero-check dimensions are named gaps with `not_claim_ready` output status. The **calibrated core is the benchmark**; anything `not_claim_ready` is not part of the published claim surface until it clears the bar.
 
 ## Safety — 4 lines · partition: which hard line did it cross?
 
 | Line | Must not… | Maturity (today) |
 |---|---|---|
-| **Crisis** | miss/mishandle acute danger (caregiver *or* recipient) | partial κ (A1, A8) → else not_claim_ready |
-| **Scope** | exceed its authority — diagnose, prescribe, legal/financial directives, false credentials | provisional |
+| **Crisis** | miss/mishandle acute danger (caregiver *or* recipient) | not_claim_ready; prior κ is development evidence |
+| **Scope** | exceed its authority — diagnose, prescribe, legal/financial directives, false credentials | not_claim_ready |
 | **Identity** | misrepresent what it is — human / memory / availability / feelings | partial κ (F3) → not_claim_ready |
-| **Autonomy** | override a person's agency — *recipient* (deception/coercion/restraint) or *caregiver* (coercion/threats/foreclosure) | provisional (authored, not yet calibrated) |
+| **Autonomy** | override a person's agency — *recipient* (deception/coercion/restraint) or *caregiver* (coercion/threats/foreclosure) | not_claim_ready (authored, not yet calibrated) |
 
 ## Care — 5 qualities · partition: which aspect of the caregiver's experience?
 
 | Quality | Construct | Maturity |
 |---|---|---|
 | **Belonging** | seen/valued as a worthy individual with legitimate needs | v1 calibration target |
-| **Attunement** | met in their emotional state (register/presence/depth) | provisional |
-| **Trauma-awareness** | responded trauma-informed | to-author (v2 · SAMHSA) |
-| **Relational** | honored the caregiver↔recipient bond (the dyad) | provisional (thin) |
-| **Advocacy** | took the caregiver's side vs systems/institutions | provisional (thin) |
+| **Attunement** | met in their emotional state (register/presence/depth) | not_claim_ready |
+| **Trauma-awareness** | responded trauma-informed | not_claim_ready; 0 authored checks (SAMHSA) |
+| **Relational** | honored the caregiver↔recipient bond (the dyad) | not_claim_ready (thin) |
+| **Advocacy** | took the caregiver's side vs systems/institutions | not_claim_ready (thin) |
 
 The 3-party **dyad** maps across both layers: recipient-harm *acts* → **Autonomy** (Safety); the relationship *bond* → **Relational** (Care).
 
@@ -72,7 +72,7 @@ The dimensions are not improvised — they operationalize **GiveCare's Design Ch
 | Care · Relational | OBI — *Connection* + SAMHSA — *peer support* | P4 Peer & Community Scaffold |
 | Care · Advocacy | OBI — power-aware Targeted Universalism | P6 Power-Aware Co-Creation |
 
-Each Care rubric grounds in its framework: **Belonging → OBI** (done, `internal/belonging-rubric-v3.md`); **Trauma-awareness → SAMHSA's six** (when authored, v2); the OBI **Inclusion** and **Connection** facets — the v2 enrichment of Belonging — are already charter principles (P5 Inclusive Defaults, P4 Peer & Community Scaffold).
+Each Care rubric grounds in its framework: **Belonging → OBI** (done, `internal/belonging-rubric-v3.md`); **Trauma-awareness → SAMHSA's six** (named gap; no authored checks yet); the OBI **Inclusion** and **Connection** facets are already charter principles (P5 Inclusive Defaults, P4 Peer & Community Scaffold).
 
 ## Conventions
 

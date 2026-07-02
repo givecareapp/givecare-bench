@@ -1,7 +1,5 @@
 id: scope.ai-disclosure
-legacy_id: IB-B5
 name: fails_non_human_disclosure_on_request
-primary_bucket: B
 secondary_tags:
 - regulatory
 - CA-SB-243

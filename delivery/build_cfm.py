@@ -11,7 +11,7 @@ Public API
     from delivery.build_cfm import build_cfm_section
 
     section = build_cfm_section(
-        scan_path=Path("results/v3_scan/merged_phase2/per_run.jsonl"),
+        scan_path=Path("results/safety_care_scan/<timestamp>/per_run.jsonl"),
     )
     # section["schema"] == "cfm/v1"
     # section["comparative_failure_modes"] == {"safety": [...], "care": [...]}
@@ -40,7 +40,6 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from invisiblebench.utils.io import load_jsonl  # noqa: E402
 
 DEFAULT_CATALOG = REPO_ROOT / "delivery" / "comparative_failure_modes.yaml"
-DEFAULT_SCAN = REPO_ROOT / "results" / "v3_scan" / "merged_phase2" / "per_run.jsonl"
 
 # Maximum evidence entries per CFM (diversity across models/scenarios preferred).
 _MAX_EVIDENCE = 5
@@ -81,6 +80,13 @@ def _load_catalog(catalog_path: Path) -> list[dict[str, Any]]:
     with open(catalog_path, encoding="utf-8") as fh:
         doc = yaml.safe_load(fh)
     cfms: list[dict[str, Any]] = doc.get("comparative_failure_modes", [])
+    retired = [cfm.get("id", "<unknown>") for cfm in cfms if "status" in cfm]
+    if retired:
+        ids = ", ".join(retired)
+        raise ValueError(
+            f"{catalog_path} uses retired CFM status fields for: {ids}. "
+            "Use calibration_status/not_claim_ready metadata instead."
+        )
     return cfms
 
 
@@ -284,8 +290,8 @@ def _compute_cfm(
     source_blindspots: list[str] = cfm_def.get("source_blindspots", []) or []
     source_checks: list[str] = cfm_def.get("source_checks", []) or []
 
-    # to-author stub — no stats
-    if cfm_def.get("status") == "to-author":
+    # Known zero-check gap — current-contract metadata, no computed stats.
+    if cfm_def.get("authored_checks") == 0:
         obj: dict[str, Any] = {
             "id": cfm_id,
             "title": cfm_def["title"],
@@ -293,7 +299,9 @@ def _compute_cfm(
             "layer": layer,
             "maturity": cfm_def["maturity"],
             "why_it_matters": cfm_def["why_it_matters"],
-            "status": "to-author",
+            "calibration_status": cfm_def.get("calibration_status", "not_claim_ready"),
+            "directional": bool(cfm_def.get("directional", layer == "care")),
+            "authored_checks": 0,
         }
         if cfm_def.get("related_dimensions"):
             obj["related_dimensions"] = cfm_def["related_dimensions"]
@@ -479,7 +487,7 @@ def _cli() -> None:
     parser = argparse.ArgumentParser(
         description="Build the CFM section (comparative_failure_modes + model_profiles) for artifact-v2."
     )
-    parser.add_argument("--scan", default=str(DEFAULT_SCAN), help="Path to per_run.jsonl")
+    parser.add_argument("--scan", required=True, help="Path to per_run.jsonl")
     parser.add_argument("--catalog", default=str(DEFAULT_CATALOG), help="Path to CFM catalog YAML")
     parser.add_argument("--out", required=True, help="Output JSON path")
     args = parser.parse_args()

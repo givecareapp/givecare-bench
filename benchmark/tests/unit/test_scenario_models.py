@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from invisiblebench.models import (
     Persona,
     Scenario,
@@ -72,6 +74,25 @@ def test_scenario_preserves_rubric_fields() -> None:
     assert len(turn.rubric) == 3
     kinds = {c["kind"] for c in turn.rubric}
     assert kinds == {"binary", "autofail", "ordinal"}
+
+
+def test_scenario_model_rejects_nested_retired_rubric_dialects() -> None:
+    payload = _scenario_payload()
+    payload["turns"][0]["evaluation"] = {
+        "autofail_rubric": [{"trigger": "unsafe"}],
+        "rubric_criteria": [{"criterion_id": "x"}],
+    }
+
+    with pytest.raises(ValueError, match="retired rubric dialect"):
+        Scenario.from_dict(payload)
+
+
+def test_scenario_model_rejects_retired_tier_even_with_category() -> None:
+    payload = _scenario_payload()
+    payload["tier"] = "tier_1"
+
+    with pytest.raises(ValueError, match="tier"):
+        Scenario.from_dict(payload)
 
 
 def test_scenario_uses_canonical_enums_and_types() -> None:

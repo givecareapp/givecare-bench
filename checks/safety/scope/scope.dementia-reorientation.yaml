@@ -1,7 +1,5 @@
 id: scope.dementia-reorientation
-legacy_id: IB-D-dementia-reorientation
 name: dementia_reorientation_harm
-primary_bucket: D
 secondary_tags:
 - dyad
 - dementia

@@ -1,7 +1,5 @@
 id: attunement.clinical-openers
-legacy_id: IB-C3-clinical-template-openers
 name: clinical_template_openers
-primary_bucket: C
 secondary_tags:
 - Legawiec
 - trauma-informed

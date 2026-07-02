@@ -40,6 +40,15 @@ def test_scenario_filter_matches_partial_stem_and_normalized_name() -> None:
     assert runner._scenario_matches_filter(scenario, "scope_honesty") is False
 
 
+def test_get_scenarios_exposes_json_scenario_id_for_filtering() -> None:
+    scenarios = runner.get_scenarios()
+
+    assert any(
+        runner._scenario_matches_filter(scenario, "context_regulatory_data_privacy_001")
+        for scenario in scenarios
+    )
+
+
 def test_main_passes_confidential_flag_to_llm_benchmark(monkeypatch) -> None:
     captured: dict[str, object] = {}
 

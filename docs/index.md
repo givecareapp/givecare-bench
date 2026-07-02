@@ -24,10 +24,10 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 
 ## Key facts
 
-- **Current public scan** covers 63 scenarios across 4 categories: safety, empathy, context, continuity (including contrast-set variants)
-- **50 checks across 9 dimensions** — 4 Safety lines + 5 Care qualities — with per-check verifiers calibrated against human labels
+- **Current checked-in public scan** covers 63 scenarios across 4 categories; the next live `--full` run covers all 64 public scenarios
+- **50 checks across 9 dimensions** — 4 Safety lines + 5 Care qualities — with binary `claim_ready` / `not_claim_ready` calibration status (currently 0 `claim_ready`)
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
-- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` (schema `safety-care/v1`) covers 11 models × 63 scenarios (Phase 2 roster); reports per-line Safety violation rates + directional Care distributions
+- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` (schema `safety-care/v1`) covers 11 models × 63 scenarios (Phase 2 source, non-strict); the current live roster is 15 models × 64 scenarios
 - Benchmark version **3.1.0** | Public harness: `llm/raw`
 
 ## Publication posture
@@ -35,7 +35,8 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 The public web-bench story is a model-by-model audit, not a stack rank. The
 release flow first documents the benchmark mechanics, then projects the scored
 outputs into per-model audit cards: per-line Safety violation rates (claim-
-bearing, with CIs) and directional Care distributions (provisional). There is no
+bearing only for `claim_ready` checks, currently empty) and directional Care
+distributions (`not_claim_ready`). There is no
 composite and no rank. The richer narrative surface — thematic blind spots,
 contrastive pairs, model signatures — is deferred to a re-authored Safety/Care
 artifact-v2 and is not in the lean `safety-care/v1` payload. See
@@ -75,9 +76,10 @@ uv run pytest benchmark/tests -q
     support paging. The YAML entry point also ships `invisiblebench --doctor`
     and `invisiblebench --list-runs --limit N --offset M`. `--out PATH` (on
     `runs`, `get`, and `leaderboard status`) writes the full payload to disk
-    and emits a `{path, byte_count, record_count}` summary. Live writes
-    (`leaderboard add/rebuild`, `archive`) refuse in non-interactive shells
-    unless `--yes` is passed.
+    and emits a `{path, byte_count, record_count}` summary. `leaderboard
+    add/rebuild` is retired for `safety-care/v1`; publish from an explicit
+    scored scan JSONL and web target via the fail-closed generate → strict QA → sync chain. Archive/clean
+    writes refuse in non-interactive shells unless `--yes` is passed.
 
 ## Documentation
 
@@ -87,7 +89,7 @@ uv run pytest benchmark/tests -q
 - [Methodology](methodology.md) — framework grounding, research mapping, regulatory landscape
 - [Publishing Audit](publishing-audit.md) — two-phase publication model and web-bench narrative contract
 - [Ontology](ontology.md) — **canonical** Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)
-- [Taxonomy](taxonomy.md) — thin reference: per-dimension check-count table + legacy A/B/C/D/F → Safety/Care map (the model itself is in ontology.md)
+- [Taxonomy](taxonomy.md) — thin reference: per-dimension check-count table (the model itself is in ontology.md)
 - [Key Findings](findings.md) — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard
 - [Verifier Validation](verifier-validation.md) — verifier manifest, the binary claim model, and the `claim_ready` bar
 - [Verifier Unit Tests](verifier-unit-tests.md) — authored AI-panel spec-conformance tests (development, **not** validation)

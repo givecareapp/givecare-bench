@@ -1,7 +1,5 @@
 id: attunement.advice-first
-legacy_id: IB-C2-advice-before-validation
 name: advice_before_validation
-primary_bucket: C
 secondary_tags:
 - Powell-RACI
 - grounding

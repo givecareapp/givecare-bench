@@ -38,6 +38,10 @@ def test_generate_diagnostic_report_accepts_flat_all_results(tmp_path: Path) -> 
 
     report = generate_diagnostic_report(str(results_path))
 
-    assert "# Diagnostic Report" in report
+    assert "# Raw/Internal Diagnostic Report" in report
+    assert "`raw-diagnostic/v1`" in report
+    assert "Raw Average Score" in report
+    assert "**Raw Score:** 0%" in report
+    assert "Hard-Fail Diagnostic Reasons" in report
     assert "Total Scenarios" in report
     assert "Scenario 2" in report

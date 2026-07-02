@@ -1,4 +1,4 @@
-"""Diagnostic report generator for InvisibleBench."""
+"""Raw/internal diagnostic report generator for runner result rows."""
 
 from __future__ import annotations
 
@@ -8,7 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from invisiblebench.models.results import is_result_success
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+    is_result_success,
+)
 from invisiblebench.utils.dimension_aliases import (
     DIMENSION_ALIASES,
     extract_numeric_dimension_value,
@@ -736,7 +741,7 @@ class DiagnosticReport:
     def generate(self, output_path: Path | None = None) -> str:
         results = self._get_results_list()
         if not results:
-            return "# Diagnostic Report\n\nNo results found."
+            return "# Raw/Internal Diagnostic Report\n\nNo results found."
 
         metadata = self.results_data.get("metadata", {}) if isinstance(self.results_data, dict) else {}
         failures = [r for r in results if self._is_failure(r)]
@@ -744,9 +749,12 @@ class DiagnosticReport:
         comparison = self._compare_with_previous(results)
 
         lines = [
-            "# Diagnostic Report",
+            "# Raw/Internal Diagnostic Report",
             "",
             f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"**Surface:** `{RAW_RESULT_SURFACE}`",
+            f"**Score model:** `{RAW_SCORE_MODEL}`",
+            f"**Public output:** `{PUBLIC_SCORE_MODEL}`",
             f"**Model:** {metadata.get('model', 'Unknown')}",
             f"**Provider:** {metadata.get('provider', 'Unknown')}",
             f"**Scenarios:** {len(results)} total, {len(failures)} failures",
@@ -767,7 +775,7 @@ class DiagnosticReport:
                 f"| Total Scenarios | {len(results)} |",
                 f"| Passed | {passed} |",
                 f"| Failed | {len(failures)} |",
-                f"| Average Score | {avg_score:.1f}% |",
+                f"| Raw Average Score | {avg_score:.1f}% |",
                 "",
             ]
         )
@@ -859,7 +867,7 @@ class DiagnosticReport:
                 [
                     "## Failure Details",
                     "",
-                    "Failures sorted by priority (hard fails first, then by score).",
+                    "Failures sorted by priority (raw/internal hard-fail diagnostic flags first, then raw score).",
                     "",
                 ]
             )
@@ -878,14 +886,14 @@ class DiagnosticReport:
                 lines.append(f"### {i}. {scenario_name}")
                 lines.append("")
                 lines.append(
-                    f"**Category:** {cat} | **Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}"
+                    f"**Category:** {cat} | **Raw Score:** {score:.0f}% | **Status:** {'HARD FAIL' if is_hard_fail else 'FAIL'}"
                 )
                 lines.append("")
 
                 # Hard fail reasons
                 hf_reasons = result.get("hard_fail_reasons", [])
                 if hf_reasons:
-                    lines.append("**Hard Fail Reasons:**")
+                    lines.append("**Hard-Fail Diagnostic Reasons:**")
                     for reason in hf_reasons:
                         lines.append(f"- {reason}")
                     lines.append("")
@@ -972,7 +980,10 @@ class DiagnosticReport:
 
         hard_fail_count = sum(1 for r in failures if r.get("hard_fail"))
         if hard_fail_count:
-            actions.append(f"4. **Address hard fails first** - {hard_fail_count} critical failures")
+            actions.append(
+                "4. **Review hard-fail diagnostic flags first** - "
+                f"{hard_fail_count} raw/internal critical flags"
+            )
 
         if not actions:
             actions.append(

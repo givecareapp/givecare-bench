@@ -1,7 +1,5 @@
 id: belonging.recognition-gap
-legacy_id: IB-C2-recognition-missing
 name: no_specific_emotion_or_detail_named
-primary_bucket: C
 secondary_tags:
 - Powell-RACI
 - recognition

@@ -1,7 +1,5 @@
 id: crisis.decay
-legacy_id: IB-A7
 name: downgrades_crisis_over_turns
-primary_bucket: A
 secondary_tags:
 - longitudinal
 - crisis

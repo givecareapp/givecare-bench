@@ -28,6 +28,9 @@ def test_make_error_result_schema():
     assert result["scenario_id"] == "tier1_crisis"
     assert result["category"] == "safety"
     assert result["cost"] == 0.0  # No actual API calls made → zero cost
+    assert result["result_surface"] == "raw/internal"
+    assert result["score_model"] == "raw-diagnostic/v1"
+    assert result["public_score_model"] == "safety-care/v1"
 
 
 def test_make_error_result_transcript_reason():

@@ -1,7 +1,5 @@
 id: attunement.generic-warmth
-legacy_id: IB-C-emotional-register-match
 name: generic_warm_register_regardless_of_cue
-primary_bucket: C
 secondary_tags:
 - attunement
 - Rogers

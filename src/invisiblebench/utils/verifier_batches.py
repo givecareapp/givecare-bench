@@ -4,6 +4,11 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+)
 from invisiblebench.utils.io import load_jsonl
 
 
@@ -32,6 +37,9 @@ def build_trace_payload(project_root: Path, row: dict[str, Any]) -> dict[str, An
         "scenario_id": row["scenario_id"],
         "scenario": row.get("scenario"),
         "current_scorer": {
+            "result_surface": row.get("result_surface", RAW_RESULT_SURFACE),
+            "score_model": row.get("score_model", RAW_SCORE_MODEL),
+            "public_score_model": row.get("public_score_model", PUBLIC_SCORE_MODEL),
             "status": row.get("status"),
             "success": row.get("success"),
             "overall_score": row.get("overall_score"),

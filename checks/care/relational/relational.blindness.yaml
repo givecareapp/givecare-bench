@@ -1,7 +1,5 @@
 id: relational.blindness
-legacy_id: IB-C2-relational-blindness
 name: relational_blindness
-primary_bucket: C
 secondary_tags:
 - Powell-RACI
 - belonging

@@ -1,7 +1,5 @@
 id: attunement.guilt-loop
-legacy_id: IB-C-guilt-loop-amplification
 name: amplifies_guilt_loop_without_interruption
-primary_bucket: C
 secondary_tags:
 - rumination
 - Mira-spec

@@ -183,7 +183,7 @@ def report_command(args) -> int:
 
 
 def diagnose_command(args) -> int:
-    """Generate diagnostic report from results JSON."""
+    """Generate a raw/internal diagnostic report from runner results."""
     console = Console() if RICH_AVAILABLE else None
 
     results_path = Path(args.results)
@@ -332,6 +332,7 @@ def _collect_runs() -> list[dict[str, Any]]:
                 "scenarios": r.get("scenarios", 0),
                 "size_mb": round(r.get("size_mb", 0.0), 2),
                 "has_results": r.get("has_results", False),
+                "artifact_state": r.get("artifact_state", "unknown"),
             }
         )
     return records
@@ -381,6 +382,7 @@ def _run_runs(
         table.add_column("Models")
         table.add_column("Scenarios", justify="right")
         table.add_column("Size", justify="right")
+        table.add_column("State")
         table.add_column("Results")
         for r in sliced:
             models = ", ".join(r["models"][:2])
@@ -392,6 +394,7 @@ def _run_runs(
                 models or "-",
                 str(r["scenarios"]) if r["scenarios"] else "-",
                 f"{r['size_mb']:.1f}MB",
+                r.get("artifact_state", "unknown"),
                 "yes" if r["has_results"] else "no",
             )
         console.print(table)
@@ -425,26 +428,28 @@ Examples:
   uv run bench --harness givecare --mode v2 -c safety -y
 
   # Diagnostics
-  uv run bench --provider givecare -y --diagnose  Run with diagnostic report
-  uv run bench diagnose results.json              Generate diagnostic from results
+  uv run bench --provider givecare -y --diagnose  Run with raw/internal diagnostic report
+  uv run bench diagnose results.json              Generate raw/internal diagnostic from results
 
   # Leaderboard
-  uv run bench leaderboard add results/run_*/all_results.json  Add model to leaderboard
-  uv run bench leaderboard rebuild    Rebuild from canonical files
+  uv run python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>
+                                      Fail-closed publish path
+  uv run bench leaderboard add ...    Retired for safety-care/v1
+  uv run bench leaderboard rebuild    Retired for safety-care/v1
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
   # Statistics & Reliability
-  uv run bench stats results/run_*/all_results.json       Score distributions + bootstrap CIs
-  uv run bench stats results/leaderboard_ready/ -o s.md   With markdown output
+  uv run bench stats results/run_*/all_results.json       Raw/internal diagnostic stats
+  uv run bench stats results/run_<id>/model_results/ -o s.md   Raw/internal markdown output
   uv run bench reliability results/run_20260211/           Scorer inter-rater reliability
   uv run bench annotate export results/run_20260211/       Export annotation kit
   uv run bench annotate import results/annotations/scores.csv  Compute agreement
 
   # Utilities
-  uv run bench report results.json    Regenerate HTML report
+  uv run bench report results.json    Regenerate raw/internal HTML report
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
-  uv run bench diff <base> <new>      Compare two benchmark runs
+  uv run bench diff <base> <new>      Raw/internal diagnostic run diff
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -475,7 +480,9 @@ Examples:
     )
 
     # Report subcommand
-    report_parser = subparsers.add_parser("report", help="Generate HTML report from results JSON")
+    report_parser = subparsers.add_parser(
+        "report", help="Generate raw/internal HTML report from runner results JSON"
+    )
     report_parser.add_argument("results", type=str, help="Path to all_results.json")
     report_parser.add_argument("--output", "-o", type=str, default=None, help="Output HTML path")
 
@@ -515,7 +522,9 @@ Examples:
     )
 
     # Diff subcommand
-    diff_parser = subparsers.add_parser("diff", help="Compare two benchmark runs")
+    diff_parser = subparsers.add_parser(
+        "diff", help="Raw/internal diagnostic diff between two benchmark runs"
+    )
     diff_parser.add_argument("base_run", type=str, help="Base run reference")
     diff_parser.add_argument("new_run", type=str, help="New run reference")
 
@@ -533,7 +542,7 @@ Examples:
     )
     explain_parser.add_argument(
         "--scan", type=str, default=None,
-        help="Scan per_run.jsonl to read (default: leaderboard metadata.source_artifact)",
+        help="Scan per_run.jsonl to read (default: leaderboard scan_metadata.source_artifact)",
     )
     explain_parser.add_argument(
         "--leaderboard", type=str, default=None,
@@ -546,12 +555,14 @@ Examples:
     )
     rescore_parser.add_argument("run_dir", type=str, help="Path to run directory with transcripts/")
     rescore_parser.add_argument(
-        "--update-leaderboard", action="store_true", help="Update leaderboard after rescoring"
+        "--update-leaderboard",
+        action="store_true",
+        help="Retired for safety-care/v1; use scripts/publish.sh on a scored scan JSONL",
     )
 
     # Diagnose subcommand
     diagnose_parser = subparsers.add_parser(
-        "diagnose", help="Generate diagnostic report from results"
+        "diagnose", help="Generate raw/internal diagnostic report from runner results"
     )
     diagnose_parser.add_argument("results", type=str, help="Path to results JSON")
     diagnose_parser.add_argument("--transcripts", "-t", type=str, help="Transcripts directory")
@@ -577,10 +588,13 @@ Examples:
     lb_parser.add_argument(
         "action",
         choices=["add", "rebuild", "status"],
-        help="add: add results to leaderboard, rebuild: regenerate from canonical files, status: health check",
+        help=(
+            "add/rebuild: retired for safety-care/v1; use python -m "
+            "invisiblebench.publish. status: health check"
+        ),
     )
     lb_parser.add_argument(
-        "results", nargs="?", default=None, help="Path to all_results.json (for 'add')"
+        "results", nargs="?", default=None, help="Retired add input; ignored with an error"
     )
     lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
     lb_parser.add_argument(
@@ -592,10 +606,11 @@ Examples:
 
     # Stats subcommand
     stats_parser = subparsers.add_parser(
-        "stats", help="Statistical analysis: distributions, bootstrap CIs, pairwise comparisons"
+        "stats",
+        help="Raw/internal diagnostic statistics: distributions, bootstrap CIs, pairwise comparisons",
     )
     stats_parser.add_argument(
-        "results", type=str, help="Path to all_results.json or leaderboard_ready/ directory"
+        "results", type=str, help="Path to all_results.json or raw model_results/ directory"
     )
     stats_parser.add_argument(
         "--output", "-o", type=str, default=None, help="Output markdown path"
@@ -707,7 +722,7 @@ Examples:
     parser.add_argument(
         "--update-leaderboard",
         action="store_true",
-        help="Update public leaderboard after run completes (llm/raw only)",
+        help="Retired for safety-care/v1; use scripts/publish.sh on a scored scan JSONL",
     )
     parser.add_argument(
         "--provider",
@@ -727,7 +742,7 @@ Examples:
     parser.add_argument(
         "--diagnose",
         action="store_true",
-        help="Generate diagnostic report after run (actionable fix suggestions)",
+        help="Generate raw/internal diagnostic report after run",
     )
     parser.add_argument(
         "--runs",
@@ -800,7 +815,7 @@ Examples:
         return diff_command(args)
 
     if args.command == "rescore":
-        print("ERROR: V2 rescore has been archived. Use V3 ModeEngine scoring:")
+        print("ERROR: V2 rescore has been archived. Use Safety/Care ModeEngine scoring:")
         print("  uv run python scripts/run_scan.py <run_dir>")
         return 1
 
@@ -855,7 +870,7 @@ Examples:
 
     if args.command == "reliability":
         print("ERROR: V2 reliability analysis has been archived.")
-        print("V3 uses per-mode K-repetition voting for reliability.")
+        print("Safety/Care scans use per-check K-repetition voting for reliability.")
         print("Run: uv run python scripts/run_scan.py --enable-llm <run_dir>")
         return 1
 

@@ -1,7 +1,5 @@
 id: identity.availability
-legacy_id: IB-F2-availability-promise
 name: promises_availability
-primary_bucket: F
 secondary_tags:
 - anti-dependency
 - APA

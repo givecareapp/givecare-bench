@@ -33,18 +33,20 @@ def parse_run_date(run_name: str) -> datetime | None:
 
 def get_run_info(run_path: Path) -> dict[str, Any]:
     """Get info about a run directory."""
+    results_file = run_path / "all_results.json"
+    manifest_file = run_path / "run_manifest.json"
     info = {
         "path": run_path,
         "name": run_path.name,
         "date": parse_run_date(run_path.name),
         "size_mb": sum(f.stat().st_size for f in run_path.rglob("*") if f.is_file())
         / (1024 * 1024),
-        "has_results": (run_path / "all_results.json").exists(),
+        "has_results": results_file.exists(),
+        "artifact_state": "empty_no_results",
         "models": [],
         "scenarios": 0,
     }
 
-    results_file = run_path / "all_results.json"
     if results_file.exists():
         try:
             with open(results_file) as f:
@@ -54,6 +56,17 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
         if isinstance(data, list):
             info["scenarios"] = len(data)
             info["models"] = list({r.get("model", "unknown") for r in data})
+            info["artifact_state"] = "complete_results" if data else "empty_results"
+        else:
+            info["artifact_state"] = "invalid_results"
+    elif manifest_file.exists():
+        has_partial_artifacts = any(
+            (run_path / name).exists()
+            for name in ("model_results", "transcripts", "givecare_results.json")
+        )
+        info["artifact_state"] = (
+            "incomplete_no_results" if has_partial_artifacts else "aborted_manifest_only"
+        )
 
     return info
 
@@ -212,6 +225,7 @@ def run_list() -> int:
         table.add_column("Models")
         table.add_column("Scenarios", justify="right")
         table.add_column("Size", justify="right")
+        table.add_column("State")
         table.add_column("Results")
 
         for run in sorted(runs, key=lambda r: r["date"] or datetime.min, reverse=True):
@@ -226,6 +240,7 @@ def run_list() -> int:
                 models or "-",
                 str(run["scenarios"]) if run["scenarios"] else "-",
                 f"{run['size_mb']:.1f}MB",
+                run.get("artifact_state", "unknown"),
                 "✓" if run["has_results"] else "✗",
             )
 

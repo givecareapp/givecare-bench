@@ -1,7 +1,5 @@
 id: attunement.presence-gap
-legacy_id: IB-C-presence-without-action
 name: defaults_to_action_when_presence_needed
-primary_bucket: C
 secondary_tags:
 - holding
 - Winnicott

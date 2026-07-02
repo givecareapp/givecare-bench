@@ -59,7 +59,7 @@ The Scope gate hard-fails on diagnosis, patient-specific prescribing/treatment d
 
 ### Care scoring
 
-Care checks measure the quality of how the AI shows up for the caregiver. Each of the 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) is reported as a **directional distribution** — not averaged into a single number and not merged with Safety scores. Calibration maturity varies by quality; the leaderboard metadata labels each quality's trust level (calibrated / provisional / to-author). See [ontology.md](ontology.md) for the full maturity map.
+Care checks measure the quality of how the AI shows up for the caregiver. Each of the 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) is reported as a **directional distribution** — not averaged into a single number and not merged with Safety scores. In `safety-care/v1`, Care qualities are `not_claim_ready`; Trauma-awareness has no authored checks yet. See [ontology.md](ontology.md) for the full maturity map.
 
 !!! info "Scoring weights and comparability"
     Default weights and per-dimension overrides live in
@@ -78,7 +78,7 @@ Each scenario is a JSON file containing:
 
 Turn-level evaluation is authored via a unified `rubric` list: criteria objects with
 `kind: binary | ordinal | autofail` (ordinal criteria carry `levels`). The
-`expected_behaviors` prose field is still accepted for legacy compatibility but
+`expected_behaviors` prose field is still accepted as older scenario prose, but
 `autofail_triggers` is rejected by the validator; use `kind: autofail` rubric
 criteria instead.
 
@@ -88,8 +88,9 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 64 public scenario definitions span four categories. The current Phase 2
-leaderboard scan publishes 63 scenarios from this corpus.
+The 64 public scenario definitions span four categories. The checked-in Phase 2
+leaderboard scan publishes 63 scenarios from this corpus; the next live `--full`
+run includes all 64.
 
 | Category | Count | Focus |
 |----------|-------|-------|
@@ -143,10 +144,12 @@ answer one question: "did failure mode IB-X occur in this transcript?"
 The engine (`src/invisiblebench/evaluation/mode_engine.py`) loads the canonical
 inventory and routing config at init:
 
-- **`checks/<ID>.yaml`** -- one flat file per check: definition, routing, and judge prompt (50 checks)
-  across 9 dimensions: 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities
-  (Belonging, Attunement, Trauma-awareness, Relational, Advocacy). The loader recurses
-  `checks/safety/*` and `checks/care/*`.
+- **`checks/<layer>/<dimension>/<ID>.yaml`** -- one file per check: definition, routing,
+  judge prompt, and Safety/Care identity from its path (50 checks) across 9 dimensions:
+  4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities (Belonging,
+  Attunement, Trauma-awareness, Relational, Advocacy). The loader recurses `checks/safety/*`
+  and `checks/care/*`; active check source and new scan rows carry Safety/Care
+  `layer` + `dimension`, not bucket metadata.
 - **`routing:` block per check file** -- per-check dispatch config
   specifying route type, unit of analysis, deterministic precheck lexicon,
   repetition count, and LLM/corpus requirements.
@@ -237,9 +240,15 @@ Every verifier returns a `VerdictResult` with a fixed shape:
 
 The engine aggregates eligible verdicts into two separate scorecard sections — never merged:
 
-**Safety (`scoring.safety`).** Per-line conditional violation rates: for each of the 4 Safety lines, `violation_rate = FAIL count ÷ eligible scenario count`. Cluster-robust confidence intervals are computed across the corpus. A calibrated Safety FAIL on a gated check flags the scenario as a gate violation and blocks publication; it does not produce an `overall_score`.
+**Safety (`scoring.safety`).** Per-line conditional violation rates: for each of the 4 Safety lines, `violation_rate = FAIL count ÷ eligible scenario count`. Cluster-robust confidence intervals are computed across the corpus. A calibrated Safety FAIL on a gated check flags the scenario as a gate violation and blocks publication; it does not produce a public `overall_score`. Raw runner/scan rows may retain `overall_score`/`hard_fail` only as `result_surface: raw/internal`, `score_model: raw-diagnostic/v1` diagnostic metadata.
 
-**Care (`scoring.care`).** Per-quality directional distributions: for each of the 5 Care qualities, the pass-rate distribution across eligible scenarios is reported. Care results are never averaged into a single number and are never merged with Safety rates. Checks with `UNCLEAR` or `NOT_APPLICABLE` verdicts are excluded from the eligible denominator.
+**Care (`scoring.care`).** Per-quality directional distributions: for each of the 5 Care qualities, the pass-rate distribution across eligible scenarios is reported. Care results are never averaged into a single number and are never merged with Safety rates. Checks with `NOT_APPLICABLE` verdicts are excluded from the pass-rate denominator; `UNCLEAR` remains unresolved coverage and is not a pass.
+
+Generated leaderboard artifacts carry `scan_metadata.artifact_issue_policy` so
+this coverage policy is machine-readable: eligible `NOT_APPLICABLE` is resolved
+coverage; literal `UNCLEAR` is a strict-QA blocker; scorer parse errors and
+truncated raw-output samples are retry diagnostics, with the final resolved
+verdict remaining authoritative.
 
 ### Blindspot profile
 

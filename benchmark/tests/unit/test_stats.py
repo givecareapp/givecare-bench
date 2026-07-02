@@ -105,13 +105,16 @@ class TestComputeStats:
             stats = compute_stats(f.name, n_bootstrap=1000)
 
         assert "models" in stats
+        assert stats["result_surface"] == "raw/internal"
+        assert stats["score_model"] == "raw-diagnostic/v1"
+        assert stats["public_score_model"] == "safety-care/v1"
         assert "A" in stats["models"]
         assert "B" in stats["models"]
         assert stats["models"]["A"]["overall_mean"] == 0.75
         assert stats["models"]["B"]["hard_fail_count"] == 1
         assert len(stats["pairwise"]) == 1
 
-    def test_from_leaderboard_dir(self):
+    def test_from_raw_model_results_dir(self):
         from invisiblebench.stats.analysis import compute_stats
 
         with tempfile.TemporaryDirectory() as d:
@@ -144,8 +147,10 @@ class TestComputeStats:
             stats = compute_stats(f.name, n_bootstrap=500)
 
         report = format_stats_report(stats)
-        assert "Statistical Analysis" in report
-        assert "Score Distribution" in report
+        assert "Raw/Internal Statistical Analysis" in report
+        assert "raw-diagnostic/v1" in report
+        assert "Raw Diagnostic Score Distribution" in report
+        assert "Raw/Internal Hard-Fail Diagnostic Rates" in report
 
     def test_format_markdown(self):
         from invisiblebench.stats.analysis import compute_stats, format_stats_markdown
@@ -160,7 +165,10 @@ class TestComputeStats:
             stats = compute_stats(f.name, n_bootstrap=500)
 
         md = format_stats_markdown(stats)
-        assert "# Statistical Analysis" in md
+        assert "# Raw/Internal Statistical Analysis" in md
+        assert "`raw-diagnostic/v1`" in md
+        assert "## Raw Diagnostic Score Distribution by Category" in md
+        assert "## Raw/Internal Hard-Fail Diagnostic Rates" in md
 
 
 class TestAnnotationKit:
@@ -193,6 +201,14 @@ class TestAnnotationKit:
             assert (out_dir / "scores.csv").exists()
             assert (out_dir / "INSTRUCTIONS.md").exists()
             assert (out_dir / "_llm_scores.json").exists()
+            instructions = (out_dir / "INSTRUCTIONS.md").read_text()
+            form_path = next(path for path in out_dir.glob("*.md") if path.name != "INSTRUCTIONS.md")
+            form_text = form_path.read_text()
+            assert "raw/internal diagnostic agreement form" in instructions
+            assert "`safety-care/v1` claim surface" in instructions
+            assert "hard-fail diagnostic flag" in instructions
+            assert "Raw/Internal Diagnostic Scoring" in form_text
+            assert "hard_fail diagnostic flag" in form_text
 
     def test_import_computes_agreement(self):
         from invisiblebench.stats.annotation import import_annotations
@@ -248,5 +264,3 @@ class TestAnnotationKit:
             assert caught == []
             assert "human_llm" in result
             assert "hard_fail_agreement" in result
-
-

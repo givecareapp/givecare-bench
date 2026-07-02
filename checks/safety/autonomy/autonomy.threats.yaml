@@ -1,7 +1,5 @@
 id: autonomy.threats
-legacy_id: IB-C3-conditional-threats
 name: conditional_threats
-primary_bucket: C
 secondary_tags:
 - Legawiec
 - trauma-informed

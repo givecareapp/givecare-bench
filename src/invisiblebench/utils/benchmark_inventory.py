@@ -114,6 +114,24 @@ def collect_public_scenario_paths(
     return _iter_json_files([scenarios_dir / category for category in categories])
 
 
+def scenario_id_for_path(path: Path) -> str:
+    """Return the runtime scenario id declared by a scenario JSON file."""
+    data = json.loads(path.read_text())
+    return str(data.get("id") or data.get("scenario_id") or path.stem)
+
+
+def collect_public_scenario_ids(
+    project_root: Path | None = None,
+    *,
+    category_filter: list[str] | None = None,
+) -> list[str]:
+    """Return sorted runtime ids for public benchmark scenarios."""
+    return sorted(
+        scenario_id_for_path(path)
+        for path in collect_public_scenario_paths(project_root, category_filter=category_filter)
+    )
+
+
 def collect_confidential_scenario_paths(project_root: Path | None = None) -> list[Path]:
     confidential_dir = require_private_confidential_dir(project_root)
     return _iter_json_files([confidential_dir])

@@ -41,4 +41,5 @@ def test_batch_report_counts_error_as_failure() -> None:
     # Success-rate is now the primary stat; both results score 0.9 (above 0.6 threshold)
     # so success-rate shows 2 pass, 0 fail. The error status still appears in failures section.
     assert "Success Rate" in html
+    assert "Raw Mean Score" in html
     assert "Error scenario" in html

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Run v3 mode_engine over existing transcripts — deterministic-only.
+"""Run the Safety/Care ModeEngine over existing transcripts.
 
-First runnable v3 benchmark. LLM-dependent modes return UNCLEAR/NOT_APPLICABLE
-since no api_client is wired in for this scan (by design, for a clean
-deterministic baseline). Regex/lexicon/corpus verifiers produce actionable
-signal on the existing transcript corpus.
+LLM-dependent modes return UNCLEAR/NOT_APPLICABLE unless --enable-llm wires an
+api_client. Regex/lexicon/corpus verifiers produce actionable signal on the
+existing transcript corpus without model calls.
 
 Output per run:
-  - `results/v3_scan/<timestamp>/per_run.jsonl` — one line per (model, scenario)
-  - `results/v3_scan/<timestamp>/blindspot_rates.json` — corpus-level rates
-  - `results/v3_scan/<timestamp>/summary.md` — human-readable summary
+  - `results/safety_care_scan/<timestamp>/per_run.jsonl` — one line per (model, scenario)
+  - `results/safety_care_scan/<timestamp>/blindspot_rates.json` — corpus-level rates
+  - `results/safety_care_scan/<timestamp>/summary.md` — human-readable summary
 
 Usage:
   uv run python scripts/run_scan.py <run_dir>
@@ -31,6 +30,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+DEFAULT_SCAN_OUTPUT_ROOT = REPO_ROOT / "results" / "safety_care_scan"
+
 from invisiblebench.api import ModelAPIClient  # noqa: E402
 from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngine,
@@ -41,7 +42,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("v3_scan")
+logger = logging.getLogger("safety_care_scan")
 
 from invisiblebench.judge import (  # noqa: E402
     apply_scan_profile,
@@ -80,7 +81,7 @@ def main() -> int:
     )
     ap.add_argument(
         "--output-root",
-        default=str(REPO_ROOT / "results" / "v3_scan"),
+        default=str(DEFAULT_SCAN_OUTPUT_ROOT),
         help="Where to write scan outputs",
     )
     ap.add_argument(

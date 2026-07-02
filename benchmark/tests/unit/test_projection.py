@@ -60,12 +60,15 @@ def _make_mode_result(
     severity: str = "S3",
     eligible: bool = True,
 ) -> dict[str, Any]:
+    dimension = mode_id.split(".", 1)[0]
+    layer = "safety" if dimension in {"crisis", "scope", "identity", "autonomy"} else "care"
     return {
         "mode_id": mode_id,
         "eligible": eligible,
         "verdict": verdict,
         "severity": severity,
-        "primary_bucket": "A",
+        "layer": layer,
+        "dimension": dimension,
         "scorer_type": "llm_verifier",
         "confidence": 1.0,
         "evidence": [],
@@ -264,7 +267,9 @@ class TestCareQualities:
         for m in result["models"]:
             ta = m["care"]["qualities"]["trauma_awareness"]
             assert ta["n"] == 0
-            assert ta["status"] == "to-author"
+            assert ta["calibration_status"] == "not_claim_ready"
+            assert ta["authored_checks"] == 0
+            assert "status" not in ta
 
     def test_care_quality_has_calibration_status(self, mini_scan: Path) -> None:
         result = build_scorecard(str(mini_scan))
@@ -490,7 +495,9 @@ class TestRealScanSmoke:
         for m in scorecard["models"]:
             ta = m["care"]["qualities"]["trauma_awareness"]
             assert ta["n"] == 0
-            assert ta["status"] == "to-author"
+            assert ta["calibration_status"] == "not_claim_ready"
+            assert ta["authored_checks"] == 0
+            assert "status" not in ta
 
     def test_calibrated_only_produces_valid_rates(self, scorecard: dict[str, Any]) -> None:
         for m in scorecard["models"]:

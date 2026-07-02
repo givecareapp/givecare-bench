@@ -137,8 +137,8 @@ InvisibleBench therefore holds temporal priority on the multi-turn + dyadic + ca
 
 - **Safety/Care ontology (2026-06-23).** The original benchmark used a letter-coded A/B/C/D/F/G taxonomy. The current instrument replaces it with a principled two-layer ontology — Safety (four prohibition lines: Crisis, Scope, Identity, Protection) and Care (four caregiver-centered qualities: Belonging, Attunement, Trauma-awareness, Relational) — with the Dyad dissolved into both layers rather than treated as a separate dimension. No composite score; the two layers are reported side by side.
 - **Calibration expansion.** The November 2025 instrument had a 60-trace gate calibration. V3.1 (2026-04-30) expanded to 53 checks across 564 human-annotated cards, rewrote four verifier prompts after adjudication, and added Tier-1 κ on individual Safety checks.
-- **Leaderboard.** Phase 2 covers 11 models × 63 scenarios with cluster-robust standard errors, 95% CIs, and `rank_upper_bound` (paired tests on per-scenario hard-fail; clusters = contrast families). The November 2025 release had no leaderboard.
-- **The longitudinal finding.** The Phase 2 data establishes, to our knowledge, the first human-calibrated longitudinal record of relational safety improving across a model generation: the 2025 fleet's failure modes (artificial intimacy, false continuity, identity misrepresentation) are largely absent in the 2026 roster on the same calibrated checks.
+- **Scorecard.** Phase 2 covers 11 models × 63 scenarios with cluster-robust standard errors and 95% CIs on the Safety/Care surfaces. The November 2025 release had no Safety/Care scorecard.
+- **The longitudinal finding.** The Phase 2 data establishes, to our knowledge, the first human-labeled development-evidence longitudinal record of relational safety improving across a model generation: the 2025 fleet's failure modes (artificial intimacy, false continuity, identity misrepresentation) are largely absent in the 2026 roster on the same historical check definitions.
 
 ---
 
@@ -148,9 +148,9 @@ InvisibleBench therefore holds temporal priority on the multi-turn + dyadic + ca
 
 1. **The Safety/Care ontology** — principled two-layer structure with claim/directional separation, replacing the letter-coded composite.
 2. **Calibration provenance** — Tier-1 κ on 5 Safety checks; disclosed limits on the compliance gate gold set; Care layer quality and epistemic status.
-3. **The longitudinal finding** — first human-calibrated cross-generation comparison, showing which 2025 failure modes have resolved and which 2026 failure modes have emerged.
+3. **The longitudinal finding** — first human-labeled development-evidence cross-generation comparison, showing which 2025 failure modes have resolved and which 2026 failure modes have emerged.
 4. **The dyad, operationalized** — Protection (Safety) and Relational (Care) dissolve the "Dyad" into a tractable dual-layer structure instead of a stand-alone dimension.
-5. **Leaderboard under statistical discipline** — cluster-robust SEs, CIs, `rank_upper_bound`; the point is jagged profiles and blind spots, not a stack rank.
+5. **Scorecard under statistical discipline** — cluster-robust SEs and CIs; the point is jagged profiles and blind spots, not a stack rank.
 
 *[Stub: methods and results section — to be written after the v1 Safety/Care instrument build is complete (Tasks #47–#55). Will cover: reclassification of 53 checks into the new ontology; violation-rate scoring for Safety; Belonging calibration (the v1 distinctiveness proof); Phase 2 results under the new schema; comparison to v1 rates.]*
 

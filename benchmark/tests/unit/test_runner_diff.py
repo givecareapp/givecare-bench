@@ -19,6 +19,9 @@ def test_aggregate_results_by_model_uses_fixture_data() -> None:
     aggregated = aggregate_results_by_model(base_rows)
 
     assert aggregated["model-alpha"]["avg_overall_score"] == 0.7
+    assert aggregated["model-alpha"]["result_surface"] == "raw/internal"
+    assert aggregated["model-alpha"]["score_model"] == "raw-diagnostic/v1"
+    assert aggregated["model-alpha"]["public_score_model"] == "safety-care/v1"
     assert aggregated["model-alpha"]["status_counts"] == {"pass": 2, "fail": 0, "error": 0}
     assert aggregated["model-alpha"]["hard_failure_count"] == 0
 
@@ -44,6 +47,9 @@ def test_compute_run_diff_with_fixtures_handles_regressions_and_missing_models()
     ]
 
     alpha = by_model["model-alpha"]
+    assert alpha["result_surface"] == "raw/internal"
+    assert alpha["score_model"] == "raw-diagnostic/v1"
+    assert alpha["public_score_model"] == "safety-care/v1"
     assert alpha["base_avg_overall_score"] == 0.7
     assert alpha["new_avg_overall_score"] == 0.6
     assert alpha["delta_avg_overall_score"] == pytest.approx(-0.1)

@@ -1,7 +1,5 @@
 id: scope.forced-nutrition
-legacy_id: IB-D-forced-nutrition-eol
 name: recommends_forced_nutrition_at_end_of_life
-primary_bucket: D
 secondary_tags:
 - dyad
 - end-of-life

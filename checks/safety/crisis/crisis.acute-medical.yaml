@@ -1,7 +1,5 @@
 id: crisis.acute-medical
-legacy_id: IB-A5
 name: misses_acute_medical_routing_need
-primary_bucket: A
 secondary_tags:
 - medical
 - emergency

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from delivery.sync_web_bench import project_leaderboard
+from delivery.sync_web_bench import compute_sync_status, project_leaderboard
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -69,12 +69,16 @@ def _minimal_source(
                             "directional": True,
                             "calibration_status": "not_claim_ready",
                         },
-                        "trauma_awareness": {"n": 0, "status": "to-author"},
+                        "trauma_awareness": {
+                            "n": 0,
+                            "directional": True,
+                            "calibration_status": "not_claim_ready",
+                            "authored_checks": 0,
+                        },
                     },
                 },
             }
         ],
-        "_deprecated_v3": {"overall_leaderboard": [], "models": []},
     }
 
 
@@ -82,13 +86,7 @@ def test_project_leaderboard_emits_lean_shape() -> None:
     """Projected web payload must be the lean {schema, notes, scan_metadata, models} contract."""
     projected = project_leaderboard(_minimal_source())
 
-    # Top-level keys: public fields only — no deprecated or private keys
-    assert "schema" in projected
-    assert "notes" in projected
-    assert "scan_metadata" in projected
-    assert "models" in projected
-    assert "_deprecated_v3" not in projected
-
+    assert set(projected) == {"schema", "notes", "scan_metadata", "models"}
     assert projected["schema"] == "safety-care/v1"
     assert len(projected["models"]) == 1
 
@@ -100,19 +98,62 @@ def test_project_leaderboard_emits_lean_shape() -> None:
     assert "belonging" in model["care"]["qualities"]
 
 
-def test_project_leaderboard_strips_deprecated_v3() -> None:
-    """_deprecated_v3 must never appear in the public output."""
-    projected = project_leaderboard(_minimal_source())
-    assert "_deprecated_v3" not in projected
+def test_project_leaderboard_rejects_deprecated_v3() -> None:
+    """_deprecated_v3 must fail before public projection."""
+    source = _minimal_source()
+    source["_deprecated_v3"] = {"overall_leaderboard": []}
+
+    with pytest.raises(ValueError, match="_deprecated_v3"):
+        project_leaderboard(source)
 
 
-def test_project_leaderboard_strips_all_private_keys() -> None:
-    """No retired composite fields appear in the projection."""
-    projected = project_leaderboard(_minimal_source())
-    assert "findings" not in projected
-    assert "themes" not in projected
-    assert "overall_score" not in projected
-    assert "dimensions" not in projected
+def test_project_leaderboard_rejects_unknown_top_level_keys() -> None:
+    """No retired composite or narrative fields can silently pass through."""
+    source = _minimal_source()
+    source["overall_score"] = 0.9
+
+    with pytest.raises(ValueError, match="overall_score"):
+        project_leaderboard(source)
+
+
+def test_project_leaderboard_rejects_nested_retired_score_keys() -> None:
+    """Retired ranking/composite keys cannot hide inside model payloads."""
+    source = _minimal_source()
+    source["models"][0]["rank"] = 1
+    source["models"][0]["safety"]["overall_score"] = 0.9
+
+    with pytest.raises(ValueError, match=r"models\[0\]"):
+        project_leaderboard(source)
+
+
+def test_project_leaderboard_rejects_raw_internal_keys() -> None:
+    """Raw runner/verdict diagnostic fields cannot leak into public payloads."""
+    source = _minimal_source()
+    source["models"][0]["hard_fail"] = True
+    source["models"][0]["care"]["qualities"]["belonging"]["primary_bucket"] = "C"
+
+    with pytest.raises(ValueError, match="hard_fail"):
+        project_leaderboard(source)
+
+
+def test_project_leaderboard_rejects_retired_care_status_key() -> None:
+    """Care qualities use binary calibration_status, not old status labels."""
+    source = _minimal_source()
+    trauma = source["models"][0]["care"]["qualities"]["trauma_awareness"]
+    del trauma["calibration_status"]
+    trauma["status"] = "to-author"
+
+    with pytest.raises(ValueError, match="retired status key"):
+        project_leaderboard(source)
+
+
+def test_project_leaderboard_rejects_invalid_care_claim_status() -> None:
+    """Care claim status must stay in the binary claim_ready/not_claim_ready vocabulary."""
+    source = _minimal_source()
+    source["models"][0]["care"]["qualities"]["belonging"]["calibration_status"] = "validated"
+
+    with pytest.raises(ValueError, match="invalid calibration_status"):
+        project_leaderboard(source)
 
 
 def test_project_leaderboard_care_qualities_present() -> None:
@@ -135,7 +176,7 @@ def test_project_leaderboard_safety_lines_present() -> None:
 def test_project_leaderboard_rejects_wrong_schema() -> None:
     """project_leaderboard must reject non-safety-care/v1 sources."""
     with pytest.raises(ValueError, match="safety-care/v1"):
-        project_leaderboard({"schema": "v3-legacy", "overall_leaderboard": []})
+        project_leaderboard({"schema": "retired-v3", "overall_leaderboard": []})
 
 
 def test_project_leaderboard_rejects_missing_models() -> None:
@@ -180,3 +221,16 @@ def test_checked_in_leaderboard_passes_lean_contract() -> None:
         assert "care" in model, f"Model {model.get('model')!r} missing care"
         assert "lines" in model["safety"], f"Model {model.get('model')!r} safety missing lines"
         assert "qualities" in model["care"], f"Model {model.get('model')!r} care missing qualities"
+
+
+def test_checked_in_web_projection_matches_canonical_leaderboard() -> None:
+    """The checked-in local web projection must not drift from leaderboard.json."""
+    status = compute_sync_status(
+        PROJECT_ROOT / "data/leaderboard/leaderboard.json",
+        PROJECT_ROOT / "data/leaderboard/leaderboard_web.json",
+    )
+
+    assert status.in_sync, (
+        "data/leaderboard/leaderboard_web.json is stale; regenerate it from "
+        "data/leaderboard/leaderboard.json with delivery/sync_web_bench.py"
+    )

@@ -1,7 +1,9 @@
-"""Statistical analysis for benchmark results.
+"""Raw/internal statistical analysis for benchmark result rows.
 
 Computes score distributions, bootstrap confidence intervals,
 hard-fail rates, success rates, and pairwise model comparisons.
+These analytics use the raw diagnostic ``overall_score`` field and are not
+the public safety-care/v1 leaderboard surface.
 """
 
 from __future__ import annotations
@@ -13,7 +15,12 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench.models._types import ResultRow
-from invisiblebench.models.results import is_result_success
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+    is_result_success,
+)
 from invisiblebench.utils.dimension_aliases import (
     extract_numeric_dimension_value,
     normalize_category,
@@ -205,7 +212,7 @@ def load_results(results_path: str) -> list[dict[str, Any]]:
 
     Handles both formats:
     - List of scenario results (all_results.json)
-    - Dict with 'scenarios' key (leaderboard_ready/)
+    - Dict with 'scenarios' key (raw per-model result JSON)
     """
     with open(results_path) as f:
         data = json.load(f)
@@ -224,8 +231,16 @@ def _get_category(result: dict[str, Any]) -> str:
     return normalize_category(result.get("category"))
 
 
+def _raw_score_contract() -> dict[str, str]:
+    return {
+        "result_surface": RAW_RESULT_SURFACE,
+        "score_model": RAW_SCORE_MODEL,
+        "public_score_model": PUBLIC_SCORE_MODEL,
+    }
+
+
 def compute_stats(results_path: str, n_bootstrap: int = 10000) -> dict[str, Any]:
-    """Compute per-model stats, pairwise comparisons, and category distributions."""
+    """Compute raw/internal per-model stats, pairwise comparisons, and categories."""
     path = Path(results_path)
 
     all_results: list[dict[str, Any]] = []
@@ -387,6 +402,7 @@ def compute_stats(results_path: str, n_bootstrap: int = 10000) -> dict[str, Any]
                 )
 
     return {
+        **_raw_score_contract(),
         "models": model_stats,
         "pairwise": pairwise,
         "warnings": warnings,
@@ -406,7 +422,12 @@ def format_stats_report(stats: dict[str, Any]) -> str:
         return "No results to analyze."
 
     # Header
-    lines.append(f"Statistical Analysis ({len(models)} models)")
+    lines.append(f"Raw/Internal Statistical Analysis ({len(models)} models)")
+    lines.append(
+        f"Surface: {stats.get('result_surface', RAW_RESULT_SURFACE)}; "
+        f"score_model: {stats.get('score_model', RAW_SCORE_MODEL)}; "
+        f"public output remains {stats.get('public_score_model', PUBLIC_SCORE_MODEL)}."
+    )
 
     # Show judge model if available
     judge_models = {ms.get("judge_model") for ms in models.values() if ms.get("judge_model")}
@@ -414,8 +435,8 @@ def format_stats_report(stats: dict[str, Any]) -> str:
         lines.append(f"Judge: {', '.join(sorted(judge_models))}")
     lines.append("")
 
-    # Score Distribution by Category
-    lines.append("Score Distribution by Category")
+    # Raw diagnostic score distribution by category.
+    lines.append("Raw Diagnostic Score Distribution by Category")
     all_cats = set()
     for ms in models.values():
         all_cats.update(ms.get("categories", {}).keys())
@@ -425,7 +446,7 @@ def format_stats_report(stats: dict[str, Any]) -> str:
     header = f"{'Model':<24}"
     for cat in cats:
         header += f" {cat[:8]:>10}"
-    header += f" {'Overall':>18}"
+    header += f" {'Raw Overall':>18}"
     lines.append(header)
     lines.append("─" * len(header))
 
@@ -443,9 +464,9 @@ def format_stats_report(stats: dict[str, Any]) -> str:
         row += f"  {ms['overall_mean']:.2f} [{ci[0]:.2f}, {ci[1]:.2f}]"
         lines.append(row)
 
-    # Hard-Fail Rates
+    # Raw/internal hard-fail diagnostic rates.
     lines.append("")
-    lines.append("Hard-Fail Rates")
+    lines.append("Raw/Internal Hard-Fail Diagnostic Rates")
     header = f"{'Model':<24}"
     for cat in cats:
         header += f" {cat[:8]:>10}"
@@ -525,7 +546,13 @@ def format_stats_markdown(stats: dict[str, Any]) -> str:
     pairwise = stats.get("pairwise", [])
     warnings = stats.get("warnings", [])
 
-    lines.append(f"# Statistical Analysis ({len(models)} models)")
+    lines.append(f"# Raw/Internal Statistical Analysis ({len(models)} models)")
+    lines.append("")
+    lines.append(
+        f"Surface: `{stats.get('result_surface', RAW_RESULT_SURFACE)}`; "
+        f"score model: `{stats.get('score_model', RAW_SCORE_MODEL)}`; "
+        f"public output remains `{stats.get('public_score_model', PUBLIC_SCORE_MODEL)}`."
+    )
     lines.append("")
 
     # Show judge model if available
@@ -534,8 +561,8 @@ def format_stats_markdown(stats: dict[str, Any]) -> str:
         lines.append(f"**Judge model:** {', '.join(sorted(judge_models))}")
         lines.append("")
 
-    # Score Distribution
-    lines.append("## Score Distribution by Category")
+    # Raw diagnostic score distribution.
+    lines.append("## Raw Diagnostic Score Distribution by Category")
     lines.append("")
 
     all_cats = set()
@@ -548,7 +575,7 @@ def format_stats_markdown(stats: dict[str, Any]) -> str:
     for cat in cats:
         header += f" {cat.capitalize()} |"
         sep += "--------|"
-    header += " Overall (95% CI) |"
+    header += " Raw Overall (95% CI) |"
     sep += "-----------------|"
     lines.append(header)
     lines.append(sep)
@@ -566,9 +593,9 @@ def format_stats_markdown(stats: dict[str, Any]) -> str:
         row += f" **{ms['overall_mean']:.2f}** [{ci[0]:.2f}, {ci[1]:.2f}] |"
         lines.append(row)
 
-    # Hard-Fail Rates
+    # Raw/internal hard-fail diagnostic rates.
     lines.append("")
-    lines.append("## Hard-Fail Rates")
+    lines.append("## Raw/Internal Hard-Fail Diagnostic Rates")
     lines.append("")
     header = "| Model |"
     sep = "|-------|"

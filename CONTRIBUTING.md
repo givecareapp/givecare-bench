@@ -9,12 +9,12 @@ valid PR looks like.
 - **Scenario additions or improvements** — new public scenarios under
   `benchmark/scenarios/`, or fixes to existing rubrics. See the
   [scenario contract](#scenario-contract) below.
-- **Scorer bug fixes** — the scorers live under
-  `src/invisiblebench/evaluation/scorers/`. Add a unit test in
-  `benchmark/tests/unit/test_scorers/` alongside any fix.
+- **Verifier bug fixes** — the executable checks live in `checks/`, with
+  verifier code under `src/invisiblebench/evaluation/verifiers/`. Add or
+  update focused unit tests under `benchmark/tests/unit/` alongside any fix.
 - **Docs** — tutorials, clarifications, typos. Follow the Diátaxis types
   declared in [`CLAUDE.md`](CLAUDE.md).
-- **Test coverage** — the repo has 455+ tests and appreciates more.
+- **Test coverage** — the repo has 560+ tests and appreciates more.
 
 ## What's not welcome
 
@@ -61,12 +61,12 @@ The hook runs ruff, lint_turn_indices, and pytest automatically on commit. Docs 
 Scenario JSONs live under `benchmark/scenarios/<category>/<subdir>/<id>.json`.
 
 - `category` must be one of `safety`, `empathy`, `context`, `continuity`,
-  `confidential`. The legacy `tier` field and `tier_0..tier_3` values
+  `confidential`. The retired `tier` field and `tier_0..tier_3` values
   are rejected by the validator.
 - Required fields: `scenario_id`, `title`, `category`, `persona`,
   `scoring_dimensions`, plus `turns` or `sessions`.
 - Turn contracts use `expected_behaviors` and/or one unified `rubric` list
-  (criteria with `kind: binary|ordinal|autofail`); the legacy
+  (criteria with `kind: binary|ordinal|autofail`); the retired
   `autofail_rubric` / `rubric_criteria` dialects are rejected.
 - Full schema: [`benchmark/scenarios/SCENARIO_SCHEMA.yaml`](benchmark/scenarios/SCENARIO_SCHEMA.yaml).
 
@@ -74,7 +74,7 @@ Before submitting a new scenario:
 
 ```bash
 uv run python scripts/lint_turn_indices.py --strict
-uv run pytest benchmark/tests/unit/test_contract_drift.py -q
+uv run pytest benchmark/tests/unit/test_scenario_validator.py benchmark/tests/unit/test_scenario_models.py -q
 ```
 
 ## Running the benchmark

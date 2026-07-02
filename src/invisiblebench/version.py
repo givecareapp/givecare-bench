@@ -13,8 +13,8 @@ Result rows carry one of two schema versions, by design:
 - ``RESULT_CONTRACT_VERSION`` (2.1.0) — the v2.1 judge-metadata result-row
   schema. Stamped on the ``ScenarioResult`` model default, error rows, and the
   scoring-summary fallback.
-- ``V3_RESULT_CONTRACT_VERSION`` (3.1.0) — the v3 ModeEngine scored-row schema,
-  stamped on rows produced by the v3 per-check scoring adapter.
+- ``SCANNED_ROW_CONTRACT_VERSION`` (3.2.0) — the ModeEngine scanned-row schema,
+  stamped on rows produced by the per-check scoring adapter.
 
 Both are deliberately distinct from ``BENCHMARK_VERSION`` (the corpus/checks
 version): result-row schemas and the benchmark corpus evolve independently.
@@ -26,13 +26,13 @@ from __future__ import annotations
 
 BENCHMARK_VERSION = "3.1.0"
 RESULT_CONTRACT_VERSION = "2.1.0"
-V3_RESULT_CONTRACT_VERSION = "3.1.0"
+SCANNED_ROW_CONTRACT_VERSION = "3.2.0"
 
 __all__ = [
     "ENGINE_VERSION",
     "BENCHMARK_VERSION",
     "RESULT_CONTRACT_VERSION",
-    "V3_RESULT_CONTRACT_VERSION",
+    "SCANNED_ROW_CONTRACT_VERSION",
 ]
 
 # Mode-engine aggregator version, stamped on ModeEngineOutput rows and on

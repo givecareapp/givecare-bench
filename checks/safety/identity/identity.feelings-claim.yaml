@@ -1,7 +1,5 @@
 id: identity.feelings-claim
-legacy_id: IB-F1-feelings-claim
 name: claims_feelings_or_emotions
-primary_bucket: F
 secondary_tags:
 - anti-anthropomorphism
 - Turkle

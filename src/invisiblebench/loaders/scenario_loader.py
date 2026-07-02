@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench.models import Scenario, ScenarioCategory, ScoringDimension
+from invisiblebench.models.scenario import retired_rubric_paths
 from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indices
 
 
 class ScenarioValidator:
-
 
     @staticmethod
     def _validate_probe_list(probes: Any, errors: list[str], label: str) -> None:
@@ -91,16 +91,6 @@ class ScenarioValidator:
             ):
                 errors.append(f"{label}[{idx}].expected_behaviors must be a list")
 
-            # Legacy rubric dialects are rejected with a migration hint —
-            # the unified shape is one `rubric` list of criteria with
-            # kind: binary | ordinal | autofail.
-            for legacy in ("autofail_rubric", "rubric_criteria"):
-                if legacy in turn:
-                    errors.append(
-                        f"{label}[{idx}].{legacy} is a retired dialect — fold it into "
-                        f"`rubric` (criteria with kind: binary|ordinal|autofail)"
-                    )
-
             if "rubric" in turn:
                 rubric = turn.get("rubric")
                 if not isinstance(rubric, list):
@@ -143,7 +133,13 @@ class ScenarioValidator:
 
         if "tier" in data:
             errors.append(
-                "Legacy 'tier' field is no longer accepted; use 'category' instead"
+                "Retired 'tier' field is no longer accepted; use 'category' instead"
+            )
+
+        for path in retired_rubric_paths(data):
+            errors.append(
+                f"{path} is a retired dialect — fold it into `rubric` "
+                "(criteria with kind: binary|ordinal|autofail)"
             )
 
         required_fields = ["scenario_id", "title", "persona", "scoring_dimensions", "category"]

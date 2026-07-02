@@ -1,4 +1,4 @@
-"""HTML and JSON report generators."""
+"""Raw/internal HTML and JSON report generators for runner result rows."""
 
 from __future__ import annotations
 
@@ -7,7 +7,12 @@ import json
 import logging
 from typing import Any
 
-from invisiblebench.models.results import is_result_success
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+    is_result_success,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +40,7 @@ class ReportGenerator:
             "<!DOCTYPE html>",
             "<html>",
             "<head>",
-            "    <title>InvisibleBench Report</title>",
+            "    <title>InvisibleBench Raw/Internal Report</title>",
             "    <style>",
             "        body { font-family: Arial, sans-serif; margin: 40px; }",
             "        h1 { color: #333; }",
@@ -56,7 +61,10 @@ class ReportGenerator:
             "    </style>",
             "</head>",
             "<body>",
-            "    <h1>InvisibleBench Scoring Report</h1>",
+            "    <h1>InvisibleBench Raw/Internal Scoring Report</h1>",
+            f"    <p><strong>Surface:</strong> {RAW_RESULT_SURFACE} &bull; "
+            f"<strong>Score model:</strong> {RAW_SCORE_MODEL} &bull; "
+            f"<strong>Public output:</strong> {PUBLIC_SCORE_MODEL}</p>",
         ]
 
         judge_model = results.get("judge_model", "N/A")
@@ -91,7 +99,7 @@ class ReportGenerator:
         score_class = "fail" if overall_score < 0.5 else "pass"
         html_parts.extend(
             [
-                "    <h2>Overall Score</h2>",
+                "    <h2>Raw Diagnostic Score</h2>",
                 f"    <div class='score {score_class}'>{overall_score:.2f}</div>",
             ]
         )
@@ -182,7 +190,7 @@ class ReportGenerator:
                     "        <thead>",
                     "            <tr>",
                     "                <th>Iteration</th>",
-                    "                <th>Overall Score</th>",
+                    "                <th>Raw Diagnostic Score</th>",
                     "                <th>Hard Fail</th>",
                     "            </tr>",
                     "        </thead>",
@@ -306,7 +314,7 @@ class ReportGenerator:
             "<!DOCTYPE html>",
             "<html>",
             "<head>",
-            "    <title>InvisibleBench Batch Report</title>",
+            "    <title>InvisibleBench Raw/Internal Batch Report</title>",
             "    <style>",
             "        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f5f5f5; }",
             "        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
@@ -339,7 +347,7 @@ class ReportGenerator:
             "</head>",
             "<body>",
             "    <div class='container'>",
-            "        <h1>InvisibleBench Report</h1>",
+            "        <h1>InvisibleBench Raw/Internal Report</h1>",
             f"        <div class='subtitle'>{html.escape(metadata.get('model', 'Unknown Model'))} &bull; {html.escape(metadata.get('mode', 'benchmark').upper())}"
             + (
                 f" &bull; Judge: {html.escape(batch_judge_model)}"
@@ -352,13 +360,18 @@ class ReportGenerator:
                 else ""
             )
             + "</div>",
+            "        <p class='subtitle'>"
+            f"Surface: {RAW_RESULT_SURFACE} &bull; "
+            f"Score model: {RAW_SCORE_MODEL} &bull; "
+            f"Public output: {PUBLIC_SCORE_MODEL}"
+            "</p>",
             "",
             "        <!-- Primary metric: Success Rate -->",
             "        <div class='stats'>",
             f"            <div class='stat'><div class='stat-value' style='color:{sr_color}'>{success_rate_pct:.0f}%</div><div class='stat-label'>Success Rate</div></div>",
             f"            <div class='stat'><div class='stat-value pass'>{sr_total['pass']}</div><div class='stat-label'>Pass</div></div>",
             f"            <div class='stat'><div class='stat-value fail'>{sr_total['fail']}</div><div class='stat-label'>Fail</div></div>",
-            f"            <div class='stat'><div class='stat-value'>{avg_score*100:.0f}%</div><div class='stat-label'>Mean Score</div></div>",
+            f"            <div class='stat'><div class='stat-value'>{avg_score*100:.0f}%</div><div class='stat-label'>Raw Mean Score</div></div>",
             f"            <div class='stat'><div class='stat-value'>${total_cost:.3f}</div><div class='stat-label'>Cost</div></div>",
             "        </div>",
         ]
@@ -413,7 +426,7 @@ class ReportGenerator:
             html_parts.extend(
                 [
                     "        <div class='category-section'>",
-                    f"            <div class='category-header'>{html.escape(str(cat).capitalize())} &mdash; {cat_avg*100:.0f}%</div>",
+                    f"            <div class='category-header'>{html.escape(str(cat).capitalize())} &mdash; raw mean {cat_avg*100:.0f}%</div>",
                 ]
             )
             for r in cat_results:
@@ -425,7 +438,7 @@ class ReportGenerator:
                     f"            <div class='scenario-row'>"
                     f"<span class='scenario-status {status_class}'>{status}</span>"
                     f"<span class='scenario-name'>{html.escape(r.get('scenario', 'Unknown'))}</span>"
-                    f"<span class='scenario-score'>{score*100:.0f}%</span>"
+                    f"<span class='scenario-score'>raw {score*100:.0f}%</span>"
                     f"</div>"
                 )
             html_parts.append("        </div>")
@@ -441,7 +454,7 @@ class ReportGenerator:
                 score_pct = int(f.get("overall_score", 0) * 100)
                 html_parts.append(
                     f"            <div class='failure-item'>"
-                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', '?')))}) &mdash; {score_pct}%</div>"
+                    f"<div class='failure-title'>{html.escape(f.get('scenario', 'Unknown'))} ({html.escape(str(f.get('category', '?')))}) &mdash; raw {score_pct}%</div>"
                 )
 
                 for reason in f.get("hard_fail_reasons", []):

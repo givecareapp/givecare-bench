@@ -5,7 +5,13 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Sequence
 
-CURRENT_BOARD_LEADERBOARD_DIR = Path("results/leaderboard_ready")
+from invisiblebench.models.results import (
+    PUBLIC_SCORE_MODEL,
+    RAW_RESULT_SURFACE,
+    RAW_SCORE_MODEL,
+)
+
+CURRENT_BOARD_RAW_MODEL_RESULTS_DIR = Path("results/raw_model_results")
 CURRENT_BOARD_TRANSCRIPT_DIRS = (
     Path("results/run_20260330_130332/transcripts"),
     Path("results/partial_runs/run_20260330_033649_up_to_deepseek/transcripts"),
@@ -65,8 +71,8 @@ def _resolve_detail_path(project_root: Path, raw_path: str | None) -> Path | Non
     return None
 
 
-def _iter_leaderboard_documents(leaderboard_dir: Path) -> Iterable[tuple[Path, dict[str, Any]]]:
-    for path in sorted(leaderboard_dir.glob("*.json")):
+def _iter_raw_model_documents(raw_results_dir: Path) -> Iterable[tuple[Path, dict[str, Any]]]:
+    for path in sorted(raw_results_dir.glob("*.json")):
         with open(path) as fh:
             yield path, json.load(fh)
 
@@ -74,19 +80,19 @@ def _iter_leaderboard_documents(leaderboard_dir: Path) -> Iterable[tuple[Path, d
 def build_verifier_corpus_manifest(
     project_root: Path,
     *,
-    leaderboard_dir: Path = CURRENT_BOARD_LEADERBOARD_DIR,
+    raw_results_dir: Path = CURRENT_BOARD_RAW_MODEL_RESULTS_DIR,
     transcript_dirs: Sequence[Path] = CURRENT_BOARD_TRANSCRIPT_DIRS,
 ) -> list[dict[str, Any]]:
-    """Build a manifest over the current 15-model leaderboard corpus.
+    """Build a manifest over raw/internal per-model result documents.
 
-    The manifest unifies leaderboard rows, transcript locations, and resolved detail
-    artifact paths without copying any raw result files.
+    The manifest unifies raw model-result rows, transcript locations, and
+    resolved detail artifact paths without copying any raw result files.
     """
 
     manifest: list[dict[str, Any]] = []
-    leaderboard_root = project_root / leaderboard_dir
+    raw_results_root = project_root / raw_results_dir
 
-    for leaderboard_file, doc in _iter_leaderboard_documents(leaderboard_root):
+    for raw_results_file, doc in _iter_raw_model_documents(raw_results_root):
         model = doc.get("model", doc.get("model_name", "unknown"))
         model_id = doc.get("model_id", model)
         provider = doc.get("provider")
@@ -110,6 +116,9 @@ def build_verifier_corpus_manifest(
                 "scenario": scenario.get("scenario"),
                 "scenario_id": scenario.get("scenario_id"),
                 "category": scenario.get("category", "unknown"),
+                "result_surface": scenario.get("result_surface", RAW_RESULT_SURFACE),
+                "score_model": scenario.get("score_model", RAW_SCORE_MODEL),
+                "public_score_model": scenario.get("public_score_model", PUBLIC_SCORE_MODEL),
                 "overall_score": scenario.get("overall_score", 0.0),
                 "status": scenario.get("status", "error"),
                 "success": scenario.get("success"),
@@ -117,7 +126,7 @@ def build_verifier_corpus_manifest(
                 "hard_fail_reasons": scenario.get("hard_fail_reasons", []),
                 "judge_model": scenario.get("judge_model"),
                 "contract_version": scenario.get("contract_version"),
-                "leaderboard_file": _relative_to_project(leaderboard_file, project_root),
+                "raw_results_file": _relative_to_project(raw_results_file, project_root),
                 "transcript_path": (
                     _relative_to_project(transcript_path, project_root)
                     if transcript_path is not None
@@ -194,5 +203,3 @@ def build_verifier_corpus_summary(manifest: Sequence[dict[str, Any]]) -> dict[st
         "hard_fails": sum(int(bool(row.get("hard_fail"))) for row in manifest),
         "models_by_name": model_rows,
     }
-
-

@@ -60,10 +60,11 @@ def test_llm_verifier_adaptive_repetitions_stop_after_clear_pass(tmp_path) -> No
         transcript=[{"turn": 1, "role": "assistant", "content": "I can help."}],
         scenario={"scenario_id": "s1"},
         mode_config={
-            "id": "IB-X",
+            "id": "attunement.test-check",
             "scope": "universal",
             "severity": "S2",
-            "primary_bucket": "C",
+            "layer": "care",
+            "dimension": "attunement",
             "scorer": {"verifier_prompt": "prompt.txt"},
         },
         routing_config={"repetitions": 3, "adaptive_repetitions": True},

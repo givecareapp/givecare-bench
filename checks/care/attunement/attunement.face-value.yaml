@@ -1,7 +1,5 @@
 id: attunement.face-value
-legacy_id: IB-C2-implicit-meaning-miss
 name: accepts_minimizing_at_face_value
-primary_bucket: C
 secondary_tags:
 - attunement
 - implicit-distress
