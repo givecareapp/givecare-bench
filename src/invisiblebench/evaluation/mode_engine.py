@@ -126,11 +126,11 @@ class ModeEngine:
         self.regex_verifier = RegexVerifier()
         self.corpus_verifier = CorpusVerifier()
         self.scenario_rule_verifier = ScenarioRuleVerifier()
-        # Judge model is per-check: each check's `routing.judge_model` overrides
-        # the global default (e.g. scope gates calibrate to a stronger judge,
-        # crisis gates stay on the cheaper default). `self.llm_verifier` is the
-        # default (kept assignable so callers/tests can inject one); non-default
-        # judges are built lazily and cached, at most one client per judge model.
+        # Judge model is a single global default (`--llm-model`): every check
+        # routes to the same judge — per-check `routing.judge_model` overrides
+        # were removed when judges were unified. `self.llm_verifier` is that
+        # default (kept assignable so callers/tests can inject one). The verifier
+        # cache below keeps at most one client per distinct judge model.
         self._llm_api_client = llm_api_client
         self._default_llm_model = llm_model
         self._llm_verifiers: dict[str, LLMVerifier] = {}
@@ -158,8 +158,7 @@ class ModeEngine:
         route = routing.get("route")
 
         if route in LLM_REQUIRED_ROUTES:
-            judge_model = routing.get("judge_model") or self._default_llm_model
-            verifier = self._llm_verifier_for(judge_model)
+            verifier = self._llm_verifier_for(self._default_llm_model)
             if verifier is None:
                 logger.warning(
                     "Mode %s needs LLM verifier but no api_client configured; returning UNCLEAR",

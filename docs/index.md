@@ -78,7 +78,7 @@ uv run pytest benchmark/tests -q
     `runs`, `get`, and `leaderboard status`) writes the full payload to disk
     and emits a `{path, byte_count, record_count}` summary. `leaderboard
     add/rebuild` is retired for `safety-care/v1`; publish from an explicit
-    scored scan JSONL and web target via the fail-closed generate → strict QA → sync chain. Archive/clean
+    scored scan JSONL and web target via the fail-closed generate → strict QA → sync chain. Archive
     writes refuse in non-interactive shells unless `--yes` is passed.
 
 ## Documentation

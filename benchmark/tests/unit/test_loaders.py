@@ -30,7 +30,7 @@ class TestRuleLoader:
 
     def test_load_base_rules(self):
         """Should load base.yaml and return complete rule dictionary."""
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "base.yaml"))
@@ -60,7 +60,7 @@ class TestRuleLoader:
 
     def test_load_rules_with_inheritance(self):
         """Should resolve 'extends: base.yaml' and merge NY-specific overrides."""
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "ny.yaml"))
@@ -79,7 +79,7 @@ class TestRuleLoader:
 
     def test_inheritance_merges_nested_dicts(self):
         """Should deep merge nested dictionaries, not replace them."""
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         loader = RuleLoader()
         rules = loader.load(str(RULES_DIR / "ny.yaml"))
@@ -91,7 +91,7 @@ class TestRuleLoader:
 
     def test_load_nonexistent_file_raises_error(self):
         """Should raise FileNotFoundError for missing rule files."""
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         loader = RuleLoader()
         with pytest.raises(FileNotFoundError):
@@ -102,7 +102,7 @@ class TestRuleLoader:
         # Create temporary circular reference fixtures
         import tempfile
 
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         with tempfile.TemporaryDirectory() as tmpdir:
             a_path = Path(tmpdir) / "a.yaml"
@@ -121,7 +121,7 @@ class TestRuleLoader:
 
         import yaml
 
-        from invisiblebench.evaluation.loaders import RuleLoader
+        from invisiblebench.loaders.yaml_loader import RuleLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content: [unclosed")
@@ -140,7 +140,7 @@ class TestScenarioLoader:
 
     def test_load_scenario_basic_structure(self):
         """Should load scenario and return structured dictionary."""
-        from invisiblebench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.loaders.yaml_loader import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -154,7 +154,7 @@ class TestScenarioLoader:
 
     def test_scenario_turns_structure(self):
         """Should parse turns with correct structure."""
-        from invisiblebench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.loaders.yaml_loader import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -171,7 +171,7 @@ class TestScenarioLoader:
 
     def test_scenario_probes_structure(self):
         """Should parse probes with expected fields."""
-        from invisiblebench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.loaders.yaml_loader import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -187,7 +187,7 @@ class TestScenarioLoader:
 
     def test_scenario_compliance_gates(self):
         """Should parse scoring dimensions and autofail triggers."""
-        from invisiblebench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.loaders.yaml_loader import ScenarioLoader
 
         loader = ScenarioLoader()
         scenario = loader.load(str(SCENARIO_PATH))
@@ -203,7 +203,7 @@ class TestScenarioLoader:
 
     def test_turn_index_normalization_adds_t(self, tmp_path):
         """Should map turn_number to t for scoring."""
-        from invisiblebench.evaluation.loaders import ScenarioLoader
+        from invisiblebench.loaders.yaml_loader import ScenarioLoader
 
         scenario_path = tmp_path / "scenario.json"
         scenario_path.write_text(
@@ -265,7 +265,7 @@ class TestTranscriptLoader:
 
     def test_load_transcript_basic(self):
         """Should load JSONL transcript into structured format."""
-        from invisiblebench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.loaders.yaml_loader import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -281,7 +281,7 @@ class TestTranscriptLoader:
 
     def test_transcript_alternating_roles(self):
         """Should have alternating user/assistant messages."""
-        from invisiblebench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.loaders.yaml_loader import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -293,7 +293,7 @@ class TestTranscriptLoader:
 
     def test_transcript_preserves_turn_numbers(self):
         """Should preserve turn numbers from JSONL."""
-        from invisiblebench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.loaders.yaml_loader import TranscriptLoader
 
         loader = TranscriptLoader()
         transcript = loader.load(str(TRANSCRIPT_PATH))
@@ -314,7 +314,7 @@ class TestTranscriptLoader:
         """Should return empty list for empty JSONL file."""
         import tempfile
 
-        from invisiblebench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.loaders.yaml_loader import TranscriptLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             empty_path = f.name
@@ -330,7 +330,7 @@ class TestTranscriptLoader:
         """Should raise error for malformed JSONL."""
         import tempfile
 
-        from invisiblebench.evaluation.loaders import TranscriptLoader
+        from invisiblebench.loaders.yaml_loader import TranscriptLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write("{invalid json}\n")

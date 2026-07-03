@@ -4,7 +4,7 @@ Tests for jurisdiction-specific rule files.
 
 import pytest
 
-from invisiblebench.evaluation.loaders import RuleLoader
+from invisiblebench.loaders.yaml_loader import RuleLoader
 
 
 class TestJurisdictionRules:

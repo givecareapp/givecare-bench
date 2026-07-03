@@ -293,7 +293,6 @@ def run_givecare_eval(
     output_dir: Path | None = None,
     adapter_name: str = "givecare-v2",
     harness_mode: str = "v2",
-    update_leaderboard: bool = False,
 ) -> int:
     """Run the GiveCare V2 system harness against the benchmark core."""
     root = get_project_root()
@@ -501,13 +500,6 @@ def run_givecare_eval(
 
     _print_audit_summary(audit)
     print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
-
-    if update_leaderboard:
-        print(
-            "--update-leaderboard is retired for safety-care/v1; no leaderboard was written. "
-            "Use scripts/publish.sh <scan>/per_run.jsonl <web-target> after strict QA."
-        )
-        return 1
 
     return 0 if failed == 0 else 1
 
@@ -780,15 +772,6 @@ def _aggregate_multi_run_results(run_results: list[dict[str, Any]]) -> dict[str,
     return final
 
 
-def _update_leaderboard(results_path: Path) -> None:
-    """Retired: run artifacts no longer write the public leaderboard directly."""
-    raise RuntimeError(
-        f"--update-leaderboard is retired for safety-care/v1; {results_path} was not "
-        "published. Use scripts/publish.sh <scan>/per_run.jsonl <web-target> "
-        "or python -m invisiblebench.publish with a scored scan JSONL."
-    )
-
-
 def _write_run_audit(
     source: Path,
     *,
@@ -946,7 +929,6 @@ def run_benchmark(
     parallel: int | None = None,
     scenario_parallel: int = 1,
     detailed_output: bool = False,
-    update_leaderboard: bool = False,
     generate_diagnostic: bool = False,
     runs: int = 1,
     include_confidential: bool = False,
@@ -2097,16 +2079,5 @@ def run_benchmark(
         console.print(f"[dim]{output_dir / 'run_audit.json'}[/dim]")
     else:
         print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
-
-    if update_leaderboard:
-        try:
-            _update_leaderboard(results_path)
-        except RuntimeError as e:
-            msg = str(e)
-            if RICH_AVAILABLE and console:
-                console.print(f"[yellow]{msg}[/yellow]")
-            else:
-                print(msg)
-            return 1
 
     return 0

@@ -23,7 +23,6 @@ from invisiblebench.cli._console import make_console
 from invisiblebench.cli.agent_commands import (
     _run_doctor,
     _run_get,
-    _run_leaderboard_mutation_json,
     _run_leaderboard_status_json,
 )
 from invisiblebench.cli.diff import (
@@ -69,29 +68,8 @@ Console = make_console
 
 load_dotenv()
 
-# Token estimates per category for cost calculation
-# Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
-# conversation history growth, and scorer LLM calls
-TOKEN_ESTIMATES = {
-    1: {"input": 5500, "output": 1400},  # 3-5 turns
-    2: {"input": 14000, "output": 3300},  # 8-12 turns
-    3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
-}
-
-# Scorer LLM costs (per scenario) — not included in model-under-test tokens
-# Scorer calls: safety (1 ref + 3 sampled), compliance (3), regard (LLM/cache-aware),
-# coordination (mostly deterministic, adds false_refusal signal), plus memory (deterministic).
-# Avg estimate: ~4-6 LLM calls/scenario
-SCORER_MODEL_COSTS = {
-    "flash_lite": {"cost_per_m_input": 0.10, "cost_per_m_output": 0.40},  # gemini-2.5-flash-lite
-    "flash": {"cost_per_m_input": 0.30, "cost_per_m_output": 2.50},       # gemini-2.5-flash (safety ref)
-}
-# Per-scenario scorer token estimates (all scorers combined)
-SCORER_CALLS_PER_SCENARIO = 8       # avg uncached LLM calls (flash-lite)
-SCORER_REF_CALLS_PER_SCENARIO = 1   # safety reference call (flash)
-SCORER_TOKENS_PER_CALL = {"input": 4000, "output": 800}
-
-# SYSTEM_PROMPT is imported from invisiblebench.cli.transcript
+# Cost-estimate constants (TOKEN_ESTIMATES, SCORER_*) live in
+# invisiblebench.cli.run_command, which owns estimate_cost().
 
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
@@ -434,14 +412,11 @@ Examples:
   # Leaderboard
   uv run python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>
                                       Fail-closed publish path
-  uv run bench leaderboard add ...    Retired for safety-care/v1
-  uv run bench leaderboard rebuild    Retired for safety-care/v1
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
-  # Statistics & Reliability
+  # Statistics
   uv run bench stats results/run_*/all_results.json       Raw/internal diagnostic stats
   uv run bench stats results/run_<id>/model_results/ -o s.md   Raw/internal markdown output
-  uv run bench reliability results/run_20260211/           Scorer inter-rater reliability
   uv run bench annotate export results/run_20260211/       Export annotation kit
   uv run bench annotate import results/annotations/scores.csv  Compute agreement
 
@@ -461,7 +436,7 @@ Examples:
         action="store_const",
         const="json",
         default=None,
-        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard[add|rebuild|status]/get)",
+        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard[status]/get)",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -500,15 +475,6 @@ Examples:
     archive_parser.add_argument(
         "--dry-run", action="store_true", help="Show what would be archived"
     )
-
-    # Clean subcommand (alias for archive)
-    clean_parser = subparsers.add_parser("clean", help="Clean up old runs (alias for archive)")
-    clean_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
-    clean_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
-    clean_parser.add_argument(
-        "--list", action="store_true", dest="list_runs", help="List runs (dry run)"
-    )
-    clean_parser.add_argument("--dry-run", action="store_true", help="Show what would be archived")
 
     # Runs subcommand (list runs)
     runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
@@ -549,17 +515,6 @@ Examples:
         help="Leaderboard JSON used to resolve the default scan artifact",
     )
 
-    # Rescore subcommand
-    rescore_parser = subparsers.add_parser(
-        "rescore", help="Rescore existing transcripts without re-running models"
-    )
-    rescore_parser.add_argument("run_dir", type=str, help="Path to run directory with transcripts/")
-    rescore_parser.add_argument(
-        "--update-leaderboard",
-        action="store_true",
-        help="Retired for safety-care/v1; use scripts/publish.sh on a scored scan JSONL",
-    )
-
     # Diagnose subcommand
     diagnose_parser = subparsers.add_parser(
         "diagnose", help="Generate raw/internal diagnostic report from runner results"
@@ -583,18 +538,12 @@ Examples:
 
     # Leaderboard subcommand
     lb_parser = subparsers.add_parser(
-        "leaderboard", help="Manage leaderboard (add, rebuild, status)"
+        "leaderboard", help="Show leaderboard health status"
     )
     lb_parser.add_argument(
         "action",
-        choices=["add", "rebuild", "status"],
-        help=(
-            "add/rebuild: retired for safety-care/v1; use python -m "
-            "invisiblebench.publish. status: health check"
-        ),
-    )
-    lb_parser.add_argument(
-        "results", nargs="?", default=None, help="Retired add input; ignored with an error"
+        choices=["status"],
+        help="status: leaderboard health check (alias for 'bench health')",
     )
     lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
     lb_parser.add_argument(
@@ -617,23 +566,6 @@ Examples:
     )
     stats_parser.add_argument(
         "--bootstrap", type=int, default=10000, help="Number of bootstrap samples (default: 10000)"
-    )
-
-    # Reliability subcommand
-    rel_parser = subparsers.add_parser(
-        "reliability", help="Scorer inter-rater reliability (runs LLM scorers N times)"
-    )
-    rel_parser.add_argument(
-        "results", type=str, help="Path to results directory with transcripts"
-    )
-    rel_parser.add_argument(
-        "--runs", "-n", type=int, default=5, help="Number of scoring runs (default: 5)"
-    )
-    rel_parser.add_argument(
-        "--sample", type=int, default=10, help="Number of transcripts to sample (default: 10)"
-    )
-    rel_parser.add_argument(
-        "--output", "-o", type=str, default=None, help="Output directory for raw data"
     )
 
     # Annotate subcommand
@@ -736,11 +668,6 @@ Examples:
         help="Select models by name or number: 'deepseek', 'gpt-5.2,claude', '1-4', '7', '1,deepseek'",
     )
     parser.add_argument(
-        "--update-leaderboard",
-        action="store_true",
-        help="Retired for safety-care/v1; use scripts/publish.sh on a scored scan JSONL",
-    )
-    parser.add_argument(
         "--provider",
         type=str,
         choices=["openrouter", "givecare"],
@@ -798,7 +725,7 @@ Examples:
 
         return run_health(verbose=args.verbose)
 
-    if args.command in ("archive", "clean"):
+    if args.command == "archive":
         from invisiblebench.cli.archive import run_archive, run_list
 
         if args.list_runs:
@@ -830,33 +757,15 @@ Examples:
     if args.command == "diff":
         return diff_command(args)
 
-    if args.command == "rescore":
-        print("ERROR: V2 rescore has been archived. Use Safety/Care ModeEngine scoring:")
-        print("  uv run python scripts/run_scan.py <run_dir>")
-        return 1
-
     if args.command == "diagnose":
         return diagnose_command(args)
 
     if args.command == "leaderboard":
-        if args.action in ("add", "rebuild"):
-            confirm_or_abort(
-                f"leaderboard {args.action}"
-                + (f" {args.results}" if args.results else ""),
-                yes=bool(getattr(args, "yes", False)),
-            )
         if json_output:
-            if args.action == "status":
-                return _run_leaderboard_status_json(out_path=getattr(args, "out", None))
-            if args.action in ("add", "rebuild"):
-                return _run_leaderboard_mutation_json(args.action, args.results)
+            return _run_leaderboard_status_json(out_path=getattr(args, "out", None))
         from invisiblebench.cli.leaderboard import run_leaderboard
 
-        return run_leaderboard(
-            action=args.action,
-            results_path=args.results,
-            verbose=args.verbose,
-        )
+        return run_leaderboard(action=args.action, verbose=args.verbose)
 
     if args.command == "stats":
         from invisiblebench.stats.analysis import (
@@ -883,12 +792,6 @@ Examples:
             else:
                 print(f"wrote: {args.output}", file=sys.stderr)
         return 0
-
-    if args.command == "reliability":
-        print("ERROR: V2 reliability analysis has been archived.")
-        print("Safety/Care scans use per-check K-repetition voting for reliability.")
-        print("Run: uv run python scripts/run_scan.py --enable-llm <run_dir>")
-        return 1
 
     if args.command == "annotate":
         if args.action == "export":
@@ -956,7 +859,6 @@ Examples:
             output_dir=args.output,
             adapter_name=adapter_name(harness_name, harness_mode),
             harness_mode=harness_mode,
-            update_leaderboard=args.update_leaderboard,
         )
 
     # Default: raw LLM benchmark via llm/raw harness
@@ -1017,7 +919,6 @@ Examples:
         parallel=args.parallel,
         scenario_parallel=args.scenario_parallel,
         detailed_output=args.detailed,
-        update_leaderboard=args.update_leaderboard,
         generate_diagnostic=args.diagnose,
         runs=getattr(args, "runs", 1),
         include_confidential=args.confidential,

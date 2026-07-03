@@ -3,8 +3,7 @@
 These cover the agent-friendly CLI guarantees added in the April 2026 pass:
 - `--out PATH` writes the full payload to disk and emits a summary envelope
 - Disk-write failures emit `{status:"error", ...}` rather than raising
-- Retired leaderboard writes stay blocked; archive live writes refuse in
-  non-interactive shells unless `--yes` is passed
+- Archive live writes refuse in non-interactive shells unless `--yes` is passed
 - Read commands never prompt
 - `archive` without `--before` or `--keep` exits 2
 
@@ -225,68 +224,6 @@ def force_noninteractive(monkeypatch):
     from invisiblebench import _agent_cli
 
     monkeypatch.setattr(_agent_cli, "is_tty", lambda: False)
-
-
-def test_leaderboard_add_refuses_noninteractive(force_noninteractive, capsys):
-    with pytest.raises(SystemExit) as exc:
-        runner_mod.main(["leaderboard", "add", "results/fake_does_not_exist"])
-    assert exc.value.code == 2
-    assert "non-interactive shell" in capsys.readouterr().err
-
-
-def test_leaderboard_rebuild_refuses_noninteractive(force_noninteractive, capsys):
-    with pytest.raises(SystemExit) as exc:
-        runner_mod.main(["leaderboard", "rebuild"])
-    assert exc.value.code == 2
-
-
-def test_leaderboard_add_is_retired_with_yes(capsys):
-    rc = runner_mod.main(["--yes", "leaderboard", "add", "results/fake_does_not_exist"])
-
-    assert rc == 1
-    assert "retired for safety-care/v1" in capsys.readouterr().out
-
-
-def test_leaderboard_rebuild_is_retired_with_yes(capsys):
-    rc = runner_mod.main(["--yes", "leaderboard", "rebuild"])
-
-    assert rc == 1
-    assert "retired for safety-care/v1" in capsys.readouterr().out
-
-
-def test_json_leaderboard_add_retired_error_omits_stale_payload(capsys):
-    rc = runner_mod.main(
-        ["--json", "--yes", "leaderboard", "add", "results/fake_does_not_exist"]
-    )
-
-    assert rc == 1
-    captured = capsys.readouterr()
-    stdout = captured.out.strip().splitlines()
-    assert len(stdout) == 1
-    envelope = json.loads(stdout[0])
-    assert envelope["status"] == "error"
-    assert envelope["command"] == "leaderboard"
-    assert envelope["data"]["action"] == "add"
-    assert envelope["data"]["exit_code"] == 1
-    assert "retired for safety-care/v1" in envelope["data"]["message"]
-    assert "leaderboard" not in envelope["data"]
-
-
-def test_run_update_leaderboard_propagates_retired_path_failure(tmp_path: Path) -> None:
-    from invisiblebench.cli.run_command import _update_leaderboard
-
-    with pytest.raises(RuntimeError, match="--update-leaderboard is retired for safety-care/v1"):
-        _update_leaderboard(tmp_path / "all_results.json")
-
-
-def test_run_update_leaderboard_help_is_marked_retired(capsys) -> None:
-    with pytest.raises(SystemExit) as exc:
-        runner_mod.main(["--help"])
-
-    assert exc.value.code == 0
-    output = capsys.readouterr().out
-    assert "--update-leaderboard" in output
-    assert "Retired for safety-care/v1" in output
 
 
 def test_benchmark_dry_run_does_not_create_run_artifacts(tmp_path: Path) -> None:
