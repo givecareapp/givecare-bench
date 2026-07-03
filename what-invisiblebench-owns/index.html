@@ -459,6 +459,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#maturity-axis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -868,6 +879,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#maturity-axis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -929,17 +951,67 @@
 <h3 id="2-three-party-dyad">2. Three-party dyad<a class="headerlink" href="#2-three-party-dyad" title="Permanent link">&para;</a></h3>
 <p>Caregiving is structurally triadic: the caregiver, the care recipient, and the relationship between them. InvisibleBench models this explicitly. A recipient-harm act is categorised under Autonomy (Safety); an erasure of the caregiver–recipient bond is categorised under Relational (Care). A model that appropriately supports the caregiver while subtly undermining their relationship with the recipient fails a distinct check. No competing benchmark encodes a three-party structure. A 2024 PMC systematic review identifies the dyad as the field's unaddressed gap; InvisibleBench addresses it directly.</p>
 <h3 id="3-human-calibrated-safety-gate-with-blocking-fail">3. Human-κ-calibrated safety gate with blocking FAIL<a class="headerlink" href="#3-human-calibrated-safety-gate-with-blocking-fail" title="Permanent link">&para;</a></h3>
-<p>InvisibleBench's hard-fail layer is calibrated against human annotation (κ=1.0 on the 60-trace resolved gold set; 564 human-annotated cards at v3.1, κ by check in docs/verifier-validation.md). A gate-bucket FAIL is a <strong>public claim</strong> — it blocks publication if it lacks calibration evidence. The benchmark refuses to publish a hard-fail reason from an uncalibrated check.</p>
+<p>InvisibleBench's hard-fail layer is built as a <strong>fail-closed, calibration-gated</strong> gate: a Safety gate FAIL becomes a public claim <em>only</em> when its check is <code>claim_ready</code> (verifier cleared independent human-labeled natural-case calibration), and <code>qa_leaderboard.py</code> blocks publication of any hard-fail reason from a check that is not. The mechanism is the moat; the claims are gated behind it. (As of 2026-06-30, <strong>0 checks are <code>claim_ready</code></strong> — the gate exists and is empty, with development evidence disclosed but no public hard-fail claim yet.)</p>
 <p>Competing work uses LLM judges (RubRIX: GPT-5-nano, 88.67% raw agreement, no holdout; no κ reported) or clinician review without a blocking gate. Adjacent medical benchmarks compute reliability only on screening instruments, not on safety verdicts. No competitor has a mechanism that prevents an uncalibrated check from driving a published claim.</p>
 <h3 id="why-rubrix-lacks-all-three-moats">Why RubRIX lacks all three moats<a class="headerlink" href="#why-rubrix-lacks-all-three-moats" title="Permanent link">&para;</a></h3>
 <p>RubRIX is the closest competitor (Goel et al., OnCARE Lab, UIUC). It evaluates 20K real Reddit and ALZConnected posts with 29 binary questions across 5 risk dimensions using a Tronto ethics-of-care framework. The methodology is solid and the scale is impressive. It lacks: multi-turn structure (it evaluates posts, not conversations), a three-party dyad encoding (it models user+AI, not caregiver+recipient+relationship), and a calibrated hard-fail gate (risk flags are remediable, not blocking; no κ is reported). RubRIX submitted to arXiv in January 2026, approximately two months after InvisibleBench's original paper (November 2025). InvisibleBench has both temporal priority and a more advanced current instrument.</p>
 <hr />
+<h2 id="related-work">Related work<a class="headerlink" href="#related-work" title="Permanent link">&para;</a></h2>
+<p>InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Overlap</th>
+<th>Why it is not the same</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RubRIX</strong></td>
+<td>Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance).</td>
+<td>Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety checks, per-mode verifier calibration, or identity-boundary drift detection.</td>
+</tr>
+<tr>
+<td><strong>ADRD-Bench</strong></td>
+<td>Caregiving-adjacent, disease-specific. Includes ADRD Caregiving QA with 149 caregiving questions grounded in the Aging Brain Care program.</td>
+<td>Knowledge/QA/clinical-reasoning assessment for Alzheimer's and dementia. Does not target relational safety failures, caregiver-to-recipient harm intent, artificial intimacy, scope deception, or boundary drift.</td>
+</tr>
+<tr>
+<td><strong>MindEval</strong></td>
+<td>Multi-turn mental-health support benchmark with simulated patients and automatic LLM evaluation, built with licensed clinical psychologists.</td>
+<td>Unit of analysis is therapy-like patient-clinician interaction and therapeutic competence. InvisibleBench's unit is caregiver-care-recipient-AI interaction, where the model can harm the caregiver, the recipient, or the relationship between them.</td>
+</tr>
+<tr>
+<td><strong>MHSafeEval</strong></td>
+<td>Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms.</td>
+<td>Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axes are caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring.</td>
+</tr>
+<tr>
+<td><strong>HealthBench</strong></td>
+<td>Large-scale health benchmark with 5,000 multi-turn conversations and physician-written rubrics.</td>
+<td>Broad healthcare capability/safety evaluation. Does not specialize in family caregiving, caregiver burden, dyadic harm, artificial intimacy, or companion compliance boundaries.</td>
+</tr>
+<tr>
+<td><strong>MedHELM</strong></td>
+<td>Broad medical LLM evaluation framework with clinician-validated taxonomy.</td>
+<td>Evaluates medical tasks. Not a caregiver-support relational safety benchmark.</td>
+</tr>
+<tr>
+<td><strong>Mental Health Crisis Benchmarks</strong></td>
+<td>Crisis detection, safe response generation, human-vs-LLM evaluator agreement.</td>
+<td>Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope.</td>
+</tr>
+</tbody>
+</table>
+<p>InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver–care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (per-line violation rates before quality distributions), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).</p>
+<hr />
 <h2 id="maturity-axis">Maturity axis<a class="headerlink" href="#maturity-axis" title="Permanent link">&para;</a></h2>
 <p>Not every dimension is ready to carry claims. Each is labelled:</p>
 <ul>
-<li><strong>Calibrated</strong> — human-κ validated; per-mode gold sets; verdict is a citable claim. (Example: Crisis A1, A8; Identity F3.)</li>
-<li><strong>Provisional</strong> — human-reviewed judge prompts with card-level evidence but no formal κ run; reported directionally, labeled. (Example: Scope, most Care qualities.)</li>
-<li><strong>To-author</strong> — named gap in the taxonomy; placeholder directory exists; no checks authored yet. (Example: Trauma-awareness, Autonomy.)</li>
+<li><strong><code>claim_ready</code></strong> — verifier meets the threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set; the verdict is a citable claim. <strong>Currently none.</strong></li>
+<li><strong><code>not_claim_ready</code></strong> — everything else. May carry disclosed development evidence (an authored AI-panel unit test on the 19 hard-fail checks, or layer-level <code>development_only</code>), reported directionally — but no public claim. (All 50 checks today.)</li>
+<li><strong>Named gaps</strong> — e.g. Trauma-awareness: a dimension with a placeholder directory and no checks authored yet.</li>
 </ul>
 <p>The comprehensive nine-dimension structure ships now. Calibration fills in over releases. The maturity label on each check prevents premature claim-making without hiding the gap — a reader can see exactly which cells are ready and which are not.</p>
 <hr />

@@ -349,6 +349,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#claim-posture-canonical-safety-carev1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claim posture (canonical · safety-care/v1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#safety-4-lines-partition-which-hard-line-did-it-cross" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -735,6 +746,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#claim-posture-canonical-safety-carev1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claim posture (canonical · safety-care/v1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#safety-4-lines-partition-which-hard-line-did-it-cross" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -811,11 +833,35 @@
 
 <h1 id="invisiblebench-ontology">InvisibleBench Ontology<a class="headerlink" href="#invisiblebench-ontology" title="Permanent link">&para;</a></h1>
 <p>Diátaxis: explanation</p>
+<blockquote>
+<p><strong>Canonical.</strong> This page is the single source of truth for the InvisibleBench
+output model (<code>safety-care/v1</code>). Other docs point here; they do not restate it.
+Volatile counts (checks/scenarios/models/version) live in <code>CLAUDE.md</code> and the
+<code>leaderboard.json</code> <code>scan_metadata</code> — never hardcode them elsewhere.</p>
+</blockquote>
+<h2 id="claim-posture-canonical-safety-carev1">Claim posture (canonical · safety-care/v1)<a class="headerlink" href="#claim-posture-canonical-safety-carev1" title="Permanent link">&para;</a></h2>
+<p>InvisibleBench reports a per-model <strong>safety profile, not a ranking</strong>. Two layers,
+never composited and never ranked:</p>
+<ul>
+<li><strong>Safety</strong> — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line
+  <strong>violation rates</strong> with 95% CIs. <strong>Claim-bearing and calibration-gated:</strong> the
+  published surface includes only <code>claim_ready</code> checks. Currently 0 of 50 checks
+  are <code>claim_ready</code>, so the public claim surface is empty. At n=63, point ranks
+  are statistically indistinguishable — cite intervals, not positions.</li>
+<li><strong>Care</strong> — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational,
+  Advocacy) as <strong>directional distributions</strong>, labeled <code>not_claim_ready</code>; never
+  merged with Safety.</li>
+</ul>
+<p>There is <strong>no <code>overall_score</code> and no rank</strong>; models are listed alphabetically.
+<strong>The calibrated core <em>is</em> the benchmark.</strong> <code>not_claim_ready</code> checks and
+zero-check named gaps are visible, but explicitly not part of the published
+claim surface until they earn independent human calibration.
+Comprehensiveness is the roadmap; calibration is the product.</p>
 <p>InvisibleBench measures a caregiver-AI's <strong>Safety</strong> (the hard lines it must not cross) and its <strong>Care</strong> (how it shows up for the caregiver). The name carries the thesis — surfacing what stays <em>invisible</em> everywhere else: harms a usefulness score can't see, and relational quality no other benchmark measures.</p>
 <p>The taxonomy is <strong>MECE</strong> — mutually exclusive (every failure-mode <em>type</em> has exactly one home) and collectively exhaustive (the nine dimensions together cover the caregiver-AI failure surface). MECE is a property of the <em>taxonomy</em>; a single response can still trip checks in several dimensions.</p>
 <p>Two <strong>orthogonal axes</strong>:
 - <strong>Layer</strong> — Safety (falsifiable prohibitions → violation <strong>RATES</strong>, claims) vs Care (gradients → <strong>DISTRIBUTIONS</strong>, directional). No composite; the two are reported side by side.
-- <strong>Maturity</strong> — each dimension is <strong>calibrated</strong> (κ → carries claims), <strong>provisional</strong> (directional, labeled), or <strong>to-author</strong> (named gap). The comprehensive structure ships now; calibration fills in over releases. This is where v1/v2 lives — not in <em>which dimensions exist</em>, but in <em>which cells are calibrated enough to claim</em>.</p>
+- <strong>Maturity</strong> — each check is <strong>claim_ready</strong> (κ vs independent human labels on natural cases → carries claims) or <strong>not_claim_ready</strong> (directional / development evidence). Zero-check dimensions are named gaps with <code>not_claim_ready</code> output status. The <strong>calibrated core is the benchmark</strong>; anything <code>not_claim_ready</code> is not part of the published claim surface until it clears the bar.</p>
 <h2 id="safety-4-lines-partition-which-hard-line-did-it-cross">Safety — 4 lines · partition: which hard line did it cross?<a class="headerlink" href="#safety-4-lines-partition-which-hard-line-did-it-cross" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -829,22 +875,22 @@
 <tr>
 <td><strong>Crisis</strong></td>
 <td>miss/mishandle acute danger (caregiver <em>or</em> recipient)</td>
-<td>partial κ (A1, A8) → else provisional</td>
+<td>not_claim_ready; prior κ is development evidence</td>
 </tr>
 <tr>
 <td><strong>Scope</strong></td>
 <td>exceed its authority — diagnose, prescribe, legal/financial directives, false credentials</td>
-<td>provisional</td>
+<td>not_claim_ready</td>
 </tr>
 <tr>
 <td><strong>Identity</strong></td>
 <td>misrepresent what it is — human / memory / availability / feelings</td>
-<td>partial κ (F3) → provisional</td>
+<td>partial κ (F3) → not_claim_ready</td>
 </tr>
 <tr>
 <td><strong>Autonomy</strong></td>
 <td>override a person's agency — <em>recipient</em> (deception/coercion/restraint) or <em>caregiver</em> (coercion/threats/foreclosure)</td>
-<td>to-author (thin)</td>
+<td>not_claim_ready (authored, not yet calibrated)</td>
 </tr>
 </tbody>
 </table>
@@ -866,28 +912,28 @@
 <tr>
 <td><strong>Attunement</strong></td>
 <td>met in their emotional state (register/presence/depth)</td>
-<td>provisional</td>
+<td>not_claim_ready</td>
 </tr>
 <tr>
 <td><strong>Trauma-awareness</strong></td>
 <td>responded trauma-informed</td>
-<td>to-author (v2 · SAMHSA)</td>
+<td>not_claim_ready; 0 authored checks (SAMHSA)</td>
 </tr>
 <tr>
 <td><strong>Relational</strong></td>
 <td>honored the caregiver↔recipient bond (the dyad)</td>
-<td>provisional (thin)</td>
+<td>not_claim_ready (thin)</td>
 </tr>
 <tr>
 <td><strong>Advocacy</strong></td>
 <td>took the caregiver's side vs systems/institutions</td>
-<td>to-author (thin)</td>
+<td>not_claim_ready (thin)</td>
 </tr>
 </tbody>
 </table>
 <p>The 3-party <strong>dyad</strong> maps across both layers: recipient-harm <em>acts</em> → <strong>Autonomy</strong> (Safety); the relationship <em>bond</em> → <strong>Relational</strong> (Care).</p>
 <h2 id="framework-grounding">Framework grounding<a class="headerlink" href="#framework-grounding" title="Permanent link">&para;</a></h2>
-<p>The dimensions are not improvised — they operationalize <strong>GiveCare's Design Charter</strong> (<code>~/agents/wiki/givecare/givecare-design-charter.md</code>), which synthesizes three recognized frameworks: <strong>SAMHSA</strong> trauma-informed care (6 principles: safety, trust, peer support, collaboration, empowerment, cultural sensitivity), <strong>Microsoft Inclusive Design</strong>, and the <strong>Othering &amp; Belonging Institute (OBI)</strong> Targeted Universalism. InvisibleBench measures whether a model upholds the same principles the product is designed to — the way RubRIX anchors in Tronto's care ethics, but with a three-framework synthesis already operationalized in <code>gc-sms</code>.</p>
+<p>The dimensions are not improvised — they operationalize <strong>GiveCare's Design Charter</strong> (<code>~/wiki/pages/givecare/givecare-design-charter.md</code>), which synthesizes three recognized frameworks: <strong>SAMHSA</strong> trauma-informed care (6 principles: safety, trust, peer support, collaboration, empowerment, cultural sensitivity), <strong>Microsoft Inclusive Design</strong>, and the <strong>Othering &amp; Belonging Institute (OBI)</strong> Targeted Universalism. InvisibleBench measures whether a model upholds the same principles the product is designed to — the way RubRIX anchors in Tronto's care ethics, but with a three-framework synthesis already operationalized in <code>gc-sms</code>.</p>
 <table>
 <thead>
 <tr>
@@ -944,7 +990,7 @@
 </tr>
 </tbody>
 </table>
-<p>Each Care rubric grounds in its framework: <strong>Belonging → OBI</strong> (done, <code>internal/belonging-rubric-v3.md</code>); <strong>Trauma-awareness → SAMHSA's six</strong> (when authored, v2); the OBI <strong>Inclusion</strong> and <strong>Connection</strong> facets — the v2 enrichment of Belonging — are already charter principles (P5 Inclusive Defaults, P4 Peer &amp; Community Scaffold).</p>
+<p>Each Care rubric grounds in its framework: <strong>Belonging → OBI</strong> (done, <code>internal/belonging-rubric-v3.md</code>); <strong>Trauma-awareness → SAMHSA's six</strong> (named gap; no authored checks yet); the OBI <strong>Inclusion</strong> and <strong>Connection</strong> facets are already charter principles (P5 Inclusive Defaults, P4 Peer &amp; Community Scaffold).</p>
 <h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Checks labeled <code>Dimension: descriptor</code> (e.g. <code>Scope: gave-diagnosis</code>, <code>Belonging: othering</code>); stable slug IDs under the hood.</li>

@@ -828,17 +828,18 @@ and current-roster relational quality gaps. See <a href="findings/">Key Findings
 <p>Canonical model: <a href="ontology/">ontology.md</a>. Positioning and the three moats: <a href="what-invisiblebench-owns/">what-invisiblebench-owns.md</a>.</p>
 <h2 id="key-facts">Key facts<a class="headerlink" href="#key-facts" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Current public scan</strong> covers 63 scenarios across 4 categories: safety, empathy, context, continuity (including contrast-set variants)</li>
-<li><strong>50 checks across 9 dimensions</strong> — 4 Safety lines + 5 Care qualities — with per-check verifiers calibrated against human labels</li>
+<li><strong>Current checked-in public scan</strong> covers 63 Phase 2 rows across 4 categories; the next live <code>--full</code> run covers all 63 current public scenarios</li>
+<li><strong>50 checks across 9 dimensions</strong> — 4 Safety lines + 5 Care qualities — with binary <code>claim_ready</code> / <code>not_claim_ready</code> calibration status (currently 0 <code>claim_ready</code>)</li>
 <li><strong>Multi-turn with conditional branching</strong> — adaptive evaluation paths based on model responses</li>
-<li><strong>Leaderboard artifact</strong>: <code>data/leaderboard/leaderboard.json</code> (schema <code>safety-care/v1</code>) covers 11 models × 63 scenarios (Phase 2 roster); reports per-line Safety violation rates + directional Care distributions</li>
+<li><strong>Leaderboard artifact</strong>: <code>data/leaderboard/leaderboard.json</code> (schema <code>safety-care/v1</code>) covers 11 models × 63 Phase 2 rows (non-strict); the current live roster is 15 models × 63 scenarios</li>
 <li>Benchmark version <strong>3.1.0</strong> | Public harness: <code>llm/raw</code></li>
 </ul>
 <h2 id="publication-posture">Publication posture<a class="headerlink" href="#publication-posture" title="Permanent link">&para;</a></h2>
 <p>The public web-bench story is a model-by-model audit, not a stack rank. The
 release flow first documents the benchmark mechanics, then projects the scored
 outputs into per-model audit cards: per-line Safety violation rates (claim-
-bearing, with CIs) and directional Care distributions (provisional). There is no
+bearing only for <code>claim_ready</code> checks, currently empty) and directional Care
+distributions (<code>not_claim_ready</code>). There is no
 composite and no rank. The richer narrative surface — thematic blind spots,
 contrastive pairs, model signatures — is deferred to a re-authored Safety/Care
 artifact-v2 and is not in the lean <code>safety-care/v1</code> payload. See
@@ -875,9 +876,10 @@ artifact-v2 and is not in the lean <code>safety-care/v1</code> payload. See
 support paging. The YAML entry point also ships <code>invisiblebench --doctor</code>
 and <code>invisiblebench --list-runs --limit N --offset M</code>. <code>--out PATH</code> (on
 <code>runs</code>, <code>get</code>, and <code>leaderboard status</code>) writes the full payload to disk
-and emits a <code>{path, byte_count, record_count}</code> summary. Live writes
-(<code>leaderboard add/rebuild</code>, <code>archive</code>) refuse in non-interactive shells
-unless <code>--yes</code> is passed.</p>
+and emits a <code>{path, byte_count, record_count}</code> summary. <code>leaderboard
+add/rebuild</code> is retired for <code>safety-care/v1</code>; publish from an explicit
+scored scan JSONL and web target via the fail-closed generate → strict QA → sync chain. Archive
+writes refuse in non-interactive shells unless <code>--yes</code> is passed.</p>
 </div>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>
@@ -886,10 +888,11 @@ unless <code>--yes</code> is passed.</p>
 <li><a href="architecture/">Architecture</a> — system design, scenario schema, harness pipeline</li>
 <li><a href="methodology/">Methodology</a> — framework grounding, research mapping, regulatory landscape</li>
 <li><a href="publishing-audit/">Publishing Audit</a> — two-phase publication model and web-bench narrative contract</li>
-<li><a href="ontology/">Ontology</a> — canonical Safety + Care model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)</li>
-<li><a href="taxonomy/">Taxonomy</a> — legacy 5-dimension failure-mode reference (A/B/C/D/F); see ontology.md for the current model</li>
+<li><a href="ontology/">Ontology</a> — <strong>canonical</strong> Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)</li>
+<li><a href="taxonomy/">Taxonomy</a> — thin reference: per-dimension check-count table (the model itself is in ontology.md)</li>
 <li><a href="findings/">Key Findings</a> — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard</li>
-<li><a href="verifier-validation/">Verifier Validation</a> — verifier template-hash manifest and validation status</li>
+<li><a href="verifier-validation/">Verifier Validation</a> — verifier manifest, the binary claim model, and the <code>claim_ready</code> bar</li>
+<li><a href="verifier-unit-tests/">Verifier Unit Tests</a> — authored AI-panel spec-conformance tests (development, <strong>not</strong> validation)</li>
 </ul>
 
 

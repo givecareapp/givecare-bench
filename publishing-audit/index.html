@@ -774,8 +774,8 @@
 <li><strong>Result narrative</strong> — the generated benchmark outputs are QA-gated, reduced
    into a web payload, and presented as caregiver-centered failure-mode analysis.
    The current checked-in Phase 2 artifact is a non-strict public source until
-   residual <code>UNCLEAR</code> verdicts and coverage-below-floor rows are adjudicated or
-   regenerated and <code>scripts/qa_leaderboard.py --strict</code> passes.</li>
+   current-contract coverage gaps and residual <code>UNCLEAR</code> verdicts are
+   adjudicated or regenerated and <code>scripts/qa_leaderboard.py --strict</code> passes.</li>
 </ol>
 <p>This split is intentional. The benchmark should not read as a generic stack
 rank of models. The useful claim is sharper: it shows where each model is jagged
@@ -788,7 +788,7 @@ would make a caregiver AI feel brittle in practice.</p>
 <li><code>checks/</code> (one YAML per check, organized as <code>checks/safety/*</code> and <code>checks/care/*</code>) defines the active 50-check failure
   inventory across 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities
   (Belonging, Attunement, Trauma-awareness, Relational, Advocacy).</li>
-<li>the <code>routing:</code> block in each <code>checks/&lt;ID&gt;.yaml</code> records which checks use
+<li>the <code>routing:</code> block in each <code>checks/&lt;layer&gt;/&lt;dimension&gt;/&lt;ID&gt;.yaml</code> records which checks use
   deterministic, LLM, or corpus scorer routes.</li>
 <li>each check file embeds its judge prompt as a <code>prompt:</code> block.</li>
 <li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
@@ -807,12 +807,29 @@ without relying on a single opaque LLM judge.</p>
 <li>Source: <code>data/leaderboard/leaderboard.json</code></li>
 <li>Current source artifact: <code>results/v3_scan/merged_phase2/per_run.jsonl</code></li>
 <li>Current public benchmark version: <code>3.1.0</code></li>
-<li>Current publication stage: <code>v3-alpha</code></li>
-<li>Current public scan: 11 models × 63 scenarios × 50 active checks</li>
-<li>Current generated timestamp: <code>2026-06-10T17:45:13Z</code></li>
-<li>Current strict QA status: not passing. The current artifact fails strict QA
-  on residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows, so
-  it must not be described as a strict-QA-passing leaderboard source.</li>
+<li>Current public framework: <code>safety-care/v1</code> (non-strict artifact; strict QA
+  still blocked by current-contract coverage gaps and residual <code>UNCLEAR</code>
+  verdicts)</li>
+<li>Current checked-in public scan: 11 models × 63 scenarios × 50 active checks</li>
+<li>Next live <code>--full</code> target: 15 models × 63 scenarios × 50 active checks</li>
+<li>Current generated timestamp: read from
+  <code>data/leaderboard/leaderboard.json</code> at <code>scan_metadata.generated_at</code> rather
+  than hand-copying it into this doc.</li>
+<li>Current strict QA status: not passing. Non-strict QA passes; strict QA fails
+  on one missing current scenario (<code>tier1_source_verification_001</code>), one extra
+  retired scenario (<code>tier2_regulatory_001_minor_disclosure</code>), 77 missing check
+  instances, and four residual quality-mode <code>UNCLEAR</code> verdicts, so it must not
+  be described as a strict-QA-passing leaderboard source.</li>
+<li>Current artifact-validation diagnostics: 1,852 eligible <code>NOT_APPLICABLE</code>
+  mode verdicts (1,466 Safety-gate), 4 unresolved mode verdicts, 0 Safety-gate
+  unresolved verdicts, 0 fail-without-evidence rows, 0 missing prompts, 0
+  unavailable verifiers, 0 fatal verifier errors, 21 mode results with scorer
+  parse errors, 24 parse errors total, and 118 bounded raw-output diagnostic
+  samples.</li>
+<li>The artifact also carries <code>scan_metadata.artifact_issue_policy</code>, which
+  classifies eligible <code>NOT_APPLICABLE</code> as resolved coverage, literal <code>UNCLEAR</code>
+  as a strict-QA blocker, and scorer parse/truncation counters as retry
+  diagnostics whose final resolved verdict remains authoritative.</li>
 </ul>
 <p>The web-bench payload is a lean projection of that artifact:</p>
 <ul>
@@ -820,7 +837,10 @@ without relying on a single opaque LLM judge.</p>
 <li>Payload shape (<code>safety-care/v1</code>): <code>schema</code>, <code>notes</code>, <code>scan_metadata</code>, and
   <code>models</code> — each model carrying <code>safety</code> (per-line violation rates + aggregate)
   and <code>care</code> (per-quality distributions). <code>delivery/sync_web_bench.py</code> validates
-  the source and strips <code>_deprecated_v3</code> before writing.</li>
+  the source and rejects non-public top-level keys before writing.</li>
+<li>Local projection drift is read-only health state: <code>bench health</code> reports when
+  the checked-in <code>data/leaderboard/leaderboard_web.json</code> lags the canonical
+  <code>data/leaderboard/leaderboard.json</code>; it does not sync or write the projection.</li>
 <li>No <code>findings</code> block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.</li>
@@ -828,14 +848,15 @@ without relying on a single opaque LLM judge.</p>
 <p>The projected web surface should explain model differences, not flatten them.
 In lean <code>safety-care/v1</code> its public analysis is organized as per-model audit cards:</p>
 <ol>
-<li><strong>Reading protocol</strong> — Safety violation rates first (claim-bearing, lower =
-   safer), Care distributions second (directional/provisional), no rank/composite.</li>
+<li><strong>Reading protocol</strong> — Safety violation rates first (claim-bearing only for
+   <code>claim_ready</code> checks, currently empty), Care distributions second
+   (directional/<code>not_claim_ready</code>), no rank/composite.</li>
 <li><strong>Per-line Safety</strong> — Crisis, Scope, Identity, Autonomy: conditional
    violation rate with 95% CI and eligible-n; low-n lines read "insufficient
    observations" rather than a precise rate.</li>
 <li><strong>Per-quality Care</strong> — Belonging, Attunement, Relational, Advocacy as
-   directional pass-rate distributions (Trauma-awareness is a declared to-author
-   slot, excluded from comparison).</li>
+   directional pass-rate distributions (Trauma-awareness is a named zero-check
+   gap, excluded from comparison).</li>
 </ol>
 <p>Deferred to a re-authored Safety/Care artifact-v2 (not in lean v1): theme audit
 (universal/jagged/emerging), contrastive pairs with transcript evidence, and

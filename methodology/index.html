@@ -1158,62 +1158,7 @@
 <hr />
 <h2 id="framework-grounding">Framework grounding<a class="headerlink" href="#framework-grounding" title="Permanent link">&para;</a></h2>
 <p>The nine dimensions operationalize <strong>GiveCare's Design Charter</strong>, which synthesizes three recognized frameworks: SAMHSA trauma-informed care, Microsoft Inclusive Design, and the Othering &amp; Belonging Institute (OBI) Targeted Universalism. InvisibleBench measures whether a deployed model upholds the same principles the product is designed to — grounding the benchmark in the same charter that governs <code>gc-sms</code>.</p>
-<table>
-<thead>
-<tr>
-<th>Dimension</th>
-<th>Framework grounding</th>
-<th>Charter principle</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Safety · Crisis</td>
-<td>SAMHSA — <em>safety</em></td>
-<td>P1 Predictable Safety</td>
-</tr>
-<tr>
-<td>Safety · Scope</td>
-<td>WOPR Act + SAMHSA — <em>trust</em></td>
-<td>P2 Radical Transparency</td>
-</tr>
-<tr>
-<td>Safety · Identity</td>
-<td>SAMHSA — <em>trust</em></td>
-<td>P2 Radical Transparency</td>
-</tr>
-<tr>
-<td>Safety · Autonomy</td>
-<td>SAMHSA — <em>empowerment</em> + OBI — <em>agency</em></td>
-<td>P3 Shared Agency</td>
-</tr>
-<tr>
-<td>Care · Belonging</td>
-<td>OBI — Recognition + Agency + Connection + Inclusion</td>
-<td>P3 / P6</td>
-</tr>
-<tr>
-<td>Care · Attunement</td>
-<td>SAMHSA — safety/trust/empowerment + Inclusive Design</td>
-<td>P1 / P7</td>
-</tr>
-<tr>
-<td>Care · Trauma-awareness</td>
-<td>SAMHSA — all six principles (foundation ring)</td>
-<td>P1</td>
-</tr>
-<tr>
-<td>Care · Relational</td>
-<td>OBI — <em>Connection</em> + SAMHSA — <em>peer support</em></td>
-<td>P4 Peer &amp; Community Scaffold</td>
-</tr>
-<tr>
-<td>Care · Advocacy</td>
-<td>OBI — power-aware Targeted Universalism</td>
-<td>P6 Power-Aware Co-Creation</td>
-</tr>
-</tbody>
-</table>
+<p>The per-dimension grounding table (dimension → framework → charter principle) is canonical in <strong><a href="../ontology/#framework-grounding">ontology.md § Framework grounding</a></strong> and is not duplicated here. The subsections below explain what each framework contributes.</p>
 <h3 id="samhsa-trauma-informed-care-2014">SAMHSA — Trauma-Informed Care (2014)<a class="headerlink" href="#samhsa-trauma-informed-care-2014" title="Permanent link">&para;</a></h3>
 <p>Six principles: safety, trustworthiness, peer support, collaboration, empowerment, cultural sensitivity. These principles are the foundation ring for every dimension: Crisis and Autonomy operationalize <em>safety</em>; Scope and Identity operationalize <em>trustworthiness</em>; Relational maps to <em>peer support</em>; Trauma-awareness grounds directly in all six principles as a whole.</p>
 <h3 id="microsoft-inclusive-design">Microsoft Inclusive Design<a class="headerlink" href="#microsoft-inclusive-design" title="Permanent link">&para;</a></h3>
@@ -1292,43 +1237,38 @@
 </table>
 <hr />
 <h2 id="calibration-and-claims">Calibration and claims<a class="headerlink" href="#calibration-and-claims" title="Permanent link">&para;</a></h2>
-<p>InvisibleBench makes <strong>calibration-gated claims</strong>: only checks whose <code>calibration:</code> block in their YAML carries status <code>"validated"</code> or <code>"provisional"</code> feed published Safety rates. Checks without a calibration block are excluded from published numbers.</p>
-<p><strong>Calibration maturity map (v1):</strong></p>
+<p>InvisibleBench makes <strong>calibration-gated claims</strong> under a binary claim model: only checks whose <code>calibration:</code> block carries status <code>claim_ready</code> feed published Safety rates. As of 2026-07-01, <strong>0 of 50 checks are <code>claim_ready</code>, so the published Safety claim surface is empty.</strong></p>
+<p><strong>Claim model (2026-06-30):</strong></p>
 <table>
 <thead>
 <tr>
-<th>Maturity tier</th>
+<th>Status</th>
 <th>Meaning</th>
-<th>Examples</th>
+<th>Current members</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>validated</code></td>
-<td>Per-mode Tier 1 κ against resolved human gold</td>
-<td>IB-A1, IB-A8 (crisis); IB-F3-false-memory</td>
+<td><code>claim_ready</code></td>
+<td>Verifier meets the agreement threshold (κ ≥ 0.65) vs an independent, human-labeled, natural-case calibration set</td>
+<td>(none yet)</td>
 </tr>
 <tr>
-<td><code>provisional</code></td>
-<td>Layer/card-level human evidence; directional, labeled</td>
-<td>Most Safety checks; all authored Care checks</td>
-</tr>
-<tr>
-<td><code>to-author</code></td>
-<td>Named gap — dimension exists, no checks authored yet</td>
-<td>Trauma-awareness (Care layer)</td>
+<td><code>not_claim_ready</code></td>
+<td>Everything else; may carry disclosed development evidence (<code>calibration.evidence</code>) but makes no public claim</td>
+<td>all 50 checks</td>
 </tr>
 </tbody>
 </table>
-<p>The public hard-fail layer (A1, A8) is validated against the resolved 60-trace human gold set (κ=1.0 on those checks, post-adjudication). See <a href="../verifier-validation/">verifier-validation.md</a> for the full reading guide on that result.</p>
+<p>The 19 hard-fail checks hold <code>authored_ai_unit_test</code> development evidence (AI reference-panel labels on authored cards — not validation) and the historical 60-trace layer-level result as <code>development_only</code> evidence — neither is a public claim. <code>scope.periodic-disclosure</code> was demoted out of the hard-fail/claim layer on 2026-07-01. See <a href="../verifier-validation/">verifier-validation.md</a> for the full reading guide.</p>
 <p><strong>What this means for public claims:</strong></p>
 <ul>
-<li>Safety violation rates are the strongest public claims: calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs.</li>
-<li>Care distributions are directional signals: Belonging has inter-model κ=0.82 (provisional); Attunement, Relational, and Advocacy are provisional/authored; Trauma-awareness is to-author (empty).</li>
+<li>Safety violation rates are the <em>intended</em> public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs) — but <strong>the surface is currently empty (0 <code>claim_ready</code>)</strong>, so no Safety rate is a public claim yet.</li>
+<li>Care distributions are directional signals, never claim-bearing: Belonging has inter-model κ=0.82 (development only); Attunement, Relational, and Advocacy are directional/authored; Trauma-awareness has no checks yet.</li>
 <li>There is no composite or ranking key to mis-cite.</li>
 </ul>
 <p><strong>Current leaderboard artifact (<code>data/leaderboard/leaderboard.json</code>):</strong>
-Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/per_run.jsonl</code>), currently 11 models × 63 scenarios, generated 2026-06-10 as a non-strict public source. Strict QA currently fails on residual quality-mode <code>UNCLEAR</code> verdicts and coverage-below-floor rows; do not describe this artifact as strict-QA-passing until <code>scripts/qa_leaderboard.py --strict</code> passes.</p>
+Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/per_run.jsonl</code>), currently 11 models × 63 rows, regenerated 2026-07-03 as a non-strict public source after the 50-check contract refresh and the 63-scenario inventory update. Non-strict QA passes; strict QA currently fails on one missing current scenario (<code>tier1_source_verification_001</code>), one extra retired scenario (<code>tier2_regulatory_001_minor_disclosure</code>), 77 missing check instances, and four residual quality-mode <code>UNCLEAR</code> verdicts, so do not describe this artifact as strict-QA-passing until <code>scripts/qa_leaderboard.py --strict</code> passes. <code>scan_metadata.artifact_validation</code> records eligible <code>NOT_APPLICABLE</code> counts, unresolved verdicts, fail-without-evidence counts, verifier infrastructure counts, scorer parse errors, and bounded raw-output diagnostic samples; QA recomputes those fields from the scan. The next live <code>--full</code> run targets 15 models × 63 scenarios.</p>
 <hr />
 <h2 id="runtime-adjudication">Runtime adjudication<a class="headerlink" href="#runtime-adjudication" title="Permanent link">&para;</a></h2>
 <p>The scoring system is a <strong>hybrid per-check verifier</strong> architecture — a deliberate departure from the monolithic LLM-as-judge paradigm.</p>
@@ -1336,7 +1276,7 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <li>Deterministic lexicon scorers catch bright-line failures fleet-wide — fast, reproducible, zero token cost.</li>
 <li>LLM verifiers adjudicate semantic edge cases on eligible checks — using token escalation (4000 → 8000 → 16000) before failing closed.</li>
 <li>Scan profiles separate cheap development feedback (<code>--profile dev</code>) from strict publication scoring (<code>--profile publish</code>).</li>
-<li>Verifier behavior is audited against the resolved human gold set; the public hard-fail layer currently matches gold at 60/60 on the validated checks.</li>
+<li>Verifier behavior is audited against the resolved human gold set (60/60 on the prior layer-level gold) — recorded as development evidence, not a public claim (0 checks are <code>claim_ready</code>).</li>
 <li>Strict leaderboard artifacts may include local manual adjudication of residual <code>UNCLEAR</code> verdicts, recorded with transcript paths and quoted evidence.</li>
 <li>Each check produces an independent pass/fail verdict with evidence spans — not a holistic score.</li>
 </ol>
@@ -1344,54 +1284,7 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <p>See <a href="../architecture/#verifier-architecture">Architecture — Verifier architecture</a> and <a href="../taxonomy/">Taxonomy</a> for the implementation rationale.</p>
 <hr />
 <h2 id="positioning-and-related-work">Positioning and related work<a class="headerlink" href="#positioning-and-related-work" title="Permanent link">&para;</a></h2>
-<p>InvisibleBench is a calibrated deployment gate for relational harms in caregiver-support AI. It occupies a specific position: dyadic, multi-turn, fail-closed, verifier-calibrated safety evaluation for caregiver-support AI. Several adjacent benchmarks evaluate related but distinct constructs.</p>
-<table>
-<thead>
-<tr>
-<th>Benchmark</th>
-<th>Overlap</th>
-<th>Why it is not the same</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>RubRIX</strong></td>
-<td>Closest caregiver-specific comparator. Explicitly about caregiver-AI interactions, uses caregiver-authored queries, defines caregiver-specific risks (inattention, bias/stigma, uncritical affirmation, epistemic arrogance).</td>
-<td>Response-level risk evaluation and mitigation over Reddit/ALZConnected caregiver queries. Not a multi-turn deployment gate with fail-closed safety checks, per-mode verifier calibration, or identity-boundary drift detection.</td>
-</tr>
-<tr>
-<td><strong>ADRD-Bench</strong></td>
-<td>Caregiving-adjacent, disease-specific. Includes ADRD Caregiving QA with 149 caregiving questions grounded in the Aging Brain Care program.</td>
-<td>Knowledge/QA/clinical-reasoning assessment for Alzheimer's and dementia. Does not target relational safety failures, caregiver-to-recipient harm intent, artificial intimacy, scope deception, or boundary drift.</td>
-</tr>
-<tr>
-<td><strong>MindEval</strong></td>
-<td>Multi-turn mental-health support benchmark with simulated patients and automatic LLM evaluation, built with licensed clinical psychologists.</td>
-<td>Unit of analysis is therapy-like patient-clinician interaction and therapeutic competence. InvisibleBench's unit is caregiver-care-recipient-AI interaction, where the model can harm the caregiver, the recipient, or the relationship between them.</td>
-</tr>
-<tr>
-<td><strong>MHSafeEval</strong></td>
-<td>Methodologically close: role-aware, interaction-level, multi-turn mental-health safety evaluation. Explicitly argues static/single-turn benchmarks miss cumulative harms.</td>
-<td>Counseling-safety focused with a role taxonomy. InvisibleBench's distinctive axes are caregiver dyad safety, practical care coordination, companion-boundary regulation, and deployment-gate scoring.</td>
-</tr>
-<tr>
-<td><strong>HealthBench</strong></td>
-<td>Large-scale health benchmark with 5,000 multi-turn conversations and physician-written rubrics.</td>
-<td>Broad healthcare capability/safety evaluation. Does not specialize in family caregiving, caregiver burden, dyadic harm, artificial intimacy, or companion compliance boundaries.</td>
-</tr>
-<tr>
-<td><strong>MedHELM</strong></td>
-<td>Broad medical LLM evaluation framework with clinician-validated taxonomy.</td>
-<td>Evaluates medical tasks. Not a caregiver-support relational safety benchmark.</td>
-</tr>
-<tr>
-<td><strong>Mental Health Crisis Benchmarks</strong></td>
-<td>Crisis detection, safe response generation, human-vs-LLM evaluator agreement.</td>
-<td>Crisis-focused, not caregiver-dyad-focused. Does not cover coordination burden, self-sacrifice reinforcement, recipient autonomy, artificial intimacy, or companion-regulatory scope.</td>
-</tr>
-</tbody>
-</table>
-<p>InvisibleBench's contribution is not another healthcare benchmark. It contributes a new harm ontology (caregiver–care-recipient dyadic safety), a new decomposition (subjective caregiver pain points converted into atomic verifier checks), a new scoring posture (per-line violation rates before quality distributions), and a new evidence contract (every failure carries eligibility, severity, quoted evidence, scorer route, and calibration status).</p>
+<p>The positioning analysis, the three moats, and the related-work comparison (RubRIX, ADRD-Bench, MindEval, MHSafeEval, HealthBench, MedHELM, crisis benchmarks) live in <strong><a href="../what-invisiblebench-owns/">what-invisiblebench-owns.md</a></strong> — not duplicated here.</p>
 <hr />
 <h2 id="baseline-dimension-coverage">Baseline dimension coverage<a class="headerlink" href="#baseline-dimension-coverage" title="Permanent link">&para;</a></h2>
 <p>These 10 baseline dimensions represent the minimum evaluation surface for a wellness/mental-health-adjacent caregiver benchmark.</p>
@@ -1408,37 +1301,37 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <tr>
 <td>Crisis recognition and routing</td>
 <td>Safety · Crisis</td>
-<td>IB-A1 through IB-A-disengagement-as-resolved</td>
+<td>crisis.passive-ideation through crisis.disengagement</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Scope honesty</td>
 <td>Safety · Scope</td>
-<td>IB-B1 through IB-B8 + clinical-directive checks</td>
+<td>scope.diagnosis through scope.false-records + clinical-directive checks</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Identity honesty / anti-dependency</td>
 <td>Safety · Identity</td>
-<td>IB-F1, IB-F2, IB-F3</td>
+<td>identity.body-claim, identity.dependency, identity.memory-claim</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Recipient autonomy protection</td>
 <td>Safety · Autonomy</td>
-<td>IB-D4-cr-endangerment, IB-C3-coercive-imperatives, IB-C3-conditional-threats, IB-C2-options-closed</td>
+<td>autonomy.override, autonomy.coercion, autonomy.threats, autonomy.closed-options</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Caregiver recognition</td>
 <td>Care · Belonging</td>
-<td>IB-C1, IB-C2-recognition-missing, IB-C2-othering, IB-C2-strength-narrative, IB-D3-self-sacrifice-affirmation</td>
+<td>belonging.self-diminishment, belonging.recognition-gap, belonging.othering, belonging.hero-framing, belonging.self-sacrifice</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
 <td>Emotional attunement</td>
 <td>Care · Attunement</td>
-<td>IB-C-emotional-register-match, IB-C2-advice-before-validation, IB-C-guilt-loop-amplification, IB-D2-infodump, others</td>
+<td>attunement.generic-warmth, attunement.advice-first, attunement.guilt-loop, attunement.infodump, others</td>
 <td><strong>Covered</strong></td>
 </tr>
 <tr>
@@ -1450,7 +1343,7 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <tr>
 <td>Trauma-informed language</td>
 <td>Care · Trauma-awareness</td>
-<td>Named gap — checks to-author (v2)</td>
+<td>Named gap — 0 authored checks</td>
 <td><strong>Gap</strong></td>
 </tr>
 <tr>
@@ -1479,8 +1372,8 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <p><strong>Evidence discipline.</strong> Testing whether cited resources are factually accurate requires ground-truth infrastructure that operates at a different layer than conversation evaluation.</p>
 <p><strong>Youth safeguards.</strong> InvisibleBench targets adult family caregivers. Youth populations have distinct risk profiles requiring purpose-built scenarios and clinical review.</p>
 <p><strong>Post-caregiving bereavement.</strong> InvisibleBench evaluates active caregiving relationships. Bereaved former caregivers have distinct needs — identity reconstruction, complicated grief — that are adjacent but not yet covered.</p>
-<p><strong>Care-recipient-initiated harm toward the caregiver.</strong> IB-A3 covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at &gt;20% prevalence) — is partially covered by IB-A3b but requires fuller purpose-built scenario coverage.</p>
-<p><strong>Proxy ethical decision-making.</strong> End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). IB-D-forced-nutrition-eol is the current single check; broader proxy ethics coverage is deferred.</p>
+<p><strong>Care-recipient-initiated harm toward the caregiver.</strong> crisis.harm-intent covers the caregiver fearing they will harm the care recipient. The inverse — the care recipient's aggression toward the caregiver (common in dementia at &gt;20% prevalence) — is partially covered by crisis.recipient-aggression but requires fuller purpose-built scenario coverage.</p>
+<p><strong>Proxy ethical decision-making.</strong> End-of-life decisions and advance directive navigation touch both the Scope line (clinical positions) and Care qualities (moral distress). scope.forced-nutrition is the current single check; broader proxy ethics coverage is deferred.</p>
 </div>
 <hr />
 <h2 id="out-of-scope-frameworks">Out-of-scope frameworks<a class="headerlink" href="#out-of-scope-frameworks" title="Permanent link">&para;</a></h2>
