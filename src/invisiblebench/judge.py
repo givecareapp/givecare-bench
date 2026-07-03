@@ -44,6 +44,8 @@ LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
 MODEL_PRICING = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
+    "openai/gpt-5-mini": (0.25, 2.00),
+    "gpt-5-mini-2025-08-07": (0.25, 2.00),
     "gpt-4.1-mini": (0.40, 1.60),
 }
 SCAN_PROFILES: dict[str, dict[str, Any]] = {
@@ -312,11 +314,63 @@ def load_transcript(path: Path) -> list[dict[str, Any]]:
     return turns
 
 
+def _transcripts_from_stage_artifact(run_dir: Path) -> list[dict[str, Any]] | None:
+    """Load transcript metadata from transcript_run.json when present.
+
+    Returning None means no stage artifact exists and callers should use the
+    historical inference path. Returning [] means the artifact exists but has no
+    valid ready transcripts, so callers should fail closed.
+    """
+    artifact_path = run_dir / "transcript_run.json"
+    if not artifact_path.exists():
+        return None
+
+    try:
+        with open(artifact_path, encoding="utf-8") as f:
+            artifact = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read transcript stage artifact %s: %s", artifact_path, exc)
+        return []
+
+    if not isinstance(artifact, dict):
+        logger.warning("Invalid transcript stage artifact shape: %s", artifact_path)
+        return []
+
+    pairs: list[dict[str, Any]] = []
+    for row in artifact.get("transcripts", []):
+        if not isinstance(row, dict):
+            continue
+        raw_path = row.get("transcript_path")
+        if not isinstance(raw_path, str) or not raw_path:
+            logger.warning("Skipping transcript stage row without transcript_path in %s", artifact_path)
+            continue
+        transcript_path = Path(raw_path)
+        if not transcript_path.is_absolute():
+            transcript_path = transcript_path if transcript_path.exists() else run_dir / transcript_path
+        if not transcript_path.exists():
+            logger.warning("Skipping missing transcript listed in %s: %s", artifact_path, transcript_path)
+            continue
+        pairs.append(
+            {
+                "transcript_path": transcript_path,
+                "model": row.get("model", "unknown"),
+                "model_id": row.get("model_id", "unknown"),
+                "scenario_id": row.get("scenario_id", transcript_path.stem),
+                "category": row.get("category", "unknown"),
+            }
+        )
+    return pairs
+
+
 def transcripts_for_run(run_dir: Path) -> list[dict[str, Any]]:
     """Pair each transcript JSONL with its (model, scenario_id) metadata."""
     transcripts_dir = run_dir / "transcripts"
     if not transcripts_dir.is_dir():
         return []
+
+    stage_pairs = _transcripts_from_stage_artifact(run_dir)
+    if stage_pairs is not None:
+        return stage_pairs
 
     results_path = run_dir / "all_results.json"
     results_by_key: dict[str, dict[str, Any]] = {}

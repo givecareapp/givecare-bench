@@ -158,6 +158,54 @@ def test_transcripts_for_run_infers_scenario_from_known_suffix_without_results(
     assert pairs[0]["model"] == "Nemotron 3 Super 120B"
 
 
+def test_transcripts_for_run_uses_transcript_stage_artifact_when_present(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run_20260703_010101"
+    transcripts_dir = run_dir / "transcripts"
+    transcripts_dir.mkdir(parents=True)
+    ready = transcripts_dir / "test_model_context_regulatory_data_privacy_001.jsonl"
+    error = transcripts_dir / "test_model_context_regulatory_data_privacy_002.jsonl"
+    ready.write_text('{"turn":1,"role":"user","content":"hi"}\n')
+    error.write_text('{"turn":1,"role":"assistant","content":"[ERROR: timeout]","error":true}\n')
+    (run_dir / "transcript_run.json").write_text(
+        json.dumps(
+            {
+                "artifact_type": "transcript_run/v1",
+                "status": "partial",
+                "expected_transcripts": 2,
+                "transcript_count": 1,
+                "error_count": 1,
+                "transcripts": [
+                    {
+                        "model": "Test Model",
+                        "model_id": "test/model",
+                        "scenario_id": "context_regulatory_data_privacy_001",
+                        "category": "context",
+                        "transcript_path": str(ready),
+                    }
+                ],
+                "errors": [
+                    {
+                        "model": "Test Model",
+                        "model_id": "test/model",
+                        "scenario_id": "context_regulatory_data_privacy_002",
+                        "category": "context",
+                        "reason": "timeout",
+                    }
+                ],
+            }
+        )
+    )
+
+    pairs = transcripts_for_run(run_dir)
+
+    assert len(pairs) == 1
+    assert pairs[0]["transcript_path"] == ready
+    assert pairs[0]["scenario_id"] == "context_regulatory_data_privacy_001"
+    assert pairs[0]["model_id"] == "test/model"
+
+
 def test_write_outputs_notes_when_llm_verifiers_are_enabled(tmp_path: Path) -> None:
     output_dir = tmp_path / "scan"
     run_dir = tmp_path / "run_1"

@@ -101,8 +101,8 @@ def main() -> int:
     )
     ap.add_argument(
         "--llm-model",
-        default="google/gemini-2.5-flash-lite",
-        help="Judge model for LLM verifiers (default: Gemini flash-lite).",
+        default="openai/gpt-5-mini",
+        help="Judge model for LLM verifiers (default: openai/gpt-5-mini).",
     )
     ap.add_argument(
         "--parallel",
@@ -160,6 +160,7 @@ def main() -> int:
             # results file, use the parent as the run dir.
             if p.name == "transcripts" and (
                 (p.parent / "run_manifest.json").exists()
+                or (p.parent / "transcript_run.json").exists()
                 or (p.parent / "givecare_results.json").exists()
                 or (p.parent / "all_results.json").exists()
             ):
@@ -198,14 +199,18 @@ def main() -> int:
             scenario = load_scenario(pair["scenario_id"])
             plan_scenarios.append(enrich_scenario_with_inferred_tags(scenario))
 
+    plan_llm_enabled = bool(
+        args.enable_llm if args.dry_run else args.enable_llm and api_client is not None
+    )
     scan_plan_dict = build_scan_plan(
         plan_scenarios,
         engine.modes,
         engine.routing,
         profile,
         judge_model=args.llm_model,
-        llm_enabled=bool(args.enable_llm and api_client is not None),
+        llm_enabled=plan_llm_enabled,
     )
+    scan_plan_dict["api_client_available"] = api_client is not None
 
     if args.dry_run:
         output_dir = Path(args.output_root) / f"plan_{time.strftime('%Y%m%d_%H%M%S')}"

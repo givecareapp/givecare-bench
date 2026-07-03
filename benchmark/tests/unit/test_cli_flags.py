@@ -116,6 +116,84 @@ def test_runs_json_classifies_manifest_only_artifacts(monkeypatch, tmp_path, cap
     assert record["artifact_state"] == "aborted_manifest_only"
 
 
+def test_runs_json_classifies_transcript_only_artifacts(monkeypatch, tmp_path, capsys):
+    from invisiblebench.cli import agent_commands
+
+    run_dir = tmp_path / "run_20260702_020202"
+    run_dir.mkdir()
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps({"run_id": "abc", "artifact_type": "transcript_run/v1"})
+    )
+    (run_dir / "transcript_run.json").write_text(
+        json.dumps(
+            {
+                "artifact_type": "transcript_run/v1",
+                "model_ids": ["test/model"],
+                "expected_transcripts": 1,
+                "transcript_count": 1,
+                "error_count": 0,
+                "missing_count": 0,
+                "status": "complete",
+            }
+        )
+    )
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: tmp_path)
+
+    rc = runner_mod._run_runs(
+        limit=25,
+        offset=0,
+        json_output=True,
+    )
+
+    assert rc == 0
+    stdout = capsys.readouterr().out.strip().splitlines()
+    envelope = json.loads(stdout[0])
+    record = envelope["data"]["runs"][0]
+    assert record["id"] == "run_20260702_020202"
+    assert record["has_results"] is False
+    assert record["artifact_state"] == "transcripts_ready"
+    assert record["scenarios"] == 1
+
+
+def test_runs_json_classifies_partial_transcript_artifacts(monkeypatch, tmp_path, capsys):
+    from invisiblebench.cli import agent_commands
+
+    run_dir = tmp_path / "run_20260702_030303"
+    run_dir.mkdir()
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps({"run_id": "abc", "artifact_type": "transcript_run/v1"})
+    )
+    (run_dir / "transcript_run.json").write_text(
+        json.dumps(
+            {
+                "artifact_type": "transcript_run/v1",
+                "model_ids": ["test/model"],
+                "expected_transcripts": 2,
+                "transcript_count": 1,
+                "error_count": 0,
+                "missing_count": 1,
+                "status": "partial",
+            }
+        )
+    )
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: tmp_path)
+
+    rc = runner_mod._run_runs(
+        limit=25,
+        offset=0,
+        json_output=True,
+    )
+
+    assert rc == 0
+    stdout = capsys.readouterr().out.strip().splitlines()
+    envelope = json.loads(stdout[0])
+    record = envelope["data"]["runs"][0]
+    assert record["id"] == "run_20260702_030303"
+    assert record["has_results"] is False
+    assert record["artifact_state"] == "transcripts_partial"
+    assert record["scenarios"] == 1
+
+
 def test_out_flag_unwritable_path_emits_error_envelope(monkeypatch, capsys):
     monkeypatch.setattr(runner_mod, "_collect_runs", _fake_records)
 
@@ -322,6 +400,7 @@ def test_benchmark_manifest_and_rows_share_run_id(
         dry_run=False,
         auto_confirm=True,
         scenario_filter=["context_regulatory_data_privacy_001"],
+        transcripts_only=False,
     )
 
     assert rc == 0

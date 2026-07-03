@@ -11,6 +11,7 @@ from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
 from invisiblebench.cli.result_helpers import (
     _build_scoring_summary,
     _make_error_result,
+    _make_transcript_result,
 )
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.utils.benchmark_inventory import get_project_root
@@ -163,12 +164,13 @@ async def evaluate_scenario_async(
     model: dict[str, Any],
     scenario: dict[str, Any],
     api_client: "ModelAPIClient",
-    orchestrator: Any,  # ModeEngineScoringAdapter — avoid circular import
+    orchestrator: Any | None,  # ModeEngineScoringAdapter — avoid circular import
     output_dir: Path,
     semaphore: asyncio.Semaphore,
     detailed_output: bool = False,
     run_suffix: str = "",
     run_id: str | None = None,
+    score_transcript: bool = True,
 ) -> dict[str, Any]:
     """Evaluate a single scenario asynchronously."""
     async with semaphore:
@@ -289,8 +291,22 @@ async def evaluate_scenario_async(
                 cost=actual_cost,
             )
 
+        if not score_transcript:
+            actual_cost = cost_tracker.total - cost_before
+            return _make_transcript_result(
+                model=model,
+                scenario_name=scenario["name"],
+                scenario_id=scenario_id,
+                category=scenario["category"],
+                transcript_path=transcript_path,
+                cost=actual_cost,
+                run_id=run_id,
+            )
+
         # Score the transcript (sync - orchestrator isn't async)
         try:
+            if orchestrator is None:
+                raise RuntimeError("Scoring requested without a scoring adapter")
             root = get_project_root()
             rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
 
@@ -341,10 +357,11 @@ def _run_single_scenario(
     run_suffix: str,
     output_dir: Path,
     api_client: "ModelAPIClient",
-    orchestrator: Any,  # ModeEngineScoringAdapter — avoid circular import
+    orchestrator: Any | None,  # ModeEngineScoringAdapter — avoid circular import
     rules_path: Path,
     detailed_output: bool = False,
     run_id: str | None = None,
+    score_transcript: bool = True,
 ) -> dict[str, Any]:
     """Run one scenario once and return standardized result row."""
     transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}{run_suffix}.jsonl"
@@ -368,7 +385,21 @@ def _run_single_scenario(
             cost=actual_cost,
         )
 
+    if not score_transcript:
+        actual_cost = cost_tracker.total - cost_before
+        return _make_transcript_result(
+            model=model,
+            scenario_name=scenario["name"],
+            scenario_id=scenario_id,
+            category=scenario["category"],
+            transcript_path=transcript_path,
+            cost=actual_cost,
+            run_id=run_id,
+        )
+
     try:
+        if orchestrator is None:
+            raise RuntimeError("Scoring requested without a scoring adapter")
         result = orchestrator.score(
             transcript_path=str(transcript_path),
             scenario_path=str(scenario_path),

@@ -281,7 +281,7 @@ class LLMVerifier(Verifier):
     def __init__(
         self,
         api_client: ModelAPIClient,
-        model: str = "google/gemini-2.5-flash-lite",
+        model: str = "openai/gpt-5-mini",
         prompt_dir: Path | None = None,
     ) -> None:
         self.api_client = api_client

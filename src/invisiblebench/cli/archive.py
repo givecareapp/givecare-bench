@@ -59,6 +59,30 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
             info["artifact_state"] = "complete_results" if data else "empty_results"
         else:
             info["artifact_state"] = "invalid_results"
+    elif (run_path / "transcript_run.json").exists():
+        try:
+            with open(run_path / "transcript_run.json") as f:
+                transcript_data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            transcript_data = None
+        if isinstance(transcript_data, dict):
+            info["scenarios"] = int(transcript_data.get("transcript_count") or 0)
+            info["models"] = [
+                str(model_id) for model_id in transcript_data.get("model_ids", [])
+            ]
+            expected = int(transcript_data.get("expected_transcripts") or 0)
+            transcript_count = int(transcript_data.get("transcript_count") or 0)
+            error_count = int(transcript_data.get("error_count") or 0)
+            missing_count = int(transcript_data.get("missing_count") or 0)
+            status = transcript_data.get("status")
+            info["artifact_state"] = "transcripts_ready" if (
+                status == "complete"
+                and error_count == 0
+                and missing_count == 0
+                and (expected == 0 or transcript_count == expected)
+            ) else "transcripts_partial"
+        else:
+            info["artifact_state"] = "invalid_transcript_run"
     elif manifest_file.exists():
         has_partial_artifacts = any(
             (run_path / name).exists()

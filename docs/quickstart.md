@@ -33,23 +33,23 @@ uv run bench doctor          # verifies env + directories
 Any OpenRouter model id works — you are not limited to the published roster:
 
 ```bash
-uv run bench -m "your-org/your-model" --dry-run     # cost preview, no calls
-uv run bench -m "your-org/your-model" -y            # all 63 public scenarios
+uv run bench -m "your-org/your-model" --transcripts-only --dry-run  # cost preview, no calls
+uv run bench -m "your-org/your-model" --transcripts-only -y  # all 64 public scenarios
 ```
 
 Want a smaller first taste? Run one category:
 
 ```bash
-uv run bench -m "your-org/your-model" -c safety -y
+uv run bench -m "your-org/your-model" -c safety --transcripts-only -y
 ```
 
-For a cheap live canary before a larger run, use one low-cost model, one
-scenario, and a low-cost scorer:
+For a cheap live canary before a larger run, use one low-cost target model and
+one scenario. The GPT-5 Mini judge runs in the scan step, not in `bench`:
 
 ```bash
 env INVISIBLEBENCH_API_TIMEOUT_SECONDS=10 INVISIBLEBENCH_API_MAX_RETRIES=1 \
-  INVISIBLEBENCH_SCORER_MODEL=google/gemini-2.5-flash-lite \
-  uv run bench -m "flash lite" --scenario context_regulatory_data_privacy_001 -y
+  uv run bench -m "flash lite" --scenario context_regulatory_data_privacy_001 \
+  --transcripts-only -y
 ```
 
 This produces `results/run_<timestamp>/` with one transcript per scenario.
@@ -60,8 +60,10 @@ The `dev` profile is the calibrated core: the Safety-line checks (Crisis, Scope,
 Identity) judged with one-pass LLM verifiers:
 
 ```bash
-uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm results/run_<timestamp>
-uv run python scripts/run_scan.py --profile dev --enable-llm results/run_<timestamp>
+uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm \
+  --llm-model openai/gpt-5-mini results/run_<timestamp>
+uv run python scripts/run_scan.py --profile dev --enable-llm \
+  --llm-model openai/gpt-5-mini results/run_<timestamp>
 ```
 
 (`--profile publish` runs all 50 checks with full repetitions — use it when

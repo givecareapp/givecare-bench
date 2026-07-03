@@ -583,8 +583,13 @@ def get_scenarios(
     return scenarios
 
 
-def estimate_cost(category: str, model: dict[str, Any]) -> float:
-    """Estimate cost for a single evaluation (model-under-test + scorer LLM calls)."""
+def estimate_cost(
+    category: str,
+    model: dict[str, Any],
+    *,
+    include_scorer: bool = True,
+) -> float:
+    """Estimate cost for one target-model run, optionally including old inline scorers."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
 
@@ -592,6 +597,9 @@ def estimate_cost(category: str, model: dict[str, Any]) -> float:
     model_cost = (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
         tokens["output"] / 1_000_000
     ) * model["cost_per_m_output"]
+
+    if not include_scorer:
+        return model_cost
 
     # Scorer LLM costs (flash-lite for most scorers + flash for safety reference)
     st = SCORER_TOKENS_PER_CALL
@@ -818,6 +826,116 @@ def _print_audit_summary(audit: dict[str, Any], console: Console | None = None) 
         print(msg)
 
 
+def _write_transcript_run_summary(
+    *,
+    output_dir: Path,
+    manifest: dict[str, Any],
+    models: list[dict[str, Any]],
+    scenarios: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+    elapsed_seconds: float,
+    abort_reason: str | None = None,
+) -> Path:
+    ready = [r for r in results if r.get("status") == "transcript_ready"]
+    errors = [r for r in results if r.get("status") != "transcript_ready"]
+    expected_transcripts = len(models) * len(scenarios)
+    missing_count = max(expected_transcripts - len(ready) - len(errors), 0)
+    is_complete = (
+        len(ready) == expected_transcripts
+        and not errors
+        and missing_count == 0
+        and abort_reason is None
+    )
+
+    def _artifact_transcript_path(row: dict[str, Any]) -> str | None:
+        raw_path = row.get("transcript_path")
+        if not isinstance(raw_path, str) or not raw_path:
+            return None
+        path = Path(raw_path)
+        try:
+            resolved = path if path.is_absolute() else path.resolve()
+            return str(resolved.relative_to(output_dir.resolve()))
+        except ValueError:
+            return str(path)
+
+    summary = {
+        "artifact_type": "transcript_run/v1",
+        "run_id": manifest.get("run_id"),
+        "benchmark_version": manifest.get("benchmark_version"),
+        "contract_version": manifest.get("contract_version"),
+        "stage": "transcripts",
+        "status": "complete" if is_complete else "partial",
+        "model_ids": [m["id"] for m in models],
+        "scenario_count": len(scenarios),
+        "expected_transcripts": expected_transcripts,
+        "transcript_count": len(ready),
+        "error_count": len(errors),
+        "missing_count": missing_count,
+        "abort_reason": abort_reason,
+        "elapsed_seconds": round(elapsed_seconds, 3),
+        "transcripts": [
+            {
+                "model": r.get("model"),
+                "model_id": r.get("model_id"),
+                "scenario": r.get("scenario"),
+                "scenario_id": r.get("scenario_id"),
+                "category": r.get("category"),
+                "transcript_path": _artifact_transcript_path(r),
+            }
+            for r in ready
+        ],
+        "errors": [
+            {
+                "model": r.get("model"),
+                "model_id": r.get("model_id"),
+                "scenario": r.get("scenario"),
+                "scenario_id": r.get("scenario_id"),
+                "category": r.get("category"),
+                "reason": "; ".join(str(x) for x in r.get("hard_fail_reasons", []))
+                or r.get("error")
+                or r.get("status"),
+            }
+            for r in errors
+        ],
+        "next_steps": {
+            "dev_scan": (
+                "uv run python scripts/run_scan.py --profile dev --enable-llm "
+                "--llm-model openai/gpt-5-mini "
+                f"{output_dir}"
+            ),
+            "publish_scan_dry_run": (
+                "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
+                "--llm-model openai/gpt-5-mini "
+                f"{output_dir}"
+            ),
+        },
+    }
+    path = output_dir / "transcript_run.json"
+    write_json(path, summary)
+    return path
+
+
+def _print_transcript_next_steps(output_dir: Path, console: Console | None = None) -> None:
+    dev_cmd = (
+        "uv run python scripts/run_scan.py --profile dev --enable-llm "
+        "--llm-model openai/gpt-5-mini "
+        f"{output_dir}"
+    )
+    publish_dry_run_cmd = (
+        "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
+        "--llm-model openai/gpt-5-mini "
+        f"{output_dir}"
+    )
+    if console:
+        console.print("[cyan]Next stage: judge transcripts with Safety/Care scan[/cyan]")
+        console.print(f"[dim]{dev_cmd}[/dim]")
+        console.print(f"[dim]{publish_dry_run_cmd}[/dim]")
+    else:
+        print("Next stage: judge transcripts with Safety/Care scan")
+        print(dev_cmd)
+        print(publish_dry_run_cmd)
+
+
 def run_benchmark(
     models: list[dict[str, Any]],
     output_dir: Path,
@@ -832,6 +950,7 @@ def run_benchmark(
     generate_diagnostic: bool = False,
     runs: int = 1,
     include_confidential: bool = False,
+    transcripts_only: bool = True,
 ) -> int:
     """Run the benchmark."""
     console = Console() if RICH_AVAILABLE else None
@@ -870,7 +989,21 @@ def run_benchmark(
     total = len(models) * len(scenarios)
     n_runs = max(1, runs)
     scenario_parallel = max(1, scenario_parallel)
-    total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios) * n_runs
+    if transcripts_only and n_runs > 1:
+        print("ERROR: --transcripts-only does not support --runs > 1 yet")
+        return 1
+    total_cost = (
+        sum(
+            estimate_cost(
+                s["category"],
+                m,
+                include_scorer=not transcripts_only,
+            )
+            for m in models
+            for s in scenarios
+        )
+        * n_runs
+    )
 
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
@@ -878,16 +1011,25 @@ def run_benchmark(
             console.print(
                 f"[cyan]Running {n_runs}\u00d7 per scenario (median + reliability stats)[/cyan]\n"
             )
+        if transcripts_only:
+            console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
     else:
         print("\nInvisibleBench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
         if n_runs > 1:
             print(f"Running {n_runs}x per scenario (median + reliability stats)")
+        if transcripts_only:
+            print("Transcript-only mode: judge/scorer calls are skipped")
 
     if dry_run:
         if RICH_AVAILABLE and console:
             console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
+            if transcripts_only:
+                console.print(
+                    "[cyan]Estimate includes target transcript generation only. "
+                    "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost.[/cyan]\n"
+                )
             console.print("[bold]Selected models:[/bold]")
             all_catalog = MODELS_FULL
             for m in models:
@@ -896,12 +1038,24 @@ def run_benchmark(
                     None,
                 )
                 num = f"#{idx + 1}" if idx is not None else "#?"
-                cost = sum(estimate_cost(s["category"], m) for s in scenarios)
+                cost = sum(
+                    estimate_cost(
+                        s["category"],
+                        m,
+                        include_scorer=not transcripts_only,
+                    )
+                    for s in scenarios
+                )
                 console.print(
                     f"  [dim]{num:<4}[/dim] {m['name']:<24} [magenta]~${cost:.2f}[/magenta]"
                 )
         else:
             print("DRY RUN - No evaluations will be run")
+            if transcripts_only:
+                print(
+                    "Estimate includes target transcript generation only. "
+                    "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost."
+                )
             print("\nSelected models:")
             all_catalog = MODELS_FULL
             for m in models:
@@ -933,7 +1087,7 @@ def run_benchmark(
 
     root = get_project_root()
     rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
-    orchestrator = ModeEngineScoringAdapter(api_client)
+    orchestrator = None if transcripts_only else ModeEngineScoringAdapter(api_client)
 
     run_id = str(uuid.uuid4())
     manifest = generate_manifest(
@@ -944,6 +1098,10 @@ def run_benchmark(
         mode="raw",
         include_confidential=include_confidential,
     )
+    if transcripts_only:
+        manifest["artifact_type"] = "transcript_run/v1"
+        manifest["stage"] = "transcripts"
+        manifest["scoring"] = "deferred_to_run_scan"
     write_manifest(manifest, output_dir)
     model_results_dir = output_dir / "model_results"
 
@@ -963,6 +1121,109 @@ def run_benchmark(
     passed = 0
     failed = 0
     credits_exhausted = False
+
+    if transcripts_only:
+        print(f"Generating transcripts only ({len(models)} model(s), {len(scenarios)} scenario(s))")
+        print("Scoring is deferred to scripts/run_scan.py\n")
+        transcript_rows: list[dict[str, Any]] = []
+
+        async def run_transcript_model(model: dict[str, Any]) -> list[dict[str, Any]]:
+            semaphore = asyncio.Semaphore(scenario_parallel)
+
+            async def run_indexed(
+                index: int,
+                scenario: dict[str, Any],
+            ) -> tuple[int, dict[str, Any]]:
+                result = await evaluate_scenario_async(
+                    model,
+                    scenario,
+                    api_client,
+                    orchestrator,
+                    output_dir,
+                    semaphore,
+                    detailed_output=False,
+                    run_id=run_id,
+                    score_transcript=False,
+                )
+                return index, result
+
+            tasks = [
+                asyncio.create_task(run_indexed(index, scenario))
+                for index, scenario in enumerate(scenarios)
+            ]
+            completed: list[tuple[int, dict[str, Any]]] = []
+
+            try:
+                for task in asyncio.as_completed(tasks):
+                    idx, result = await task
+                    completed.append((idx, result))
+                    transcript_rows.append(result)
+                    is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
+                    status = "ERROR" if is_error else "TRANSCRIPT"
+                    print(
+                        f"[{len(completed)}/{len(tasks)}] {model['name']} - "
+                        f"{result.get('scenario', 'unknown')} {status}"
+                    )
+            except InsufficientCreditsError:
+                for task in tasks:
+                    task.cancel()
+                raise
+
+            return [result for _, result in sorted(completed, key=lambda item: item[0])]
+
+        async def run_transcripts() -> list[dict[str, Any]]:
+            model_parallel = max(1, parallel or 1)
+            if model_parallel <= 1:
+                rows: list[dict[str, Any]] = []
+                for model in models:
+                    rows.extend(await run_transcript_model(model))
+                return rows
+
+            model_semaphore = asyncio.Semaphore(model_parallel)
+
+            async def run_model_with_sem(model: dict[str, Any]) -> list[dict[str, Any]]:
+                async with model_semaphore:
+                    return await run_transcript_model(model)
+
+            nested = await asyncio.gather(*(run_model_with_sem(model) for model in models))
+            return [row for model_rows in nested for row in model_rows]
+
+        try:
+            results = asyncio.run(run_transcripts())
+        except InsufficientCreditsError:
+            credits_exhausted = True
+            results = transcript_rows
+            print("\nCredits exhausted. Saving transcript summary for completed scenarios.")
+        except Exception as e:
+            print(f"ERROR: Transcript generation failed: {e}")
+            return 1
+
+        for row in results:
+            if row.get("status") == "transcript_ready":
+                passed += 1
+            else:
+                failed += 1
+
+        elapsed = time.time() - start_time
+        summary_path = _write_transcript_run_summary(
+            output_dir=output_dir,
+            manifest=manifest,
+            models=models,
+            scenarios=scenarios,
+            results=results,
+            elapsed_seconds=elapsed,
+            abort_reason="credits_exhausted" if credits_exhausted else None,
+        )
+
+        actual_total = cost_tracker.total
+        state = "Partial" if failed or credits_exhausted else "Complete"
+        print(
+            f"\n{state}: {passed} transcripts ready, {failed} errors  "
+            f"${actual_total:.3f}"
+        )
+        print(f"Transcript summary: {summary_path}")
+        _print_transcript_next_steps(output_dir, console if RICH_AVAILABLE else None)
+        return 0 if passed and not failed and not credits_exhausted else 1
 
     # Parallel execution mode - runs N MODELS in parallel
     if parallel and parallel > 1:

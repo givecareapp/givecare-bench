@@ -711,6 +711,22 @@ Examples:
         metavar="N",
         help="Run up to N scenarios concurrently per model for the llm/raw harness (default: 1)",
     )
+    stage_group = parser.add_mutually_exclusive_group()
+    stage_group.add_argument(
+        "--transcripts-only",
+        dest="run_stage",
+        action="store_const",
+        const="transcripts",
+        default="transcripts",
+        help="Generate target model transcripts only; judge later with scripts/run_scan.py (default)",
+    )
+    stage_group.add_argument(
+        "--legacy-inline-score",
+        dest="run_stage",
+        action="store_const",
+        const="legacy_inline",
+        help="Deprecated: generate transcripts and run the old inline raw scorer in one command",
+    )
     parser.add_argument(
         "--models",
         "-m",
@@ -1005,6 +1021,7 @@ Examples:
         generate_diagnostic=args.diagnose,
         runs=getattr(args, "runs", 1),
         include_confidential=args.confidential,
+        transcripts_only=args.run_stage == "transcripts",
     )
 
 

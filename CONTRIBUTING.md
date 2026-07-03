@@ -82,10 +82,16 @@ uv run pytest benchmark/tests/unit/test_scenario_validator.py benchmark/tests/un
 See [docs/install.md](docs/install.md) for the "reproduce a leaderboard
 entry from scratch" walkthrough. The short version:
 
+`bench` generates target transcripts only by default; judge them in a
+separate step with `scripts/run_scan.py` (`--legacy-inline-score` restores
+the old inline scorer):
+
 ```bash
 uv run bench --dry-run          # estimate cost only
-uv run bench -m deepseek -y     # single model
-uv run bench --full -y          # all public models, current leaderboard scenarios
+uv run bench -m deepseek -y     # single model, transcripts only
+uv run bench --full -y          # all public models, transcripts only
+uv run python scripts/run_scan.py --profile dev --enable-llm \
+  --llm-model openai/gpt-5-mini results/run_<id>   # judge the transcripts
 ```
 
 ## PR checklist

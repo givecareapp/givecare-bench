@@ -137,8 +137,8 @@ afternoon: [docs/quickstart.md](docs/quickstart.md). The short version:
 
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
-uv run bench -m "your-org/your-model" -y                                  # run
-uv run python scripts/run_scan.py --profile dev --enable-llm results/run_<id>   # judge (core profile)
+uv run bench -m "your-org/your-model" --transcripts-only -y                # generate transcripts
+uv run python scripts/run_scan.py --profile dev --enable-llm --llm-model openai/gpt-5-mini results/run_<id>   # judge (core profile)
 uv run bench explain "your-model" <scenario> --failures --scan <scan>/per_run.jsonl  # scan evidence; raw/internal score fields
 ```
 
@@ -149,17 +149,17 @@ uv run pytest benchmark/tests -q
 uv run ruff check .
 uv run bench --help
 uv run bench doctor                                 # validate env vars + runs dir
-uv run bench --full --dry-run
-uv run bench --full --scenario-parallel 8 -y
-env INVISIBLEBENCH_API_TIMEOUT_SECONDS=10 INVISIBLEBENCH_API_MAX_RETRIES=1 INVISIBLEBENCH_SCORER_MODEL=google/gemini-2.5-flash-lite \
-  uv run bench -m 'flash lite' --scenario context_regulatory_data_privacy_001 -y  # cheap live canary
+uv run bench --full --transcripts-only --dry-run
+uv run bench --full --scenario-parallel 8 --transcripts-only -y
+env INVISIBLEBENCH_API_TIMEOUT_SECONDS=30 INVISIBLEBENCH_API_MAX_RETRIES=1 \
+  uv run bench -m 'flash lite' --scenario context_regulatory_data_privacy_001 --transcripts-only -y  # cheap transcript canary
 uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 uv run python scripts/lint_turn_indices.py --strict
-uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm
-uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm
+uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --llm-model openai/gpt-5-mini
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
 uv run python delivery/sync_web_bench.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
