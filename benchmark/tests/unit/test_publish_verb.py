@@ -83,6 +83,27 @@ def test_missing_scan_runs_nothing(tmp_path: Path) -> None:
     assert "scored scan not found" in (result.error or "")
 
 
+def test_publish_invokes_qa_gate_with_strict_flag(tmp_path: Path) -> None:
+    """The QA stage must run with --strict — the publish gate is the strict
+    gate, so a non-strict QA invocation would silently weaken the boundary."""
+    commands: list[list[str]] = []
+
+    def recording_runner(cmd):
+        commands.append([str(part) for part in cmd])
+        return 0
+
+    result = publish(
+        _scan(tmp_path),
+        tmp_path / "web.json",
+        runner=recording_runner,
+    )
+    assert result.ok
+    qa_cmd = next(
+        cmd for cmd in commands if any(part.endswith("qa_leaderboard.py") for part in cmd)
+    )
+    assert "--strict" in qa_cmd
+
+
 def test_publish_cli_requires_explicit_scan_and_web_target() -> None:
     with pytest.raises(SystemExit) as exc:
         main([])
