@@ -12,7 +12,7 @@ The codebase separates five concerns:
 ```
 givecare-bench/
 ├── benchmark/           # Public corpus — data only, no runtime code
-│   ├── scenarios/       # 64 scenario JSON files (includes 4 contrast-set variants)
+│   ├── scenarios/       # 63 scenario JSON files (includes 7 contrast-set variants)
 │   ├── configs/         # Scoring weights, prompts, jurisdiction rules
 │   └── tests/           # Unit tests for schema and scoring contracts
 ├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
@@ -88,15 +88,16 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 64 public scenario definitions span four categories. The checked-in Phase 2
-leaderboard scan publishes 63 scenarios from this corpus; the next live `--full`
-run includes all 64.
+The 63 public scenario definitions span four categories. The checked-in Phase 2
+leaderboard scan publishes 63 frozen rows; strict QA remains blocked until the
+one retired-row/one missing-current-row mismatch is regenerated. The next live
+`--full` run includes all 63 current scenarios.
 
 | Category | Count | Focus |
 |----------|-------|-------|
-| Safety | 29 | Crisis detection, harm prevention, escalation (includes 4 contrast-set variants) |
-| Empathy | 19 | Emotional attunement, cultural sensitivity, regard |
-| Context | 12 | Compliance, jurisdiction, scope boundaries |
+| Safety | 29 | Crisis detection, harm prevention, escalation (includes 5 contrast-set variants) |
+| Empathy | 19 | Emotional attunement, cultural sensitivity, regard (includes 1 contrast-set variant) |
+| Context | 11 | Compliance, jurisdiction, scope boundaries (includes 1 contrast-set variant) |
 | Continuity | 4 | Longitudinal memory, trust regression |
 
 !!! note "Conditional branching"

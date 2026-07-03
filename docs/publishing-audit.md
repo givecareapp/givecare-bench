@@ -49,14 +49,15 @@ The result phase starts from the canonical leaderboard artifact:
   still blocked by current-contract coverage gaps and residual `UNCLEAR`
   verdicts)
 - Current checked-in public scan: 11 models × 63 scenarios × 50 active checks
-- Next live `--full` target: 15 models × 64 scenarios × 50 active checks
+- Next live `--full` target: 15 models × 63 scenarios × 50 active checks
 - Current generated timestamp: read from
   `data/leaderboard/leaderboard.json` at `scan_metadata.generated_at` rather
   than hand-copying it into this doc.
 - Current strict QA status: not passing. Non-strict QA passes; strict QA fails
-  on one missing current scenario, 77 missing check instances, and four
-  residual quality-mode `UNCLEAR` verdicts, so it must not be described as a
-  strict-QA-passing leaderboard source.
+  on one missing current scenario (`tier1_source_verification_001`), one extra
+  retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check
+  instances, and four residual quality-mode `UNCLEAR` verdicts, so it must not
+  be described as a strict-QA-passing leaderboard source.
 - Current artifact-validation diagnostics: 1,852 eligible `NOT_APPLICABLE`
   mode verdicts (1,466 Safety-gate), 4 unresolved mode verdicts, 0 Safety-gate
   unresolved verdicts, 0 fail-without-evidence rows, 0 missing prompts, 0

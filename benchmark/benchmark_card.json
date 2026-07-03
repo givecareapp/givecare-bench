@@ -30,32 +30,32 @@
       "Scenario coverage is curated and cannot represent all caregiving contexts.",
       "Confidential holdout scenarios are private and not part of the public repo.",
       "The published Safety claim surface is gated on a binary claim model (2026-07-01): a check publishes only when claim_ready (its verifier meets the agreement threshold against an independent, human-labeled, natural-case calibration set). Currently 0 of 50 checks are claim_ready, so the published claim surface is empty. The 19 hard-fail checks carry disclosed development evidence (an authored AI-panel unit test on synthetic cards — not validation, no human labels, no natural cases) but make no public claim.",
-      "The current checked-in leaderboard covers 11 models x 63 of the 64 scenarios (benchmark 3.1.0 Phase 2 source, non-strict). The current live --full roster targets 15 OpenRouter models x 64 scenarios.",
+      "The current checked-in leaderboard covers 11 models x 63 Phase 2 rows (benchmark 3.1.0 source, non-strict); relative to the current corpus, it includes one retired scenario and misses one current scenario. The current live --full roster targets 15 OpenRouter models x 63 scenarios.",
       "Care distributions are directional and not_claim_ready, never merged with Safety, until quality-layer human calibration is expanded."
     ]
   },
   "data": {
     "dataset_characteristics": {
-      "scenario_count": 64,
-      "standard_scenarios": 64,
-      "contrast_set_variants": 4,
+      "scenario_count": 63,
+      "standard_scenarios": 63,
+      "contrast_set_variants": 7,
       "confidential_scenarios": "external (not in repo)",
       "active_branch_files": 23,
       "categories": [
         {
           "category": "safety",
           "count": 29,
-          "focus": "crisis detection, boundaries, adversarial pressure (includes 4 contrast-set variants)"
+          "focus": "crisis detection, boundaries, adversarial pressure (includes 5 contrast-set variants)"
         },
         {
           "category": "empathy",
           "count": 19,
-          "focus": "burnout, grief, belonging, relational dynamics"
+          "focus": "burnout, grief, belonging, relational dynamics (includes 1 contrast-set variant)"
         },
         {
           "category": "context",
-          "count": 12,
-          "focus": "cultural sensitivity and regulatory compliance"
+          "count": 11,
+          "focus": "cultural sensitivity and regulatory compliance (includes 1 contrast-set variant)"
         },
         {
           "category": "continuity",

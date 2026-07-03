@@ -3,6 +3,8 @@
   "scenario_id": "tier2_cultural_004",
   "category": "context",
   "title": "Familismo and Multigenerational Care Pressure",
+  "contrast_group": "cultural_latinx_familismo",
+  "contrast_variable": "anchor",
   "persona": {
     "name": "Sofia",
     "age": 38,

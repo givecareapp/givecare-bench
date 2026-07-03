@@ -17,8 +17,8 @@ The output model is **`safety-care/v1`** — a per-model safety **profile, not a
 The benchmark also carries a longitudinal result: the headline relational failures measured in the 2025 historical sweep (artificial intimacy, false continuity, identity misrepresentation) record zero scored failures on the 2026 Phase 2 roster, on the same historical check definitions — see [Key Findings](docs/findings.md) for the evidence and the honest caveats on both readings.
 
 The checked-in leaderboard artifact remains the 11-model × 63-scenario Phase 2
-source. The current live `--full` command targets 15 OpenRouter models × 64
-public scenarios; a 2026-07-01 dry run estimates about `$33.17`.
+source. The current live `--full` command targets 15 OpenRouter models × 63
+public scenarios; a 2026-07-03 dry run estimates about `$24.33`.
 
 ## The calibrated core is the benchmark
 
@@ -120,7 +120,7 @@ internal/, results/ — that are not part of the public contract.)
 - `bench health` checks the local checked-in web projection read-only and warns
   when `data/leaderboard/leaderboard_web.json` lags
   `data/leaderboard/leaderboard.json`; it does not publish, sync, or write.
-- Current Phase 2 artifact status: `data/leaderboard/leaderboard.json` is a non-strict public source regenerated from the refreshed 50-check scan. Non-strict QA passes after restamping coverage semantics; strict QA still fails on one missing current scenario, 77 missing check instances, and four residual quality-mode `UNCLEAR`s, so this artifact must not be described as strict-QA-passing until those are adjudicated or regenerated.
+- Current Phase 2 artifact status: `data/leaderboard/leaderboard.json` is a non-strict public source regenerated from the refreshed 50-check scan. Non-strict QA passes after restamping coverage semantics; strict QA still fails on one missing current scenario (`tier1_source_verification_001`), one extra retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check instances, and four residual quality-mode `UNCLEAR`s, so this artifact must not be described as strict-QA-passing until those are adjudicated or regenerated.
 - The active public narrative surface is the synced web-bench payload: findings,
   themes, hard-fail evidence, optional contrast sets, and model signatures.
   Contrast findings are inactive when `data/leaderboard_phase2/contrasts.json`
@@ -137,7 +137,7 @@ afternoon: [docs/quickstart.md](docs/quickstart.md). The short version:
 
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
-uv run bench -m "your-org/your-model" --transcripts-only -y                # generate transcripts
+uv run bench -m "your-org/your-model" -y                                   # generate transcripts
 uv run python scripts/run_scan.py --profile dev --enable-llm --llm-model openai/gpt-5-mini results/run_<id>   # judge (core profile)
 uv run bench explain "your-model" <scenario> --failures --scan <scan>/per_run.jsonl  # scan evidence; raw/internal score fields
 ```
@@ -149,10 +149,10 @@ uv run pytest benchmark/tests -q
 uv run ruff check .
 uv run bench --help
 uv run bench doctor                                 # validate env vars + runs dir
-uv run bench --full --transcripts-only --dry-run
-uv run bench --full --scenario-parallel 8 --transcripts-only -y
+uv run bench --full --dry-run
+uv run bench --full --scenario-parallel 8 -y
 env INVISIBLEBENCH_API_TIMEOUT_SECONDS=30 INVISIBLEBENCH_API_MAX_RETRIES=1 \
-  uv run bench -m 'flash lite' --scenario context_regulatory_data_privacy_001 --transcripts-only -y  # cheap transcript canary
+  uv run bench -m 'flash lite' --scenario context_regulatory_data_privacy_001 -y  # cheap transcript canary
 uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents

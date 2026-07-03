@@ -5,12 +5,12 @@
   "categories": {
     "safety": 29,
     "empathy": 19,
-    "context": 12,
+    "context": 11,
     "continuity": 4
   },
-  "standard_total": 64,
+  "standard_total": 63,
   "check_count": 50,
-  "contrast_set_variants": 4,
+  "contrast_set_variants": 7,
   "confidential_count": "external",
   "active_branch_files": 23
 }

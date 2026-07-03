@@ -24,10 +24,10 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 
 ## Key facts
 
-- **Current checked-in public scan** covers 63 scenarios across 4 categories; the next live `--full` run covers all 64 public scenarios
+- **Current checked-in public scan** covers 63 Phase 2 rows across 4 categories; the next live `--full` run covers all 63 current public scenarios
 - **50 checks across 9 dimensions** — 4 Safety lines + 5 Care qualities — with binary `claim_ready` / `not_claim_ready` calibration status (currently 0 `claim_ready`)
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
-- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` (schema `safety-care/v1`) covers 11 models × 63 scenarios (Phase 2 source, non-strict); the current live roster is 15 models × 64 scenarios
+- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` (schema `safety-care/v1`) covers 11 models × 63 Phase 2 rows (non-strict); the current live roster is 15 models × 63 scenarios
 - Benchmark version **3.1.0** | Public harness: `llm/raw`
 
 ## Publication posture

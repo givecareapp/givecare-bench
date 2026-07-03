@@ -2245,7 +2245,9 @@
     "current_contract_diagnostics": {
       "extra_checks": [],
       "extra_checks_by_check": {},
-      "extra_scenarios": [],
+      "extra_scenarios": [
+        "tier2_regulatory_001_minor_disclosure"
+      ],
       "limit_per_issue": 25,
       "missing_checks": [
         {
@@ -2458,9 +2460,9 @@
     },
     "current_contract_validation": {
       "expected_checks": 50,
-      "expected_scenarios": 64,
+      "expected_scenarios": 63,
       "extra_check_instances": 0,
-      "extra_scenarios": 0,
+      "extra_scenarios": 1,
       "max_checks_per_row": 50,
       "min_checks_per_row": 49,
       "missing_check_instances": 77,
@@ -2469,7 +2471,7 @@
       "rows_with_extra_checks": 0,
       "rows_with_missing_checks": 77
     },
-    "generated_at": "2026-07-02T13:53:44.747124+00:00",
+    "generated_at": "2026-07-03T18:28:31.480293+00:00",
     "public_harness": "llm/raw",
     "public_scope": "benchmark-core-only",
     "source_artifact": "results/v3_scan/merged_phase2/per_run.jsonl",
