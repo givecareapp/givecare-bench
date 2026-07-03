@@ -132,34 +132,6 @@ def generate_transcript(
     return output_path
 
 
-def write_detailed_outputs(
-    results: dict[str, Any],
-    output_dir: Path,
-    model_id: str,
-    scenario_id: str,
-) -> dict[str, str]:
-    """Write per-scenario JSON/HTML reports and return their paths."""
-    from invisiblebench.export.reports import ReportGenerator
-
-    detail_dir = output_dir / "scenario_results"
-    report_dir = output_dir / "reports"
-    detail_dir.mkdir(parents=True, exist_ok=True)
-    report_dir.mkdir(parents=True, exist_ok=True)
-
-    base_name = f"{model_id.replace('/', '_')}_{scenario_id}"
-    detail_json_path = detail_dir / f"{base_name}.json"
-    detail_html_path = report_dir / f"{base_name}.html"
-
-    reporter = ReportGenerator()
-    reporter.generate_json(results, str(detail_json_path))
-    reporter.generate_html(results, str(detail_html_path))
-
-    return {
-        "detail_json": str(detail_json_path),
-        "detail_html": str(detail_html_path),
-    }
-
-
 async def evaluate_scenario_async(
     model: dict[str, Any],
     scenario: dict[str, Any],
@@ -319,13 +291,6 @@ async def evaluate_scenario_async(
             )
 
             detail_paths: dict[str, str] = {}
-            if detailed_output:
-                detail_paths = write_detailed_outputs(
-                    result,
-                    output_dir=output_dir,
-                    model_id=model["id"],
-                    scenario_id=scenario_id,
-                )
 
             actual_cost = cost_tracker.total - cost_before
             return _build_scoring_summary(
@@ -409,13 +374,6 @@ def _run_single_scenario(
         )
 
         detail_paths: dict[str, str] = {}
-        if detailed_output:
-            detail_paths = write_detailed_outputs(
-                result,
-                output_dir=output_dir,
-                model_id=model["id"],
-                scenario_id=scenario_id,
-            )
 
         actual_cost = cost_tracker.total - cost_before
         return _build_scoring_summary(

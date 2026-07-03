@@ -55,15 +55,6 @@ from invisiblebench.api.client import (
     resolve_scorer_model,
 )
 from invisiblebench.cli._console import make_console
-from invisiblebench.cli.diff import (
-    aggregate_results_by_model as aggregate_results_by_model,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.diff import (
-    compute_run_diff as compute_run_diff,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.diff import (
-    load_run_results as load_run_results,  # re-exported: tests import from this module
-)
 from invisiblebench.cli.display import ScenarioDisplay, print_banner
 from invisiblebench.cli.result_helpers import (
     _compute_success as _compute_success,  # re-exported: tests import from this module
@@ -78,9 +69,6 @@ from invisiblebench.cli.result_helpers import (
 from invisiblebench.cli.transcript import (
     _run_single_scenario,
     evaluate_scenario_async,
-)
-from invisiblebench.cli.transcript import (
-    write_detailed_outputs as write_detailed_outputs,  # re-exported: tests import from this module
 )
 from invisiblebench.evaluation.scoring_contract import coverage_floor
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
@@ -116,7 +104,6 @@ try:
         SpinnerColumn,
         TextColumn,
     )
-    from rich.table import Table
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -289,7 +276,6 @@ def run_givecare_eval(
     verbose: bool = True,
     dry_run: bool = False,
     auto_confirm: bool = False,
-    generate_diagnostic: bool = False,
     output_dir: Path | None = None,
     adapter_name: str = "givecare-v2",
     harness_mode: str = "v2",
@@ -480,23 +466,6 @@ def run_givecare_eval(
     print(f"Average:   {avg_score:.1f}% raw diagnostic score")
     print(f"{'='*50}")
     print(f"Saved: {results_path}")
-
-    if generate_diagnostic:
-        print("\nGenerating diagnostic report...")
-        try:
-            from invisiblebench.export.diagnostic import generate_diagnostic_report
-
-            diag_path = output_dir / "diagnostic_report.md"
-            transcripts_path = output_dir / "transcripts"
-
-            generate_diagnostic_report(
-                results_path=str(results_path),
-                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
-                output_path=str(diag_path),
-            )
-            print(f"Diagnostic: {diag_path}")
-        except (ImportError, OSError) as e:
-            print(f"Warning: Could not generate diagnostic report: {e}")
 
     _print_audit_summary(audit)
     print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
@@ -929,7 +898,6 @@ def run_benchmark(
     parallel: int | None = None,
     scenario_parallel: int = 1,
     detailed_output: bool = False,
-    generate_diagnostic: bool = False,
     runs: int = 1,
     include_confidential: bool = False,
     transcripts_only: bool = True,
@@ -1751,37 +1719,6 @@ def run_benchmark(
     results_path = output_dir / "all_results.json"
     write_json(results_path, results)
 
-    report_path = output_dir / "report.html"
-    try:
-        from invisiblebench.export.reports import ReportGenerator
-
-        reporter = ReportGenerator()
-        model_names = ", ".join(m["name"] for m in models)
-        reporter.generate_batch_report(
-            results,
-            str(report_path),
-            metadata={"model": model_names, "mode": "llm-raw"},
-        )
-    except (ImportError, OSError) as e:
-        print(f"Warning: Could not generate HTML report: {e}")
-
-    # Generate diagnostic report if requested
-    diag_path = None
-    if generate_diagnostic:
-        try:
-            from invisiblebench.export.diagnostic import generate_diagnostic_report
-
-            diag_path = output_dir / "diagnostic_report.md"
-            transcripts_path = output_dir / "transcripts"
-
-            generate_diagnostic_report(
-                results_path=str(results_path),
-                transcripts_dir=str(transcripts_path) if transcripts_path.exists() else None,
-                output_path=str(diag_path),
-            )
-        except (ImportError, OSError) as e:
-            print(f"Warning: Could not generate diagnostic report: {e}")
-
     audit = _write_run_audit(
         results_path,
         output_dir=output_dir,
@@ -1796,58 +1733,6 @@ def run_benchmark(
         actual_total = cost_tracker.total
         elapsed_str = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
         cost_snap = cost_tracker.snapshot()
-
-        # ── Success Rate table (primary metric) ──
-        try:
-            from invisiblebench.stats.analysis import (
-                compute_failure_buckets,
-                compute_success_rates,
-            )
-
-            sr = compute_success_rates(results)
-            sr_total = sr["total"]
-            console.print()
-            console.print("[bold]SUCCESS RATE[/bold]")
-            sr_table = Table(show_header=True, show_lines=False, pad_edge=False)
-            sr_table.add_column("Category", style="bold")
-            sr_table.add_column("Pass", justify="right")
-            sr_table.add_column("Fail", justify="right")
-            sr_table.add_column("Rate", justify="right")
-            sr_table.add_column("95% CI", justify="right")
-
-            for cat, cs in sr["categories"].items():
-                rate_str = f"{cs['rate'] * 100:.1f}%"
-                ci_str = f"[{cs['ci_lo'] * 100:.1f}%, {cs['ci_hi'] * 100:.1f}%]"
-                rate_color = "green" if cs["rate"] >= 0.8 else "yellow" if cs["rate"] >= 0.6 else "red"
-                sr_table.add_row(
-                    cat,
-                    str(cs["pass"]),
-                    str(cs["fail"]),
-                    f"[{rate_color}]{rate_str}[/{rate_color}]",
-                    f"[dim]{ci_str}[/dim]",
-                )
-            # Total row
-            total_rate_str = f"{sr_total['rate'] * 100:.1f}%"
-            total_ci_str = f"[{sr_total['ci_lo'] * 100:.1f}%, {sr_total['ci_hi'] * 100:.1f}%]"
-            total_color = "green" if sr_total["rate"] >= 0.8 else "yellow" if sr_total["rate"] >= 0.6 else "red"
-            sr_table.add_row(
-                "[bold]TOTAL[/bold]",
-                f"[bold]{sr_total['pass']}[/bold]",
-                f"[bold]{sr_total['fail']}[/bold]",
-                f"[bold {total_color}]{total_rate_str}[/bold {total_color}]",
-                f"[dim]{total_ci_str}[/dim]",
-            )
-            console.print(sr_table)
-
-            # Failure buckets
-            buckets = compute_failure_buckets(results)
-            if buckets:
-                console.print("\n[bold]FAILURE BUCKETS[/bold]")
-                for bucket, count in buckets.items():
-                    label = bucket.replace("_", " ").title()
-                    console.print(f"  [red]{label}:[/red]  {count}")
-        except ImportError as _e:
-            logger.debug("Success rate table rendering failed: %s", _e)
 
         console.print()
         console.print(
@@ -1949,114 +1834,7 @@ def run_benchmark(
                 if dim_parts:
                     console.print(f"    Quality: {' '.join(dim_parts)}")
 
-        # Raw/internal gate report for compatibility runner results. Public
-        # leaderboard output is generated separately as safety-care/v1.
-        try:
-            from invisiblebench.export.safety_report_card import generate_safety_report_card
-
-            report_card = generate_safety_report_card(results)
-            if report_card["models"]:
-                # --- Gate summary table ---
-                console.print("\n[bold]RAW GATE REPORT[/bold]")
-                card_table = Table(show_header=True, show_lines=False, pad_edge=False)
-                card_table.add_column("Model", style="bold")
-                card_table.add_column("A gate", justify="right")
-                card_table.add_column("B gate", justify="right")
-                card_table.add_column("Status")
-
-                for m in report_card["models"]:
-                    sg = m["safety_gate"]
-                    cg = m["compliance_gate"]
-                    safety_str = f"{sg['passed']}/{sg['total']}"
-                    compliance_str = f"{cg['passed']}/{cg['total']}"
-                    total_failures = sg["failed"] + cg["failed"]
-                    if total_failures == 0:
-                        status = "[green]Clean[/green]"
-                    else:
-                        status = f"[yellow]{total_failures} failure{'s' if total_failures != 1 else ''}[/yellow]"
-                    card_table.add_row(m["model"], safety_str, compliance_str, status)
-
-                console.print(card_table)
-
-                # --- Per-scenario matrix (only show scenarios with at least one FAIL) ---
-                matrix = report_card["scenario_matrix"]
-                names = report_card["scenario_names"]
-                models_list = [m["model"] for m in report_card["models"]]
-                failed_scenarios = [
-                    sid for sid, model_map in matrix.items()
-                    if any(v == "FAIL" for v in model_map.values())
-                ]
-                if failed_scenarios:
-                    console.print("\n[bold]GATE FAILURES BY SCENARIO[/bold]")
-                    mtx_table = Table(show_header=True, show_lines=False, pad_edge=False)
-                    mtx_table.add_column("Scenario", style="bold")
-                    for model in models_list:
-                        # Shorten model name for column header
-                        short = model[:20]
-                        mtx_table.add_column(short, justify="center")
-
-                    for sid in failed_scenarios:
-                        display = names.get(sid, sid)
-                        if len(display) > 30:
-                            display = display[:28] + ".."
-                        cells = []
-                        for model in models_list:
-                            status = matrix.get(sid, {}).get(model, "?")
-                            if status == "PASS":
-                                cells.append("[green]PASS[/green]")
-                            else:
-                                cells.append("[red]FAIL[/red]")
-                        mtx_table.add_row(display, *cells)
-
-                    console.print(mtx_table)
-
-                # --- Raw quality diagnostics ---
-                quality = report_card.get("quality", [])
-                if quality:
-                    passers = [q for q in quality if q["all_gates_pass"]]
-                    failers = [q for q in quality if not q["all_gates_pass"]]
-
-                    if passers:
-                        console.print(
-                            "\n[bold]RAW QUALITY DIAGNOSTIC[/bold] "
-                            "[dim](passed raw Safety gates; not ranked)[/dim]"
-                        )
-                        q_table = Table(show_header=True, show_lines=False, pad_edge=False)
-                        q_table.add_column("Model", style="bold")
-                        q_table.add_column("Regard", justify="right")
-                        q_table.add_column("Coordination", justify="right")
-                        for q in passers:
-                            q_table.add_row(
-                                q["model"],
-                                f"{q['regard']:.2f}",
-                                f"{q['coordination']:.2f}",
-                            )
-                        console.print(q_table)
-
-                    if failers:
-                        console.print("\n[bold red]FAILED RAW GATE[/bold red]")
-                        # Show each failer with their specific failure reasons
-                        fail_lookup = {m["model"]: m["failures"] for m in report_card["models"]}
-                        for q in failers:
-                            failure_list = fail_lookup.get(q["model"], [])
-                            if failure_list:
-                                reasons = ", ".join(
-                                    f"{f['scenario']} ({f['reasons'][0]})" if f["reasons"]
-                                    else f["scenario"]
-                                    for f in failure_list[:3]
-                                )
-                                if len(failure_list) > 3:
-                                    reasons += f" +{len(failure_list) - 3} more"
-                            else:
-                                reasons = "gate failure"
-                            console.print(f"  [red]✗[/red] [bold]{q['model']}[/bold]  {reasons}")
-        except ImportError as _e:
-            logger.debug("Safety report card rendering failed: %s", _e)
-
         console.print(f"\n[dim]{results_path}[/dim]")
-        console.print(f"[dim]{report_path}[/dim]")
-        if diag_path:
-            console.print(f"[dim]{diag_path}[/dim]")
     else:
         actual_total = cost_tracker.total
         print(
@@ -2070,9 +1848,6 @@ def run_benchmark(
         else:
             print(f"\nComplete: {passed} passed, {failed} failed  ${actual_total:.3f}")
         print(f"Results: {results_path}")
-        print(f"Report: {report_path}")
-        if diag_path:
-            print(f"Diagnostic: {diag_path}")
 
     _print_audit_summary(audit, console if RICH_AVAILABLE else None)
     if RICH_AVAILABLE and console:

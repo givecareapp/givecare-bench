@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 from datetime import datetime
@@ -17,7 +16,6 @@ from dotenv import load_dotenv
 
 from invisiblebench._agent_cli import (
     confirm_or_abort,
-    emit_json,
 )
 from invisiblebench.cli._console import make_console
 from invisiblebench.cli.agent_commands import (
@@ -25,34 +23,11 @@ from invisiblebench.cli.agent_commands import (
     _run_get,
     _run_leaderboard_status_json,
 )
-from invisiblebench.cli.diff import (
-    _infer_run_dir_for_output,
-    diff_command,
-)
-from invisiblebench.cli.diff import (
-    aggregate_results_by_model as aggregate_results_by_model,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.diff import (
-    compute_run_diff as compute_run_diff,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.diff import (
-    load_run_results as load_run_results,  # re-exported: tests import from this module
-)
 from invisiblebench.cli.result_helpers import (
     _compute_success as _compute_success,  # re-exported: tests import from this module
 )
-from invisiblebench.cli.transcript import (
-    write_detailed_outputs as write_detailed_outputs,  # re-exported: tests import from this module
-)
 from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
-from invisiblebench.results_io import write_json
-from invisiblebench.run_artifacts import (
-    detect_transcripts_dir,
-    load_result_rows,
-    write_aggregate_results,
-)
-from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 
 try:
     from rich.table import Table  # noqa: F401
@@ -107,184 +82,6 @@ from invisiblebench.cli.run_command import (  # noqa: E402,F401
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
     run_givecare_eval as run_givecare_eval,
 )
-
-
-def report_command(args) -> int:
-    """Generate HTML report from any supported results source."""
-    console = Console() if RICH_AVAILABLE else None
-
-    results_path = Path(args.results)
-    if not results_path.exists():
-        msg = f"Results file not found: {results_path}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-    try:
-        results = load_result_rows(results_path)
-    except (OSError, json.JSONDecodeError, ValueError) as e:
-        msg = f"Could not load results: {e}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        output_path = _infer_run_dir_for_output(results_path) / "report.html"
-
-    try:
-        from invisiblebench.export.reports import ReportGenerator
-
-        reporter = ReportGenerator()
-        reporter.generate_batch_report(
-            results,
-            str(output_path),
-            metadata={"source": str(results_path)},
-        )
-        if console:
-            console.print(f"[green]✓[/green] Report generated: {output_path}")
-        else:
-            print(f"Report generated: {output_path}")
-        return 0
-    except (ImportError, OSError) as e:
-        msg = f"Failed to generate report: {e}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-
-def diagnose_command(args) -> int:
-    """Generate a raw/internal diagnostic report from runner results."""
-    console = Console() if RICH_AVAILABLE else None
-
-    results_path = Path(args.results)
-    if not results_path.exists():
-        msg = f"Results file not found: {results_path}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-    # Determine transcripts directory
-    transcripts_dir = Path(args.transcripts) if args.transcripts else detect_transcripts_dir(results_path)
-
-    # Determine output path
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        output_path = (results_path if results_path.is_dir() else results_path.parent) / "diagnostic_report.md"
-
-    try:
-        from invisiblebench.export.diagnostic import generate_diagnostic_report
-
-        if results_path.is_file():
-            diagnostic_input = results_path
-        elif (results_path / "all_results.json").exists():
-            diagnostic_input = results_path / "all_results.json"
-        else:
-            diagnostic_input = write_aggregate_results(results_path)
-
-        report = generate_diagnostic_report(
-            results_path=str(diagnostic_input),
-            transcripts_dir=str(transcripts_dir) if transcripts_dir else None,
-            previous_results_path=args.previous,
-            output_path=str(output_path),
-        )
-
-        if console:
-            console.print(f"[green]✓[/green] Diagnostic report generated: {output_path}")
-        else:
-            print(f"Diagnostic report generated: {output_path}")
-
-        # Print summary
-        lines = report.split("\n")
-        summary_start = None
-        for i, line in enumerate(lines):
-            if line.startswith("## Summary"):
-                summary_start = i
-                break
-
-        if summary_start and console:
-            console.print("\n[bold]Summary:[/bold]")
-            for line in lines[summary_start + 2 : summary_start + 10]:
-                if line.strip():
-                    console.print(f"  {line}")
-
-        return 0
-    except (ImportError, OSError, json.JSONDecodeError) as e:
-        msg = f"Failed to generate diagnostic report: {e}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        import traceback
-
-        traceback.print_exc()
-        return 1
-
-
-def audit_command(args) -> int:
-    """Generate run audit artifacts from a run/results source."""
-    console = Console() if RICH_AVAILABLE else None
-
-    results_path = Path(args.results)
-    if not results_path.exists():
-        msg = f"Results source not found: {results_path}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-    try:
-        audit = audit_results_source(
-            results_path,
-            expected_scenario_count=args.expected_scenarios,
-            harness=args.harness,
-            mode=args.mode,
-            previous_source=args.previous,
-        )
-    except (OSError, json.JSONDecodeError, ValueError) as e:
-        msg = f"Failed to audit results: {e}"
-        if console:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            print(msg)
-        return 1
-
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
-    else:
-        output_dir = _infer_run_dir_for_output(results_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    write_json(output_dir / "run_audit.json", audit)
-    (output_dir / "run_audit.md").write_text(render_audit_markdown(audit))
-
-    _print_audit_summary(audit, console)
-    if console:
-        console.print(f"[green]✓[/green] Audit written: {output_dir / 'run_audit.json'}")
-    else:
-        print(f"Audit written: {output_dir / 'run_audit.json'}")
-    return 0 if audit.get("run_valid") else 1
-
-
-# _infer_run_dir_for_output, resolve_run_reference, load_run_results, aggregate_results_by_model,
-# compute_run_diff, _format_score/_delta/_status_counts, _print_diff_table, diff_command
-# moved to invisiblebench.cli.diff
-
-
-# resolve_run_reference, load_run_results, aggregate_results_by_model, compute_run_diff,
-# _format_score/_delta/_status_counts, _print_diff_table, diff_command: all moved to invisiblebench.cli.diff
-
-
 
 # ---------- agent-friendly helpers ----------
 # Note: _collect_runs and _run_runs stay in this module (tests monkeypatch them here)
@@ -405,26 +202,16 @@ Examples:
   INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR=/path/to/private/confidential uv run bench --harness givecare --mode v2 -y --confidential
   uv run bench --harness givecare --mode v2 -c safety -y
 
-  # Diagnostics
-  uv run bench --provider givecare -y --diagnose  Run with raw/internal diagnostic report
-  uv run bench diagnose results.json              Generate raw/internal diagnostic from results
-
-  # Leaderboard
+  # Judge transcripts (JUDGE scan) and publish
+  uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm
   uv run python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>
                                       Fail-closed publish path
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
-  # Statistics
-  uv run bench stats results/run_*/all_results.json       Raw/internal diagnostic stats
-  uv run bench stats results/run_<id>/model_results/ -o s.md   Raw/internal markdown output
-  uv run bench annotate export results/run_20260211/       Export annotation kit
-  uv run bench annotate import results/annotations/scores.csv  Compute agreement
-
   # Utilities
-  uv run bench report results.json    Regenerate raw/internal HTML report
+  uv run bench explain <model> <scenario> --failures   Trace scan evidence
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
-  uv run bench diff <base> <new>      Raw/internal diagnostic run diff
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -454,13 +241,6 @@ Examples:
         help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
     )
 
-    # Report subcommand
-    report_parser = subparsers.add_parser(
-        "report", help="Generate raw/internal HTML report from runner results JSON"
-    )
-    report_parser.add_argument("results", type=str, help="Path to all_results.json")
-    report_parser.add_argument("--output", "-o", type=str, default=None, help="Output HTML path")
-
     # Health subcommand
     health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
     health_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
@@ -487,13 +267,6 @@ Examples:
         help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
     )
 
-    # Diff subcommand
-    diff_parser = subparsers.add_parser(
-        "diff", help="Raw/internal diagnostic diff between two benchmark runs"
-    )
-    diff_parser.add_argument("base_run", type=str, help="Base run reference")
-    diff_parser.add_argument("new_run", type=str, help="New run reference")
-
     # Explain subcommand
     explain_parser = subparsers.add_parser(
         "explain", help="Trace a leaderboard cell to its verdicts and transcript evidence"
@@ -515,27 +288,6 @@ Examples:
         help="Leaderboard JSON used to resolve the default scan artifact",
     )
 
-    # Diagnose subcommand
-    diagnose_parser = subparsers.add_parser(
-        "diagnose", help="Generate raw/internal diagnostic report from runner results"
-    )
-    diagnose_parser.add_argument("results", type=str, help="Path to results JSON")
-    diagnose_parser.add_argument("--transcripts", "-t", type=str, help="Transcripts directory")
-    diagnose_parser.add_argument(
-        "--previous", "-p", type=str, help="Previous results for comparison"
-    )
-    diagnose_parser.add_argument("--output", "-o", type=str, help="Output markdown path")
-
-    audit_parser = subparsers.add_parser(
-        "audit", help="Audit a run/results source and classify benchmark failure modes"
-    )
-    audit_parser.add_argument("results", type=str, help="Path to run dir, results JSON, or model_results/")
-    audit_parser.add_argument("--previous", "-p", type=str, help="Previous run/results source for comparability checks")
-    audit_parser.add_argument("--expected-scenarios", type=int, default=None, help="Expected scenario count per model/provider")
-    audit_parser.add_argument("--harness", type=str, choices=["llm", "givecare"], default=None)
-    audit_parser.add_argument("--mode", type=str, default=None)
-    audit_parser.add_argument("--output-dir", type=str, default=None, help="Directory for run_audit.json and run_audit.md")
-
     # Leaderboard subcommand
     lb_parser = subparsers.add_parser(
         "leaderboard", help="Show leaderboard health status"
@@ -551,43 +303,6 @@ Examples:
         type=str,
         default=None,
         help="For --json status: write full leaderboard to PATH; stdout gets summary envelope",
-    )
-
-    # Stats subcommand
-    stats_parser = subparsers.add_parser(
-        "stats",
-        help="Raw/internal diagnostic statistics: distributions, bootstrap CIs, pairwise comparisons",
-    )
-    stats_parser.add_argument(
-        "results", type=str, help="Path to all_results.json or raw model_results/ directory"
-    )
-    stats_parser.add_argument(
-        "--output", "-o", type=str, default=None, help="Output markdown path"
-    )
-    stats_parser.add_argument(
-        "--bootstrap", type=int, default=10000, help="Number of bootstrap samples (default: 10000)"
-    )
-
-    # Annotate subcommand
-    annotate_parser = subparsers.add_parser(
-        "annotate", help="Human annotation kit for human-LLM agreement"
-    )
-    annotate_parser.add_argument(
-        "action",
-        choices=["export", "import"],
-        help="export: create scoring forms, import: compute agreement",
-    )
-    annotate_parser.add_argument(
-        "path", type=str, help="Results path (export) or annotations CSV path (import)"
-    )
-    annotate_parser.add_argument(
-        "--output", "-o", type=str, default=None, help="Output directory (export) or unused (import)"
-    )
-    annotate_parser.add_argument(
-        "--sample", type=int, default=20, help="Number of transcripts to sample (default: 20)"
-    )
-    annotate_parser.add_argument(
-        "--llm-scores", type=str, default=None, help="Path to _llm_scores.json (for import)"
     )
 
     # Main run arguments (default command)
@@ -609,11 +324,6 @@ Examples:
     )
     parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
-    parser.add_argument(
-        "--detailed",
-        action="store_true",
-        help="Write per-scenario JSON/HTML reports with turn flags",
-    )
     parser.add_argument(
         "--category",
         "-c",
@@ -683,11 +393,6 @@ Examples:
         ),
     )
     parser.add_argument(
-        "--diagnose",
-        action="store_true",
-        help="Generate raw/internal diagnostic report after run",
-    )
-    parser.add_argument(
         "--runs",
         type=int,
         default=1,
@@ -709,16 +414,10 @@ Examples:
             out_path=getattr(args, "out", None),
         )
 
-    if args.command == "report":
-        return report_command(args)
-
     if args.command == "explain":
         from invisiblebench.cli.explain import explain_command
 
         return explain_command(args)
-
-    if args.command == "audit":
-        return audit_command(args)
 
     if args.command == "health":
         from invisiblebench.cli.health import run_health
@@ -754,73 +453,12 @@ Examples:
             out_path=getattr(args, "out", None),
         )
 
-    if args.command == "diff":
-        return diff_command(args)
-
-    if args.command == "diagnose":
-        return diagnose_command(args)
-
     if args.command == "leaderboard":
         if json_output:
             return _run_leaderboard_status_json(out_path=getattr(args, "out", None))
         from invisiblebench.cli.leaderboard import run_leaderboard
 
         return run_leaderboard(action=args.action, verbose=args.verbose)
-
-    if args.command == "stats":
-        from invisiblebench.stats.analysis import (
-            compute_stats,
-            format_stats_markdown,
-            format_stats_report,
-        )
-
-        stats = compute_stats(args.results, n_bootstrap=args.bootstrap)
-        if "error" in stats:
-            if json_output:
-                emit_json(status="error", command="stats", error=stats["error"])
-            else:
-                print(f"Error: {stats['error']}")
-            return 1
-        if json_output:
-            emit_json(command="stats", data=stats)
-        else:
-            print(format_stats_report(stats))
-        if args.output:
-            Path(args.output).write_text(format_stats_markdown(stats))
-            if not json_output:
-                print(f"\nMarkdown report written to {args.output}")
-            else:
-                print(f"wrote: {args.output}", file=sys.stderr)
-        return 0
-
-    if args.command == "annotate":
-        if args.action == "export":
-            from invisiblebench.stats.annotation import export_annotation_kit
-
-            out_dir = args.output or "results/annotations"
-            result = export_annotation_kit(
-                args.path, out_dir, sample_size=args.sample
-            )
-            if "error" in result:
-                print(f"Error: {result['error']}")
-                return 1
-            print(f"Exported {result['exported']} transcripts to {result['output_dir']}/")
-            print(f"  Forms: {len(result['files']['forms'])} markdown files")
-            print(f"  CSV template: {result['files']['csv_template']}")
-            print(f"  Instructions: {result['files']['instructions']}")
-            return 0
-        else:  # import
-            from invisiblebench.stats.annotation import (
-                format_agreement_report,
-                import_annotations,
-            )
-
-            result = import_annotations(args.path, llm_scores_path=args.llm_scores)
-            if "error" in result:
-                print(f"Error: {result['error']}")
-                return 1
-            print(format_agreement_report(result))
-            return 0
 
     category_filter = None
     if args.category:
@@ -855,7 +493,6 @@ Examples:
             verbose=True,
             dry_run=args.dry_run,
             auto_confirm=args.yes,
-            generate_diagnostic=args.diagnose,
             output_dir=args.output,
             adapter_name=adapter_name(harness_name, harness_mode),
             harness_mode=harness_mode,
@@ -918,8 +555,6 @@ Examples:
         scenario_filter=scenario_filter,
         parallel=args.parallel,
         scenario_parallel=args.scenario_parallel,
-        detailed_output=args.detailed,
-        generate_diagnostic=args.diagnose,
         runs=getattr(args, "runs", 1),
         include_confidential=args.confidential,
         transcripts_only=args.run_stage == "transcripts",

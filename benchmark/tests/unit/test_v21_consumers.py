@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import tempfile
-from pathlib import Path
-
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -78,63 +74,6 @@ class TestMakeErrorResult:
 
 
 # ---------------------------------------------------------------------------
-# stats/analysis — success rate and judge_model
-# ---------------------------------------------------------------------------
-
-class TestStatsV21:
-    def test_success_rate_in_stats(self):
-        from invisiblebench.stats.analysis import compute_stats
-
-        results = [
-            {"model": "A", "overall_score": 0.8, "category": "safety", "success": True, "judge_model": "gemini-2.5-flash-lite"},
-            {"model": "A", "overall_score": 0.4, "category": "empathy", "success": False, "judge_model": "gemini-2.5-flash-lite"},
-            {"model": "A", "overall_score": 0.7, "category": "context", "success": True},
-        ]
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(results, f)
-            f.flush()
-            stats = compute_stats(f.name, n_bootstrap=500)
-
-        model_stats = stats["models"]["A"]
-        assert model_stats["success_count"] == 2
-        assert model_stats["success_rate"] == pytest.approx(2 / 3, abs=0.01)
-        assert model_stats["judge_model"] == "gemini-2.5-flash-lite"
-
-    def test_success_rate_zero_when_absent(self):
-        from invisiblebench.stats.analysis import compute_stats
-
-        results = [
-            {"model": "B", "overall_score": 0.8, "category": "safety"},
-        ]
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(results, f)
-            f.flush()
-            stats = compute_stats(f.name, n_bootstrap=500)
-
-        assert stats["models"]["B"]["success_count"] == 0
-        assert stats["models"]["B"]["success_rate"] == 0.0
-        assert stats["models"]["B"]["judge_model"] is None
-
-    def test_format_report_includes_success(self):
-        from invisiblebench.stats.analysis import compute_stats, format_stats_report
-
-        results = [
-            {"model": "A", "overall_score": 0.8, "category": "safety", "success": True, "judge_model": "test-judge"},
-        ]
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(results, f)
-            f.flush()
-            stats = compute_stats(f.name, n_bootstrap=500)
-
-        report = format_stats_report(stats)
-        assert "Success Rates" in report
-        assert "Judge: test-judge" in report
-
-
-# ---------------------------------------------------------------------------
 # health — current leaderboard contract
 # ---------------------------------------------------------------------------
 
@@ -164,55 +103,3 @@ class TestHealthCurrentContract:
 
         with pytest.raises(ValueError, match="safety-care/v1"):
             analyze_leaderboard({"models": []})
-
-
-# ---------------------------------------------------------------------------
-# reports — batch report includes success count
-# ---------------------------------------------------------------------------
-
-class TestBatchReportV21:
-    def test_batch_html_includes_success_and_judge(self):
-        from invisiblebench.export.reports import ReportGenerator
-
-        results = [
-            {"scenario": "S1", "overall_score": 0.8, "success": True, "judge_model": "gemini", "contract_version": "2.1.0"},
-            {"scenario": "S2", "overall_score": 0.3, "hard_fail": True, "success": False, "judge_model": "gemini", "contract_version": "2.1.0"},
-        ]
-
-        gen = ReportGenerator()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
-            gen.generate_batch_report(results, f.name, metadata={"model": "Test", "mode": "full"})
-            html_content = Path(f.name).read_text()
-
-        assert "Success" in html_content
-        assert "Raw/Internal" in html_content
-        assert "Raw Mean Score" in html_content
-        assert "Judge: gemini" in html_content
-        assert "Contract: 2.1.0" in html_content
-
-
-# ---------------------------------------------------------------------------
-# reports — single scenario report includes judge metadata
-# ---------------------------------------------------------------------------
-
-class TestSingleReportV21:
-    def test_html_includes_judge_model(self):
-        from invisiblebench.export.reports import ReportGenerator
-
-        results = {
-            "overall_score": 0.8,
-            "hard_fail": False,
-            "judge_model": "gemini-2.5-flash-lite",
-            "contract_version": "2.1.0",
-            "metadata": {"scenario_id": "test", "jurisdiction": "ca", "timestamp": "2026-02-13", "llm_mode": "llm"},
-            "dimension_scores": {},
-        }
-
-        gen = ReportGenerator()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
-            gen.generate_html(results, f.name)
-            html_content = Path(f.name).read_text()
-
-        assert "gemini-2.5-flash-lite" in html_content
-        assert "2.1.0" in html_content
-        assert "Raw/Internal Scoring Report" in html_content

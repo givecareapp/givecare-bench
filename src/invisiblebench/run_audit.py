@@ -16,9 +16,38 @@ from invisiblebench.failure_taxonomy import (
     compute_quality_summary,
     compute_reliability_summary,
 )
+from invisiblebench.models.results import is_result_success
 from invisiblebench.run_artifacts import detect_transcripts_dir, load_result_rows
 
 logger = logging.getLogger(__name__)
+
+
+def compute_failure_buckets(results: list[dict[str, Any]]) -> dict[str, int]:
+    """Count failures by bucket (from failure_categories.primary_category).
+
+    Only counts results where success=False. Kept in-module for the run-audit
+    behavioral summary (the former stats/analysis diagnostic layer is retired).
+    """
+    buckets: dict[str, int] = {}
+    for r in results:
+        if is_result_success(r):
+            continue
+        fc = r.get("failure_categories", {})
+        primary = fc.get("primary_category")
+        if primary:
+            buckets[primary] = buckets.get(primary, 0) + 1
+        elif r.get("hard_fail"):
+            reasons = r.get("hard_fail_reasons", [])
+            if reasons:
+                bucket = reasons[0].split(":")[0].strip().lower().replace(" ", "_")
+                buckets[bucket] = buckets.get(bucket, 0) + 1
+            else:
+                buckets["unknown"] = buckets.get("unknown", 0) + 1
+        elif r.get("status") == "error":
+            buckets["error"] = buckets.get("error", 0) + 1
+        else:
+            buckets["low_score"] = buckets.get("low_score", 0) + 1
+    return dict(sorted(buckets.items(), key=lambda x: -x[1]))
 
 STATUS_PASS = "PASS"
 STATUS_WARN = "WARN"
@@ -328,8 +357,6 @@ def _audit_target_config(
 
 
 def _audit_model_behavior(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    from invisiblebench.stats.analysis import compute_failure_buckets
-
     quality = compute_quality_summary(rows)
     failure_buckets = compute_failure_buckets(rows)
     details = {"quality_summary": quality, "failure_buckets": failure_buckets}
