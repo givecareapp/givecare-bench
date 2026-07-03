@@ -136,7 +136,13 @@ def main() -> int:
             logger.info("LLM verifier enabled with model=%s", args.llm_model)
         except (ImportError, ValueError) as e:
             logger.error("Failed to initialize ModelAPIClient: %s", e)
-            logger.error("LLM modes will short-circuit to UNCLEAR / NOT_APPLICABLE.")
+            if not args.dry_run:
+                # Fail closed: an explicitly requested --enable-llm scan must not
+                # silently degrade to a deterministic-only scan where eligible
+                # LLM checks vanish as NOT_APPLICABLE. Dry-run still plans.
+                logger.error("Aborting: --enable-llm scan cannot run without an API client.")
+                return 2
+            logger.error("Dry-run continues; live scan would abort here.")
 
     engine = ModeEngine(llm_api_client=api_client, llm_model=args.llm_model)
     engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)

@@ -190,6 +190,12 @@ def _validate_safety_care_artifact(
         errors.append("scan_metadata.artifact_validation missing or not an object")
     if not isinstance(scan_meta.get("artifact_diagnostics"), dict):
         errors.append("scan_metadata.artifact_diagnostics missing or not an object")
+    # Presence is required unconditionally: without this the current-contract
+    # strict gate (missing scenarios / check instances) is only run when the
+    # block happens to be present, so an artifact that omits it silently
+    # bypasses strict QA. Parallel to artifact_validation/artifact_diagnostics.
+    if not isinstance(scan_meta.get("current_contract_validation"), dict):
+        errors.append("scan_metadata.current_contract_validation missing or not an object")
     if scan_meta.get("artifact_issue_policy") != artifact_issue_policy():
         errors.append("scan_metadata.artifact_issue_policy missing or mismatch")
 

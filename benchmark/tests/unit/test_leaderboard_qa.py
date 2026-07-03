@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import scripts.qa_leaderboard as qa_leaderboard
 from invisiblebench.utils.artifact_validation import (
     artifact_issue_policy,
@@ -69,8 +71,45 @@ def _read_rows(source: Path) -> list[dict]:
     return [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines() if line]
 
 
+# The current-contract validation block is compared by QA against the repo's
+# real scenario/check contract. So a fixture built from synthetic "s1" rows can
+# report complete coverage, the autouse fixture below patches those two id
+# sources to the ids the fixture actually emitted. Tests that exercise coverage
+# gaps re-patch them directly.
+_CONTRACT_IDS: dict[str, list[str]] = {"scenarios": [], "checks": []}
+
+
+@pytest.fixture(autouse=True)
+def _default_contract_ids(monkeypatch):
+    _CONTRACT_IDS["scenarios"] = []
+    _CONTRACT_IDS["checks"] = []
+    monkeypatch.setattr(
+        qa_leaderboard,
+        "collect_public_scenario_ids",
+        lambda _root: list(_CONTRACT_IDS["scenarios"]),
+    )
+    monkeypatch.setattr(
+        qa_leaderboard,
+        "_active_mode_ids",
+        lambda checks_dir=None: list(_CONTRACT_IDS["checks"]),
+    )
+    yield
+
+
 def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
     """Minimal safety-care/v1 leaderboard fixture."""
+    rows = _read_rows(source)
+    scenario_ids = sorted({str(row.get("scenario_id")) for row in rows if row.get("scenario_id")})
+    check_ids = sorted(
+        {
+            str(result.get("mode_id"))
+            for row in rows
+            for result in row.get("mode_results") or []
+            if result.get("mode_id")
+        }
+    )
+    _CONTRACT_IDS["scenarios"] = scenario_ids
+    _CONTRACT_IDS["checks"] = check_ids
     return {
         "schema": "safety-care/v1",
         "notes": {"no_composite": True},
@@ -78,8 +117,18 @@ def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
             "source_artifact": str(source),
             "total_models": models,
             "total_scenarios": scenarios,
-            "artifact_validation": scan_artifact_validation_summary(_read_rows(source)),
-            "artifact_diagnostics": scan_artifact_validation_diagnostics(_read_rows(source)),
+            "artifact_validation": scan_artifact_validation_summary(rows),
+            "artifact_diagnostics": scan_artifact_validation_diagnostics(rows),
+            "current_contract_validation": scan_current_contract_validation_summary(
+                rows,
+                expected_scenario_ids=scenario_ids,
+                expected_check_ids=check_ids,
+            ),
+            "current_contract_diagnostics": scan_current_contract_validation_diagnostics(
+                rows,
+                expected_scenario_ids=scenario_ids,
+                expected_check_ids=check_ids,
+            ),
             "artifact_issue_policy": artifact_issue_policy(),
         },
         "models": [],
@@ -403,6 +452,33 @@ def test_safety_care_qa_strict_rejects_current_contract_gaps(
     assert "current_contract_missing_scenarios=1" in strict_errors
     assert "current_contract_rows_with_missing_checks=1" in strict_errors
     assert "current_contract_missing_check_instances=1" in strict_errors
+
+
+def test_safety_care_qa_requires_current_contract_validation_block(tmp_path: Path) -> None:
+    """Omitting the current-contract block must not silently bypass strict QA.
+
+    Deleting both current_contract_* keys used to make the strict current-contract
+    blockers (missing scenarios / check instances) disappear, because the gate
+    only ran when the block was present. Presence is now required unconditionally.
+    """
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "safety_care_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    del payload["scan_metadata"]["current_contract_validation"]
+    del payload["scan_metadata"]["current_contract_diagnostics"]
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(
+        scan,
+        leaderboard,
+        expected_rows=1,
+        expected_models=1,
+        expected_scenarios=1,
+        strict=True,
+    )
+
+    assert "scan_metadata.current_contract_validation missing or not an object" in errors
 
 
 def test_safety_care_qa_rejects_missing_artifact_diagnostics(tmp_path: Path) -> None:

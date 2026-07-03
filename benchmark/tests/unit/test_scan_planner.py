@@ -137,6 +137,57 @@ def test_run_scan_normalizes_transcripts_subdir_to_parent(
     assert rc == 3
 
 
+def test_run_scan_enable_llm_aborts_when_api_client_init_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """--enable-llm must fail closed when the API client cannot initialize.
+
+    Continuing without a client silently downgrades the scan: every eligible
+    LLM check resolves NOT_APPLICABLE and the degradation only surfaces as a
+    log line. An explicitly requested live LLM scan aborts instead; --dry-run
+    still plans without a client.
+    """
+    run_dir = tmp_path / "run_20260612_192912"
+    run_dir.mkdir()
+    (run_dir / "run_manifest.json").write_text("{}")
+    transcripts_dir = run_dir / "transcripts"
+    transcripts_dir.mkdir()
+    (transcripts_dir / "dummy.jsonl").write_text('{"role":"user","content":"hi"}\n')
+
+    import scripts.run_scan as run_scan_mod
+
+    def _failing_client():
+        raise ValueError("OPENROUTER_API_KEY not set")
+
+    scan_calls: list[Path] = []
+
+    def _stub_scan_run(rd, *args, **kwargs):
+        scan_calls.append(rd)
+        return [], []
+
+    monkeypatch.setattr(run_scan_mod, "ModelAPIClient", _failing_client)
+    monkeypatch.setattr(run_scan_mod, "scan_run", _stub_scan_run)
+
+    monkeypatch.setattr(sys, "argv", ["run_scan.py", "--enable-llm", str(run_dir)])
+    assert run_scan_mod.main() == 2
+    assert not scan_calls, "live scan must abort before scanning any transcript"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_scan.py",
+            "--enable-llm",
+            "--dry-run",
+            "--output-root",
+            str(tmp_path / "scan_out"),
+            str(run_dir),
+        ],
+    )
+    assert run_scan_mod.main() == 0
+    assert not scan_calls, "dry-run must not invoke scan_run"
+
+
 def test_transcripts_for_run_infers_scenario_from_known_suffix_without_results(
     tmp_path: Path,
 ) -> None:

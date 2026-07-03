@@ -34,6 +34,7 @@ from invisiblebench.models.results import (
     RAW_RESULT_SURFACE,
     RAW_SCORE_MODEL,
 )
+from invisiblebench.utils.io import load_jsonl
 
 logger = logging.getLogger("safety_care_scan")
 
@@ -301,17 +302,14 @@ def _infer_transcript_metadata_from_stem(stem: str) -> dict[str, Any] | None:
 
 
 def load_transcript(path: Path) -> list[dict[str, Any]]:
-    turns: list[dict[str, Any]] = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                turns.append(json.loads(line))
-            except json.JSONDecodeError:
-                logger.debug("Bad JSONL line in %s", path)
-    return turns
+    """Load a transcript JSONL, failing closed on a malformed line.
+
+    Delegates to ``utils.io.load_jsonl`` so a truncated or corrupt transcript
+    raises ``ValueError`` naming the file and line number instead of being
+    silently judged as if complete. An empty file returns ``[]``; callers
+    (``_scan_pair``, ``rescore_diff``) treat that as skip-with-warning.
+    """
+    return load_jsonl(path)
 
 
 def _transcripts_from_stage_artifact(run_dir: Path) -> list[dict[str, Any]] | None:
