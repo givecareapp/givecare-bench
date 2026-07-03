@@ -82,9 +82,8 @@ uv run pytest benchmark/tests/unit/test_scenario_validator.py benchmark/tests/un
 See [docs/install.md](docs/install.md) for the "reproduce a leaderboard
 entry from scratch" walkthrough. The short version:
 
-`bench` generates target transcripts only by default; judge them in a
-separate step with `scripts/run_scan.py` (`--legacy-inline-score` restores
-the old inline scorer):
+`bench` generates target transcripts only; judge them in a separate step with
+`scripts/run_scan.py`:
 
 ```bash
 uv run bench --dry-run          # estimate cost only

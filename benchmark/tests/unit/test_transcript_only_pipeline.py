@@ -29,11 +29,6 @@ class _FakeAsyncClient:
         }
 
 
-class _ExplodingOrchestrator:
-    def score(self, **kwargs: Any) -> dict[str, Any]:
-        raise AssertionError("transcript-only mode must not invoke the judge")
-
-
 def _write_scenario(path: Path) -> None:
     path.write_text(
         json.dumps(
@@ -65,11 +60,9 @@ def test_evaluate_scenario_async_transcript_only_skips_judge(tmp_path: Path) -> 
                 "category": "context",
             },
             api_client=_FakeAsyncClient(),  # type: ignore[arg-type]
-            orchestrator=_ExplodingOrchestrator(),
             output_dir=tmp_path / "run",
             semaphore=asyncio.Semaphore(1),
             run_id="run-id",
-            score_transcript=False,
         )
     )
 
@@ -93,25 +86,16 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
         "invisiblebench.api.client.ModelAPIClient",
         FakeModelAPIClient,
     )
-    monkeypatch.setattr(
-        run_command_mod,
-        "ModeEngineScoringAdapter",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("transcript-only mode must not construct the inline scorer")
-        ),
-    )
 
     async def fake_evaluate_scenario_async(
         model: dict[str, Any],
         scenario: dict[str, Any],
         api_client: Any,
-        orchestrator: Any,
         output_dir: Path,
         semaphore: asyncio.Semaphore,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        assert orchestrator is None
-        assert kwargs["score_transcript"] is False
+        assert "score_transcript" not in kwargs
         transcript_dir = output_dir / "transcripts"
         transcript_dir.mkdir(parents=True, exist_ok=True)
         transcript_path = transcript_dir / f"{model['id'].replace('/', '_')}_scenario.jsonl"
@@ -149,7 +133,6 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
         dry_run=False,
         auto_confirm=True,
         scenario_filter=["context_regulatory_data_privacy_001"],
-        transcripts_only=True,
     )
 
     assert rc == 0
@@ -187,33 +170,4 @@ def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) ->
     )
 
     assert rc == 0
-    assert observed["transcripts_only"] is True
-
-
-def test_runner_main_requires_legacy_opt_in_for_inline_scoring(
-    monkeypatch,
-    tmp_path: Path,
-) -> None:
-    observed: dict[str, Any] = {}
-
-    def fake_run_benchmark(**kwargs: Any) -> int:
-        observed.update(kwargs)
-        return 0
-
-    monkeypatch.setattr("invisiblebench.cli.runner.run_benchmark", fake_run_benchmark)
-
-    from invisiblebench.cli import runner as runner_mod
-
-    rc = runner_mod.main(
-        [
-            "-m",
-            "1",
-            "--legacy-inline-score",
-            "--dry-run",
-            "--output",
-            str(tmp_path / "run"),
-        ]
-    )
-
-    assert rc == 0
-    assert observed["transcripts_only"] is False
+    assert "transcripts_only" not in observed

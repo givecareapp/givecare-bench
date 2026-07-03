@@ -53,12 +53,6 @@ from invisiblebench.cli.result_helpers import (  # noqa: E402,F401
     _make_error_result as _make_error_result,  # re-exported: tests import from this module
 )
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    ModeEngineScoringAdapter as ModeEngineScoringAdapter,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    _aggregate_multi_run_results as _aggregate_multi_run_results,
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
     _print_audit_summary as _print_audit_summary,
 )
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
@@ -353,21 +347,10 @@ Examples:
         metavar="N",
         help="Run up to N scenarios concurrently per model for the llm/raw harness (default: 1)",
     )
-    stage_group = parser.add_mutually_exclusive_group()
-    stage_group.add_argument(
+    parser.add_argument(
         "--transcripts-only",
-        dest="run_stage",
-        action="store_const",
-        const="transcripts",
-        default="transcripts",
+        action="store_true",
         help="Generate target model transcripts only; judge later with scripts/run_scan.py (default)",
-    )
-    stage_group.add_argument(
-        "--legacy-inline-score",
-        dest="run_stage",
-        action="store_const",
-        const="legacy_inline",
-        help="Deprecated: generate transcripts and run the old inline raw scorer in one command",
     )
     parser.add_argument(
         "--models",
@@ -392,14 +375,6 @@ Examples:
             "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR"
         ),
     )
-    parser.add_argument(
-        "--runs",
-        type=int,
-        default=1,
-        metavar="N",
-        help="Run each scenario N times and take median score (default: 1)",
-    )
-
     args = parser.parse_args(argv)
 
     json_output = bool(getattr(args, "json_output", None))
@@ -555,9 +530,7 @@ Examples:
         scenario_filter=scenario_filter,
         parallel=args.parallel,
         scenario_parallel=args.scenario_parallel,
-        runs=getattr(args, "runs", 1),
         include_confidential=args.confidential,
-        transcripts_only=args.run_stage == "transcripts",
     )
 
 

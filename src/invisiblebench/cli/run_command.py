@@ -12,16 +12,11 @@ import asyncio
 import json
 import logging
 import os
-import statistics
 import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from invisiblebench.api.client import ModelAPIClient
-    from invisiblebench.evaluation.mode_engine import ModeEngine
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -49,34 +44,26 @@ from invisiblebench.adapters.givecare_v2 import (
     run_scenario as run_givecare_v2_scenario,
 )
 from invisiblebench.api.client import (
-    DEFAULT_SCORER_MODEL,
     InsufficientCreditsError,
     cost_tracker,
-    resolve_scorer_model,
 )
 from invisiblebench.cli._console import make_console
-from invisiblebench.cli.display import ScenarioDisplay, print_banner
+from invisiblebench.cli.display import print_banner
 from invisiblebench.cli.result_helpers import (
     _compute_success as _compute_success,  # re-exported: tests import from this module
 )
 from invisiblebench.cli.result_helpers import (
-    _make_error_result,
     _make_harness_error_result,
-    _raw_gate_payload,
-    _raw_score_metadata,
     _safe_load_scenario_data,
 )
 from invisiblebench.cli.transcript import (
-    _run_single_scenario,
     evaluate_scenario_async,
 )
-from invisiblebench.evaluation.scoring_contract import coverage_floor
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.models.results import (
     PUBLIC_SCORE_MODEL,
     RAW_RESULT_SURFACE,
     RAW_SCORE_MODEL,
-    SUCCESS_THRESHOLD,
     is_result_success,
 )
 from invisiblebench.results_io import write_json, write_model_results
@@ -87,23 +74,10 @@ from invisiblebench.utils.benchmark_inventory import (
     get_project_root,
     scenario_category_for_path,
 )
-from invisiblebench.utils.dimension_aliases import (
-    extract_numeric_dimension_value,
-    normalize_dimension_scores,
-)
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
-from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION
 
 try:
-    import threading
-
-    from rich.live import Live
-    from rich.progress import (
-        BarColumn,
-        Progress,
-        SpinnerColumn,
-        TextColumn,
-    )
+    import rich  # noqa: F401 — availability probe for RICH_AVAILABLE
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -117,156 +91,18 @@ Console = make_console
 load_dotenv()
 
 
-def _raw_score_percent(score: float) -> str:
-    """Format an overall_score value as raw/internal diagnostic text."""
-    return f"raw {int(score * 100)}%"
-
-
-def _raw_score_range(
-    score: float,
-    *,
-    min_score: float,
-    max_score: float,
-    pass_rate: int | None = None,
-) -> str:
-    """Format multi-run raw/internal score summary text."""
-    base = (
-        f"{_raw_score_percent(score)} "
-        f"[raw {int(min_score * 100)}-{int(max_score * 100)}%]"
-    )
-    if pass_rate is None:
-        return base
-    return f"{base} pass@1={pass_rate}%"
-
-
 # Token estimates per category for cost calculation
-# Calibrated from actual benchmark runs (Jan 2026) - includes system prompt,
-# conversation history growth, and scorer LLM calls
+# Calibrated from actual benchmark runs (Jan 2026) - includes system prompt
+# and conversation history growth
 TOKEN_ESTIMATES = {
     1: {"input": 5500, "output": 1400},  # 3-5 turns
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
 }
 
-# Scorer LLM costs (per scenario) — not included in model-under-test tokens
-# Scorer calls: safety (1 ref + 3 sampled), compliance (3), regard (LLM/cache-aware),
-# coordination (mostly deterministic, adds false_refusal signal), plus memory (deterministic).
-# Avg estimate: ~4-6 LLM calls/scenario
-SCORER_MODEL_COSTS = {
-    "flash_lite": {"cost_per_m_input": 0.10, "cost_per_m_output": 0.40},  # gemini-2.5-flash-lite
-    "flash": {"cost_per_m_input": 0.30, "cost_per_m_output": 2.50},       # gemini-2.5-flash (safety ref)
-}
-# Per-scenario scorer token estimates (all scorers combined)
-SCORER_CALLS_PER_SCENARIO = 8       # avg uncached LLM calls (flash-lite)
-SCORER_REF_CALLS_PER_SCENARIO = 1   # safety reference call (flash)
-SCORER_TOKENS_PER_CALL = {"input": 4000, "output": 800}
-
 # SYSTEM_PROMPT is imported from invisiblebench.cli.transcript
 
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
-
-
-def _load_transcript_jsonl(transcript_path: Path) -> list[dict[str, Any]]:
-    transcript: list[dict[str, Any]] = []
-    with transcript_path.open(encoding="utf-8") as fh:
-        for line_number, line in enumerate(fh, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise ValueError(
-                    f"{transcript_path}:{line_number}: invalid transcript JSONL: {exc}"
-                ) from exc
-            if isinstance(row, dict):
-                transcript.append(row)
-    if not transcript:
-        raise ValueError(f"{transcript_path}: transcript is empty")
-    return transcript
-
-
-# _raw_gate_payload, _compute_success, _build_scoring_summary, _make_error_result,
-# _make_harness_error_result, _safe_load_scenario_data moved to result_helpers.py
-
-
-class ModeEngineScoringAdapter:
-    """Adapter exposing the runner's .score(...) contract on top of ModeEngine."""
-
-    def __init__(
-        self,
-        api_client: ModelAPIClient | None = None,
-        *,
-        llm_model: str | None = None,
-        engine: ModeEngine | None = None,
-    ) -> None:
-        self.llm_model = llm_model or (
-            resolve_scorer_model(api_client, "scorer", DEFAULT_SCORER_MODEL)
-            if api_client is not None
-            else DEFAULT_SCORER_MODEL
-        )
-        if engine is None:
-            from invisiblebench.evaluation.mode_engine import ModeEngine
-
-            engine = ModeEngine(llm_api_client=api_client, llm_model=self.llm_model)
-        self.engine = engine
-
-    def score(
-        self,
-        *,
-        transcript_path: str,
-        scenario_path: str,
-        rules_path: str | None = None,
-        model_name: str | None = None,
-        run_id: str | None = None,
-    ) -> dict[str, Any]:
-        del rules_path, model_name
-        transcript = _load_transcript_jsonl(Path(transcript_path))
-        with open(scenario_path, encoding="utf-8") as fh:
-            scenario = json.load(fh)
-
-        output = self.engine.evaluate(transcript=transcript, scenario=scenario)
-        result = output.to_dict()
-        mode_results = result.get("mode_results") or []
-        raw_reasons = result.get("hard_fail_reasons") or []
-        str_reasons = [
-            r.get("mode_id", r.get("reason", "unknown")) if isinstance(r, dict) else str(r)
-            for r in raw_reasons
-        ]
-        result["hard_fail_reasons"] = str_reasons
-        result.update(
-            {
-                "run_id": run_id,
-                "judge_model": self.llm_model,
-                "judge_prompt_hash": None,
-                "judge_temp": None,
-                "contract_version": SCANNED_ROW_CONTRACT_VERSION,
-                "gates": _raw_gate_payload(
-                    mode_results,
-                    raw_reasons,
-                ),
-                "dimensions": result.get("dimension_scores") or {},
-                "transcript_path": transcript_path,
-                "coverage": {
-                    "eligible": output.eligible_count,
-                    "resolved": output.resolved_count,
-                    "unclear": output.unclear_count,
-                    "rate": output.coverage_rate,
-                },
-                **_raw_score_metadata(),
-            }
-        )
-
-        # Minimum coverage gate: below the floor (scoring.yaml coverage_floor)
-        # the result is invalid; the QA gate independently blocks publication.
-        floor = coverage_floor()
-        if output.coverage_rate < floor:
-            result["coverage_invalid"] = True
-            result["coverage_invalid_reason"] = (
-                f"Coverage {output.coverage_rate:.0%} below {floor:.0%} threshold"
-            )
-
-        return result
 
 
 def run_givecare_eval(
@@ -544,38 +380,14 @@ def get_scenarios(
     return scenarios
 
 
-def estimate_cost(
-    category: str,
-    model: dict[str, Any],
-    *,
-    include_scorer: bool = True,
-) -> float:
-    """Estimate cost for one target-model run, optionally including old inline scorers."""
+def estimate_cost(category: str, model: dict[str, Any]) -> float:
+    """Estimate the cost of one target-model transcript run."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
 
-    # Model-under-test cost
-    model_cost = (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
+    return (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
         tokens["output"] / 1_000_000
     ) * model["cost_per_m_output"]
-
-    if not include_scorer:
-        return model_cost
-
-    # Scorer LLM costs (flash-lite for most scorers + flash for safety reference)
-    st = SCORER_TOKENS_PER_CALL
-    fl = SCORER_MODEL_COSTS["flash_lite"]
-    scorer_cost = SCORER_CALLS_PER_SCENARIO * (
-        (st["input"] / 1_000_000) * fl["cost_per_m_input"]
-        + (st["output"] / 1_000_000) * fl["cost_per_m_output"]
-    )
-    fr = SCORER_MODEL_COSTS["flash"]
-    scorer_cost += SCORER_REF_CALLS_PER_SCENARIO * (
-        (st["input"] / 1_000_000) * fr["cost_per_m_input"]
-        + (st["output"] / 1_000_000) * fr["cost_per_m_output"]
-    )
-
-    return model_cost + scorer_cost
 
 
 def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
@@ -644,101 +456,6 @@ def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
             indices.update(matched)
 
     return sorted(indices)
-
-
-# ScenarioDisplay and print_banner moved to invisiblebench.cli.display
-
-# ScenarioDisplay and print_banner moved to invisiblebench.cli.display
-
-def _aggregate_multi_run_results(run_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Aggregate N run results with median score and reliability stats."""
-    if len(run_results) == 1:
-        return run_results[0]
-
-    def _score_value(result: dict[str, Any]) -> float:
-        score = result.get("overall_score", 0.0)
-        return float(score) if isinstance(score, (int, float)) else 0.0
-
-    sorted_results = sorted(run_results, key=_score_value)
-    median_idx = len(sorted_results) // 2
-    final = sorted_results[median_idx].copy()
-    run_count = len(run_results)
-
-    scores = [_score_value(r) for r in run_results]
-    hard_fail_flags = [bool(r.get("hard_fail", False)) for r in run_results]
-    pass_flags = [not hf and _score_value(r) >= SUCCESS_THRESHOLD for hf, r in zip(hard_fail_flags, run_results, strict=True)]
-    pass_count = sum(1 for p in pass_flags if p)
-    hard_fail_count = sum(1 for hf in hard_fail_flags if hf)
-
-    dimension_values: dict[str, list[float]] = {}
-    for result in run_results:
-        raw_dims = result.get("dimensions") or result.get("dimension_scores", {})
-        dims = normalize_dimension_scores(raw_dims)
-        for dim, value in dims.items():
-            score = extract_numeric_dimension_value(value)
-            if isinstance(score, (int, float)):
-                dimension_values.setdefault(dim, []).append(float(score))
-
-    def _stats(values: list[float]) -> tuple[float, float, float]:
-        if not values:
-            return 0.0, 0.0, 0.0
-        if len(values) == 1:
-            return values[0], 0.0, 1.0 if values[0] >= SUCCESS_THRESHOLD else 0.0
-        return (
-            statistics.mean(values),
-            statistics.pstdev(values),
-            sum(1 for v in values if v >= SUCCESS_THRESHOLD) / len(values),
-        )
-
-    # Gate handling: if ANY run triggers a gate failure, the scenario fails
-    any_hard_fail = any(r.get("hard_fail") for r in run_results)
-    if any_hard_fail:
-        final["hard_fail"] = True
-        all_reasons: list[str] = []
-        for r in run_results:
-            for reason in r.get("hard_fail_reasons", []):
-                if reason not in all_reasons:
-                    all_reasons.append(reason)
-        final["hard_fail_reasons"] = all_reasons
-        final["status"] = "fail"
-
-    final["runs"] = [
-        {
-            "run": i + 1,
-            "overall_score": _score_value(r),
-            "hard_fail": r.get("hard_fail", False),
-        }
-        for i, r in enumerate(run_results)
-    ]
-    final["run_stats"] = {
-        "median": scores[median_idx],
-        "min": min(scores),
-        "max": max(scores),
-        "mean": statistics.mean(scores),
-        "std": statistics.pstdev(scores) if len(scores) > 1 else 0.0,
-        "n": run_count,
-        "pass_count": pass_count,
-        "pass_rate": pass_count / run_count,
-        "hard_fail_count": hard_fail_count,
-        "hard_fail_rate": hard_fail_count / run_count,
-    }
-    final["run_summary"] = {
-        "n": run_count,
-        "pass_count": pass_count,
-        "pass_rate": pass_count / run_count,
-        "hard_fail_count": hard_fail_count,
-        "hard_fail_rate": hard_fail_count / run_count,
-        "dimension_stats": {
-            dim: {"mean": mean, "std": std, "pass_rate": pass_rate}
-            for dim, (mean, std, pass_rate) in {
-                d: _stats(values) for d, values in dimension_values.items()
-            }.items()
-        },
-    }
-    final["overall_score"] = scores[median_idx]
-    final["cost"] = sum(r.get("cost", 0) for r in run_results)
-
-    return final
 
 
 def _write_run_audit(
@@ -897,12 +614,9 @@ def run_benchmark(
     scenario_filter: list[str] | None = None,
     parallel: int | None = None,
     scenario_parallel: int = 1,
-    detailed_output: bool = False,
-    runs: int = 1,
     include_confidential: bool = False,
-    transcripts_only: bool = True,
 ) -> int:
-    """Run the benchmark."""
+    """Run the benchmark (transcript-only; judging happens later via run_scan)."""
     console = Console() if RICH_AVAILABLE else None
 
     try:
@@ -937,49 +651,29 @@ def run_benchmark(
         return 1
 
     total = len(models) * len(scenarios)
-    n_runs = max(1, runs)
     scenario_parallel = max(1, scenario_parallel)
-    if transcripts_only and n_runs > 1:
-        print("ERROR: --transcripts-only does not support --runs > 1 yet")
-        return 1
-    total_cost = (
-        sum(
-            estimate_cost(
-                s["category"],
-                m,
-                include_scorer=not transcripts_only,
-            )
-            for m in models
-            for s in scenarios
-        )
-        * n_runs
+    total_cost = sum(
+        estimate_cost(s["category"], m)
+        for m in models
+        for s in scenarios
     )
 
     if RICH_AVAILABLE and console:
         print_banner(console, "full", models, scenarios, total_cost)
-        if n_runs > 1:
-            console.print(
-                f"[cyan]Running {n_runs}\u00d7 per scenario (median + reliability stats)[/cyan]\n"
-            )
-        if transcripts_only:
-            console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
+        console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
     else:
         print("\nInvisibleBench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
-        if n_runs > 1:
-            print(f"Running {n_runs}x per scenario (median + reliability stats)")
-        if transcripts_only:
-            print("Transcript-only mode: judge/scorer calls are skipped")
+        print("Transcript-only mode: judge/scorer calls are skipped")
 
     if dry_run:
         if RICH_AVAILABLE and console:
             console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
-            if transcripts_only:
-                console.print(
-                    "[cyan]Estimate includes target transcript generation only. "
-                    "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost.[/cyan]\n"
-                )
+            console.print(
+                "[cyan]Estimate includes target transcript generation only. "
+                "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost.[/cyan]\n"
+            )
             console.print("[bold]Selected models:[/bold]")
             all_catalog = MODELS_FULL
             for m in models:
@@ -988,24 +682,16 @@ def run_benchmark(
                     None,
                 )
                 num = f"#{idx + 1}" if idx is not None else "#?"
-                cost = sum(
-                    estimate_cost(
-                        s["category"],
-                        m,
-                        include_scorer=not transcripts_only,
-                    )
-                    for s in scenarios
-                )
+                cost = sum(estimate_cost(s["category"], m) for s in scenarios)
                 console.print(
                     f"  [dim]{num:<4}[/dim] {m['name']:<24} [magenta]~${cost:.2f}[/magenta]"
                 )
         else:
             print("DRY RUN - No evaluations will be run")
-            if transcripts_only:
-                print(
-                    "Estimate includes target transcript generation only. "
-                    "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost."
-                )
+            print(
+                "Estimate includes target transcript generation only. "
+                "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost."
+            )
             print("\nSelected models:")
             all_catalog = MODELS_FULL
             for m in models:
@@ -1036,8 +722,6 @@ def run_benchmark(
         return 1
 
     root = get_project_root()
-    rules_path = root / "benchmark" / "configs" / "rules" / "base.yaml"
-    orchestrator = None if transcripts_only else ModeEngineScoringAdapter(api_client)
 
     run_id = str(uuid.uuid4())
     manifest = generate_manifest(
@@ -1048,811 +732,111 @@ def run_benchmark(
         mode="raw",
         include_confidential=include_confidential,
     )
-    if transcripts_only:
-        manifest["artifact_type"] = "transcript_run/v1"
-        manifest["stage"] = "transcripts"
-        manifest["scoring"] = "deferred_to_run_scan"
+    manifest["artifact_type"] = "transcript_run/v1"
+    manifest["stage"] = "transcripts"
+    manifest["scoring"] = "deferred_to_run_scan"
     write_manifest(manifest, output_dir)
-    model_results_dir = output_dir / "model_results"
 
-    def persist_model_results(model_rows: list[dict[str, Any]]) -> None:
-        if not model_rows:
-            return
-        write_model_results(
-            model_rows,
-            model_results_dir,
-            benchmark_version=manifest.get("benchmark_version", "unknown"),
-            mode="benchmark",
-            run_metadata={"run_id": run_id, "provider": "openrouter"},
-        )
-
-    results = []
     start_time = time.time()
     passed = 0
     failed = 0
     credits_exhausted = False
 
-    if transcripts_only:
-        print(f"Generating transcripts only ({len(models)} model(s), {len(scenarios)} scenario(s))")
-        print("Scoring is deferred to scripts/run_scan.py\n")
-        transcript_rows: list[dict[str, Any]] = []
+    print(f"Generating transcripts only ({len(models)} model(s), {len(scenarios)} scenario(s))")
+    print("Scoring is deferred to scripts/run_scan.py\n")
+    transcript_rows: list[dict[str, Any]] = []
 
-        async def run_transcript_model(model: dict[str, Any]) -> list[dict[str, Any]]:
-            semaphore = asyncio.Semaphore(scenario_parallel)
+    async def run_transcript_model(model: dict[str, Any]) -> list[dict[str, Any]]:
+        semaphore = asyncio.Semaphore(scenario_parallel)
 
-            async def run_indexed(
-                index: int,
-                scenario: dict[str, Any],
-            ) -> tuple[int, dict[str, Any]]:
-                result = await evaluate_scenario_async(
-                    model,
-                    scenario,
-                    api_client,
-                    orchestrator,
-                    output_dir,
-                    semaphore,
-                    detailed_output=False,
-                    run_id=run_id,
-                    score_transcript=False,
-                )
-                return index, result
+        async def run_indexed(
+            index: int,
+            scenario: dict[str, Any],
+        ) -> tuple[int, dict[str, Any]]:
+            result = await evaluate_scenario_async(
+                model,
+                scenario,
+                api_client,
+                output_dir,
+                semaphore,
+                run_id=run_id,
+            )
+            return index, result
 
-            tasks = [
-                asyncio.create_task(run_indexed(index, scenario))
-                for index, scenario in enumerate(scenarios)
-            ]
-            completed: list[tuple[int, dict[str, Any]]] = []
-
-            try:
-                for task in asyncio.as_completed(tasks):
-                    idx, result = await task
-                    completed.append((idx, result))
-                    transcript_rows.append(result)
-                    is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
-                    status = "ERROR" if is_error else "TRANSCRIPT"
-                    print(
-                        f"[{len(completed)}/{len(tasks)}] {model['name']} - "
-                        f"{result.get('scenario', 'unknown')} {status}"
-                    )
-            except InsufficientCreditsError:
-                for task in tasks:
-                    task.cancel()
-                raise
-
-            return [result for _, result in sorted(completed, key=lambda item: item[0])]
-
-        async def run_transcripts() -> list[dict[str, Any]]:
-            model_parallel = max(1, parallel or 1)
-            if model_parallel <= 1:
-                rows: list[dict[str, Any]] = []
-                for model in models:
-                    rows.extend(await run_transcript_model(model))
-                return rows
-
-            model_semaphore = asyncio.Semaphore(model_parallel)
-
-            async def run_model_with_sem(model: dict[str, Any]) -> list[dict[str, Any]]:
-                async with model_semaphore:
-                    return await run_transcript_model(model)
-
-            nested = await asyncio.gather(*(run_model_with_sem(model) for model in models))
-            return [row for model_rows in nested for row in model_rows]
+        tasks = [
+            asyncio.create_task(run_indexed(index, scenario))
+            for index, scenario in enumerate(scenarios)
+        ]
+        completed: list[tuple[int, dict[str, Any]]] = []
 
         try:
-            results = asyncio.run(run_transcripts())
-        except InsufficientCreditsError:
-            credits_exhausted = True
-            results = transcript_rows
-            print("\nCredits exhausted. Saving transcript summary for completed scenarios.")
-        except Exception as e:
-            print(f"ERROR: Transcript generation failed: {e}")
-            return 1
-
-        for row in results:
-            if row.get("status") == "transcript_ready":
-                passed += 1
-            else:
-                failed += 1
-
-        elapsed = time.time() - start_time
-        summary_path = _write_transcript_run_summary(
-            output_dir=output_dir,
-            manifest=manifest,
-            models=models,
-            scenarios=scenarios,
-            results=results,
-            elapsed_seconds=elapsed,
-            abort_reason="credits_exhausted" if credits_exhausted else None,
-        )
-
-        actual_total = cost_tracker.total
-        state = "Partial" if failed or credits_exhausted else "Complete"
-        print(
-            f"\n{state}: {passed} transcripts ready, {failed} errors  "
-            f"${actual_total:.3f}"
-        )
-        print(f"Transcript summary: {summary_path}")
-        _print_transcript_next_steps(output_dir, console if RICH_AVAILABLE else None)
-        return 0 if passed and not failed and not credits_exhausted else 1
-
-    # Parallel execution mode - runs N MODELS in parallel
-    if parallel and parallel > 1:
-        if RICH_AVAILABLE and console:
-            # Track progress per model
-            model_progress: dict[str, tuple] = (
-                {}
-            )  # model_name -> (completed, total, current_scenario)
-            progress_lock = threading.Lock()
-            all_results: list[dict[str, Any]] = []
-            results_lock = threading.Lock()
-
-            async def run_model_scenarios(model: dict[str, Any]) -> list[dict[str, Any]]:
-                """Run all scenarios for a single model sequentially."""
-                model_results = []
-                model_name = model["name"]
-
-                for i, scenario in enumerate(scenarios):
-                    with progress_lock:
-                        model_progress[model_name] = (i, len(scenarios), scenario["name"][:20])
-
-                    # Use a dummy semaphore (no limit within model)
-                    dummy_sem = asyncio.Semaphore(1)
-                    if n_runs > 1:
-                        run_results = []
-                        for run_idx in range(n_runs):
-                            r = await evaluate_scenario_async(
-                                model, scenario, api_client, orchestrator,
-                                output_dir, dummy_sem,
-                                detailed_output=detailed_output,
-                                run_suffix=f"_run{run_idx + 1}",
-                                run_id=run_id,
-                            )
-                            run_results.append(r)
-                        result = _aggregate_multi_run_results(run_results)
-                    else:
-                        result = await evaluate_scenario_async(
-                            model, scenario, api_client, orchestrator,
-                            output_dir, dummy_sem,
-                            detailed_output=detailed_output,
-                            run_id=run_id,
-                        )
-                    model_results.append(result)
-
-                    with results_lock:
-                        all_results.append(result)
-
-                with progress_lock:
-                    model_progress[model_name] = (len(scenarios), len(scenarios), "Done")
-
-                persist_model_results(model_results)
-                return model_results
-
-            async def run_models_parallel():
-                semaphore = asyncio.Semaphore(parallel)
-
-                async def run_with_sem(model):
-                    async with semaphore:
-                        return await run_model_scenarios(model)
-
-                tasks = [run_with_sem(m) for m in models]
-                return await asyncio.gather(*tasks)
-
-            console.print(f"[cyan]Running {min(parallel, len(models))} models in parallel[/cyan]\n")
-
-            async def run_and_display():
-                import asyncio as aio
-
-                task = aio.create_task(run_models_parallel())
-
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[bold blue]{task.fields[model_name]:<18}[/bold blue]"),
-                    BarColumn(bar_width=20),
-                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                    TextColumn("{task.completed}/{task.total}"),
-                    TextColumn("[dim]|[/dim]"),
-                    TextColumn("[cyan]{task.fields[scenario]:<25}[/cyan]"),
-                    console=console,
-                    transient=False,
-                ) as progress:
-                    model_tasks = {}
-                    for model in models:
-                        model_tasks[model["name"]] = progress.add_task(
-                            model["name"],
-                            total=len(scenarios),
-                            model_name=model["name"],
-                            scenario="waiting...",
-                        )
-
-                    while not task.done():
-                        with progress_lock:
-                            for mname, (comp, tot, scen) in model_progress.items():
-                                if mname in model_tasks:
-                                    progress.update(
-                                        model_tasks[mname],
-                                        completed=comp,
-                                        scenario=scen if comp < tot else "[green]Done[/green]",
-                                    )
-
-                        await aio.sleep(0.3)
-
-                    # Final update - mark all complete
-                    for _mname, task_id in model_tasks.items():
-                        progress.update(
-                            task_id, completed=len(scenarios), scenario="[green]Done[/green]"
-                        )
-
-                return await task
-
-            try:
-                asyncio.run(run_and_display())
-            except InsufficientCreditsError:
-                credits_exhausted = True
-                console.print(
-                    "\n[bold red]Credits exhausted.[/bold red] Saving partial results."
-                )
-            except Exception as e:
-                print(f"ERROR: Parallel execution failed: {e}")
-                return 1
-            for r in all_results:
-                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
-                    failed += 1
-                else:
-                    passed += 1
-            results = all_results
-        else:
-            # Non-rich parallel fallback - still parallelize by model
-            all_results: list[dict[str, Any]] = []
-
-            async def run_model_scenarios_simple(model: dict[str, Any]) -> list[dict[str, Any]]:
-                model_results = []
-                for scenario in scenarios:
-                    dummy_sem = asyncio.Semaphore(1)
-                    if n_runs > 1:
-                        run_results = []
-                        for run_idx in range(n_runs):
-                            r = await evaluate_scenario_async(
-                                model, scenario, api_client, orchestrator,
-                                output_dir, dummy_sem,
-                                detailed_output=detailed_output,
-                                run_suffix=f"_run{run_idx + 1}",
-                                run_id=run_id,
-                            )
-                            run_results.append(r)
-                        result = _aggregate_multi_run_results(run_results)
-                    else:
-                        result = await evaluate_scenario_async(
-                            model, scenario, api_client, orchestrator,
-                            output_dir, dummy_sem,
-                            detailed_output=detailed_output,
-                            run_id=run_id,
-                        )
-                    model_results.append(result)
-                persist_model_results(model_results)
-                return model_results
-
-            async def run_parallel():
-                semaphore = asyncio.Semaphore(parallel)
-
-                async def run_with_sem(model):
-                    async with semaphore:
-                        return await run_model_scenarios_simple(model)
-
-                tasks = [run_with_sem(m) for m in models]
-                nested = await asyncio.gather(*tasks)
-                return [r for model_results in nested for r in model_results]
-
-            try:
-                results = asyncio.run(run_parallel())
-            except InsufficientCreditsError:
-                credits_exhausted = True
-                print("\nCredits exhausted. Saving partial results.")
-            except Exception as e:
-                print(f"ERROR: Parallel execution failed: {e}")
-                return 1
-            for r in results:
-                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
-                    failed += 1
-                else:
-                    passed += 1
-
-    elif scenario_parallel > 1:
-        print(f"Running up to {scenario_parallel} scenarios in parallel per model\n")
-
-        async def run_one_scenario_concurrent(
-            model: dict[str, Any],
-            scenario: dict[str, Any],
-            semaphore: asyncio.Semaphore,
-        ) -> dict[str, Any]:
-            scenario_path = Path(scenario["path"])
-            if not scenario_path.exists():
-                return _make_error_result(
-                    model,
-                    scenario["name"],
-                    scenario_path.stem,
-                    scenario["category"],
-                    "Scenario file not found",
-                )
-
-            try:
-                if n_runs > 1:
-                    run_results = []
-                    for run_idx in range(n_runs):
-                        run_results.append(
-                            await evaluate_scenario_async(
-                                model,
-                                scenario,
-                                api_client,
-                                orchestrator,
-                                output_dir,
-                                semaphore,
-                                detailed_output=detailed_output,
-                                run_suffix=f"_run{run_idx + 1}",
-                                run_id=run_id,
-                            )
-                        )
-                    return _aggregate_multi_run_results(run_results)
-
-                return await evaluate_scenario_async(
-                    model,
-                    scenario,
-                    api_client,
-                    orchestrator,
-                    output_dir,
-                    semaphore,
-                    detailed_output=detailed_output,
-                    run_id=run_id,
-                )
-            except InsufficientCreditsError:
-                raise
-            except Exception as e:
-                logger.exception("Scenario run failed: %s", e)
-                return _make_error_result(
-                    model,
-                    scenario["name"],
-                    scenario_path.stem,
-                    scenario["category"],
-                    f"Unexpected scenario run failure: {e}",
-                )
-
-        async def run_model_scenarios_concurrent(
-            model: dict[str, Any],
-        ) -> list[dict[str, Any]]:
-            semaphore = asyncio.Semaphore(scenario_parallel)
-
-            async def run_indexed(
-                index: int,
-                scenario: dict[str, Any],
-            ) -> tuple[int, dict[str, Any]]:
-                return index, await run_one_scenario_concurrent(model, scenario, semaphore)
-
-            tasks = [
-                asyncio.create_task(run_indexed(index, scenario))
-                for index, scenario in enumerate(scenarios)
-            ]
-            completed: list[tuple[int, dict[str, Any]]] = []
-
-            try:
-                for task in asyncio.as_completed(tasks):
-                    idx, result = await task
-                    completed.append((idx, result))
-                    is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
-                    status = "FAIL" if is_error else "PASS"
-                    print(
-                        f"[{len(completed)}/{len(tasks)}] {model['name']} → "
-                        f"{result.get('scenario', 'unknown')} {status}"
-                    )
-            except InsufficientCreditsError:
-                for task in tasks:
-                    task.cancel()
-                raise
-
-            return [result for _, result in sorted(completed, key=lambda item: item[0])]
-
-        for model in models:
-            try:
-                model_results = asyncio.run(run_model_scenarios_concurrent(model))
-            except InsufficientCreditsError:
-                credits_exhausted = True
-                break
-
-            results.extend(model_results)
-            persist_model_results(model_results)
-            for r in model_results:
-                if r.get("status") in ("fail", "error") or r.get("hard_fail"):
-                    failed += 1
-                else:
-                    passed += 1
-
-    elif RICH_AVAILABLE and console:
-        cats = sorted({s["category"] for s in scenarios})
-        scenarios_by_cat = {c: [s for s in scenarios if s["category"] == c] for c in cats}
-
-        for model in models:
-            model_results: list[dict[str, Any]] = []
-            display = ScenarioDisplay(model["name"], scenarios, start_time)
-
-            with Live(
-                display,
-                console=console,
-                refresh_per_second=4,
-                transient=True,
-                vertical_overflow="crop",
-            ) as _live:
-                for cat in cats:
-                    cat_scenarios = scenarios_by_cat[cat]
-
-                    for scenario in cat_scenarios:
-                        display.set_running(scenario["path"], cat)
-
-                        scenario_path = Path(scenario["path"])
-                        if not scenario_path.exists():
-                            display.set_complete(scenario["path"], 0.0, False, cat)
-                            failed += 1
-                            continue
-
-                        with open(scenario_path) as f:
-                            scenario_data = json.load(f)
-
-                        scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-                        run_results = []
-
-                        for run_idx in range(n_runs):
-                            run_suffix = f"_run{run_idx + 1}" if n_runs > 1 else ""
-                            try:
-                                run_results.append(
-                                    _run_single_scenario(
-                                        model=model,
-                                        scenario=scenario,
-                                        scenario_path=scenario_path,
-                                        scenario_id=scenario_id,
-                                        run_suffix=run_suffix,
-                                        output_dir=output_dir,
-                                        api_client=api_client,
-                                        orchestrator=orchestrator,
-                                        rules_path=rules_path,
-                                        detailed_output=detailed_output,
-                                        run_id=run_id,
-                                    )
-                                )
-                            except InsufficientCreditsError:
-                                credits_exhausted = True
-                                break
-                            except Exception as e:
-                                logger.exception("Scenario run failed: %s", e)
-                                run_results.append(
-                                    _make_error_result(
-                                        model,
-                                        scenario["name"],
-                                        scenario_id,
-                                        scenario["category"],
-                                        f"Unexpected scenario run failure: {e}",
-                                    )
-                                )
-
-                        if credits_exhausted and not run_results:
-                            break
-
-                        if not run_results:
-                            final = _make_error_result(
-                                model,
-                                scenario["name"],
-                                scenario_id,
-                                scenario["category"],
-                                "No runs completed",
-                            )
-                        elif n_runs > 1:
-                            final = _aggregate_multi_run_results(run_results)
-                        else:
-                            final = run_results[0]
-
-                        results.append(final)
-                        model_results.append(final)
-
-                        score = final["overall_score"]
-                        is_pass = not final.get("hard_fail")
-                        is_coverage_invalid = final.get("coverage_invalid", False)
-                        score_display = ""
-                        if "run_stats" in final:
-                            stats = final["run_stats"]
-                            pass_rate = int(stats["pass_rate"] * 100)
-                            if pass_rate == 100:
-                                score_display = _raw_score_range(
-                                    score,
-                                    min_score=stats["min"],
-                                    max_score=stats["max"],
-                                    pass_rate=pass_rate,
-                                )
-                            else:
-                                score_display = _raw_score_range(
-                                    score,
-                                    min_score=stats["min"],
-                                    max_score=stats["max"],
-                                    pass_rate=pass_rate,
-                                )
-                        display.set_complete(
-                            scenario["path"],
-                            score,
-                            is_pass and not is_coverage_invalid,
-                            cat,
-                            score_display=score_display,
-                            coverage=final.get("coverage"),
-                            coverage_invalid=is_coverage_invalid,
-                        )
-
-                        if is_coverage_invalid or not is_pass:
-                            failed += 1
-                        else:
-                            passed += 1
-
-                        if credits_exhausted:
-                            break
-
-                    # Mark category as done
-                    display.set_category_done(cat)
-                    if credits_exhausted:
-                        break
-
-            # Print final state after Live exits (since transient=True clears it)
-            console.print(display)
-            persist_model_results(model_results)
-
-    else:
-        # Fallback without rich - still run actual evaluations
-        eval_num = 0
-        for model in models:
-            model_results: list[dict[str, Any]] = []
-            for scenario in scenarios:
-                eval_num += 1
+            for task in asyncio.as_completed(tasks):
+                idx, result = await task
+                completed.append((idx, result))
+                transcript_rows.append(result)
+                is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
+                status = "ERROR" if is_error else "TRANSCRIPT"
                 print(
-                    f"[{eval_num}/{total}] {model['name']} → {scenario['name']}",
-                    end=" ",
-                    flush=True,
+                    f"[{len(completed)}/{len(tasks)}] {model['name']} - "
+                    f"{result.get('scenario', 'unknown')} {status}"
                 )
+        except InsufficientCreditsError:
+            for task in tasks:
+                task.cancel()
+            raise
 
-                scenario_path = Path(scenario["path"])
-                if not scenario_path.exists():
-                    print("SKIP (not found)")
-                    failed += 1
-                    continue
+        return [result for _, result in sorted(completed, key=lambda item: item[0])]
 
-                with open(scenario_path) as f:
-                    scenario_data = json.load(f)
+    async def run_transcripts() -> list[dict[str, Any]]:
+        model_parallel = max(1, parallel or 1)
+        if model_parallel <= 1:
+            rows: list[dict[str, Any]] = []
+            for model in models:
+                rows.extend(await run_transcript_model(model))
+            return rows
 
-                scenario_id = scenario_data.get("scenario_id", scenario_path.stem)
-                run_results = []
+        model_semaphore = asyncio.Semaphore(model_parallel)
 
-                for run_idx in range(n_runs):
-                    run_suffix = f"_run{run_idx + 1}" if n_runs > 1 else ""
-                    try:
-                        run_results.append(
-                            _run_single_scenario(
-                                model=model,
-                                scenario=scenario,
-                                scenario_path=scenario_path,
-                                scenario_id=scenario_id,
-                                run_suffix=run_suffix,
-                                output_dir=output_dir,
-                                api_client=api_client,
-                                orchestrator=orchestrator,
-                                rules_path=rules_path,
-                                detailed_output=detailed_output,
-                                run_id=run_id,
-                            )
-                        )
-                    except InsufficientCreditsError:
-                        credits_exhausted = True
-                        break
-                    except Exception as e:
-                        logger.exception("Scenario run failed: %s", e)
-                        run_results.append(
-                            _make_error_result(
-                                model,
-                                scenario["name"],
-                                scenario_id,
-                                scenario["category"],
-                                f"Unexpected scenario run failure: {e}",
-                            )
-                        )
+        async def run_model_with_sem(model: dict[str, Any]) -> list[dict[str, Any]]:
+            async with model_semaphore:
+                return await run_transcript_model(model)
 
-                if credits_exhausted and not run_results:
-                    break
+        nested = await asyncio.gather(*(run_model_with_sem(model) for model in models))
+        return [row for model_rows in nested for row in model_rows]
 
-                if not run_results:
-                    final = _make_error_result(
-                        model, scenario["name"], scenario_id,
-                        scenario["category"], "No runs completed",
-                    )
-                elif n_runs > 1:
-                    final = _aggregate_multi_run_results(run_results)
-                else:
-                    final = run_results[0]
-
-                results.append(final)
-                model_results.append(final)
-
-                score_val = final["overall_score"]
-                is_pass = not final.get("hard_fail")
-                if "run_stats" in final:
-                    stats = final["run_stats"]
-                    print(
-                        f"{'FAIL' if not is_pass else 'PASS'} ("
-                        f"{_raw_score_range(score_val, min_score=stats['min'], max_score=stats['max'], pass_rate=int(stats['pass_rate'] * 100))})"
-                    )
-                elif is_pass:
-                    print(f"PASS ({_raw_score_percent(score_val)})")
-                else:
-                    print(f"FAIL ({_raw_score_percent(score_val)})")
-
-                if is_pass:
-                    passed += 1
-                else:
-                    failed += 1
-
-                if credits_exhausted:
-                    break
-            persist_model_results(model_results)
-            if credits_exhausted:
-                break
-
-    elapsed = time.time() - start_time
-
-    if not results:
-        if credits_exhausted:
-            msg = "Credits exhausted before any scenarios completed."
-            if RICH_AVAILABLE and console:
-                console.print(f"\n[bold red]{msg}[/bold red]")
-                console.print("[yellow]Add credits at https://openrouter.ai/settings/credits[/yellow]")
-            else:
-                print(f"\n{msg}")
-                print("Add credits at https://openrouter.ai/settings/credits")
+    try:
+        results = asyncio.run(run_transcripts())
+    except InsufficientCreditsError:
+        credits_exhausted = True
+        results = transcript_rows
+        print("\nCredits exhausted. Saving transcript summary for completed scenarios.")
+    except Exception as e:
+        print(f"ERROR: Transcript generation failed: {e}")
         return 1
 
-    # Save results
-    write_model_results(
-        results,
-        model_results_dir,
-        benchmark_version=manifest.get("benchmark_version", "unknown"),
-        mode="benchmark",
-        run_metadata={"run_id": run_id, "provider": "openrouter"},
-    )
-    results_path = output_dir / "all_results.json"
-    write_json(results_path, results)
+    for row in results:
+        if row.get("status") == "transcript_ready":
+            passed += 1
+        else:
+            failed += 1
 
-    audit = _write_run_audit(
-        results_path,
+    elapsed = time.time() - start_time
+    summary_path = _write_transcript_run_summary(
         output_dir=output_dir,
-        expected_scenario_count=len(scenarios),
-        harness="llm",
-        mode="raw",
+        manifest=manifest,
+        models=models,
+        scenarios=scenarios,
+        results=results,
+        elapsed_seconds=elapsed,
+        abort_reason="credits_exhausted" if credits_exhausted else None,
     )
 
-    # Print summary — use actual metered cost from OpenRouter
-    if RICH_AVAILABLE and console:
-        avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
-        actual_total = cost_tracker.total
-        elapsed_str = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
-        cost_snap = cost_tracker.snapshot()
-
-        console.print()
-        console.print(
-            "[dim]Surface: "
-            f"{RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); "
-            f"public model {PUBLIC_SCORE_MODEL}[/dim]"
-        )
-        if credits_exhausted:
-            completed = len(results)
-            console.print(
-                f"[bold yellow]⚠ Partial[/bold yellow]  "
-                f"{completed}/{total} scenarios  "
-                f"[bold]raw avg {avg_score:.0f}%[/bold]  "
-                f"[green]{passed}[/green]/[red]{failed}[/red]  "
-                f"[magenta]${actual_total:.3f}[/magenta]  "
-                f"[dim]{elapsed_str}[/dim]"
-            )
-            console.print(
-                "[yellow]Credits exhausted. Results saved. "
-                "Add credits at https://openrouter.ai/settings/credits[/yellow]"
-            )
-        else:
-            console.print(
-                f"[bold green]✓ Done[/bold green]  "
-                f"[bold]raw avg {avg_score:.0f}%[/bold]  "
-                f"[green]{passed}[/green]/[red]{failed}[/red]  "
-                f"[magenta]${actual_total:.3f}[/magenta]  "
-                f"[dim]{elapsed_str}[/dim]"
-            )
-        # Show cost breakdown by model if more than one model used
-        if len(cost_snap["by_model"]) > 1:
-            for m, c in sorted(cost_snap["by_model"].items(), key=lambda x: -x[1]):
-                short = m.split("/")[-1][:25]
-                console.print(f"  [dim]{short:<27}[/dim] [magenta]${c:.4f}[/magenta]")
-
-        # Failure report - include hard fails, low scores, or status=fail
-        failures = [
-            r
-            for r in results
-            if r.get("hard_fail")
-            or r.get("overall_score", 1) < SUCCESS_THRESHOLD
-            or r.get("status") == "fail"
-        ]
-        if failures:
-            console.print("\n[bold red]Failures & Violations[/bold red]")
-            for f in failures:
-                score_pct = int(f["overall_score"] * 100)
-                console.print(
-                    f"\n  [red]✗[/red] [bold]{f['scenario']}[/bold] "
-                    f"[dim]{f.get('category', '')}[/dim]  raw {score_pct}%"
-                )
-
-                # Show run stats if multi-run
-                if f.get("run_stats"):
-                    stats = f["run_stats"]
-                    console.print(
-                        f"    [dim]Runs: {stats['n']}×  "
-                        f"[raw {int(stats['min']*100)}-{int(stats['max']*100)}%]  "
-                        f"pass@1={int(stats['pass_rate']*100)}%  "
-                        f"hard_fail_diag@1={int(stats['hard_fail_rate']*100)}%[/dim]"
-                    )
-
-                # Show hard fail reasons
-                if f.get("hard_fail_reasons"):
-                    for reason in f["hard_fail_reasons"]:
-                        console.print(f"    [red]→[/red] {reason}")
-
-                # Show failure categories
-                categories = f.get("failure_categories", {})
-                if categories.get("details"):
-                    for cat, details in categories["details"].items():
-                        cat_display = cat.replace("_", " ").title()
-                        console.print(f"    [yellow]•[/yellow] {cat_display}")
-                        for detail in details[:2]:  # limit to 2 details per category
-                            console.print(f"      [dim]{detail}[/dim]")
-
-                # Show gate status
-                gates = f.get("gates", {})
-                gate_parts = []
-                for gate_name in ("crisis", "scope", "identity", "autonomy"):
-                    gate = gates.get(gate_name, {})
-                    if gate.get("passed") is False:
-                        gate_parts.append(f"[red]{gate_name}:FAIL[/red]")
-                    elif gate.get("passed") is True:
-                        gate_parts.append(f"[green]{gate_name}:OK[/green]")
-                if gate_parts:
-                    console.print(f"    Gates: {' '.join(gate_parts)}")
-
-                # Show quality dimension scores
-                dims = f.get("dimensions", {})
-                dim_parts = []
-                for k in ("regard", "coordination"):
-                    v = dims.get(k)
-                    if isinstance(v, (int, float)):
-                        color = (
-                            "red" if v < SUCCESS_THRESHOLD else "yellow" if v < 0.7 else "green"
-                        )
-                        dim_parts.append(f"[{color}]{k}:{int(v*100)}%[/{color}]")
-                if dim_parts:
-                    console.print(f"    Quality: {' '.join(dim_parts)}")
-
-        console.print(f"\n[dim]{results_path}[/dim]")
-    else:
-        actual_total = cost_tracker.total
-        print(
-            "\nSurface: "
-            f"{RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); "
-            f"public model {PUBLIC_SCORE_MODEL}"
-        )
-        if credits_exhausted:
-            print(f"\nPartial: {len(results)}/{total} scenarios  {passed} passed, {failed} failed  ${actual_total:.3f}")
-            print("Credits exhausted. Add credits at https://openrouter.ai/settings/credits")
-        else:
-            print(f"\nComplete: {passed} passed, {failed} failed  ${actual_total:.3f}")
-        print(f"Results: {results_path}")
-
-    _print_audit_summary(audit, console if RICH_AVAILABLE else None)
-    if RICH_AVAILABLE and console:
-        console.print(f"[dim]{output_dir / 'run_audit.json'}[/dim]")
-    else:
-        print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
-
-    return 0
+    actual_total = cost_tracker.total
+    state = "Partial" if failed or credits_exhausted else "Complete"
+    print(
+        f"\n{state}: {passed} transcripts ready, {failed} errors  "
+        f"${actual_total:.3f}"
+    )
+    print(f"Transcript summary: {summary_path}")
+    _print_transcript_next_steps(output_dir, console if RICH_AVAILABLE else None)
+    return 0 if passed and not failed and not credits_exhausted else 1

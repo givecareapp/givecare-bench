@@ -110,8 +110,7 @@ def test_error_results_appear_in_saved_json(tmp_path: Path):
 
 
 def test_sequential_runner_records_transcript_error(tmp_path: Path):
-    """Patch generate_transcript to raise, verify the scenario appears in
-    all_results.json with status='error'."""
+    """Verify a transcript-generation failure can be persisted as an error row."""
     # Create a minimal scenario file
     scenario_file = tmp_path / "scenario.json"
     scenario_file.write_text(
@@ -140,7 +139,7 @@ def test_sequential_runner_records_transcript_error(tmp_path: Path):
     scenario_data = json.loads(scenario_file.read_text())
     scenario_id = scenario_data["scenario_id"]
 
-    # Simulate generate_transcript raising
+    # Simulate transcript generation raising
     transcript_error = RuntimeError("Transcript generation had 1 error(s): Turn 1: 400 Bad Request")
 
     # This is the fixed code path from runner.py

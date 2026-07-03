@@ -21,17 +21,8 @@ import pytest
 
 from invisiblebench.cli import run_command as run_command_mod
 from invisiblebench.cli import runner as runner_mod
-from invisiblebench.cli.run_command import _raw_score_percent, _raw_score_range
 
 # -------------------- --out flag --------------------
-
-
-def test_run_output_formats_raw_score_labels() -> None:
-    assert _raw_score_percent(0.73) == "raw 73%"
-    assert (
-        _raw_score_range(0.73, min_score=0.51, max_score=0.94, pass_rate=67)
-        == "raw 73% [raw 51-94%] pass@1=67%"
-    )
 
 
 def _fake_records() -> list[dict[str, Any]]:
@@ -275,76 +266,20 @@ def test_benchmark_cancel_does_not_create_run_artifacts(
     assert not output_dir.exists()
 
 
-def test_benchmark_manifest_and_rows_share_run_id(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    output_dir = tmp_path / "run"
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setattr(run_command_mod, "RICH_AVAILABLE", False)
+def test_legacy_inline_score_flag_is_removed(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        runner_mod.main(["-m", "1", "--legacy-inline-score", "--dry-run"])
 
-    class FakeModelAPIClient:
-        pass
+    assert exc.value.code == 2
+    assert "legacy-inline-score" in capsys.readouterr().err
 
-    monkeypatch.setattr(
-        "invisiblebench.api.client.ModelAPIClient",
-        FakeModelAPIClient,
-    )
 
-    def fake_run_single_scenario(**kwargs: Any) -> dict[str, Any]:
-        scenario = kwargs["scenario"]
-        return {
-            "model": kwargs["model"]["name"],
-            "model_id": kwargs["model"]["id"],
-            "scenario": scenario["name"],
-            "scenario_id": kwargs["scenario_id"],
-            "category": scenario["category"],
-            "overall_score": 1.0,
-            "hard_fail": False,
-            "hard_fail_reasons": [],
-            "failure_categories": {},
-            "gates": {
-                "crisis": {"passed": True, "reasons": []},
-                "scope": {"passed": True, "reasons": []},
-                "identity": {"passed": True, "reasons": []},
-                "autonomy": {"passed": True, "reasons": []},
-            },
-            "dimensions": {},
-            "dimension_scores": {},
-            "cost": 0.0,
-            "status": "pass",
-            "run_id": kwargs["run_id"],
-            "judge_model": "fake-judge",
-            "judge_prompt_hash": None,
-            "judge_temp": None,
-            "contract_version": "3.2.0",
-            "success": True,
-            "coverage": {"eligible": 0, "resolved": 0, "unclear": 0, "rate": 1.0},
-        }
+def test_runs_flag_is_removed(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        runner_mod.main(["-m", "1", "--runs=3", "--dry-run"])
 
-    monkeypatch.setattr(run_command_mod, "_run_single_scenario", fake_run_single_scenario)
-
-    rc = run_command_mod.run_benchmark(
-        models=[
-            {
-                "id": "test/model",
-                "name": "Test Model",
-                "cost_per_m_input": 1.0,
-                "cost_per_m_output": 1.0,
-            }
-        ],
-        output_dir=output_dir,
-        dry_run=False,
-        auto_confirm=True,
-        scenario_filter=["context_regulatory_data_privacy_001"],
-        transcripts_only=False,
-    )
-
-    assert rc == 0
-    manifest = json.loads((output_dir / "run_manifest.json").read_text())
-    rows = json.loads((output_dir / "all_results.json").read_text())
-    assert len(rows) == 1
-    assert manifest["run_id"] == rows[0]["run_id"]
+    assert exc.value.code == 2
+    assert "--runs" in capsys.readouterr().err
 
 
 def test_leaderboard_status_does_not_prompt(
