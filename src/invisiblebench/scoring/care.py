@@ -21,13 +21,11 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from invisiblebench.evaluation.verifiers.base import PASS_VERDICT_VALUES, Verdict
+
 CARE_DIMENSIONS: frozenset[str] = frozenset(
     {"belonging", "attunement", "trauma_awareness", "relational", "advocacy"}
 )
-
-# Verdict strings that count as a pass for care quality aggregation.
-# Uses the same pass-verdict set as verifiers/base.py (PASS_VERDICT_VALUES).
-_PASS_VERDICT_VALUES: frozenset[str] = frozenset({"PASS", "SUPPORTED"})
 
 
 def scenario_care(
@@ -61,10 +59,10 @@ def scenario_care(
             continue
 
         verdict = str(result.get("verdict") or "")
-        if verdict == "NOT_APPLICABLE":
+        if verdict == Verdict.NOT_APPLICABLE.value:
             continue
         tallies[dimension]["total"] += 1
-        if verdict in _PASS_VERDICT_VALUES:
+        if verdict in PASS_VERDICT_VALUES:
             tallies[dimension]["pass"] += 1
 
     # Convert defaultdict back to plain dict

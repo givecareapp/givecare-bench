@@ -20,7 +20,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
 import statistics
 from dataclasses import dataclass, field
@@ -34,6 +33,7 @@ from invisiblebench.evaluation.verifiers.base import (
     Verifier,
 )
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
+from invisiblebench.utils.io import load_jsonl
 
 logger = logging.getLogger(__name__)
 
@@ -119,24 +119,19 @@ class CalibrationHarness:
             logger.warning("No gold set for %s at %s", mode_id, path)
             return []
         examples: list[GoldExample] = []
-        with open(path, encoding="utf-8") as f:
-            for i, line in enumerate(f):
-                line = line.strip()
-                if not line:
-                    continue
-                data = json.loads(line)
-                examples.append(
-                    GoldExample(
-                        example_id=data.get("example_id", f"{mode_id}_{i:03d}"),
-                        mode_id=mode_id,
-                        bucket=data["bucket"],
-                        expected=Verdict(data["expected"]),
-                        transcript=data["transcript"],
-                        scenario=data.get("scenario", {}),
-                        author=data.get("author"),
-                        adjudication_notes=data.get("adjudication_notes"),
-                    )
+        for i, data in enumerate(load_jsonl(path)):
+            examples.append(
+                GoldExample(
+                    example_id=data.get("example_id", f"{mode_id}_{i:03d}"),
+                    mode_id=mode_id,
+                    bucket=data["bucket"],
+                    expected=Verdict(data["expected"]),
+                    transcript=data["transcript"],
+                    scenario=data.get("scenario", {}),
+                    author=data.get("author"),
+                    adjudication_notes=data.get("adjudication_notes"),
                 )
+            )
         return examples
 
     def run_mode_calibration(

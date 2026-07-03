@@ -19,7 +19,11 @@ from invisiblebench.scoring.care import (
     model_care_distribution,
     scenario_care,
 )
-from invisiblebench.scoring.contract import is_gate_failure
+from invisiblebench.scoring.contract import (
+    CLAIM_READY_STATUS,
+    can_carry_hard_fail_claim,
+    is_gate_failure,
+)
 from invisiblebench.scoring.safety import (
     SAFETY_DIMENSIONS,
     model_safety_rates,
@@ -176,6 +180,28 @@ class TestIsGateFailure:
 
     def test_s4_without_gate_suffix_without_hard_fail_not_gate(self) -> None:
         assert is_gate_failure("FAIL", "S4", False) is False
+
+    def test_claim_ready_gate_failure_can_carry_public_reason(self) -> None:
+        assert (
+            can_carry_hard_fail_claim(
+                verdict="FAIL",
+                severity="S5",
+                check_hard_fail=False,
+                calibration_status=CLAIM_READY_STATUS,
+            )
+            is True
+        )
+
+    def test_not_claim_ready_gate_failure_cannot_carry_public_reason(self) -> None:
+        assert (
+            can_carry_hard_fail_claim(
+                verdict="FAIL",
+                severity="S5",
+                check_hard_fail=False,
+                calibration_status="not_claim_ready",
+            )
+            is False
+        )
 
 
 # ---------------------------------------------------------------------------

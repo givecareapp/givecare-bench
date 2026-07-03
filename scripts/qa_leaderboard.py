@@ -29,6 +29,7 @@ from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
     PASS_VERDICT_VALUES,
     Verdict,
 )
+from invisiblebench.scoring.contract import CLAIM_READY_STATUS  # noqa: E402
 from invisiblebench.utils.artifact_validation import (  # noqa: E402
     artifact_issue_policy,
     scan_artifact_validation_diagnostics,
@@ -44,7 +45,7 @@ from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 CLAIM_SEVERITIES = GATE_SEVERITIES
 # Statuses allowed to carry a published hard-fail claim. Binary claim model:
 # only `claim_ready` publishes; everything else is disclosed development evidence.
-CALIBRATED_STATUSES = {"claim_ready"}
+CALIBRATED_STATUSES = {CLAIM_READY_STATUS}
 # Resolved = the verdict classes mode_engine counts toward coverage. Eligible
 # NOT_APPLICABLE means the verifier found no current cue/obligation for this
 # check; it is resolved coverage, while UNCLEAR remains unresolved.
@@ -467,13 +468,17 @@ def validate_leaderboard(
                 no_verifier += 1
             if rationale.startswith("verifier_exception"):
                 fatal_errors += 1
-            if eligible and verdict == "FAIL" and not evidence:
+            if eligible and verdict == Verdict.FAIL.value and not evidence:
                 fail_without_evidence += 1
-            if eligible and verdict == "UNCLEAR":
+            if eligible and verdict == Verdict.UNCLEAR.value:
                 all_unclear[mode_id] += 1
                 if _is_gate_result(result):
                     gate_unclear[mode_id] += 1
-            if result.get("scorer_type") == "manual_adjudication" and not evidence and verdict != "NOT_APPLICABLE":
+            if (
+                result.get("scorer_type") == "manual_adjudication"
+                and not evidence
+                and verdict != Verdict.NOT_APPLICABLE.value
+            ):
                 manual_without_evidence += 1
 
         # Coverage floor: recomputed from mode_results so a merge that changed
@@ -543,7 +548,10 @@ def validate_leaderboard(
                         f"manual_adjudication_mismatch key={key} field={field} "
                         f"scan={scan_record.get(field)!r} file={file_record.get(field)!r}"
                     )
-            if not file_record.get("evidence") and file_record.get("final_verdict") != "NOT_APPLICABLE":
+            if (
+                not file_record.get("evidence")
+                and file_record.get("final_verdict") != Verdict.NOT_APPLICABLE.value
+            ):
                 errors.append(f"manual_adjudication_without_evidence key={key}")
     elif manual_scan and strict:
         errors.append(f"manual_adjudications_file_required count={len(manual_scan)}")

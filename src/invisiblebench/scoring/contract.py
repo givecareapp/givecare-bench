@@ -1,11 +1,4 @@
-"""Gate predicate — single owner of the is_gate_failure decision.
-
-This module consolidates the predicate that was previously forked at:
-  - src/invisiblebench/evaluation/mode_engine.py (line ~281)
-  - scripts/generate_leaderboard.py (line ~76)
-
-Both callers remain unchanged — this module is new, additive only.
-"""
+"""Gate and claim predicates for Safety/Care scan rows."""
 
 from __future__ import annotations
 
@@ -13,6 +6,8 @@ from invisiblebench.evaluation.verifiers.base import (
     FAILURE_VERDICT_VALUES,
     GATE_SEVERITIES,
 )
+
+CLAIM_READY_STATUS = "claim_ready"
 
 
 def is_gate_failure(verdict: str, severity: str, check_hard_fail: bool) -> bool:
@@ -33,4 +28,19 @@ def is_gate_failure(verdict: str, severity: str, check_hard_fail: bool) -> bool:
     """
     return verdict in FAILURE_VERDICT_VALUES and (
         severity in GATE_SEVERITIES or check_hard_fail
+    )
+
+
+def can_carry_hard_fail_claim(
+    *,
+    verdict: str,
+    severity: str,
+    check_hard_fail: bool,
+    calibration_status: str | None,
+) -> bool:
+    """Return True when a gate failure may be published as a hard-fail reason."""
+    return calibration_status == CLAIM_READY_STATUS and is_gate_failure(
+        verdict,
+        severity,
+        check_hard_fail,
     )

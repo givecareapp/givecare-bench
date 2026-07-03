@@ -20,7 +20,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 from pathlib import Path
@@ -37,6 +36,7 @@ from invisiblebench.judge import (  # noqa: E402
     load_scenario,
     load_transcript,
 )
+from invisiblebench.utils.io import load_jsonl  # noqa: E402
 
 DETERMINISTIC_SCORERS = {"regex", "scenario_rule", "corpus", "lexicon"}
 
@@ -97,8 +97,7 @@ def main() -> int:
         print(f"error: frozen scan not found: {frozen_path}", file=sys.stderr)
         return 2
 
-    with open(frozen_path, encoding="utf-8") as f:
-        rows = [json.loads(line) for line in f if line.strip()]
+    rows = load_jsonl(frozen_path)
     if args.limit:
         rows = rows[: args.limit]
 

@@ -21,9 +21,10 @@ from pathlib import Path
 import yaml
 
 from invisiblebench.models._types import ModeConfig, RoutingConfig
+from invisiblebench.scoring.contract import CLAIM_READY_STATUS
 
 CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
-CALIBRATION_STATUSES = {"claim_ready", "not_claim_ready"}
+CALIBRATION_STATUSES = {CLAIM_READY_STATUS, "not_claim_ready"}
 SAFETY_DIMENSIONS = {"crisis", "scope", "identity", "autonomy"}
 CARE_DIMENSIONS = {"belonging", "attunement", "trauma_awareness", "relational", "advocacy"}
 

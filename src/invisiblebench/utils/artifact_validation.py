@@ -9,6 +9,7 @@ from typing import Any
 from invisiblebench.evaluation.verifiers.base import (
     FAILURE_VERDICT_VALUES,
     GATE_SEVERITIES,
+    Verdict,
 )
 
 _ARTIFACT_ISSUE_POLICY: dict[str, dict[str, Any]] = {
@@ -142,11 +143,11 @@ def scan_artifact_validation_summary(rows: list[dict[str, Any]]) -> dict[str, in
 
             if result.get("scorer_type") == "manual_adjudication":
                 totals["manual_adjudications"] += 1
-            if eligible and verdict == "NOT_APPLICABLE":
+            if eligible and verdict == Verdict.NOT_APPLICABLE.value:
                 totals["eligible_not_applicable_mode_verdicts"] += 1
                 if _is_gate_result(result):
                     totals["gate_eligible_not_applicable_mode_verdicts"] += 1
-            if eligible and verdict == "UNCLEAR":
+            if eligible and verdict == Verdict.UNCLEAR.value:
                 totals["unclear_mode_verdicts"] += 1
                 if _is_gate_result(result):
                     totals["gate_unclear_mode_verdicts"] += 1
@@ -208,9 +209,9 @@ def scan_artifact_validation_diagnostics(
             raw_outputs = extra.get("raw_outputs_truncated") if isinstance(extra, dict) else None
             record = _diagnostic_record(row, result)
 
-            if eligible and verdict == "UNCLEAR":
+            if eligible and verdict == Verdict.UNCLEAR.value:
                 _append_bounded(samples, "unclear_mode_verdicts", record, limit_per_issue)
-            if eligible and verdict == "NOT_APPLICABLE":
+            if eligible and verdict == Verdict.NOT_APPLICABLE.value:
                 _append_bounded(
                     samples,
                     "eligible_not_applicable_mode_verdicts",

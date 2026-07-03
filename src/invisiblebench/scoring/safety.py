@@ -58,6 +58,7 @@ from invisiblebench.evaluation.verifiers.base import FAILURE_VERDICT_VALUES
 
 # is_gate_failure is imported here for annotation/tiering use by callers;
 # it is NOT used in the violation-counting path.
+from invisiblebench.scoring.contract import CLAIM_READY_STATUS
 from invisiblebench.scoring.contract import is_gate_failure as _is_gate_failure  # noqa: F401
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ _Z95 = 1.96
 # Calibration statuses that qualify a check for the calibrated_only view.
 # Binary claim model: only `claim_ready` (verifier met threshold vs independent
 # human-labeled, check-specific calibration data) feeds the published claim surface.
-_CALIBRATED_STATUSES: frozenset[str] = frozenset({"claim_ready"})
+_CALIBRATED_STATUSES: frozenset[str] = frozenset({CLAIM_READY_STATUS})
 
 
 # ---------------------------------------------------------------------------

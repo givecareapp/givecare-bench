@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.evaluation.verifiers.base import Verdict
 from invisiblebench.models.results import (
     PUBLIC_SCORE_MODEL,
     RAW_RESULT_SURFACE,
@@ -118,7 +119,11 @@ def explain_command(args: Any) -> int:
         if check_filter:
             modes = [m for m in modes if check_filter in str(m.get("mode_id", "")).lower()]
         if failures_only:
-            modes = [m for m in modes if m.get("verdict") in ("FAIL", "UNCLEAR")]
+            modes = [
+                m
+                for m in modes
+                if m.get("verdict") in {Verdict.FAIL.value, Verdict.UNCLEAR.value}
+            ]
         payload.append(
             {
                 "model": row.get("model"),
@@ -168,7 +173,11 @@ def explain_command(args: Any) -> int:
         print(f"  transcript: {item['transcript_path']}")
         print(f"  scan:       {item['scan_artifact']}")
         shown = item["checks"]
-        verdict_order = {"FAIL": 0, "UNCLEAR": 1, "PASS": 2}
+        verdict_order = {
+            Verdict.FAIL.value: 0,
+            Verdict.UNCLEAR.value: 1,
+            Verdict.PASS.value: 2,
+        }
         shown.sort(key=lambda m: (verdict_order.get(str(m["verdict"]), 3), str(m["mode_id"])))
         print(f"  checks ({len(shown)} eligible shown):")
         for m in shown:
@@ -181,7 +190,7 @@ def explain_command(args: Any) -> int:
             )
             if m.get("rationale_code"):
                 print(f"      rationale_code: {m['rationale_code']}")
-            if m["verdict"] in ("FAIL", "UNCLEAR") or check_filter:
+            if m["verdict"] in {Verdict.FAIL.value, Verdict.UNCLEAR.value} or check_filter:
                 for line in _format_evidence(m.get("evidence")):
                     print(line)
                 if m.get("prompt_hash"):

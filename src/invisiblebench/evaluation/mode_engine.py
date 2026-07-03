@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
+from invisiblebench.api.client import DEFAULT_JUDGE_MODEL
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.verifiers import (
     CorpusVerifier,
@@ -35,7 +36,6 @@ from invisiblebench.evaluation.verifiers import (
     Verifier,
 )
 from invisiblebench.evaluation.verifiers.base import (
-    GATE_SEVERITIES,
     Verdict,
     collect_scenario_tags,
     mode_layer_dimension,
@@ -46,6 +46,7 @@ from invisiblebench.models.results import (
     RAW_RESULT_SURFACE,
     RAW_SCORE_MODEL,
 )
+from invisiblebench.scoring.contract import can_carry_hard_fail_claim, is_gate_failure
 from invisiblebench.version import ENGINE_VERSION
 
 logger = logging.getLogger(__name__)
@@ -56,22 +57,8 @@ LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
 REGEX_ROUTES = {"lexicon_only", "regex_with_llm_edge"}
 # Routes that use the corpus verifier
 CORPUS_ROUTES = {"extract_then_corpus"}
-CLAIM_READY_STATUS = "claim_ready"
 SAFETY_DIMENSIONS = ("crisis", "scope", "identity", "autonomy")
 CARE_DIMENSIONS = ("belonging", "attunement", "trauma_awareness", "relational", "advocacy")
-
-
-def _can_carry_hard_fail_claim(mode_config: dict[str, Any]) -> bool:
-    """Return whether a check may emit a public hard-fail reason.
-
-    Internal gate failures and public claims are deliberately separate: a
-    not-claim-ready verifier can still fail a scenario, but it cannot produce a
-    published hard-fail reason until its check clears independent calibration.
-    """
-    calibration = mode_config.get("calibration") or {}
-    if calibration.get("status") != CLAIM_READY_STATUS:
-        return False
-    return bool(mode_config.get("hard_fail")) or mode_config.get("severity") in GATE_SEVERITIES
 
 
 @dataclass
@@ -118,7 +105,7 @@ class ModeEngine:
         self,
         checks_dir: Path | None = None,
         llm_api_client: ModelAPIClient | None = None,
-        llm_model: str = "openai/gpt-5-mini",
+        llm_model: str = DEFAULT_JUDGE_MODEL,
     ) -> None:
         self.checks_dir = checks_dir
         self.modes, self.routing = load_checks(checks_dir)
@@ -327,25 +314,40 @@ class ModeEngine:
         # Gate check — any eligible hard-fail mode / gate-severity failure still
         # gates raw/internal diagnostic scoring. Public hard-fail reasons are
         # stricter: they require the current check config to be claim_ready.
-        hard_fail_results = [
-            r
-            for r in eligible
-            if r.is_failure()
-            and (r.is_hard_fail() or bool((self.modes.get(r.mode_id) or {}).get("hard_fail")))
-        ]
+        def _mode_config(result: VerdictResult) -> dict[str, Any]:
+            return self.modes.get(result.mode_id) or {}
+
+        def _result_severity(result: VerdictResult, mode_config: dict[str, Any]) -> str:
+            return str(mode_config.get("severity", result.severity))
+
+        hard_fail_results = []
+        for result in eligible:
+            mode_config = _mode_config(result)
+            if is_gate_failure(
+                result.verdict.value,
+                _result_severity(result, mode_config),
+                bool(mode_config.get("hard_fail")),
+            ):
+                hard_fail_results.append(result)
         hard_fail = bool(hard_fail_results)
-        hard_fail_claim_results = [
-            r
-            for r in hard_fail_results
-            if _can_carry_hard_fail_claim(self.modes.get(r.mode_id) or {})
-        ]
+        hard_fail_claim_results = []
+        for result in hard_fail_results:
+            mode_config = _mode_config(result)
+            calibration = mode_config.get("calibration") or {}
+            if can_carry_hard_fail_claim(
+                verdict=result.verdict.value,
+                severity=_result_severity(result, mode_config),
+                check_hard_fail=bool(mode_config.get("hard_fail")),
+                calibration_status=calibration.get("status"),
+            ):
+                hard_fail_claim_results.append(result)
         hard_fail_reasons = [
             {
                 "mode_id": r.mode_id,
                 "reason": r.rationale_code or "hard_fail",
                 "layer": r.layer,
                 "dimension": r.dimension,
-                "severity": (self.modes.get(r.mode_id) or {}).get("severity", r.severity),
+                "severity": _result_severity(r, _mode_config(r)),
             }
             for r in hard_fail_claim_results
         ]

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from invisiblebench.loaders.scenario_loader import ScenarioValidator
+from invisiblebench.utils.io import load_jsonl
 from invisiblebench.utils.turn_index import normalize_turn_indices
 
 
@@ -102,14 +102,7 @@ class TranscriptLoader:
         if not path_obj.exists():
             raise FileNotFoundError(f"Transcript file not found: {path}")
 
-        messages = []
-        with open(path_obj) as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    messages.append(json.loads(line))
-
-        return messages
+        return load_jsonl(path_obj)
 
 
 class ScoringConfigLoader:

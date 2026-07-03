@@ -44,6 +44,7 @@ from invisiblebench.adapters.givecare_v2 import (
     run_scenario as run_givecare_v2_scenario,
 )
 from invisiblebench.api.client import (
+    DEFAULT_JUDGE_MODEL,
     InsufficientCreditsError,
     cost_tracker,
 )
@@ -569,12 +570,12 @@ def _write_transcript_run_summary(
         "next_steps": {
             "dev_scan": (
                 "uv run python scripts/run_scan.py --profile dev --enable-llm "
-                "--llm-model openai/gpt-5-mini "
+                f"--llm-model {DEFAULT_JUDGE_MODEL} "
                 f"{output_dir}"
             ),
             "publish_scan_dry_run": (
                 "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
-                "--llm-model openai/gpt-5-mini "
+                f"--llm-model {DEFAULT_JUDGE_MODEL} "
                 f"{output_dir}"
             ),
         },
@@ -587,12 +588,12 @@ def _write_transcript_run_summary(
 def _print_transcript_next_steps(output_dir: Path, console: Console | None = None) -> None:
     dev_cmd = (
         "uv run python scripts/run_scan.py --profile dev --enable-llm "
-        "--llm-model openai/gpt-5-mini "
+        f"--llm-model {DEFAULT_JUDGE_MODEL} "
         f"{output_dir}"
     )
     publish_dry_run_cmd = (
         "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
-        "--llm-model openai/gpt-5-mini "
+        f"--llm-model {DEFAULT_JUDGE_MODEL} "
         f"{output_dir}"
     )
     if console:

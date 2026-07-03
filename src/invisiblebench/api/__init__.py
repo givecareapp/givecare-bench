@@ -1,6 +1,7 @@
 """API clients."""
 
 from .client import (
+    DEFAULT_JUDGE_MODEL,
     DEFAULT_SAFETY_REFERENCE_MODEL,
     DEFAULT_SCORER_MODEL,
     APIConfig,
@@ -16,6 +17,7 @@ from .client import (
 __all__ = [
     "APIConfig",
     "CostTracker",
+    "DEFAULT_JUDGE_MODEL",
     "DEFAULT_SAFETY_REFERENCE_MODEL",
     "DEFAULT_SCORER_MODEL",
     "InsufficientCreditsError",

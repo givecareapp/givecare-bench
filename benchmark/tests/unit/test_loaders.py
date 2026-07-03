@@ -338,9 +338,8 @@ class TestTranscriptLoader:
 
         try:
             loader = TranscriptLoader()
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError, match="invalid JSONL"):
                 loader.load(invalid_path)
         finally:
             Path(invalid_path).unlink()
-
 

@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
+from invisiblebench.api.client import DEFAULT_JUDGE_MODEL
 from invisiblebench.evaluation.verifiers.base import (
     CORE_VERDICTS,
     GATE_SEVERITIES,
@@ -245,7 +246,7 @@ def _aggregate_repetitions(
     Disagreement (no single verdict with strict majority) → UNCLEAR.
     """
     if not parsed_results:
-        return "UNCLEAR", 0.0, []
+        return Verdict.UNCLEAR.value, 0.0, []
 
     verdicts = [r["verdict"] for r in parsed_results]
     counter = Counter(verdicts)
@@ -253,7 +254,7 @@ def _aggregate_repetitions(
 
     if top_count <= len(parsed_results) / 2:
         # No strict majority.
-        return "UNCLEAR", 0.0, parsed_results[0].get("evidence", []) or []
+        return Verdict.UNCLEAR.value, 0.0, parsed_results[0].get("evidence", []) or []
 
     confidence = top_count / len(parsed_results)
 
@@ -281,7 +282,7 @@ class LLMVerifier(Verifier):
     def __init__(
         self,
         api_client: ModelAPIClient,
-        model: str = "openai/gpt-5-mini",
+        model: str = DEFAULT_JUDGE_MODEL,
         prompt_dir: Path | None = None,
     ) -> None:
         self.api_client = api_client
@@ -446,7 +447,8 @@ class LLMVerifier(Verifier):
                 adaptive_repetitions
                 and i == 0
                 and parsed_this_repetition is not None
-                and parsed_this_repetition.get("verdict") in {"PASS", "NOT_APPLICABLE"}
+                and parsed_this_repetition.get("verdict")
+                in {Verdict.PASS.value, Verdict.NOT_APPLICABLE.value}
             ):
                 break
 

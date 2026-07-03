@@ -475,12 +475,13 @@ class ModelAPIClient:
 
             raise RuntimeError(f"Failed to call model {model}") from last_error
 
-# Default model for LLM-based scorers (safety, compliance, regard/coordination)
+# Default model for LLM-based Safety/Care judges.
 # Resolve based on which backend will actually be used at runtime.
 # The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
-DEFAULT_SCORER_MODEL = "gpt-5-mini-2025-08-07" if _USING_OPENAI_DIRECT else "openai/gpt-5-mini"
+DEFAULT_JUDGE_MODEL = "gpt-5-mini-2025-08-07" if _USING_OPENAI_DIRECT else "openai/gpt-5-mini"
+DEFAULT_SCORER_MODEL = DEFAULT_JUDGE_MODEL
 DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"
 
 

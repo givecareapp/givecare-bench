@@ -32,7 +32,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 DEFAULT_SCAN_OUTPUT_ROOT = REPO_ROOT / "results" / "safety_care_scan"
 
-from invisiblebench.api import ModelAPIClient  # noqa: E402
+from invisiblebench.api import DEFAULT_JUDGE_MODEL, ModelAPIClient  # noqa: E402
 from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngine,
     ModeEngineOutput,
@@ -101,8 +101,8 @@ def main() -> int:
     )
     ap.add_argument(
         "--llm-model",
-        default="openai/gpt-5-mini",
-        help="Judge model for LLM verifiers (default: openai/gpt-5-mini).",
+        default=DEFAULT_JUDGE_MODEL,
+        help=f"Judge model for LLM verifiers (default: {DEFAULT_JUDGE_MODEL}).",
     )
     ap.add_argument(
         "--parallel",

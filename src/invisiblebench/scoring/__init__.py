@@ -4,6 +4,7 @@ Public API
 ----------
 contract
     is_gate_failure(verdict, severity, check_hard_fail) -> bool
+    can_carry_hard_fail_claim(...) -> bool
 
 safety
     scenario_safety(mode_results, dim_map, ...) -> dict[str, bool]
@@ -19,7 +20,7 @@ care
 from __future__ import annotations
 
 from invisiblebench.scoring.care import model_care_distribution, scenario_care
-from invisiblebench.scoring.contract import is_gate_failure
+from invisiblebench.scoring.contract import can_carry_hard_fail_claim, is_gate_failure
 from invisiblebench.scoring.safety import (
     check_calibration_statuses,
     model_safety_rates,
@@ -29,6 +30,7 @@ from invisiblebench.scoring.safety import (
 
 __all__ = [
     "check_calibration_statuses",
+    "can_carry_hard_fail_claim",
     "is_gate_failure",
     "model_care_distribution",
     "model_safety_rates",

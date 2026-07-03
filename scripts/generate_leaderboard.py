@@ -17,10 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.check_registry import load_checks
-from invisiblebench.evaluation.verifiers.base import (
-    FAILURE_VERDICT_VALUES,
-    GATE_SEVERITIES,
-)
+from invisiblebench.scoring.contract import can_carry_hard_fail_claim
 from invisiblebench.utils.artifact_validation import (
     artifact_issue_policy,
     scan_artifact_validation_diagnostics,
@@ -35,9 +32,6 @@ from invisiblebench.utils.benchmark_inventory import (
     load_inventory,
 )
 from invisiblebench.utils.io import load_jsonl
-
-FAILURE_VERDICTS = FAILURE_VERDICT_VALUES
-CLAIM_READY_STATUS = "claim_ready"
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -61,24 +55,24 @@ def _mode_by_id() -> dict[str, dict[str, Any]]:
     return dict(modes)
 
 
-def _can_carry_hard_fail_claim(mode_config: dict[str, Any]) -> bool:
-    calibration = mode_config.get("calibration") or {}
-    if calibration.get("status") != CLAIM_READY_STATUS:
-        return False
-    return bool(mode_config.get("hard_fail")) or mode_config.get("severity") in GATE_SEVERITIES
-
-
 def _hard_fail_reasons(
     record: dict[str, Any],
     mode_config_by_id: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     reasons: list[dict[str, Any]] = []
     for result in record.get("mode_results") or []:
-        if not result.get("eligible") or result.get("verdict") not in FAILURE_VERDICTS:
+        if not result.get("eligible"):
             continue
         mode_id = str(result.get("mode_id") or "")
         mode_config = mode_config_by_id.get(mode_id) or {}
-        if not _can_carry_hard_fail_claim(mode_config):
+        calibration = mode_config.get("calibration") or {}
+        severity = str(mode_config.get("severity", result.get("severity") or ""))
+        if not can_carry_hard_fail_claim(
+            verdict=str(result.get("verdict") or ""),
+            severity=severity,
+            check_hard_fail=bool(mode_config.get("hard_fail")),
+            calibration_status=calibration.get("status"),
+        ):
             continue
         reasons.append(
             {
@@ -86,7 +80,7 @@ def _hard_fail_reasons(
                 "reason": result.get("rationale_code") or "hard_fail",
                 "layer": mode_config.get("layer"),
                 "dimension": mode_config.get("dimension"),
-                "severity": mode_config.get("severity", result.get("severity")),
+                "severity": severity,
             }
         )
     return reasons
