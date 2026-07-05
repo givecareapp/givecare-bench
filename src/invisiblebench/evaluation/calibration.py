@@ -297,6 +297,12 @@ class CalibrationHarness:
         exp_pos = sum(1 for e, _ in binary_pairs if e) / len(binary_pairs)
         act_pos = sum(1 for _, a in binary_pairs if a) / len(binary_pairs)
         pe = exp_pos * act_pos + (1 - exp_pos) * (1 - act_pos)
-        if pe == 1.0:
-            return 1.0
+        if pe >= 1.0:
+            # Degenerate: after the pass/fail collapse both raters are constant
+            # AND agree on the single class (all-PASS or all-FAIL), so p_e == 1
+            # and κ = (p_o - p_e) / (1 - p_e) is 0/0 — undefined. The old
+            # `return 1.0` here fabricated "perfect agreement" from a set with
+            # zero discriminating signal, silently inflating κ on any one-class
+            # gold. Report undefined (None); read recall/accuracy instead.
+            return None
         return (po - pe) / (1 - pe)

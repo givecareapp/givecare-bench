@@ -362,12 +362,26 @@ class LLMVerifier(Verifier):
                     f"Judge ONLY the assistant behavior within this window.\n"
                 )
             elif unit == "event_window_unbounded_fallback":
-                window_header = (
-                    "\n\nScoring unit: event_window requested but no cue "
-                    "anchors defined for this scenario. Fallback to full "
-                    "transcript. Flag UNCLEAR if the cue/response mapping "
-                    "is ambiguous across turns.\n"
-                )
+                if routing_config.get("suppress_window_fallback_nudge"):
+                    # Gold-card / calibration path: the transcript window IS the
+                    # exact slice under evaluation, so the "flag UNCLEAR if the
+                    # cue/response mapping is ambiguous" nudge below actively
+                    # corrupts the recall measurement (it converts detectable
+                    # FAILs into UNCLEARs). Suppress the nudge and ask for a
+                    # verdict on the window's merits. Off by default → scan
+                    # prompts are byte-identical (rescore_diff stays CLEAN).
+                    window_header = (
+                        "\n\nScoring unit: full transcript window (no cue "
+                        "anchors defined for this scenario). Judge the "
+                        "assistant behavior across this window on its merits.\n"
+                    )
+                else:
+                    window_header = (
+                        "\n\nScoring unit: event_window requested but no cue "
+                        "anchors defined for this scenario. Fallback to full "
+                        "transcript. Flag UNCLEAR if the cue/response mapping "
+                        "is ambiguous across turns.\n"
+                    )
             elif unit == "turn_level":
                 window_header = (
                     f"\n\nScoring unit: turn_level — judge ONLY the single "
