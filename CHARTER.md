@@ -27,7 +27,7 @@ pressure that improves Mira, public communication, and future model training.
 
 - InvisibleBench public benchmark scenarios, configs, taxonomy, verifier prompts,
   runner, scan tooling, calibration artifacts, and leaderboard generation.
-- `checks/<ID>.yaml` as the benchmark check taxonomy, including definitions and embedded routing.
+- `checks/<layer>/<dimension>/<ID>.yaml` as the benchmark check taxonomy, including definitions and embedded routing.
 - Public methodology, findings, architecture, and verifier-validation docs.
 - Leaderboard JSON and sync tooling for `../gc-web/apps/web-bench`.
 - Import/staging workflows for `../givecare-evals` candidate cases.
@@ -41,7 +41,9 @@ pressure that improves Mira, public communication, and future model training.
   behavior. Those belong in `../gc-sms`.
 - Public eval dataset distribution outside the executable benchmark. That belongs
   in `../givecare-evals`.
-- Model training runs or checkpoint production. That belongs in `../gc-tune`.
+- Model training runs or checkpoint production. That belongs to
+  `givecareapp/givecare-train` (archived on GitHub; fine-tuning is deferred
+  and there is no local clone).
 - Public web rendering of the benchmark site. That belongs in `../gc-web`.
 - Private user traces unless explicitly harvested, anonymized, reviewed, and
   promoted through the accepted benchmark/eval workflow.
@@ -61,7 +63,8 @@ pressure that improves Mira, public communication, and future model training.
 - Public findings and methodology docs.
 - Benchmark pressure that informs `../gc-sms` prompt, navigation, evaluator, and
   policy changes.
-- Reward/evaluation signal for `../gc-tune`.
+- Reward/evaluation signal for `givecareapp/givecare-train` (archived on
+  GitHub; no local clone), once fine-tuning resumes.
 - Public credibility assets projected by `../gc-web`.
 
 ## Core Invariants
@@ -82,7 +85,8 @@ pressure that improves Mira, public communication, and future model training.
 - Does it distinguish benchmark truth from product runtime enforcement?
 - Are new findings backed by scenario evidence, verifier behavior, and QA gates?
 - Does the change feed the learning loop back into `../gc-sms`,
-  `../givecare-evals`, `../gc-tune`, or public proof?
+  `../givecare-evals`, `givecareapp/givecare-train` (archived; no local
+  clone), or public proof?
 
 ## Anti-Patterns
 
