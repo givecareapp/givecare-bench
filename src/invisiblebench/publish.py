@@ -12,10 +12,13 @@ module is a separate move); `scripts/publish.sh` is a thin shim over
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
@@ -23,12 +26,31 @@ from invisiblebench.utils.benchmark_inventory import get_project_root
 LEADERBOARD_DIR = "data/leaderboard"
 LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard.json"
 WEB_LEADERBOARD_ARTIFACT = "data/leaderboard/leaderboard_web.json"
+QA_STAMP_FILENAME = ".qa-stamp"
 
 Runner = Callable[[Sequence[str]], int]
 
 
 def _run(cmd: Sequence[str]) -> int:
     return subprocess.run(list(cmd), cwd=get_project_root()).returncode
+
+
+def _write_qa_stamp(root: Path, scan_path: Path) -> Path:
+    """Stamp the just-QA'd leaderboard artifact so sync_web_bench.py can prove
+    freshness (VISION.md: no side doors — a direct sync_web_bench.py call with
+    no fresh stamp must refuse, not silently ship whatever leaderboard.json
+    happens to be on disk)."""
+    leaderboard_path = root / LEADERBOARD_ARTIFACT
+    stamp_path = root / LEADERBOARD_DIR / QA_STAMP_FILENAME
+    stamp = {
+        "leaderboard_sha256": hashlib.sha256(leaderboard_path.read_bytes()).hexdigest(),
+        "scan_path": str(scan_path),
+        "strict": True,
+        "qa_passed_at": datetime.now(UTC).isoformat(),
+    }
+    stamp_path.parent.mkdir(parents=True, exist_ok=True)
+    stamp_path.write_text(json.dumps(stamp, indent=2) + "\n")
+    return stamp_path
 
 
 @dataclass
@@ -117,6 +139,8 @@ def publish(
             result.failed_stage = name
             result.error = f"stage {name!r} failed with exit code {code}"
             return result
+        if name == "qa":
+            _write_qa_stamp(root, scan_abs)
 
     result.ok = True
     return result

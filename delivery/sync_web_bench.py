@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_SOURCE = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
+QA_STAMP_FILENAME = ".qa-stamp"
 
 _PUBLIC_TOP_LEVEL_KEYS = frozenset({"schema", "notes", "scan_metadata", "models"})
 _FORBIDDEN_PUBLIC_KEYS = frozenset(
@@ -165,17 +167,78 @@ def compute_sync_status(source: Path, target: Path) -> SyncStatus:
     )
 
 
-def sync_leaderboard(source: Path, target: Path) -> SyncStatus:
+class QAStampError(RuntimeError):
+    """The source leaderboard has no fresh strict-QA stamp — refuse to write.
+
+    VISION.md: no side doors. publish.py (the fail-closed generate -> strict
+    QA -> sync chain) writes this stamp immediately after strict QA passes;
+    calling this script directly on a leaderboard.json that was never QA'd
+    (or was regenerated/hand-edited since it last was) must fail loudly
+    instead of silently shipping unvetted content to a public target.
+    """
+
+
+def _qa_stamp_path(source: Path) -> Path:
+    return source.parent / QA_STAMP_FILENAME
+
+
+def _verify_qa_stamp(source: Path) -> None:
+    stamp_path = _qa_stamp_path(source)
+    if not stamp_path.exists():
+        raise QAStampError(
+            f"No QA stamp at {stamp_path}. Run the fail-closed publish chain "
+            "(scripts/publish.sh or `python -m invisiblebench.publish`) instead of "
+            "calling sync_web_bench.py directly, or pass --unsafe-debug-bypass for "
+            "a deliberate debug write."
+        )
+
+    try:
+        stamp = json.loads(stamp_path.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        raise QAStampError(f"QA stamp at {stamp_path} is unreadable: {exc}") from exc
+
+    actual_hash = _sha256_bytes(source.read_bytes())
+    if stamp.get("leaderboard_sha256") != actual_hash:
+        raise QAStampError(
+            f"QA stamp at {stamp_path} is stale — {source} changed since strict QA "
+            "last passed against it (content hash mismatch). Re-run the publish "
+            "chain, or pass --unsafe-debug-bypass for a deliberate debug write."
+        )
+
+
+def _print_unsafe_bypass_warning(source: Path, target: Path) -> None:
+    print(
+        "\n".join(
+            [
+                "=" * 72,
+                "UNSAFE DEBUG BYPASS — writing web-bench payload with NO fresh QA stamp.",
+                f"  source: {source}",
+                f"  target: {target}",
+                "This skips the fail-closed publish gate (VISION.md: no side doors).",
+                "Never use --unsafe-debug-bypass for a real publish — debugging only.",
+                "=" * 72,
+            ]
+        ),
+        file=sys.stderr,
+    )
+
+
+def sync_leaderboard(source: Path, target: Path, *, unsafe_debug_bypass: bool = False) -> SyncStatus:
     status = compute_sync_status(source, target)
     if status.in_sync:
         return status
+
+    if unsafe_debug_bypass:
+        _print_unsafe_bypass_warning(source, target)
+    else:
+        _verify_qa_stamp(source)
 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(_projected_bytes(source))
     return compute_sync_status(source, target)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Project leaderboard JSON into web-bench public assets"
     )
@@ -191,14 +254,27 @@ def main() -> int:
         action="store_true",
         help="Fail if the target differs instead of writing the projection",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--unsafe-debug-bypass",
+        action="store_true",
+        help=(
+            "Skip the QA-stamp freshness gate and write anyway. Debugging only — "
+            "never for a real publish (VISION.md: no side doors)."
+        ),
+    )
+    args = parser.parse_args(argv)
 
     status = compute_sync_status(args.source, args.target)
     if args.check:
         print(json.dumps({"status": "ok" if status.in_sync else "drift", "data": asdict(status)}, indent=2))
         return 0 if status.in_sync else 1
 
-    synced = sync_leaderboard(args.source, args.target)
+    try:
+        synced = sync_leaderboard(args.source, args.target, unsafe_debug_bypass=args.unsafe_debug_bypass)
+    except QAStampError as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, indent=2), file=sys.stderr)
+        return 1
+
     print(json.dumps({"status": "synced", "data": asdict(synced)}, indent=2))
     return 0
 

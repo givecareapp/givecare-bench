@@ -72,6 +72,11 @@ internal/autoresearch/chart.png
 # Overnight campaign log
 data/overnight-campaign.tsv
 
+# QA-stamp gate: local proof that strict QA last passed against the current
+# leaderboard.json bytes (content-hash + timestamp). Machine/run-specific,
+# not shared state — a fresh clone has none and must run the publish chain.
+data/leaderboard/.qa-stamp
+
 # Misc
 *.tmp
 logs/
@@ -87,4 +92,4 @@ CODE_OF_CONDUCT.md
 internal/
 archive/
 adapters/
-intake/
+/intake/

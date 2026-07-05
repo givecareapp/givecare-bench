@@ -6,11 +6,13 @@ strict QA gate passed, and nothing runs without a scored scan.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
-from invisiblebench.publish import main, publish
+from invisiblebench.publish import QA_STAMP_FILENAME, main, publish
 
 
 def _fake_runner(fail_stage: str | None, calls: list[str]):
@@ -29,6 +31,19 @@ def _scan(tmp_path: Path) -> Path:
     scan = tmp_path / "per_run.jsonl"
     scan.write_text("{}\n")
     return scan
+
+
+def _seed_fake_repo(tmp_path: Path) -> Path:
+    """A fake repo_root with a leaderboard.json for the QA-stamp write to hash.
+
+    Real subprocess stages are always faked in this file, so nothing here
+    ever regenerates a real leaderboard — the stamp writer just needs bytes
+    to hash at the path it expects (root / data/leaderboard/leaderboard.json).
+    """
+    leaderboard = tmp_path / "data" / "leaderboard" / "leaderboard.json"
+    leaderboard.parent.mkdir(parents=True, exist_ok=True)
+    leaderboard.write_text(json.dumps({"schema": "safety-care/v1", "models": []}))
+    return tmp_path
 
 
 def test_qa_failure_blocks_web_sync(tmp_path: Path) -> None:
@@ -56,11 +71,13 @@ def test_generate_failure_blocks_everything_downstream(tmp_path: Path) -> None:
 
 
 def test_happy_path_runs_stages_in_order(tmp_path: Path) -> None:
+    repo_root = _seed_fake_repo(tmp_path)
     calls: list[str] = []
     result = publish(
         _scan(tmp_path),
         tmp_path / "web.json",
         runner=_fake_runner(None, calls),
+        repo_root=repo_root,
     )
     assert result.ok
     assert calls == [
@@ -86,6 +103,7 @@ def test_missing_scan_runs_nothing(tmp_path: Path) -> None:
 def test_publish_invokes_qa_gate_with_strict_flag(tmp_path: Path) -> None:
     """The QA stage must run with --strict — the publish gate is the strict
     gate, so a non-strict QA invocation would silently weaken the boundary."""
+    repo_root = _seed_fake_repo(tmp_path)
     commands: list[list[str]] = []
 
     def recording_runner(cmd):
@@ -96,6 +114,7 @@ def test_publish_invokes_qa_gate_with_strict_flag(tmp_path: Path) -> None:
         _scan(tmp_path),
         tmp_path / "web.json",
         runner=recording_runner,
+        repo_root=repo_root,
     )
     assert result.ok
     qa_cmd = next(
@@ -109,3 +128,44 @@ def test_publish_cli_requires_explicit_scan_and_web_target() -> None:
         main([])
 
     assert exc.value.code == 2
+
+
+def test_qa_success_writes_fresh_qa_stamp(tmp_path: Path) -> None:
+    """After the qa stage passes, publish() stamps the leaderboard artifact
+    so sync_web_bench.py can prove it's syncing a just-QA'd file (VISION.md:
+    no side doors) instead of trusting whatever happens to be on disk."""
+    repo_root = _seed_fake_repo(tmp_path)
+    scan = _scan(tmp_path)
+
+    result = publish(
+        scan,
+        tmp_path / "web.json",
+        runner=_fake_runner(None, []),
+        repo_root=repo_root,
+    )
+    assert result.ok
+
+    stamp_path = repo_root / "data" / "leaderboard" / QA_STAMP_FILENAME
+    assert stamp_path.exists()
+    stamp = json.loads(stamp_path.read_text())
+
+    leaderboard_bytes = (repo_root / "data" / "leaderboard" / "leaderboard.json").read_bytes()
+    assert stamp["leaderboard_sha256"] == hashlib.sha256(leaderboard_bytes).hexdigest()
+    assert stamp["strict"] is True
+    assert stamp["scan_path"] == str(scan)
+    assert stamp["qa_passed_at"]  # non-empty ISO timestamp
+
+
+def test_qa_failure_does_not_write_a_stamp(tmp_path: Path) -> None:
+    """A failed QA stage must never leave a stamp behind — a stamp is a claim
+    that strict QA passed, full stop."""
+    repo_root = _seed_fake_repo(tmp_path)
+
+    result = publish(
+        _scan(tmp_path),
+        tmp_path / "web.json",
+        runner=_fake_runner("qa_leaderboard", []),
+        repo_root=repo_root,
+    )
+    assert not result.ok
+    assert not (repo_root / "data" / "leaderboard" / QA_STAMP_FILENAME).exists()
