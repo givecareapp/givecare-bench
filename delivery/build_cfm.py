@@ -20,11 +20,19 @@ Public API
 CLI
 ---
     python -m delivery.build_cfm --scan <path> --out <path>
+
+    Gated on a fresh strict-QA stamp (VISION.md: no side doors) — the scan
+    must have gone through the fail-closed publish chain
+    (``invisiblebench.publish`` / ``scripts/publish.sh``) first, which writes
+    ``data/leaderboard/.qa-stamp`` recording the scan's content hash right
+    after strict QA passes. ``--unsafe-debug-bypass`` skips the gate for
+    deliberate debugging only.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -40,6 +48,8 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from invisiblebench.utils.io import load_jsonl  # noqa: E402
 
 DEFAULT_CATALOG = REPO_ROOT / "delivery" / "comparative_failure_modes.yaml"
+QA_STAMP_FILENAME = ".qa-stamp"
+DEFAULT_QA_STAMP = REPO_ROOT / "data" / "leaderboard" / QA_STAMP_FILENAME
 
 # Maximum evidence entries per CFM (diversity across models/scenarios preferred).
 _MAX_EVIDENCE = 5
@@ -480,6 +490,124 @@ def build_cfm_section(
 
 
 # ---------------------------------------------------------------------------
+# QA-stamp gate (VISION.md: no side doors)
+#
+# Mirrors delivery/sync_web_bench.py's _verify_qa_stamp pattern. That gate
+# checks a leaderboard.json's bytes against a stamped hash; this one checks a
+# scan's bytes, because build_cfm reads per_run.jsonl directly rather than the
+# leaderboard artifact. Both gates read the SAME stamp file
+# (data/leaderboard/.qa-stamp) — invisiblebench.publish writes it once, right
+# after strict QA passes, with both the leaderboard hash (for sync_web_bench)
+# and the scan path + hash (for build_cfm) recorded together.
+# ---------------------------------------------------------------------------
+
+class QAStampError(RuntimeError):
+    """The CFM inputs have no fresh strict-QA stamp — refuse to emit a public
+    artifact-v2 payload.
+
+    VISION.md: no side doors. invisiblebench.publish (the fail-closed generate
+    -> strict QA -> sync chain) writes data/leaderboard/.qa-stamp immediately
+    after strict QA passes, recording both the QA'd leaderboard's bytes and
+    the exact scan (path + content hash) that produced it. Calling
+    `python -m delivery.build_cfm --scan ... --out ...` directly on a scan
+    that was never through that chain — or a stamp that now points at a
+    different scan — must fail loudly instead of silently shipping unvetted
+    comparative-failure-mode claims to a public target.
+    """
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _verify_qa_stamp(scan_path: Path, stamp_path: Path) -> None:
+    if not stamp_path.exists():
+        raise QAStampError(
+            f"No QA stamp at {stamp_path}. Run the fail-closed publish chain "
+            "(scripts/publish.sh or `python -m invisiblebench.publish`) against "
+            "this scan first, or pass --unsafe-debug-bypass for a deliberate "
+            "debug write."
+        )
+
+    try:
+        stamp = json.loads(stamp_path.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        raise QAStampError(f"QA stamp at {stamp_path} is unreadable: {exc}") from exc
+
+    stamped_scan_hash = stamp.get("scan_sha256")
+    if not stamped_scan_hash:
+        raise QAStampError(
+            f"QA stamp at {stamp_path} has no scan_sha256 — it predates the "
+            "scan-identity gate (or was written by an old invisiblebench.publish). "
+            "Re-run the fail-closed publish chain to regenerate a compatible "
+            "stamp, or pass --unsafe-debug-bypass for a deliberate debug write."
+        )
+
+    if not scan_path.exists():
+        raise QAStampError(f"Scan file not found: {scan_path}")
+
+    actual_hash = _sha256_bytes(scan_path.read_bytes())
+    if stamped_scan_hash != actual_hash:
+        raise QAStampError(
+            f"QA stamp at {stamp_path} does not match {scan_path} (scan content "
+            "hash mismatch) — this scan was never strict-QA'd, has changed since "
+            "strict QA last passed, or is a different scan than the one the "
+            "stamped leaderboard was generated from. Re-run the fail-closed "
+            "publish chain against this scan, or pass --unsafe-debug-bypass for "
+            "a deliberate debug write."
+        )
+
+
+def _print_unsafe_bypass_warning(scan_path: Path, out_path: Path) -> None:
+    print(
+        "\n".join(
+            [
+                "=" * 72,
+                "UNSAFE DEBUG BYPASS — writing CFM artifact-v2 payload with NO fresh QA stamp.",
+                f"  scan: {scan_path}",
+                f"  out: {out_path}",
+                "This skips the fail-closed publish gate (VISION.md: no side doors).",
+                "Never use --unsafe-debug-bypass for a real publish — debugging only.",
+                "=" * 72,
+            ]
+        ),
+        file=sys.stderr,
+    )
+
+
+def build_and_write_cfm(
+    scan_path: Path | str,
+    out_path: Path | str,
+    catalog_path: Path | str = DEFAULT_CATALOG,
+    *,
+    qa_stamp_path: Path | str = DEFAULT_QA_STAMP,
+    unsafe_debug_bypass: bool = False,
+) -> dict[str, Any]:
+    """Build the CFM section and write it to ``out_path``.
+
+    Gated on a fresh strict-QA stamp that was generated against this exact
+    scan (VISION.md: no side doors) — the pure ``build_cfm_section()``
+    computation above stays ungated (used directly by tests and any future
+    read-only/--check tooling); only this write-to-disk path is gated, same
+    split as sync_web_bench.py's project_leaderboard() vs sync_leaderboard().
+    """
+    scan_path = Path(scan_path)
+    out_path = Path(out_path)
+    qa_stamp_path = Path(qa_stamp_path)
+
+    if unsafe_debug_bypass:
+        _print_unsafe_bypass_warning(scan_path, out_path)
+    else:
+        _verify_qa_stamp(scan_path, qa_stamp_path)
+
+    section = build_cfm_section(scan_path, catalog_path)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(section, indent=2))
+    return section
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -490,14 +618,37 @@ def _cli() -> None:
     parser.add_argument("--scan", required=True, help="Path to per_run.jsonl")
     parser.add_argument("--catalog", default=str(DEFAULT_CATALOG), help="Path to CFM catalog YAML")
     parser.add_argument("--out", required=True, help="Output JSON path")
+    parser.add_argument(
+        "--qa-stamp",
+        default=str(DEFAULT_QA_STAMP),
+        help=(
+            "Path to the strict-QA stamp written by invisiblebench.publish "
+            f"(default: {DEFAULT_QA_STAMP})"
+        ),
+    )
+    parser.add_argument(
+        "--unsafe-debug-bypass",
+        action="store_true",
+        help=(
+            "Skip the QA-stamp scan-identity gate and write anyway. Debugging "
+            "only — never for a real publish (VISION.md: no side doors)."
+        ),
+    )
     args = parser.parse_args()
 
-    section = build_cfm_section(Path(args.scan), Path(args.catalog))
+    try:
+        section = build_and_write_cfm(
+            Path(args.scan),
+            Path(args.out),
+            Path(args.catalog),
+            qa_stamp_path=Path(args.qa_stamp),
+            unsafe_debug_bypass=args.unsafe_debug_bypass,
+        )
+    except QAStampError as exc:
+        print(f"build_cfm FAILED: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
     out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(section, indent=2))
-
     safety_cfms = section["comparative_failure_modes"]["safety"]
     care_cfms = section["comparative_failure_modes"]["care"]
     all_live = [c for c in safety_cfms + care_cfms if "field" in c]

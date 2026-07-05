@@ -36,15 +36,21 @@ def _run(cmd: Sequence[str]) -> int:
 
 
 def _write_qa_stamp(root: Path, scan_path: Path) -> Path:
-    """Stamp the just-QA'd leaderboard artifact so sync_web_bench.py can prove
-    freshness (VISION.md: no side doors — a direct sync_web_bench.py call with
-    no fresh stamp must refuse, not silently ship whatever leaderboard.json
-    happens to be on disk)."""
+    """Stamp the just-QA'd leaderboard artifact so sync_web_bench.py and
+    build_cfm.py can prove freshness (VISION.md: no side doors — a direct
+    sync_web_bench.py or build_cfm.py call with no fresh stamp must refuse,
+    not silently ship whatever leaderboard.json/scan happens to be on disk).
+
+    ``scan_sha256`` records the exact scan bytes strict QA ran against, so a
+    downstream consumer that reads the scan directly (build_cfm.py) can verify
+    it's looking at the same scan the stamped leaderboard was generated from —
+    not just a scan at a path that happens to match."""
     leaderboard_path = root / LEADERBOARD_ARTIFACT
     stamp_path = root / LEADERBOARD_DIR / QA_STAMP_FILENAME
     stamp = {
         "leaderboard_sha256": hashlib.sha256(leaderboard_path.read_bytes()).hexdigest(),
         "scan_path": str(scan_path),
+        "scan_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
         "strict": True,
         "qa_passed_at": datetime.now(UTC).isoformat(),
     }

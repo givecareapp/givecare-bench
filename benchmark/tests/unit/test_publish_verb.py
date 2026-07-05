@@ -156,6 +156,28 @@ def test_qa_success_writes_fresh_qa_stamp(tmp_path: Path) -> None:
     assert stamp["qa_passed_at"]  # non-empty ISO timestamp
 
 
+def test_qa_success_stamps_scan_content_hash(tmp_path: Path) -> None:
+    """The stamp records scan_sha256 (not just scan_path) so a downstream
+    reader of the scan itself (delivery/build_cfm.py, which never touches
+    leaderboard.json) can verify it's looking at the exact scan strict QA
+    ran against, not just a same-named path."""
+    repo_root = _seed_fake_repo(tmp_path)
+    scan = _scan(tmp_path)
+
+    result = publish(
+        scan,
+        tmp_path / "web.json",
+        runner=_fake_runner(None, []),
+        repo_root=repo_root,
+    )
+    assert result.ok
+
+    stamp_path = repo_root / "data" / "leaderboard" / QA_STAMP_FILENAME
+    stamp = json.loads(stamp_path.read_text())
+
+    assert stamp["scan_sha256"] == hashlib.sha256(scan.read_bytes()).hexdigest()
+
+
 def test_qa_failure_does_not_write_a_stamp(tmp_path: Path) -> None:
     """A failed QA stage must never leave a stamp behind — a stamp is a claim
     that strict QA passed, full stop."""

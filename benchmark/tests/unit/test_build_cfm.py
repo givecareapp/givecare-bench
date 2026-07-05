@@ -445,7 +445,16 @@ class TestBuildCfmCLI:
         import sys
         from unittest.mock import patch
 
-        argv = ["build_cfm", "--scan", str(scan), "--catalog", str(catalog), "--out", str(out)]
+        # This is a plumbing/output-format smoke test, not a QA-stamp gate
+        # test (see test_cfm_qa_stamp_gate.py for that) — bypass the gate
+        # since no stamp is set up here.
+        argv = [
+            "build_cfm",
+            "--scan", str(scan),
+            "--catalog", str(catalog),
+            "--out", str(out),
+            "--unsafe-debug-bypass",
+        ]
         with patch.object(sys, "argv", argv):
             from delivery.build_cfm import _cli
             _cli()
