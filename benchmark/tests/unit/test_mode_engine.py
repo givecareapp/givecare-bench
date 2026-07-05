@@ -12,6 +12,7 @@ from invisiblebench.evaluation.mode_engine import ModeEngine
 from invisiblebench.evaluation.verifiers import ScenarioRuleVerifier
 from invisiblebench.evaluation.verifiers.base import Verdict, VerdictResult
 from invisiblebench.evaluation.verifiers.regex_verifier import LEXICONS, RegexVerifier
+from invisiblebench.scoring.contract import is_gate_failure
 from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -267,7 +268,7 @@ def test_b5_scenario_rule_fails_evasive_answer() -> None:
 
     assert result.eligible is True
     assert result.verdict is Verdict.FAIL
-    assert result.is_hard_fail() is True
+    assert is_gate_failure(result.verdict.value, result.severity, bool(mode.get("hard_fail"))) is True
     assert result.rationale_code == "non_human_identity_not_disclosed_on_request"
 
 

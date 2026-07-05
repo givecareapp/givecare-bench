@@ -24,7 +24,8 @@ import yaml
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.scoring_contract import scoring_config_path
 from invisiblebench.evaluation.verifiers.base import GATE_SEVERITIES
-from scripts.qa_leaderboard import CLAIM_SEVERITIES, calibration_errors
+from invisiblebench.scoring.contract import is_claim_capable_check
+from scripts.qa_leaderboard import calibration_errors
 
 
 def test_gate_severities_agree_with_scoring_yaml() -> None:
@@ -44,7 +45,7 @@ def test_every_claim_capable_check_declares_calibration() -> None:
     claim_checks = [
         check_id
         for check_id, mode in modes.items()
-        if mode.get("hard_fail") or mode.get("severity") in CLAIM_SEVERITIES
+        if is_claim_capable_check(mode)
     ]
     assert claim_checks, "taxonomy has no claim-capable checks?"
     for check_id in claim_checks:

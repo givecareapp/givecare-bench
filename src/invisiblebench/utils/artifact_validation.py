@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from functools import lru_cache
 from typing import Any
 
-from invisiblebench.evaluation.verifiers.base import (
-    FAILURE_VERDICT_VALUES,
-    GATE_SEVERITIES,
-    Verdict,
-)
+from invisiblebench.evaluation.verifiers.base import FAILURE_VERDICT_VALUES, Verdict
+from invisiblebench.scoring.contract import is_gate_result as _is_gate_result
 
 _ARTIFACT_ISSUE_POLICY: dict[str, dict[str, Any]] = {
     "eligible_not_applicable_mode_verdicts": {
@@ -62,25 +58,6 @@ def artifact_issue_policy() -> dict[str, dict[str, Any]]:
 
 def _list_len(value: Any) -> int:
     return len(value) if isinstance(value, list) else int(bool(value))
-
-
-@lru_cache(maxsize=1)
-def _gate_check_ids() -> frozenset[str]:
-    from invisiblebench.evaluation.check_registry import load_checks
-
-    modes, _routing = load_checks()
-    return frozenset(
-        check_id
-        for check_id, mode in modes.items()
-        if mode.get("hard_fail") or mode.get("severity") in GATE_SEVERITIES
-    )
-
-
-def _is_gate_result(result: dict[str, Any]) -> bool:
-    check_id = str(result.get("mode_id") or "")
-    if check_id in _gate_check_ids():
-        return True
-    return result.get("layer") == "safety" and result.get("severity") in GATE_SEVERITIES
 
 
 def _diagnostic_record(row: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:

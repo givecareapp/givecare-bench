@@ -3,6 +3,10 @@
 Covers:
 - check_dimensions registry accessor
 - is_gate_failure contract predicate (annotation only — not the counting path)
+- is_claim_capable_check / is_gate_result — single-owner check-level and
+  scan-row-level claim-capability predicates (pins the 2026-07 dedup that
+  folded scripts/qa_leaderboard.py + utils/artifact_validation.py +
+  test_calibration_gate.py's forked copies into scoring/contract.py)
 - scenario_safety (any-FAIL counting rule) + model_safety_rates
 - severity_breakdown (diagnostic annotation)
 - check_calibration_statuses + calibrated_only view
@@ -22,7 +26,10 @@ from invisiblebench.scoring.care import (
 from invisiblebench.scoring.contract import (
     CLAIM_READY_STATUS,
     can_carry_hard_fail_claim,
+    claim_capable_check_ids,
+    is_claim_capable_check,
     is_gate_failure,
+    is_gate_result,
 )
 from invisiblebench.scoring.safety import (
     SAFETY_DIMENSIONS,
@@ -30,6 +37,11 @@ from invisiblebench.scoring.safety import (
     scenario_safety,
     severity_breakdown,
 )
+
+# All severities defined in the taxonomy's severity scale (checks/*.yaml
+# `severity:` field), used to exhaustively cover the claim-capability truth
+# table below.
+_ALL_SEVERITIES = ("S1", "S2", "S3", "S4", "S4_GATE", "S5")
 
 # ---------------------------------------------------------------------------
 # check_dimensions
@@ -202,6 +214,111 @@ class TestIsGateFailure:
             )
             is False
         )
+
+
+# ---------------------------------------------------------------------------
+# is_claim_capable_check / is_gate_result — single-owner dedup pins
+#
+# Prior to 2026-07, "mode.get('hard_fail') or mode.get('severity') in
+# GATE_SEVERITIES" was re-derived verbatim in scripts/qa_leaderboard.py,
+# src/invisiblebench/utils/artifact_validation.py, and inline in
+# test_calibration_gate.py. All three now call
+# invisiblebench.scoring.contract.is_claim_capable_check. This class pins the
+# full severity x hard_fail-flag truth table so a future edit to any one
+# call site is caught here instead of silently diverging from the others.
+# ---------------------------------------------------------------------------
+
+class TestIsClaimCapableCheck:
+    """Truth table for the check-*definition*-level claim-capability predicate."""
+
+    @pytest.mark.parametrize("severity", _ALL_SEVERITIES)
+    def test_hard_fail_flag_always_makes_check_claim_capable(self, severity: str) -> None:
+        assert is_claim_capable_check({"severity": severity, "hard_fail": True}) is True
+
+    @pytest.mark.parametrize("severity", ("S5", "S4_GATE"))
+    def test_gate_severity_is_claim_capable_without_hard_fail_flag(self, severity: str) -> None:
+        assert is_claim_capable_check({"severity": severity, "hard_fail": False}) is True
+        assert is_claim_capable_check({"severity": severity}) is True
+
+    @pytest.mark.parametrize("severity", ("S1", "S2", "S3", "S4"))
+    def test_non_gate_severity_without_hard_fail_flag_not_claim_capable(
+        self, severity: str
+    ) -> None:
+        assert is_claim_capable_check({"severity": severity, "hard_fail": False}) is False
+        assert is_claim_capable_check({"severity": severity}) is False
+
+    def test_missing_severity_and_hard_fail_not_claim_capable(self) -> None:
+        assert is_claim_capable_check({}) is False
+
+    def test_falsy_hard_fail_values_do_not_trip_the_flag_arm(self) -> None:
+        # Only truthy hard_fail should count; a stray `hard_fail: null`/`""`
+        # in checks/<ID>.yaml must not silently promote a low-severity check.
+        assert is_claim_capable_check({"severity": "S3", "hard_fail": None}) is False
+        assert is_claim_capable_check({"severity": "S3", "hard_fail": ""}) is False
+
+    @pytest.mark.parametrize("severity", _ALL_SEVERITIES)
+    @pytest.mark.parametrize("hard_fail", (True, False))
+    def test_equality_pin_against_is_gate_failure_at_verdict_fail(
+        self, severity: str, hard_fail: bool
+    ) -> None:
+        """is_claim_capable_check(mode) must agree with is_gate_failure("FAIL", ...).
+
+        These are two distinct canonical predicates in scoring/contract.py —
+        one over a check *definition*, one over a scan-row *verdict*. Fixing
+        verdict="FAIL" (always a failure verdict) collapses is_gate_failure to
+        exactly the same rule as is_claim_capable_check. If this pin ever
+        fails, the two predicates have drifted and one of them needs fixing,
+        not the test.
+        """
+        mode = {"severity": severity, "hard_fail": hard_fail}
+        assert is_claim_capable_check(mode) == is_gate_failure("FAIL", severity, hard_fail)
+
+
+class TestIsGateResult:
+    """is_gate_result — scan-row mode_results-entry claim-capability predicate.
+
+    Single owner for the classification previously forked as
+    `_gate_check_ids()`/`_is_gate_result()` in scripts/qa_leaderboard.py and
+    src/invisiblebench/utils/artifact_validation.py.
+    """
+
+    def test_known_claim_capable_check_id_is_gate_result(self) -> None:
+        # scope.ai-disclosure is S5 in the live taxonomy (see
+        # test_scenario_rule_ai_disclosure.py / test_mode_engine.py MODE
+        # fixtures), so it must appear in the cached registry set.
+        assert "scope.ai-disclosure" in claim_capable_check_ids()
+        assert is_gate_result({"mode_id": "scope.ai-disclosure"}) is True
+
+    def test_unknown_check_id_falls_back_to_layer_and_severity(self) -> None:
+        # A synthetic/test-only mode_id with no registry entry still gates
+        # when tagged layer=safety with a gate severity — the fallback branch
+        # that lets unit tests exercise gate behavior without a real check.
+        assert (
+            is_gate_result(
+                {"mode_id": "synthetic.not-a-real-check", "layer": "safety", "severity": "S5"}
+            )
+            is True
+        )
+
+    def test_unknown_check_id_non_gate_severity_is_not_gate_result(self) -> None:
+        assert (
+            is_gate_result(
+                {"mode_id": "synthetic.not-a-real-check", "layer": "safety", "severity": "S3"}
+            )
+            is False
+        )
+
+    def test_unknown_check_id_non_safety_layer_is_not_gate_result(self) -> None:
+        assert (
+            is_gate_result(
+                {"mode_id": "synthetic.not-a-real-check", "layer": "care", "severity": "S5"}
+            )
+            is False
+        )
+
+    def test_missing_mode_id_falls_back_to_layer_and_severity(self) -> None:
+        assert is_gate_result({"layer": "safety", "severity": "S4_GATE"}) is True
+        assert is_gate_result({}) is False
 
 
 # ---------------------------------------------------------------------------

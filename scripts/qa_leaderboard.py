@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter, defaultdict
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -25,11 +24,14 @@ from invisiblebench.evaluation.check_registry import load_checks  # noqa: E402
 from invisiblebench.evaluation.scoring_contract import coverage_floor  # noqa: E402
 from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
     FAILURE_VERDICT_VALUES,
-    GATE_SEVERITIES,
     PASS_VERDICT_VALUES,
     Verdict,
 )
-from invisiblebench.scoring.contract import CLAIM_READY_STATUS  # noqa: E402
+from invisiblebench.scoring.contract import (  # noqa: E402
+    CLAIM_READY_STATUS,
+    is_claim_capable_check,
+)
+from invisiblebench.scoring.contract import is_gate_result as _is_gate_result  # noqa: E402
 from invisiblebench.utils.artifact_validation import (  # noqa: E402
     artifact_issue_policy,
     scan_artifact_validation_diagnostics,
@@ -41,8 +43,6 @@ from invisiblebench.utils.benchmark_inventory import collect_public_scenario_ids
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 
-# Severities whose FAILs become public hard-fail claims (owner: base.py).
-CLAIM_SEVERITIES = GATE_SEVERITIES
 # Statuses allowed to carry a published hard-fail claim. Binary claim model:
 # only `claim_ready` publishes; everything else is disclosed development evidence.
 CALIBRATED_STATUSES = {CLAIM_READY_STATUS}
@@ -50,23 +50,6 @@ CALIBRATED_STATUSES = {CLAIM_READY_STATUS}
 # NOT_APPLICABLE means the verifier found no current cue/obligation for this
 # check; it is resolved coverage, while UNCLEAR remains unresolved.
 RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES | {Verdict.NOT_APPLICABLE.value}
-
-
-@lru_cache(maxsize=1)
-def _gate_check_ids() -> frozenset[str]:
-    modes, _routing = load_checks()
-    return frozenset(
-        check_id
-        for check_id, mode in modes.items()
-        if mode.get("hard_fail") or mode.get("severity") in GATE_SEVERITIES
-    )
-
-
-def _is_gate_result(result: dict[str, Any]) -> bool:
-    check_id = str(result.get("mode_id") or "")
-    if check_id in _gate_check_ids():
-        return True
-    return result.get("layer") == "safety" and result.get("severity") in GATE_SEVERITIES
 
 
 def calibration_errors(
@@ -85,7 +68,7 @@ def calibration_errors(
     claim_checks = {
         check_id
         for check_id, mode in modes.items()
-        if mode.get("hard_fail") or mode.get("severity") in CLAIM_SEVERITIES
+        if is_claim_capable_check(mode)
     }
     missing = sorted(
         check_id

@@ -140,10 +140,6 @@ class VerdictResult:
     def is_pass(self) -> bool:
         return self.eligible and self.verdict in PASS_VERDICTS
 
-    def is_hard_fail(self) -> bool:
-        """S5 eligible failures trigger overall=0. S4_GATE also gates."""
-        return self.is_failure() and self.severity in GATE_SEVERITIES
-
     def to_dict(self) -> dict[str, Any]:
         return {
             "mode_id": self.mode_id,
