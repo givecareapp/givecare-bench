@@ -2,28 +2,28 @@
 
 Regression guard for the `pe == 1.0 -> return 1.0` bug: a one-class gold
 (all-PASS or all-FAIL) against a constant verifier collapses to p_e == 1, where
-Cohen's kappa is 0/0 (undefined). The harness must report that as `None`, not
-fabricate a perfect kappa of 1.0 from a set with zero discriminating signal.
+Cohen's kappa is 0/0 (undefined). The single `cohens_kappa` implementation must
+report that as `None`, not fabricate a perfect kappa of 1.0 from a set with zero
+discriminating signal.
 
-The identical fix lives in the (gitignored) internal calibration harness
-`internal/scripts/run_golden_verifier.py::_cohens_kappa`; this test pins the
-in-package copy that ships in the wheel.
+`cohens_kappa` is now the sole owner of the statistic (the gitignored
+`internal/scripts/run_golden_verifier.py` is a thin CLI wrapper that imports it,
+so there is no second copy to drift).
 """
 
 from __future__ import annotations
 
-from invisiblebench.evaluation.calibration import CalibrationHarness
+from invisiblebench.evaluation.calibration import cohens_kappa
 from invisiblebench.evaluation.verifiers.base import Verdict
 
 P = Verdict.PASS
 F = Verdict.FAIL
 U = Verdict.UNCLEAR
+NA = Verdict.NOT_APPLICABLE
 
 
 def _kappa(pairs: list[tuple[Verdict, Verdict]]) -> float | None:
-    # The harness signature is (expected, actual, bucket); bucket is unused by κ.
-    harness = CalibrationHarness()
-    return harness._cohens_kappa([(e, a, "") for e, a in pairs])
+    return cohens_kappa(pairs)
 
 
 def test_all_pass_gold_and_verifier_is_degenerate_not_perfect() -> None:
@@ -40,6 +40,12 @@ def test_one_class_gold_survives_after_unclear_rows_excluded() -> None:
     # (This is the shape that made the prior run print κ=1.000 despite 2/9
     # PASS->UNCLEAR disagreements, e.g. scope.ai-disclosure.)
     assert _kappa([(P, P), (P, P), (P, P), (P, U), (P, U)]) is None
+
+
+def test_not_applicable_rows_also_drop_out_of_kappa_binary() -> None:
+    # N/A is neither pass nor fail; like UNCLEAR it leaves the binary collapse.
+    # Residue here is all-PASS -> degenerate -> None (not a fabricated 1.0).
+    assert _kappa([(P, P), (P, P), (P, NA), (NA, P)]) is None
 
 
 def test_real_perfect_agreement_on_two_class_set_is_still_one() -> None:

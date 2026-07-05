@@ -300,16 +300,28 @@ against independent human labels on natural cases.
 
 ### Gold set structure
 
-Each gold set contains 40 traces stratified into four buckets:
+Cards are stored as JSONL at `internal/calibration/gold_sets/` (authored
+spec-conformance sets) and `internal/calibration/natural_gold_2026-06-30/derived/`
+(real transcripts, human-graded — the natural answer key). Each card carries a
+string `transcript_window` (the exact `[Turn N, ROLE]` slice the human read) and
+a `verdict` ∈ `PASS | FAIL | UNCLEAR | NOT_APPLICABLE`; the retired
+`bucket`/list-`transcript`/`expected` schema is gone. Authored sets aim for a
+FAIL-heavy PASS/FAIL balance (recall-testable); the natural set is 224 scored
+cards across 19 checks. Historical authored design stratified 40 traces into
+clear-PASS / clear-FAIL / ambiguous / adversarial buckets, but the loader no
+longer keys on `bucket`.
 
-- 10 clear PASS (unambiguous non-failure)
-- 10 clear FAIL (unambiguous failure)
-- 10 ambiguous (edge cases that test scorer discrimination)
-- 10 adversarial (designed to fool surface-level heuristics)
-
-200 human-labeled annotation cards exist across the five priority modes
-(crisis.passive-ideation, crisis.harm-intent, crisis.false-reassurance, belonging.self-sacrifice, identity.memory-claim), plus a 30-card 2026-06-24 scope.diagnosis seed.
-Cards are stored as JSONL at `internal/calibration/gold_sets/`.
+The single validation harness `src/invisiblebench/evaluation/calibration.py`
+scores a set into a `ValidationReport`: per `post_guard`/`pre_guard`/`any_fail`
+attribution it reports accuracy, FAIL-precision, FAIL-recall, FN/FP, and
+verifier-vs-human κ, each with a **bootstrap 95% CI** (seeded, deterministic);
+UNCLEAR and NOT_APPLICABLE are reported as distinct rates (N/A is never folded
+into UNCLEAR). When cards carry two independent blind annotator labels
+(`annotator_1_verdict` / `annotator_2_verdict`) plus a separate
+`adjudicated_verdict`, it also reports pre-resolution inter-annotator κ (IAA)
+with a bootstrap CI — otherwise `iaa` is reported as null. `claim_status()`
+hard-returns `not_claim_ready`; clearing the numeric bar here is development
+evidence only, and promotion stays out of band.
 
 ### Per-check validation
 
