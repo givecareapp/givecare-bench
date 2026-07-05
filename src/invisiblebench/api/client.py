@@ -476,11 +476,31 @@ class ModelAPIClient:
             raise RuntimeError(f"Failed to call model {model}") from last_error
 
 # Default model for LLM-based Safety/Care judges.
-# Resolve based on which backend will actually be used at runtime.
-# The env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults.
+#
+# Resolved once at import time based on which backend will actually be used
+# at runtime (INVISIBLEBENCH_API_BACKEND / OPENROUTER_API_KEY / OPENAI_API_KEY
+# — see _resolve_api_backend above): direct-OpenAI callers get the dated
+# OpenAI model id, OpenRouter callers get the "openai/..." id. Both spellings
+# name the SAME judge model — this is the single canonical owner of the judge
+# id (CLAUDE.md). Callers needing a judge model must import DEFAULT_JUDGE_MODEL
+# / DEFAULT_SCORER_MODEL from here rather than re-deriving or hardcoding either
+# spelling; the env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults
+# at the call site. JUDGE_MODEL_OPENAI_ID / JUDGE_MODEL_OPENROUTER_ID expose
+# both known spellings (not just whichever one won at import time) so
+# consumers that must key data off the judge id under both backends — e.g.
+# judge.py's MODEL_PRICING cost-estimation table — have one place to read
+# them from instead of copying the literals.
+#
+# Drift detection: if this judge id ever changes, run_audit.py's
+# _audit_judge_health (~line 308) flags any scan artifact whose rows carry
+# more than one distinct `judge_model` value — that's the tripwire for a
+# judge swap that happened mid-run instead of a clean cutover.
+JUDGE_MODEL_OPENAI_ID = "gpt-5-mini-2025-08-07"
+JUDGE_MODEL_OPENROUTER_ID = "openai/gpt-5-mini"
+
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
-DEFAULT_JUDGE_MODEL = "gpt-5-mini-2025-08-07" if _USING_OPENAI_DIRECT else "openai/gpt-5-mini"
+DEFAULT_JUDGE_MODEL = JUDGE_MODEL_OPENAI_ID if _USING_OPENAI_DIRECT else JUDGE_MODEL_OPENROUTER_ID
 DEFAULT_SCORER_MODEL = DEFAULT_JUDGE_MODEL
 DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"
 

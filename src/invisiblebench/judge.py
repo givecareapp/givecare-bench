@@ -20,6 +20,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.api.client import (
+    JUDGE_MODEL_OPENAI_ID,
+    JUDGE_MODEL_OPENROUTER_ID,
+)
 from invisiblebench.evaluation.mode_engine import (
     ModeEngine,
     ModeEngineOutput,
@@ -42,11 +46,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 SCENARIOS_ROOT = REPO_ROOT / "benchmark" / "scenarios"
 LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
+# Pricing keys for the two default-judge id spellings are read from
+# api.client's JUDGE_MODEL_* constants (the same source DEFAULT_JUDGE_MODEL
+# resolves from) rather than re-typed as literals here, so a future judge
+# swap can't leave this table silently keyed to a retired id — see
+# test_judge_pricing.py, which pins that pricing resolves for
+# DEFAULT_JUDGE_MODEL under both backend spellings.
 MODEL_PRICING = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
-    "openai/gpt-5-mini": (0.25, 2.00),
-    "gpt-5-mini-2025-08-07": (0.25, 2.00),
+    JUDGE_MODEL_OPENROUTER_ID: (0.25, 2.00),
+    JUDGE_MODEL_OPENAI_ID: (0.25, 2.00),
     "gpt-4.1-mini": (0.40, 1.60),
 }
 SCAN_PROFILES: dict[str, dict[str, Any]] = {

@@ -673,7 +673,7 @@ def run_benchmark(
             console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
             console.print(
                 "[cyan]Estimate includes target transcript generation only. "
-                "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost.[/cyan]\n"
+                f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost.[/cyan]\n"
             )
             console.print("[bold]Selected models:[/bold]")
             all_catalog = MODELS_FULL
@@ -691,7 +691,7 @@ def run_benchmark(
             print("DRY RUN - No evaluations will be run")
             print(
                 "Estimate includes target transcript generation only. "
-                "Use scripts/run_scan.py --dry-run for GPT-5 Mini judging cost."
+                f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost."
             )
             print("\nSelected models:")
             all_catalog = MODELS_FULL
