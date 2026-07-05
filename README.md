@@ -60,11 +60,15 @@ claim posture.
 ## Publication framing
 
 Benchmark publication has two phases: document the mechanics, then publish the
-scored outputs as a narrative audit. The web-bench projection is intentionally
-findings-first: themes, optional contrastive failure modes when a contrast
-artifact exists, hard-fail evidence, and model signatures explain jagged
-caregiver-AI behavior. It is not meant to be a generic stack rank. See
-[Benchmark Publishing Audit](docs/publishing-audit.md).
+scored outputs. The published artifact is the **lean `safety-care/v1`**
+payload — `{schema, notes, scan_metadata, models}`, where each model entry
+carries `safety` (per-line violation rates, aggregate, severity breakdown,
+`calibrated_only`) and `care` (per-quality distributions), never composited or
+ranked. There is no `findings` block: thematic failure clusters, contrastive
+pairs, and per-model signatures are **not** in the lean payload today — they
+are deferred to a re-authored Safety/Care artifact-v2. See
+[Benchmark Publishing Audit](docs/publishing-audit.md) for the two-phase
+publication model and what a v2 findings layer would add.
 
 ## Public, internal, and historical
 
@@ -121,13 +125,13 @@ internal/, results/ — that are not part of the public contract.)
   when `data/leaderboard/leaderboard_web.json` lags
   `data/leaderboard/leaderboard.json`; it does not publish, sync, or write.
 - Current Phase 2 artifact status: `data/leaderboard/leaderboard.json` is a non-strict public source regenerated from the refreshed 50-check scan. Non-strict QA passes after restamping coverage semantics; strict QA still fails on one missing current scenario (`tier1_source_verification_001`), one extra retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check instances, and four residual quality-mode `UNCLEAR`s, so this artifact must not be described as strict-QA-passing until those are adjudicated or regenerated.
-- The active public narrative surface is the synced web-bench payload: findings,
-  themes, hard-fail evidence, optional contrast sets, and model signatures.
-  Contrast findings are inactive when `data/leaderboard_phase2/contrasts.json`
-  is absent; in that state the web payload carries
-  `metadata.contrast_surface.status: absent_optional` and
-  `findings.contrasts: []`. Older generated narrative markdown should be
-  treated as provenance unless regenerated from the current scan.
+- The active public surface is the lean `safety-care/v1` web-bench payload:
+  `schema`, `notes`, `scan_metadata`, and `models` (each carrying `safety` and
+  `care`). There is no `findings` block in the current payload — themes,
+  contrast sets, and per-model signatures are deferred to a re-authored
+  Safety/Care artifact-v2 (see [docs/publishing-audit.md](docs/publishing-audit.md)).
+  Older generated narrative markdown (e.g. the archived `model_narratives.md`)
+  is historical provenance, not the current publication surface.
 - Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only when it is `claim_ready`. Today that surface is empty (0 of 50 checks). Care distributions are complete for the frozen transcript artifact but ship as directional/`not_claim_ready`, never composited with Safety.
 
 ## Quickstart

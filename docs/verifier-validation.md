@@ -8,10 +8,14 @@
 ## Purpose
 
 InvisibleBench evaluates models using a mix of deterministic scorers and
-LLM-backed verifiers. The verifier prompt templates themselves are kept private
-to prevent gaming, but the runtime emits **stable prompt-template hashes** with
-every scored result so that external readers can verify that two runs used the
-same verifier template — even without access to the prompt text.
+LLM-backed verifiers. Each verifier's prompt template is public: it is embedded
+directly in that check's `checks/<layer>/<dimension>/<ID>.yaml` file under the
+`prompt:` block, alongside the check's definition and routing. What is not
+published is the fully **rendered** per-scenario prompt (template + transcript
+merged at call time, which differs on every call) — comparability across runs
+instead relies on a **stable prompt-template hash** emitted with every scored
+result, so external readers can verify that two runs used the same verifier
+template without diffing rendered call payloads.
 
 This document lists the verifiers, their template-hash slots, and the current
 status of validation work (TPR/TNR against human-labelled ground truth).
