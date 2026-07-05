@@ -186,7 +186,9 @@ routes and as a precheck for `hybrid_llm` routes.
 
 **LLMVerifier** -- sends a per-check prompt from
 the check file's embedded `prompt:` to a judge model with K-repetition
-majority vote (publish default K=3). All checks share a single global judge
+majority vote (publish default K=3) — except gate-severity checks that opt in
+via `routing.gate_aggregation: any_fail`, where any failing rep escalates to
+FAIL + adjudication (honored only for S5/S4_GATE). All checks share a single global judge
 model (`--llm-model`, default **GPT-5 Mini** as of 2026-06-29); the per-check
 `routing.judge_model` overrides were removed when judges were unified (it is a
 candidate judge pending per-check re-validation). ModeEngine

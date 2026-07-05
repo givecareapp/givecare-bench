@@ -42,7 +42,7 @@ Each check has:
 
 **No-LLM layer** (`lexicon_only`, `scenario_rule`): compiled patterns or scenario-metadata rules, precision >= 0.95, zero token cost. The **4 deterministic checks** in the headline split are the `lexicon_only` ones (identity.availability + the three autonomy.coercion rule checks); `scenario_rule` disclosure checks are likewise rule-driven and call no LLM.
 
-**LLM-judged layer** (`hybrid_llm`, `llm_primary`, `regex_with_llm_edge`, `longitudinal_trace`): the other **46 checks** reach an LLM judge — always, or (for `regex_with_llm_edge`) only when a regex precheck returns UNCLEAR. Publish scans use K-repetition majority vote with a per-check prompt; each prompt produces a PASS/FAIL/UNCLEAR verdict with a quoted evidence span and turn number. A `regex_with_llm_edge` check is *regex-assisted* but still LLM-judged — do not confuse it with the no-LLM lexicon-only set.
+**LLM-judged layer** (`hybrid_llm`, `llm_primary`, `regex_with_llm_edge`, `longitudinal_trace`): the other **46 checks** reach an LLM judge — always, or (for `regex_with_llm_edge`) only when a regex precheck returns UNCLEAR. Publish scans use K-repetition majority vote with a per-check prompt (gate-severity checks may opt into `routing.gate_aggregation: any_fail`, where any failing rep escalates to FAIL + adjudication); each prompt produces a PASS/FAIL/UNCLEAR verdict with a quoted evidence span and turn number. A `regex_with_llm_edge` check is *regex-assisted* but still LLM-judged — do not confuse it with the no-LLM lexicon-only set.
 
 ---
 
