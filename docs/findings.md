@@ -15,7 +15,7 @@ to be the most important finding the benchmark has produced.
 
 ---
 
-## 1. The generational finding: relational safety improved — measurably
+## 1. The generational finding: the 2025 relational-failure patterns have largely receded
 
 The failure patterns that defined the historical sweep have largely disappeared
 from the current roster, **on the same historical check definitions**:
@@ -31,8 +31,8 @@ Two explanations, not mutually exclusive, and we report both:
 
 1. **Post-training improved.** The trajectory was already visible inside the
    historical sweep: Anthropic cut body-presence language from 9.1% to 0.0%
-   between Opus 4.5 and Opus 4.6. The 2026 roster completes that trend across
-   labs. To our knowledge no other benchmark has longitudinal,
+   between Opus 4.5 and Opus 4.6. The 2026 roster is consistent with that trend
+   continuing across labs. To our knowledge no other benchmark has longitudinal,
    human-labeled development evidence of relational safety improving across a
    model generation — this is exactly the change a persistent-relationship
    benchmark exists to detect.
@@ -50,18 +50,18 @@ development-evidence scorers (not yet claim_ready).
 
 ## 2. What still fails today (Phase 2 roster)
 
-**Hard-fail rates — diagnostic surface only today (0 `claim_ready`).** Every
-model on the current leaderboard hard-fails some scenarios on safety/compliance
-gates:
+**Hard-fail distribution — raw/internal diagnostic, not a published claim.**
+The hard-fail gates are `not_claim_ready` (0 of 50 checks are `claim_ready`), so
+per-model hard-fail rates are a raw/internal diagnostic surface only: the QA
+gate refuses to publish them as a claim, and this document does not name models
+against them either. As an anonymized distribution — not a per-model comparison
+— every model on the current roster hard-fails some scenarios on the
+safety/compliance gates, with the field spanning roughly 3 to 10 of 63
+scenarios (about 5% to 16%) and a median near 6–8 / 63 (10–13%).
 
-| Model | Hard-fail scenarios | Rate |
-|-------|--------------------:|-----:|
-| GPT-5.5 (best) | 3 / 63 | 5% |
-| field median | ~6–8 / 63 | 10–13% |
-| DeepSeek V4 Pro (worst) | 10 / 63 | 16% |
-
-The gates are the benchmark's most-developed layer (see Calibration status
-below for what this development evidence does and does not cover).
+The gates are the benchmark's most-developed layer, but "most-developed" here
+still means development evidence, not validation (see Calibration status below
+for what it does and does not cover).
 
 **Live failure patterns — directional, pending quality-layer validation.**
 The dominant current failure modes are no longer identity tricks or fake
@@ -81,8 +81,8 @@ intimacy; they are subtler relational failures, observed by LLM-judged checks
 - **Guilt amplification** — 79 failures: reinforcing self-blame loops instead
   of interrupting them.
 
-The story of the field, in one line: **models stopped pretending to be human,
-and still don't know how to sit with one.**
+The story of the field, in one line: **models have mostly stopped pretending
+to be human, and still don't know how to sit with one.**
 
 ---
 
@@ -211,8 +211,8 @@ harming the care recipient, the caregiver, or the relationship between them.
 Half the checks exist only because of that dyadic structure.
 
 The 2025 findings — fake intimacy, false continuity, identity
-misrepresentation — were commission failures, and post-training has largely
-eliminated them. The 2026 findings — register mismatch, infodumping,
+misrepresentation — were commission failures, and they record near-zero scored
+failures on the current roster. The 2026 findings — register mismatch, infodumping,
 relational blindness, guilt amplification — are subtler failures of attention
 and restraint, and they are where the field's work now is. A model with zero
 artificial-intimacy language can still be unhelpful. The findings are a

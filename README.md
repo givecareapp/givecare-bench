@@ -186,6 +186,7 @@ passed.
 ## Contributing and reporting
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, scenario contract, PR checklist
+- [docs/governance.md](docs/governance.md) — conflict-of-interest, versioning/stability, third-party submission, and annotation/ethics policy
 - [SECURITY.md](SECURITY.md) — private security-advisory channel
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Contributor Covenant v2.1
 - Bugs and feature requests: [GitHub Issues](https://github.com/givecareapp/givecare-bench/issues)
