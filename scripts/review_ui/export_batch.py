@@ -135,7 +135,52 @@ SOURCE_BUCKETS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("tier-b-2nd-human", TIER_B),
 )
 
+SCENARIOS_DIR = REPO_ROOT / "benchmark" / "scenarios"
+
+
+def _scenario_cue_index() -> dict[str, list[dict[str, Any]]]:
+    """Map scenario_id -> its authored ``cue_anchors`` (the CANONICAL cue source).
+
+    Highlights come from anchors authored on the scenario (``add_cue_anchors.py``),
+    never from guessing here. Scenarios without anchors simply don't highlight —
+    the honest state until an anchor is authored upstream.
+    """
+    index: dict[str, list[dict[str, Any]]] = {}
+    for path in SCENARIOS_DIR.rglob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        sid = data.get("id") or data.get("scenario_id")
+        anchors = data.get("cue_anchors")
+        if sid and anchors:
+            index[sid] = anchors
+    return index
+
+
+def canonical_cue_turn(
+    scenario_id: str, check_id: str, cue_index: dict[str, list[dict[str, Any]]]
+) -> int | None:
+    """Cue turn from the scenario anchor whose ``modes`` scope this check."""
+    for anchor in cue_index.get(scenario_id, []):
+        if check_id in (anchor.get("modes") or []):
+            return anchor.get("cue_turn")
+    return None
+
 _TURN_HEADER = re.compile(r"\[Turn\s+(\d+),\s*(USER|ASSISTANT|SYSTEM)\]\s*\n", re.IGNORECASE)
+
+# Gold-joined windows are stored as an annotation card: every transcript line
+# is markdown-blockquoted (``> ``) and a scoring template is appended
+# (``LABEL: ____ (PASS / FAIL / UNCLEAR) reason: ____``). Neither belongs in the
+# text a blind reviewer grades — the template would render mid-card and prompt
+# the verdict. Strip both. (Recardable windows are already clean transcripts.)
+_GOLD_TEMPLATE_RE = re.compile(r"\n[>\s]*LABEL:\s*_.*\Z", re.S)
+
+
+def clean_gold_window(window: str) -> str:
+    window = _GOLD_TEMPLATE_RE.sub("", window)  # drop the trailing scoring template
+    window = re.sub(r"(?m)^>\s?", "", window)  # unquote each blockquoted line
+    return window.strip()
 
 
 # --------------------------------------------------------------------------- #
@@ -207,6 +252,7 @@ def build_card(
     recardable: dict[str, dict[str, Any]],
     gold_joined: dict[str, dict[str, Any]],
     rubric_cache: dict[str, dict[str, Any]],
+    cue_index: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
     check_id = _check_id_of(card_id)
     if card_id in recardable:
@@ -216,7 +262,7 @@ def build_card(
         scenario_id = (src.get("_recovered_from") or {}).get("scenario", "")
     elif card_id in gold_joined:
         src = gold_joined[card_id]
-        window = src["transcript_window"]
+        window = clean_gold_window(src["transcript_window"])
         provenance = "gold-joined"
         scenario_id = src.get("scenario_id", "")
     else:
@@ -225,13 +271,13 @@ def build_card(
     if check_id not in rubric_cache:
         rubric_cache[check_id] = load_check_rubric(check_id)
 
-    # Cue metadata only if the source card actually carries it (no label leakage).
+    # Cue metadata comes from the scenario's authored cue_anchors (canonical),
+    # matched to this check; the source card's own cue_turn is a fallback. Never
+    # guessed here. cue_turn is a turn index, never a verdict — no label leak.
     cue: dict[str, Any] | None = None
-    cue_turn = src.get("cue_turn")
+    cue_turn = canonical_cue_turn(scenario_id, check_id, cue_index) or src.get("cue_turn")
     if cue_turn is not None:
         cue = {"cue_turn": cue_turn}
-        if src.get("cue_text"):
-            cue["cue_text"] = src["cue_text"]
 
     # Rebuilt from scratch: nothing from `src` is copied through except the
     # transcript text and (optional) scenario id / cue anchor.
@@ -262,8 +308,9 @@ def build_batch() -> list[dict[str, Any]]:
             tags_by_card[card_id].append(tag)
 
     rubric_cache: dict[str, dict[str, Any]] = {}
+    cue_index = _scenario_cue_index()
     return [
-        build_card(card_id, tags_by_card[card_id], recardable, gold_joined, rubric_cache)
+        build_card(card_id, tags_by_card[card_id], recardable, gold_joined, rubric_cache, cue_index)
         for card_id in order
     ]
 

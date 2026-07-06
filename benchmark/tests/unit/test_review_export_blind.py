@@ -82,6 +82,7 @@ def _build() -> dict[str, Any]:
         recardable={"crisis.synthetic__card_1": _POISONED_SOURCE},
         gold_joined={},
         rubric_cache={"crisis.synthetic": _RUBRIC},
+        cue_index={},
     )
 
 
