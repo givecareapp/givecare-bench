@@ -28,7 +28,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +45,14 @@ DEFAULT_GOLD_DIRS = (
 _ANNOTATOR_1_FIELDS = ("annotator_1_id", "annotator_1_verdict", "annotator_1_note")
 _ANNOTATOR_2_FIELDS = ("annotator_2_id", "annotator_2_verdict", "annotator_2_note")
 _ADJUDICATED_FIELDS = ("adjudicated_verdict", "adjudicated_by", "adjudication_notes")
+
+
+class DuplicateCardIdError(RuntimeError):
+    """Raised when the same card_id appears in more than one gold file.
+
+    Silently keeping the first occurrence would merge annotations into the
+    wrong file copy — this must refuse instead.
+    """
 
 
 @dataclass
@@ -58,7 +70,12 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _index_gold(gold_dirs: list[Path]) -> dict[str, tuple[Path, int, dict[str, Any]]]:
-    """Map card_id -> (file, line index, record) across every gold jsonl."""
+    """Map card_id -> (file, line index, record) across every gold jsonl.
+
+    Raises ``DuplicateCardIdError`` if a card_id appears in more than one
+    file — see that class's docstring for why this must be a hard error
+    rather than a silent first-wins.
+    """
     index: dict[str, tuple[Path, int, dict[str, Any]]] = {}
     for gdir in gold_dirs:
         if not gdir.exists():
@@ -66,9 +83,43 @@ def _index_gold(gold_dirs: list[Path]) -> dict[str, tuple[Path, int, dict[str, A
         for path in sorted(gdir.glob("*.jsonl")):
             for i, rec in enumerate(_load_jsonl(path)):
                 cid = rec.get("card_id")
-                if cid and cid not in index:
-                    index[cid] = (path, i, rec)
+                if not cid:
+                    continue
+                if cid in index:
+                    prior_path, _, _ = index[cid]
+                    raise DuplicateCardIdError(
+                        f"duplicate card_id {cid!r} found in both "
+                        f"{prior_path} and {path} — refusing to merge. "
+                        "Resolve the duplicate (rename/remove one copy) "
+                        "before running this script."
+                    )
+                index[cid] = (path, i, rec)
     return index
+
+
+def _annotator_2_diffs(rec: dict[str, Any], ann: dict[str, Any]) -> list[str]:
+    """Diff every ``annotator_2_*`` field present on BOTH sides.
+
+    Verdicts compare case-insensitively; id/note compare as-is. A field
+    present on only one side is not a diff for that field (nothing to
+    compare against) — but any field present on both sides that disagrees
+    is, even when the verdict itself matches: same verdict with a differing
+    note or annotator id means the gold and the incoming export disagree
+    about who said what, and that must not be silently merged.
+    """
+    diffs: list[str] = []
+    for key in _ANNOTATOR_2_FIELDS:
+        existing = rec.get(key)
+        incoming = ann.get(key)
+        if not existing or not incoming:
+            continue
+        if key == "annotator_2_verdict":
+            existing_cmp, incoming_cmp = str(existing).upper(), str(incoming).upper()
+        else:
+            existing_cmp, incoming_cmp = existing, incoming
+        if existing_cmp != incoming_cmp:
+            diffs.append(f"{key}: gold={existing!r} vs incoming={incoming!r}")
+    return diffs
 
 
 def plan_merge(
@@ -97,8 +148,12 @@ def plan_merge(
 
         existing = rec.get("annotator_2_verdict")
         if existing:
-            if str(existing).upper() != str(a2_verdict).upper():
-                plan.conflicts.append(f"{cid}: gold annotator_2={existing} vs incoming={a2_verdict}")
+            diffs = _annotator_2_diffs(rec, ann)
+            verdict_conflict = any(d.startswith("annotator_2_verdict:") for d in diffs)
+            if verdict_conflict:
+                plan.conflicts.append(f"{cid}: " + "; ".join(diffs))
+            elif diffs:
+                plan.conflicts.append(f"{cid}: same verdict, metadata differs — " + "; ".join(diffs))
             else:
                 plan.skipped_present.append(cid)
             continue
@@ -128,6 +183,36 @@ def plan_merge(
     return plan, file_records
 
 
+def _write_gold_file_atomic(path: Path, records: list[dict[str, Any]]) -> Path:
+    """Back up the pre-merge file, then atomically replace it with ``records``.
+
+    1. Copy the current on-disk file to a timestamped ``.pre-merge.bak``
+       sibling, so an interrupted or incorrect merge is always recoverable.
+    2. Write the new payload to a temp file in the SAME directory (so the
+       final replace is on one filesystem), flush, and fsync it.
+    3. ``os.replace`` the temp file over the target — atomic on POSIX, so
+       readers never observe a partially written gold file.
+
+    Returns the backup path.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_path = path.with_name(f"{path.name}.{timestamp}.pre-merge.bak")
+    shutil.copy2(path, backup_path)
+
+    payload = "\n".join(json.dumps(r, ensure_ascii=False) for r in records) + "\n"
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
+    return backup_path
+
+
 def _validate_calibration_shape(file_records: dict[Path, list[dict[str, Any]]]) -> str | None:
     """Confirm the merged records still load through the calibration parser."""
     try:
@@ -152,7 +237,11 @@ def main() -> int:
 
     gold_dirs = list(args.gold_dir) if args.gold_dir else list(DEFAULT_GOLD_DIRS)
     annotations = _load_jsonl(args.annotations)
-    gold_index = _index_gold(gold_dirs)
+    try:
+        gold_index = _index_gold(gold_dirs)
+    except DuplicateCardIdError as exc:
+        print(f"ERROR: {exc}")
+        return 1
     plan, file_records = plan_merge(annotations, gold_index)
 
     shape_err = _validate_calibration_shape(
@@ -181,8 +270,8 @@ def main() -> int:
 
     for path_str in plan.files_touched:
         path = Path(path_str)
-        payload = "\n".join(json.dumps(r, ensure_ascii=False) for r in file_records[path]) + "\n"
-        path.write_text(payload, encoding="utf-8")
+        backup_path = _write_gold_file_atomic(path, file_records[path])
+        print(f"  backed up {path} -> {backup_path}")
         print(f"  wrote {path}")
     print(f"Applied: filled {len(plan.filled)} annotator_2 labels across "
           f"{len(plan.files_touched)} files.")
