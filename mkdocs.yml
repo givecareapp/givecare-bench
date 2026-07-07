@@ -49,7 +49,6 @@ nav:
   - Governance: governance.md
 
 exclude_docs: |
-  clawpatch-watchlist.md
   paper-draft/
 
 plugins:
