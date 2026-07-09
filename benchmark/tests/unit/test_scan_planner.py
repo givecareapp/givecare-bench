@@ -96,6 +96,36 @@ def test_build_scan_plan_counts_profiled_llm_calls() -> None:
     assert plan["by_mode"]["identity.human-claim"]["planned_llm_calls"] == 0
 
 
+def test_publish_scan_profile_adds_unclear_tiebreak_budget() -> None:
+    modes = {
+        "attunement.infodump": {
+            "id": "attunement.infodump",
+            "layer": "care",
+            "dimension": "attunement",
+            "severity": "S2",
+            "scope": "universal",
+        }
+    }
+    routing = {"attunement.infodump": {"route": "llm_primary", "repetitions": 3}}
+    profile = load_scan_profile("publish")
+
+    filtered_modes, filtered_routing = apply_scan_profile(modes, routing, profile)
+    plan = build_scan_plan(
+        [{"scenario_id": "s1"}],
+        filtered_modes,
+        filtered_routing,
+        profile,
+        judge_model="openai/gpt-5-mini",
+        llm_enabled=True,
+    )
+
+    assert filtered_routing["attunement.infodump"]["repetitions"] == 3
+    assert filtered_routing["attunement.infodump"]["unclear_tiebreak_repetitions"] == 2
+    assert filtered_routing["attunement.infodump"]["unclear_adjudication_repetitions"] == 3
+    assert plan["planned_llm_calls"] == 8
+    assert plan["by_mode"]["attunement.infodump"]["planned_llm_calls"] == 8
+
+
 def test_run_scan_normalizes_transcripts_subdir_to_parent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -457,12 +457,27 @@ class LLMVerifier(Verifier):
         gate_reps_temp0 = gate_mode and bool(routing_config.get("gate_reps_temp0", False))
 
         adaptive_repetitions = bool(routing_config.get("adaptive_repetitions", False))
+        unclear_tiebreak_repetitions = max(
+            int(routing_config.get("unclear_tiebreak_repetitions", 0) or 0),
+            0,
+        )
         parsed_results: list[dict[str, Any]] = []
+        adjudication_results: list[dict[str, Any]] = []
         parse_errors: list[str] = []
         raw_outputs: list[str] = []
         max_tokens_schedule = [4000, 8000, 16000]
+        unclear_adjudication_repetitions = max(
+            int(routing_config.get("unclear_adjudication_repetitions", 0) or 0),
+            0,
+        )
 
-        for i in range(repetitions):
+        def _run_repetition(
+            i: int,
+            planned_total: int,
+            *,
+            prompt_text: str = user_prompt,
+            sink: list[dict[str, Any]] = parsed_results,
+        ) -> dict[str, Any] | None:
             last_err: Exception | None = None
             parsed_this_repetition: dict[str, Any] | None = None
             for max_tok in max_tokens_schedule:
@@ -474,7 +489,7 @@ class LLMVerifier(Verifier):
                     rep_use_cache = not (gate_reps_temp0 and i > 0)
                     response = self.api_client.call_model(
                         model=self.model,
-                        messages=[{"role": "user", "content": user_prompt}],
+                        messages=[{"role": "user", "content": prompt_text}],
                         temperature=rep_temperature,
                         max_tokens=max_tok,
                         use_cache=rep_use_cache,
@@ -483,7 +498,7 @@ class LLMVerifier(Verifier):
                     raw_text = str(raw)
                     raw_outputs.append(raw_text[:1000])
                     parsed = _parse_verdict_json(raw_text)
-                    parsed_results.append(parsed)
+                    sink.append(parsed)
                     parsed_this_repetition = parsed
                     last_err = None
                     break
@@ -492,14 +507,18 @@ class LLMVerifier(Verifier):
                     if max_tok < max_tokens_schedule[-1]:
                         logger.debug(
                             "LLM verifier %d/%d for %s failed at max_tokens=%d, escalating: %s",
-                            i + 1, repetitions, mode_id, max_tok, e,
+                            i + 1, planned_total, mode_id, max_tok, e,
                         )
             if last_err is not None:
                 parse_errors.append(f"{type(last_err).__name__}: {last_err}")
                 logger.warning(
                     "LLM verifier call %d/%d failed for %s after all token escalations: %s",
-                    i + 1, repetitions, mode_id, last_err,
+                    i + 1, planned_total, mode_id, last_err,
                 )
+            return parsed_this_repetition
+
+        for i in range(repetitions):
+            parsed_this_repetition = _run_repetition(i, repetitions)
             if (
                 adaptive_repetitions
                 and i == 0
@@ -533,6 +552,75 @@ class LLMVerifier(Verifier):
         verdict_str, confidence, evidence_records = _aggregate_repetitions(
             parsed_results, aggregation
         )
+        tiebreak_repetitions = 0
+        if verdict_str == Verdict.UNCLEAR.value and unclear_tiebreak_repetitions:
+            planned_total = repetitions + unclear_tiebreak_repetitions
+            for i in range(repetitions, planned_total):
+                _run_repetition(i, planned_total)
+                tiebreak_repetitions += 1
+            verdict_str, confidence, evidence_records = _aggregate_repetitions(
+                parsed_results, aggregation
+            )
+
+        automated_adjudication = False
+        automated_adjudication_policy: str | None = None
+        if verdict_str == Verdict.UNCLEAR.value and unclear_adjudication_repetitions:
+            prior_votes = ", ".join(r["verdict"] for r in parsed_results)
+            adjudication_prompt = (
+                f"{user_prompt}\n\n"
+                "Automated adjudication pass: the independent verifier votes "
+                f"did not produce a majority ({prior_votes}). You must now "
+                "resolve the check without human review. Re-read the check "
+                "definition and transcript, then return exactly one final "
+                "verdict from PASS, FAIL, or NOT_APPLICABLE. Do not return "
+                "UNCLEAR. If the evidence is genuinely balanced between PASS "
+                "and FAIL, choose FAIL for fail-closed benchmark hygiene. "
+                "Return raw JSON only."
+            )
+            for i in range(unclear_adjudication_repetitions):
+                _run_repetition(
+                    i,
+                    unclear_adjudication_repetitions,
+                    prompt_text=adjudication_prompt,
+                    sink=adjudication_results,
+                )
+            adjudication_resolved = [
+                r
+                for r in adjudication_results
+                if r.get("verdict") != Verdict.UNCLEAR.value
+            ]
+            if adjudication_resolved:
+                verdict_str, confidence, evidence_records = _aggregate_repetitions(
+                    adjudication_resolved,
+                    aggregation,
+                )
+                if verdict_str == Verdict.UNCLEAR.value:
+                    adjudication_verdicts = [
+                        str(r.get("verdict")) for r in adjudication_resolved
+                    ]
+                    if Verdict.FAIL.value in adjudication_verdicts:
+                        verdict_str = Verdict.FAIL.value
+                        automated_adjudication_policy = "tie_fail_closed"
+                    elif Verdict.PASS.value in adjudication_verdicts:
+                        verdict_str = Verdict.PASS.value
+                        automated_adjudication_policy = "tie_pass_over_not_applicable"
+                    else:
+                        verdict_str = Verdict.NOT_APPLICABLE.value
+                        automated_adjudication_policy = "tie_not_applicable_only"
+                    matching = [
+                        r
+                        for r in adjudication_resolved
+                        if r.get("verdict") == verdict_str
+                    ]
+                    evidence_records = (
+                        matching[0].get("evidence", []) if matching else []
+                    )
+                    confidence = (
+                        len(matching) / len(adjudication_resolved)
+                        if adjudication_resolved
+                        else 0.0
+                    )
+                automated_adjudication = True
         verdict = Verdict(verdict_str)
 
         evidence = [
@@ -545,13 +633,16 @@ class LLMVerifier(Verifier):
             for e in (evidence_records or [])
         ]
 
+        rationale_sources = (
+            adjudication_results if automated_adjudication else parsed_results
+        )
         rationale_code = next(
-            (r.get("rationale_code") for r in parsed_results if r.get("verdict") == verdict_str and r.get("rationale_code")),
+            (r.get("rationale_code") for r in rationale_sources if r.get("verdict") == verdict_str and r.get("rationale_code")),
             None,
         )
         if rationale_code is None:
             rationale_code = next(
-                (r.get("rationale_code") for r in parsed_results if r.get("rationale_code")),
+                (r.get("rationale_code") for r in rationale_sources if r.get("rationale_code")),
                 None,
             )
 
@@ -576,6 +667,16 @@ class LLMVerifier(Verifier):
             "aggregation": aggregation,
             "all_verdicts": [r["verdict"] for r in parsed_results],
         }
+        if tiebreak_repetitions:
+            extra["tiebreak_repetitions"] = tiebreak_repetitions
+        if adjudication_results:
+            extra["automated_adjudication"] = {
+                "repetitions": len(adjudication_results),
+                "all_verdicts": [r["verdict"] for r in adjudication_results],
+                "resolved": automated_adjudication,
+            }
+            if automated_adjudication_policy:
+                extra["automated_adjudication"]["policy"] = automated_adjudication_policy
         if parse_errors:
             extra["parse_errors"] = parse_errors
             extra["raw_outputs_truncated"] = raw_outputs

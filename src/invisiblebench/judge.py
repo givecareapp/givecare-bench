@@ -84,10 +84,15 @@ SCAN_PROFILES: dict[str, dict[str, Any]] = {
         "adaptive_repetitions": True,
     },
     "publish": {
-        "description": "Publication scan: all checks with configured repetitions.",
+        "description": (
+            "Publication scan: all checks with configured repetitions, automated "
+            "UNCLEAR tie-breaks, and machine adjudication fallback."
+        ),
         "include_all": True,
         "llm_repetitions": None,
         "adaptive_repetitions": False,
+        "unclear_tiebreak_repetitions": 2,
+        "unclear_adjudication_repetitions": 3,
     },
 }
 
@@ -154,6 +159,16 @@ def apply_scan_profile(
             routed["repetitions"] = max(int(profile["llm_repetitions"]), 0)
         if route_requires_llm(routed) and profile.get("adaptive_repetitions"):
             routed["adaptive_repetitions"] = True
+        if route_requires_llm(routed) and profile.get("unclear_tiebreak_repetitions"):
+            routed["unclear_tiebreak_repetitions"] = max(
+                int(profile["unclear_tiebreak_repetitions"]),
+                0,
+            )
+        if route_requires_llm(routed) and profile.get("unclear_adjudication_repetitions"):
+            routed["unclear_adjudication_repetitions"] = max(
+                int(profile["unclear_adjudication_repetitions"]),
+                0,
+            )
         filtered_routing[mode_id] = routed
 
     return filtered_modes, filtered_routing
@@ -214,6 +229,14 @@ def build_scan_plan(
 
             if llm_enabled and route_requires_llm(routing_config):
                 calls = max(int(routing_config.get("repetitions", 1) or 0), 0)
+                calls += max(
+                    int(routing_config.get("unclear_tiebreak_repetitions", 0) or 0),
+                    0,
+                )
+                calls += max(
+                    int(routing_config.get("unclear_adjudication_repetitions", 0) or 0),
+                    0,
+                )
                 mode_stats["planned_llm_calls"] += calls
                 planned_llm_calls += calls
 

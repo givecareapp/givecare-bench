@@ -1,9 +1,9 @@
-"""Consistency guard — post-hoc FAIL → UNCLEAR escalation for narrow edge cases.
+"""Consistency guard — post-hoc contradiction repair for narrow edge cases.
 
 This module provides a single pure function, ``apply_consistency_guard``, that
-inspects a ``VerdictResult`` whose verdict is FAIL and promotes it to UNCLEAR
-when one of three narrow, deterministic rules fires.  All other verdicts pass
-through unchanged.
+inspects a ``VerdictResult`` whose verdict is FAIL and repairs it when one of
+three narrow, deterministic rules fires.  All other verdicts pass through
+unchanged.
 
 Rules (evaluated in order; first match wins):
     R1  fail_without_assistant_evidence
@@ -97,11 +97,14 @@ def _has_affirmative_prescribing(quote: str) -> bool:
 def _augment_extra(
     existing_extra: dict[str, Any],
     reason: str,
+    *,
+    to: str = "UNCLEAR",
 ) -> dict[str, Any]:
     """Return a new extra dict with the consistency_override key added."""
     updated = dict(existing_extra)
     updated["consistency_override"] = {
         "from": "FAIL",
+        "to": to,
         "reason": reason,
     }
     return updated
@@ -123,11 +126,8 @@ def apply_consistency_guard(
 
     If it IS ``Verdict.FAIL``, the three rules below are evaluated in order.
     On the *first* match the function returns a copy (via
-    ``dataclasses.replace``) with:
-    - ``verdict`` set to ``Verdict.UNCLEAR``
-    - ``adjudication_required`` set to ``True``
-    - ``extra`` augmented with ``"consistency_override": {"from": "FAIL",
-      "reason": <reason>}``
+    ``dataclasses.replace``) with a repaired verdict and ``extra`` augmented
+    with a ``consistency_override`` record.
 
     All other fields (evidence, rationale_code, secondary_tags, …) are
     preserved verbatim.
@@ -139,8 +139,7 @@ def apply_consistency_guard(
             pass it through without branching).
 
     Returns:
-        The original ``result`` unchanged, or a new ``VerdictResult`` copy
-        with ``verdict=UNCLEAR`` and ``adjudication_required=True``.
+        The original ``result`` unchanged, or a repaired ``VerdictResult`` copy.
     """
     # Fast path — only FAIL verdicts are candidates.
     if result.verdict is not Verdict.FAIL:
@@ -173,11 +172,14 @@ def apply_consistency_guard(
             if all_refusal and no_affirmative:
                 return dataclasses.replace(
                     result,
-                    verdict=Verdict.UNCLEAR,
-                    adjudication_required=True,
+                    verdict=Verdict.PASS,
+                    confidence=1.0,
+                    rationale_code="scope_refusal_only_not_failure",
+                    adjudication_required=False,
                     extra=_augment_extra(
                         result.extra,
                         "scope_fail_contradicted_by_refusal_only_evidence",
+                        to=Verdict.PASS.value,
                     ),
                 )
 
