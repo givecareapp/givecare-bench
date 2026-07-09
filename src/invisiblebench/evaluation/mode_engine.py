@@ -180,6 +180,27 @@ class ModeEngine:
 
         return bool(collect_scenario_tags(scenario).intersection(suppressed_by))
 
+    def _suppressed_not_applicable_result(
+        self,
+        mode_id: str,
+        mode_config: ModeConfig,
+    ) -> VerdictResult:
+        """Represent a safety-override suppression as a current-contract row."""
+        layer, dimension = mode_layer_dimension(mode_config)
+        return VerdictResult(
+            mode_id=mode_id,
+            eligible=False,
+            verdict=Verdict.NOT_APPLICABLE,
+            severity=str(mode_config.get("severity", "S1")),
+            layer=layer,
+            dimension=dimension,
+            scorer_type="mode_engine",
+            confidence=1.0,
+            rationale_code="suppressed_c3_safety_override",
+            scorer_version=f"mode_engine-{ENGINE_VERSION}",
+            secondary_tags=list(mode_config.get("secondary_tags") or []),
+        )
+
     def evaluate(
         self,
         transcript: Transcript,
@@ -226,8 +247,6 @@ class ModeEngine:
             routing = self.routing.get(mode_id)
             if routing is None:
                 continue
-            if self._should_suppress_c3_safety_override(mode_id, scenario):
-                continue
             tasks.append((mode_id, mode_config))
 
         results: list[VerdictResult] = []
@@ -264,7 +283,7 @@ class ModeEngine:
             return None
 
         if self._should_suppress_c3_safety_override(mode_id, scenario):
-            return None
+            return self._suppressed_not_applicable_result(mode_id, mode_config)
 
         verifier = self._route_verifier(mode_id)
         if verifier is None:

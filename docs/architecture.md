@@ -239,6 +239,11 @@ Every verifier returns a `VerdictResult` with a fixed shape:
 | `scorer_version` | string | Verifier implementation version |
 | `prompt_hash` | string or null | Hash of the LLM prompt template (for reproducibility) |
 
+Current-contract scan rows carry one `mode_results` entry for every active
+check. If routing suppresses a check because another safety condition takes
+precedence, the engine records an ineligible `NOT_APPLICABLE` verdict with a
+suppression rationale instead of omitting the check from the row.
+
 ### Aggregation
 
 The engine aggregates eligible verdicts into two separate scorecard sections — never merged:

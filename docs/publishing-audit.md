@@ -57,7 +57,10 @@ The result phase starts from the canonical leaderboard artifact:
   on one missing current scenario (`tier1_source_verification_001`), one extra
   retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check
   instances, and four residual quality-mode `UNCLEAR` verdicts, so it must not
-  be described as a strict-QA-passing leaderboard source.
+  be described as a strict-QA-passing leaderboard source. The missing-check
+  instances are in the stale Phase 2 source; current scans record
+  safety-override suppression as ineligible `NOT_APPLICABLE` rows instead of
+  dropping active checks.
 - Current artifact-validation diagnostics: 1,852 eligible `NOT_APPLICABLE`
   mode verdicts (1,466 Safety-gate), 4 unresolved mode verdicts, 0 Safety-gate
   unresolved verdicts, 0 fail-without-evidence rows, 0 missing prompts, 0
