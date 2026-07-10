@@ -93,6 +93,16 @@ def test_project_leaderboard_emits_lean_shape() -> None:
     assert "belonging" in model["care"]["qualities"]
 
 
+def test_project_leaderboard_redacts_local_source_artifact_path() -> None:
+    source = _minimal_source()
+    source["scan_metadata"]["source_artifact"] = "/private/host/release/per_run.jsonl"
+
+    projected = project_leaderboard(source)
+
+    assert projected["scan_metadata"]["source_artifact"] == "per_run.jsonl"
+    assert source["scan_metadata"]["source_artifact"].startswith("/private/")
+
+
 def test_project_leaderboard_rejects_deprecated_v3() -> None:
     """_deprecated_v3 must fail before public projection."""
     source = _minimal_source()

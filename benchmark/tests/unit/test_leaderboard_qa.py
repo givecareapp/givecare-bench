@@ -119,7 +119,7 @@ def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
             "benchmark_version": "4.0.0",
             "check_prompt_hashes": {},
             "observed_prompt_hashes": {},
-            "source_artifact": str(source),
+            "source_artifact": source.name,
             "total_models": models,
             "total_scenarios": scenarios,
             "artifact_validation": scan_artifact_validation_summary(rows),

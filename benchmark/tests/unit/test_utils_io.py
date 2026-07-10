@@ -7,7 +7,20 @@ from pathlib import Path
 
 import pytest
 
-from invisiblebench.utils.io import leaderboard_rows
+from invisiblebench.utils.io import artifact_reference, leaderboard_rows
+
+
+def test_artifact_reference_is_repo_relative_or_basename(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    inside = repo_root / "results" / "scan" / "per_run.jsonl"
+    inside.parent.mkdir(parents=True)
+    inside.touch()
+    outside = tmp_path / "private" / "per_run.jsonl"
+    outside.parent.mkdir()
+    outside.touch()
+
+    assert artifact_reference(inside, repo_root) == "results/scan/per_run.jsonl"
+    assert artifact_reference(outside, repo_root) == "per_run.jsonl"
 
 
 def test_leaderboard_rows_current_models_key() -> None:

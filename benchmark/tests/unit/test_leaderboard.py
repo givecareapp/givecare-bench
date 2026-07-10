@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+
+import pytest
 
 from invisiblebench.utils.artifact_validation import artifact_issue_policy
 from scripts.generate_leaderboard import generate_leaderboard
@@ -135,10 +138,85 @@ def test_generate_leaderboard_scan_metadata_present(tmp_path: Path) -> None:
     meta = payload["scan_metadata"]
     assert meta["total_models"] == 2
     assert meta["total_scenarios"] == 2
-    assert meta["source_artifact"] == str(input_path)
+    assert meta["source_artifact"] == input_path.name
     assert meta["artifact_validation"]["rows"] == 4
     assert len(meta["check_prompt_hashes"]) == 46
     assert meta["observed_prompt_hashes"] == {}
+
+
+def test_generate_leaderboard_embeds_validated_merge_lineage(tmp_path: Path) -> None:
+    input_path = tmp_path / "per_run.jsonl"
+    input_path.write_text(json.dumps(_row("model-a", "s1", score=0.8)) + "\n")
+    scan_sha = hashlib.sha256(input_path.read_bytes()).hexdigest()
+    merge_manifest = {
+        "schema": "invisiblebench-scan-merge/v1",
+        "benchmark_version": "4.0.0",
+        "result_contract_version": "2.1.0",
+        "profile": "publish",
+        "judge_model": "openai/gpt-5-mini",
+        "model_count": 1,
+        "scenario_count": 1,
+        "row_count": 1,
+        "actual_cost_usd": 1.25,
+        "actual_billable_api_calls": 10,
+        "output_file": "per_run.jsonl",
+        "output_sha256": scan_sha,
+        "sources": [
+            {
+                "artifact_id": "scan_a",
+                "file": "per_run.jsonl",
+                "sha256": "a" * 64,
+                "row_count": 1,
+                "model_ids": ["model-a"],
+                "transcript_source_artifacts": ["run_a"],
+                "actual_cost_usd": 1.25,
+                "actual_billable_api_calls": 10,
+            }
+        ],
+    }
+    (tmp_path / "merge_manifest.json").write_text(json.dumps(merge_manifest))
+
+    out_path = generate_leaderboard(input_path, tmp_path / "out")
+    payload = json.loads(out_path.read_text())
+
+    assert payload["scan_metadata"]["source_merge"] == merge_manifest
+
+
+def test_generate_leaderboard_rejects_inconsistent_merge_lineage(tmp_path: Path) -> None:
+    input_path = tmp_path / "per_run.jsonl"
+    input_path.write_text(json.dumps(_row("model-a", "s1", score=0.8)) + "\n")
+    (tmp_path / "merge_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "invisiblebench-scan-merge/v1",
+                "benchmark_version": "4.0.0",
+                "result_contract_version": "2.1.0",
+                "profile": "publish",
+                "judge_model": "openai/gpt-5-mini",
+                "model_count": 1,
+                "scenario_count": 1,
+                "row_count": 1,
+                "actual_cost_usd": 1.25,
+                "actual_billable_api_calls": 10,
+                "output_file": input_path.name,
+                "output_sha256": hashlib.sha256(input_path.read_bytes()).hexdigest(),
+                "sources": [
+                    {
+                        "artifact_id": "scan_a",
+                        "sha256": "a" * 64,
+                        "row_count": 2,
+                        "model_ids": ["model-a"],
+                        "transcript_source_artifacts": ["run_a"],
+                        "actual_cost_usd": 1.25,
+                        "actual_billable_api_calls": 10,
+                    }
+                ],
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="source row counts"):
+        generate_leaderboard(input_path, tmp_path / "out")
 
 
 def test_generate_leaderboard_reports_hard_fail_contract_normalizations(tmp_path: Path) -> None:
