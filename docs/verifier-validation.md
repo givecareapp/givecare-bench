@@ -29,22 +29,26 @@ pattern** (`safety-care/v1`): the taxonomy is **50 checks**, and each check
 carries its own verifier — definition, routing, and prompt — in its
 `checks/<layer>/<dimension>/<ID>.yaml`. Of the 50:
 
-- **46 are LLM-judged.** Each LLM verifier votes **K=3** and takes the majority
-  verdict; all checks share a single global judge model (**GPT-5 Mini** as of
+- **35 route directly to an LLM.** Publish scans use each check's configured
+  repetitions and aggregation rule. All checks share a single global judge model (**GPT-5 Mini** as of
   2026-06-29 — a candidate judge pending per-check re-validation; the former
   per-check `routing.judge_model` overrides, scope gates on `openai/gpt-5.5` and
   crisis on `gemini-2.5-flash-lite`, were removed). LLM verifiers emit a
   per-check `prompt_hash`.
-- **4 are deterministic** — no LLM, no hash: `identity.availability` plus
-  the three `autonomy.coercion` rule checks.
+- **10 are regex-first with conditional LLM review.** Clean candidates finish
+  without a judge call; positive or ambiguous candidates escalate.
+- **5 are no-LLM rules** — four `lexicon_only` checks plus the
+  `scope.ai-disclosure` scenario rule.
 
 | Verifier class       | Count | Type                          | Has per-check `prompt_hash`? |
 |----------------------|-------|-------------------------------|--------------------------|
-| LLM-judged checks    | 46    | per-check LLM verifier, K=3 majority | yes (one per check) |
-| Deterministic checks | 4     | regex / rule scorer (`identity.availability`, three `autonomy.coercion` rule checks) | no |
+| Direct LLM checks    | 35    | per-check LLM verifier with configured repetitions | yes when the judge fires |
+| Regex-edge checks    | 10    | regex candidate filter, conditional LLM review | yes when the judge fires |
+| Lexicon-only checks  | 4     | compiled regex / rule scorer | no |
+| Scenario rule        | 1     | deterministic metadata + response rule (`scope.ai-disclosure`) | no runtime hash |
 
 Each current-contract `mode_results` entry carries `prompt_hash` when an LLM
-judge fired; deterministic results carry none. The older single-judge result
+judge fired; no-LLM results carry none. The older single-judge result
 model names its scalar compatibility field `judge_prompt_hash`. Per-check
 judge prompts live in each `checks/<layer>/<dimension>/<ID>.yaml` as a `prompt:` block; template
 hashes are computed from that text. The rendered `.txt` files are gitignored.
@@ -187,10 +191,10 @@ conflict resolution into `labels/gold/`. Under the per-check model this counts
 as layer-level human evidence (`development_only`, `not_claim_ready`), not a
 closed per-mode κ on natural cases — so it does not make any check `claim_ready`.
 
-#### How to read the κ=1.0 layer result
+#### How to read the 60/60 layer result
 
-The reported "60/60, κ=1.0" agreement on the Crisis and Scope lines is a
-**post-adjudication** figure and should be read with three caveats:
+The reported 60/60 agreement on the Crisis and Scope lines is a
+**post-adjudication, prior-judge** figure and should be read with four caveats:
 
 1. **The gold is resolved by an AI adjudicator, not a third human.** Conflicts
    between the two human passes were resolved into `labels/gold/` by an
@@ -214,6 +218,11 @@ The reported "60/60, κ=1.0" agreement on the Crisis and Scope lines is a
    Failure *patterns* are expected to transfer, but verifier behavior on a
    current-generation model's phrasing is not directly validated by gold built
    on previous-generation outputs.
+4. **The 60/60 scorer used Gemini 2.5 Flash Lite.** The current publication
+   judge is GPT-5 Mini. Agreement measured on the former judge does not transfer
+   to the latter after a judge and prompt change; the result remains a historical
+   regression check until the current judge is rerun against an eligible gold
+   set.
 
 These caveats narrow, not negate, the claim: the Crisis and Scope lines are the
 benchmark's strongest-evidenced Safety surface, but "κ=1.0" should be cited as
@@ -250,8 +259,10 @@ not a comparable reproduction.
 
 Dated history. On 2026-04-30, **all then-current 49 LLM-judged verifier prompts
 were updated in one commit (`742ee78`)**. The taxonomy has since consolidated to
-the current **50 checks** (46 LLM-judged, 4 deterministic); the deterministic
-checks have no prompt and were not part of this batch. Two categories of change:
+the current **50 checks** (35 direct LLM, 10 regex-edge, and 5 no-LLM); the four
+lexicon-only checks have no prompt and were not part of this batch. The
+scenario rule retains a documented prompt block but does not call an LLM at
+runtime. Two categories of change:
 
 1. **Security hardening** — injection-resistance block added to every LLM-judged
    prompt. Transcripts are untrusted input; prompts now explicitly reject
@@ -350,7 +361,10 @@ string `transcript_window` (the exact `[Turn N, ROLE]` slice the human read) and
 a `verdict` ∈ `PASS | FAIL | UNCLEAR | NOT_APPLICABLE`; the retired
 `bucket`/list-`transcript`/`expected` schema is gone. Authored sets aim for a
 FAIL-heavy PASS/FAIL balance (recall-testable); the natural set is 224 scored
-cards across 19 checks. Historical authored design stratified 40 traces into
+cards across 19 checks (201 PASS, 13 FAIL, 10 UNCLEAR). Its retained files carry
+final verdicts but not both humans' raw independent labels, so pre-resolution
+inter-annotator agreement cannot be reconstructed and the set is not claim-grade.
+Historical authored design stratified 40 traces into
 clear-PASS / clear-FAIL / ambiguous / adversarial buckets, but the loader no
 longer keys on `bucket`.
 

@@ -66,7 +66,7 @@ Advocacy maps to OBI's power-aware Targeted Universalism: a model that speaks fo
 
 ## Calibration and claims
 
-InvisibleBench makes **calibration-gated claims** under a binary claim model: only checks whose `calibration:` block carries status `claim_ready` feed published Safety rates. As of 2026-07-01, **0 of 50 checks are `claim_ready`, so the published Safety claim surface is empty.**
+InvisibleBench makes **calibration-gated claims** under a binary claim model: only checks whose `calibration:` block carries status `claim_ready` feed published Safety rates. As of 2026-07-10, **0 of 50 checks are `claim_ready`, so the published Safety claim surface is empty.**
 
 **Claim model (2026-06-30):**
 
@@ -103,7 +103,7 @@ The scoring system is a **hybrid per-check verifier** architecture — a deliber
 1. Deterministic lexicon scorers catch bright-line failures fleet-wide — fast, reproducible, zero token cost.
 2. LLM verifiers adjudicate semantic edge cases on eligible checks — using token escalation (4000 → 8000 → 16000) before failing closed.
 3. Scan profiles separate cheap development feedback (`--profile dev`) from strict publication scoring (`--profile publish`).
-4. Verifier behavior is audited against the resolved human gold set (60/60 on the prior layer-level gold) — recorded as development evidence, not a public claim (0 checks are `claim_ready`).
+4. Verifier behavior has historical development evidence against the resolved layer-level gold (60/60 using Gemini 2.5 Flash Lite, not the current GPT-5 Mini judge). It is not current-judge validation or a public claim (0 checks are `claim_ready`).
 5. Strict leaderboard artifacts may include local manual adjudication of residual `UNCLEAR` verdicts, recorded with transcript paths and quoted evidence.
 6. Each check produces an independent pass/fail verdict with evidence spans — not a holistic score.
 

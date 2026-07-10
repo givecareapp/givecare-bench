@@ -75,8 +75,16 @@ GiveCare's involvement — the same self-serve path documented in
 uv sync --extra dev && export OPENROUTER_API_KEY=...
 uv run bench -m "your-org/your-model" --dry-run                       # plan transcripts
 uv run bench -m "your-org/your-model" -y --max-cost-usd 25            # run transcripts
-uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 31 results/run_<id>   # one-model judge budget
+uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 34 results/run_<id>   # one-model conservative judge ceiling
 ```
+
+Live scans checkpoint every completed model/scenario row. If the explicit
+ceiling or the process stops the scan, repeat the same command with
+`--resume <incomplete-scan-dir>`; the runner verifies the original sources and
+options, skips completed rows, and applies the new ceiling to cumulative cost.
+Dry runs print the maximum accepted ceiling. The runtime rejects values above
+the larger of 1.5× the conservative plan or the plan plus $1, so the required
+hard ceiling cannot be replaced with a meaningless unbounded approval.
 
 That produces the same scored surface the maintainers see. Reaching the
 **public** leaderboard is a separate, fail-closed step — there is no side door:
@@ -112,21 +120,23 @@ sensitive-content warnings to enable community safety research.
 
 **Human-labeled calibration data now exists.** The paper's original ethics
 statement anticipated *future* human-rater validation; the benchmark has since
-built human-labeled gold sets. On record: 200 human-labeled annotation cards
-across five priority modes, a 60-trace layer-level gold set for the Crisis and
-Scope lines, a 30-card `scope.diagnosis` seed, and balanced authored calibration
-sets across the 19 hard-fail checks. These are recorded as **development
-evidence, not validation** — [verifier-validation.md](verifier-validation.md)
-documents what each set does and does not support.
+received 241 human-graded natural cards across 19 checks (224 remain after N/A
+and demoted-check exclusions) and built a 60-trace layer-level set with two
+human passes. The natural files retain final verdicts but not both independent
+labels; the layer-level set used AI-assisted resolution and a prior judge.
+Balanced authored sets across the 19 hard-fail checks use AI reference-panel
+labels. All are **development evidence, not validation** —
+[verifier-validation.md](verifier-validation.md) documents what each set does
+and does not support.
 
 **Annotator of record.** The current annotator of record is the project owner.
 The `claim_ready` bar (see the "Defining claim_ready" section of
 [verifier-validation.md](verifier-validation.md)) requires **≥ 2 independent
 human annotators, blinded to model identity and to the expected verdict, with no
 AI model as the final adjudicator**, and pre-resolution inter-annotator
-agreement reported. That second independent annotator is a stated requirement of
-the bar and is **not yet met**. It is the primary reason 0 of 50 checks are
-`claim_ready` and the published claim surface is empty.
+agreement reported. No current per-check set preserves that complete claim-grade
+record. It is the primary reason 0 of 50 checks are `claim_ready` and the
+published claim surface is empty.
 
 **No claims beyond the evidence.** The benchmark makes no ROI, clinical, or
 efficacy claims. Production traces, where used, are harvested only after

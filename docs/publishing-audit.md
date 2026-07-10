@@ -28,9 +28,25 @@ The code documentation phase makes the procedure inspectable:
 - each check file embeds its judge prompt as a `prompt:` block.
 - `src/invisiblebench/evaluation/mode_engine.py` aggregates per-check verdicts
   into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.
-- `scripts/run_scan.py`, `scripts/generate_leaderboard.py`,
-  `scripts/qa_leaderboard.py`, and `delivery/sync_web_bench.py`
-  form the release path from transcripts to public web payload.
+- `scripts/run_scan.py`, `delivery/combine_scans.py`,
+  `scripts/generate_leaderboard.py`, `scripts/qa_leaderboard.py`, and
+  `delivery/sync_web_bench.py` form the fail-closed path from complete,
+  common-profile scans to the public scorecard. `delivery/combine_scans.py`
+  requires exact scenario-set parity, one publish profile, one judge, complete
+  cost accounting, and no duplicate model/scenario rows; its manifest and
+  source hashes are embedded into leaderboard metadata.
+- `delivery/build_public_transcript_release.py` independently projects raw run
+  artifacts into allowlisted, provenance-complete public transcript bundles.
+  It verifies the exact v4 inventory and shared corpus hash and excludes local
+  paths and provider metadata.
+- `delivery/build_public_score_release.py` projects the strict-QA-ready merged
+  scan into model-specific per-check evidence bundles. It preserves check
+  verdicts, repetitions, prompt hashes, rationale codes, and transcript quotes,
+  while excluding host paths, provider metadata, and internal composite fields.
+- Live judge scans write a durable row checkpoint and cumulative cost state
+  after every completed transcript. `--resume <incomplete-scan-dir>` verifies
+  the original source/options signature and skips completed rows, so a hard
+  ceiling or process failure does not turn paid work into an unusable partial.
 
 The publication standard is evidence-bearing: each failure should preserve the
 eligible check, the verdict, the scorer route, and quoted transcript evidence.
@@ -44,8 +60,13 @@ The result phase starts from a current-version scored scan:
 - Current benchmark contract: `4.0.0`
 - Current public framework: `safety-care/v1`
 - Live `--full` target: 15 models × 63 scenarios × 50 active checks
-- Current result artifact: none checked in
-- Generation target: `data/leaderboard/leaderboard.json`
+- Current result artifact: `data/leaderboard/leaderboard.json`, generated from
+  the 2026-07-10 four-model v4 release and checked in only after strict QA
+- Release scope: 4 models × 63 scenarios × 50 checks = 252 score rows and
+  12,600 per-check results under one `publish` profile and GPT-5 Mini judge
+- Recorded verifier cost: $24.19056413 across 9,190 billed calls; transcript
+  generation is separately accounted, with two older runners lacking recorded
+  generation cost
 - Strict QA requires complete scenario/check coverage, no blocking unresolved
   verdicts, a current benchmark version, exact expected/observed prompt hashes,
   and a matching manual-adjudication ledger when manual results exist.
@@ -71,6 +92,10 @@ The web-bench payload is a lean projection of that artifact:
 - No `findings` block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.
+- Public audit data complements the lean payload: `/bench/evidence/v4.0.0/`
+  contains the 252 source transcripts, and `/bench/scores/v4.0.0/` contains all
+  12,600 allowlisted per-check verdicts and evidence quotes. Both ship manifests
+  with source hashes; neither contains host-specific paths.
 
 The projected web surface should explain model differences, not flatten them.
 In lean `safety-care/v1` its public analysis is organized as per-model audit cards:

@@ -19,7 +19,7 @@ It does not contain the runtime package anymore. Runtime code now lives in `src/
 - public scope: benchmark core only
 - public harness: `llm/raw`
 - public scenarios: `63`
-- checks: `50` (46 LLM-judged, 4 deterministic)
+- checks: `50` (35 direct-LLM routes, 10 regex-first with conditional LLM review, 5 no-LLM rules)
 
 ## Notes
 

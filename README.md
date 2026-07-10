@@ -12,21 +12,28 @@ The output model is **`safety-care/v1`** — a per-model safety **profile, not a
 - **Safety** — 4 lines (Crisis, Scope, Identity, Autonomy) as per-line **violation rates** with 95% CIs. Claim-bearing only for `claim_ready` checks; the current published claim surface is empty.
 - **Care** — 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) as **directional distributions**, labeled `not_claim_ready`; never merged with Safety.
 
-50 verifier checks (46 LLM-judged, 4 deterministic) span these 9 dimensions. There is **no `overall_score` and no rank**; models are listed alphabetically, and at n=63 point ranks are statistically indistinguishable, so cite intervals, not positions. The canonical output model — the single source of truth — is **[docs/ontology.md](docs/ontology.md)**; see [Taxonomy](docs/taxonomy.md) for the per-check framework.
+50 verifier checks (35 direct-LLM routes, 10 regex-first checks with conditional LLM review, and 5 no-LLM rules) span these 9 dimensions. There is **no `overall_score` and no rank**; models are listed alphabetically, and at n=63 point ranks are statistically indistinguishable, so cite intervals, not positions. The canonical output model — the single source of truth — is **[docs/ontology.md](docs/ontology.md)**; see [Taxonomy](docs/taxonomy.md) for the per-check framework.
 
-No result artifact is checked in until it passes the current contract's strict
-QA gate. The live `--full` command targets 15 OpenRouter models × 63 public
-scenarios. The 2026-07-10 live-calibrated budget is about **$49.71 for
-transcript generation**, then **$171 base / $456 conservative** for the
-publication judge scan across all 15 models. Budget roughly **$221–$506 end to
-end**, not the transcript number alone.
+The current four-model v4 research scorecard passed the current contract's
+strict QA gate on 2026-07-10 and is checked in at
+`data/leaderboard/leaderboard.json`. It covers 252 complete model/scenario rows
+and 12,600 per-check results under one GPT-5 Mini publish profile; the verifier
+pass cost **$24.19 across 9,190 billed calls**. Safety remains withheld because
+0 checks are claim-ready; Care is directional. The live `--full` command
+targets 15 OpenRouter models × 63 public scenarios. The 2026-07-10
+live-calibrated budget is about **$49.71 for
+transcript generation**, then **$171 base / $503.25 conservative** for the
+publication judge scan across all 15 models, including worst-case regex-edge
+escalation. Budget
+roughly **$220.71 base / $552.96 conservative end to end**, not the transcript
+number alone.
 
 ## The calibrated core is the benchmark
 
 The published claim surface is the **calibrated core only**, gated on a binary
 claim model: a check publishes a Safety claim only when it is **`claim_ready`** —
 its verifier has cleared verifier↔human agreement against an independent,
-human-labeled, natural-case calibration set. **As of 2026-07-01, 0 of 50 checks
+human-labeled, natural-case calibration set. **As of 2026-07-10, 0 of 50 checks
 are `claim_ready`, so the published claim surface is empty.** The 19 hard-fail
 checks carry disclosed development evidence (an authored AI-panel unit test on
 synthetic cards — not validation) but make no public claim; Care
@@ -70,6 +77,12 @@ are deferred to a re-authored Safety/Care artifact-v2. See
 [Benchmark Publishing Audit](docs/publishing-audit.md) for the two-phase
 publication model and what a v2 findings layer would add.
 
+Public evidence is independently inspectable at
+[the transcript manifest](https://bench.givecareapp.com/bench/evidence/v4.0.0/manifest.json)
+for all 252 transcripts and
+[the score-evidence manifest](https://bench.givecareapp.com/bench/scores/v4.0.0/manifest.json)
+for all 12,600 named check verdicts and evidence quotes.
+
 ## Public and internal surfaces
 
 ### Public
@@ -78,7 +91,7 @@ These are the parts external users should rely on:
 - `benchmark/`: public scenario corpus, scoring contract, tests
 - `src/invisiblebench/`: runtime package, scoring, CLI, adapters
 - `scripts/`: benchmark pipeline (run scan, leaderboard, QA, publish, rescore gate)
-- `delivery/`: projections to consumers (web-bench sync, contrast analysis, taxonomy snapshot)
+- `delivery/`: auditable release assembly and projections to consumers
 - `docs/`: public docs
 - `data/leaderboard/`: generated only by the fail-closed publication path
 
@@ -114,9 +127,14 @@ internal/, results/ — that are not part of the public contract.)
 - The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py`. New publication refreshes must use the strict QA gate (`scripts/qa_leaderboard.py --strict`; one fail-closed path: `scripts/publish.sh <scan>/per_run.jsonl <web-target>`).
 - `bench health` reports the absence or drift of generated local projections;
   it does not publish, sync, or write.
-- There is no checked-in result artifact. A fresh run must complete transcript
-  generation, current-contract scanning, artifact generation, and strict QA
-  before publication.
+- A result artifact may be checked in only after transcript generation,
+  current-contract scanning, deterministic multi-scan assembly, artifact
+  generation, and strict QA complete. The public transcript release is built
+  separately from raw run artifacts with an allowlisted schema and exact
+  corpus/run hashes. The per-check score-evidence release is likewise an
+  allowlisted projection: it publishes named verdicts, repetitions, prompt
+  hashes, and transcript quotes while excluding local paths, provider metadata,
+  and internal composite fields.
 - The active public surface is the lean `safety-care/v1` web-bench payload:
   `schema`, `notes`, `scan_metadata`, and `models` (each carrying `safety` and
   `care`). There is no `findings` block in the current payload — themes,
@@ -132,8 +150,9 @@ afternoon: [docs/quickstart.md](docs/quickstart.md). The short version:
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
 uv run bench -m "your-org/your-model" --dry-run                            # plan transcript budget
-uv run bench -m "your-org/your-model" -y --max-cost-usd 25                 # generate transcripts
-uv run python scripts/run_scan.py --profile dev --enable-llm --max-cost-usd 25 --llm-model openai/gpt-5-mini results/run_<id>   # judge (core profile)
+uv run bench -m "your-org/your-model" -y --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"
+uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm --llm-model openai/gpt-5-mini results/run_<id>
+uv run python scripts/run_scan.py --profile dev --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini results/run_<id>
 uv run bench explain "your-model" <scenario> --failures --scan <scan>/per_run.jsonl  # scan evidence; raw/internal score fields
 ```
 
@@ -154,15 +173,27 @@ uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 uv run python scripts/lint_turn_indices.py --strict
 uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm --llm-model openai/gpt-5-mini
-uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd 500 --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini --resume <incomplete-scan-dir>
+uv run python delivery/combine_scans.py --input <scan-a>/per_run.jsonl --input <scan-b>/per_run.jsonl --output <release>/per_run.jsonl
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
 uv run python delivery/sync_web_bench.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
+uv run python delivery/build_public_transcript_release.py --source model/id=results/run_... --output /path/to/gc-web/apps/web-bench/public/bench/evidence/v4.0.0
+uv run python delivery/build_public_score_release.py --input <release>/per_run.jsonl --output /path/to/gc-web/apps/web-bench/public/bench/scores/v4.0.0
 
 # Or run generate -> strict QA -> sync as one fail-closed command.
 # Aborts before writing the web target if the QA gate fails:
 ./scripts/publish.sh <scan>/per_run.jsonl /path/to/gc-web/apps/web-bench/public/bench/leaderboard.json
 ```
+
+Live scans durably checkpoint each completed model/scenario row. A runtime
+ceiling or process failure leaves `scan_state.json` plus
+`per_run.partial.jsonl`; repeat the original options with `--resume` and an
+adequate explicit ceiling. Completed rows are not judged or billed again.
+Dry runs print the maximum accepted ceiling. Live transcript and judge commands
+reject a nominal ceiling above the larger of 1.5× the conservative plan or the
+plan plus $1, preventing values such as `$1,000,000` from disabling the guard.
 
 Both `bench` and `invisiblebench` follow the agent-friendly CLI standard:
 `NO_COLOR=1` is respected, `bench --json` / `--format json` wraps `runs`,

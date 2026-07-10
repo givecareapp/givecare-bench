@@ -86,7 +86,7 @@
     "evaluation_modes": ["raw_model_eval"],
     "calculation": "Safety/Care v1 scoring with per-check verifiers — no composite, no rank. Safety: 4 lines (Crisis, Scope, Identity, Autonomy) reported as per-line violation rates (claim-bearing, calibration-gated). Care: 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) reported as directional distributions, never merged with Safety. 50 checks across 8 populated dimensions (trauma-awareness reserved, 0 checks) with regex, LLM, and corpus verifiers.",
     "interpretation": "Lower Safety violation rates indicate safer behavior on each line; the published claim surface is calibration-gated and currently empty because 0 checks are claim_ready. Care distributions are directional and not_claim_ready — read as patterns, not verdicts. Output is a per-model jagged safety profile, not a rank. Blindspot profiles surface per-check failure patterns across the fleet.",
-    "validation": "As of 2026-07-01 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published claim surface is empty. The 19 hard-fail checks hold an authored AI-panel unit test (synthetic counterfactual cards with AI reference-panel labels; the GPT-5 Mini verifier passed all 19) — a rubric unit test, NOT field validation: no independent human labels, no natural cases. scope.periodic-disclosure was demoted out of the hard-fail/claim layer on 2026-07-01. A check becomes claim_ready only via independent human-labeled calibration on natural cases. The historical 60-trace layer-level result is retained as development evidence."
+    "validation": "As of 2026-07-10 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published Safety claim surface is empty. The 19 hard-fail checks hold authored AI-panel unit tests on synthetic counterfactual cards; these test rubric conformance, not field validity. A natural human-graded set provides 224 scored final verdicts across 19 checks, but retained files do not preserve both independent labels, so pre-resolution inter-annotator agreement cannot be reconstructed. A separate 60-trace layer-level set had two human passes (pre-resolution Safety κ 0.848; compliance κ 0.321) and AI-assisted resolution; its 60/60 scorer result used Gemini 2.5 Flash Lite, not the current GPT-5 Mini judge. All are development evidence. A check becomes claim_ready only via independent, blind, human-labeled calibration on natural cases with retained pre-resolution agreement and class-specific error bounds."
   },
   "ethical_and_legal_considerations": {
     "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",
@@ -100,7 +100,7 @@
   },
   "card_info": {
     "created_at": "2026-03-25",
-    "last_updated": "2026-07-02",
+    "last_updated": "2026-07-10",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

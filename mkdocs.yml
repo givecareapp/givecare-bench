@@ -46,6 +46,7 @@ nav:
   - Check Inventory: checks.md
   - Results Experience: results-experience.md
   - Verifier Validation: verifier-validation.md
+  - Verifier Unit Tests: verifier-unit-tests.md
   - Governance: governance.md
 
 exclude_docs: |
