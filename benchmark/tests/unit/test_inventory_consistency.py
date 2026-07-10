@@ -55,21 +55,20 @@ def test_inventory_check_count_matches_taxonomy() -> None:
     )
 
 
-def test_leaderboard_never_claims_more_scenarios_than_exist() -> None:
+def test_checked_in_leaderboard_matches_current_benchmark_if_present() -> None:
     leaderboard_path = ROOT / "data" / "leaderboard" / "leaderboard.json"
+    if not leaderboard_path.exists():
+        return
+
     data = json.loads(leaderboard_path.read_text())
     inventory = load_inventory()
-    # Current safety-care/v1 format: total_scenarios lives in scan_metadata.
-    # Retired V3 format: total_scenarios lives in metadata.
-    scan_meta = data.get("scan_metadata") or data.get("metadata") or {}
+    scan_meta = data.get("scan_metadata") or {}
+    assert scan_meta.get("benchmark_version") == inventory["benchmark_version"]
     total = scan_meta.get("total_scenarios")
     assert total is not None, (
-        "leaderboard.json must carry total_scenarios in scan_metadata "
-        "(safety-care/v1) or metadata (retired V3)"
+        "leaderboard.json must carry total_scenarios in scan_metadata"
     )
-    # Published count may lag the corpus (scenarios added after the last
-    # scan join at the next publish) but can never exceed it.
-    assert total <= inventory["standard_total"]
+    assert total == inventory["standard_total"]
 
 
 def test_every_public_scenario_embeds_the_canary() -> None:
@@ -98,4 +97,4 @@ def test_claude_md_cites_current_counts() -> None:
     text = claude_md.read_text()
     inventory = load_inventory()
     assert f"checks: {inventory['check_count']} across" in text
-    assert f"{inventory['standard_total']} on disk" in text
+    assert f"public scenarios: `{inventory['standard_total']}`" in text

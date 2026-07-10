@@ -14,18 +14,15 @@ valid PR looks like.
   update focused unit tests under `benchmark/tests/unit/` alongside any fix.
 - **Docs** — tutorials, clarifications, typos. Follow the Diátaxis types
   declared in [`CLAUDE.md`](CLAUDE.md).
-- **Test coverage** — the repo has 560+ tests and appreciates more.
+- **Test coverage** — focused regressions for benchmark contracts and runtime behavior.
 
 ## What's not welcome
 
-- Edits to private scoring prompts or jurisdiction rules. These are
-  gitignored by design (see the
-  [private-content segregation note in CLAUDE.md](CLAUDE.md)). Public
-  judge prompts are embedded in `checks/<ID>.yaml` as `prompt:` blocks.
+- Publication of confidential holdout scenarios, private transcripts, or
+  credentials. Public judge prompts are embedded in
+  `checks/<layer>/<dimension>/<ID>.yaml` as `prompt:` blocks.
 - Benchmark version bumps without maintainer sign-off. The public contract
   version lives in `benchmark/benchmark_card.json`.
-- Changes to archived material under `archive/` — that directory is
-  frozen for provenance.
 
 ## Dev setup
 
@@ -87,10 +84,10 @@ entry from scratch" walkthrough. The short version:
 
 ```bash
 uv run bench --dry-run          # estimate cost only
-uv run bench -m deepseek -y     # single model, transcripts only
-uv run bench --full -y          # all public models, transcripts only
+uv run bench -m deepseek -y --max-cost-usd 1   # single model, transcripts only
+uv run bench --full -y --max-cost-usd 50       # all public models, transcripts only
 uv run python scripts/run_scan.py --profile dev --enable-llm \
-  --llm-model openai/gpt-5-mini results/run_<id>   # judge the transcripts
+  --max-cost-usd 2 --llm-model openai/gpt-5-mini results/run_<id>   # judge one model
 ```
 
 ## PR checklist

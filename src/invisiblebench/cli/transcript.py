@@ -12,6 +12,7 @@ from invisiblebench.cli.result_helpers import (
     _make_transcript_result,
 )
 from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
@@ -68,16 +69,13 @@ async def evaluate_scenario_async(
             conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
             errors: list[str] = []
 
-            if "sessions" in scenario_data:
-                all_turns = []
-                for session in scenario_data["sessions"]:
-                    all_turns.extend(session.get("turns", []))
-            else:
-                all_turns = scenario_data.get("turns", [])
-
             prev_assistant_msg: str | None = None
-            for turn in all_turns:
+            for turn, session in iter_scenario_turns(scenario_data):
                 turn_num = turn["turn_number"]
+                conversation_history[0]["content"] = session_system_prompt(
+                    SYSTEM_PROMPT,
+                    session,
+                )
 
                 # Resolve conditional branch (adaptive user message).
                 user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
@@ -87,6 +85,8 @@ async def evaluate_scenario_async(
                     "role": "user",
                     "content": user_msg,
                 }
+                if session:
+                    user_entry.update(session)
                 if branch_id is not None:
                     user_entry["branch_id"] = branch_id
                 transcript.append(user_entry)
@@ -117,12 +117,13 @@ async def evaluate_scenario_async(
                         "role": "assistant",
                         "content": assistant_msg,
                     }
+                    if session:
+                        assistant_entry.update(session)
                     if response.get("finish_reason") == "length":
                         assistant_entry["truncated"] = True
                     transcript.append(assistant_entry)
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
                     prev_assistant_msg = assistant_msg
-                    await asyncio.sleep(0.3)  # Slightly longer delay between turns
                 except InsufficientCreditsError:
                     raise  # Abort immediately — don't retry or continue
                 except Exception as e:

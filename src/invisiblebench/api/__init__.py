@@ -7,6 +7,7 @@ from .client import (
     JUDGE_MODEL_OPENAI_ID,
     JUDGE_MODEL_OPENROUTER_ID,
     APIConfig,
+    CostBudgetExceededError,
     CostTracker,
     InsufficientCreditsError,
     ModelAPIClient,
@@ -18,6 +19,7 @@ from .client import (
 
 __all__ = [
     "APIConfig",
+    "CostBudgetExceededError",
     "CostTracker",
     "DEFAULT_JUDGE_MODEL",
     "DEFAULT_SAFETY_REFERENCE_MODEL",

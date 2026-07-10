@@ -86,9 +86,12 @@ class TestGenerateManifest:
 
         datetime.fromisoformat(manifest["run_date"])
 
-    def test_scorer_prompt_hashes_empty_dict(self, project_root: Path):
+    def test_scorer_prompt_hashes_snapshot_current_check_templates(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
-        assert manifest["scorer_prompt_hashes"] == {}
+        hashes = manifest["scorer_prompt_hashes"]
+        assert len(hashes) == 46
+        assert all(len(value) == 16 for value in hashes.values())
+        assert "crisis.passive-ideation" in hashes
 
 
 class TestScenarioHash:

@@ -23,6 +23,7 @@ from typing import Any
 from invisiblebench.api.client import (
     JUDGE_MODEL_OPENAI_ID,
     JUDGE_MODEL_OPENROUTER_ID,
+    CostBudgetExceededError,
 )
 from invisiblebench.evaluation.mode_engine import (
     ModeEngine,
@@ -104,8 +105,11 @@ def load_scan_profile(name: str) -> dict[str, Any]:
         choices = ", ".join(sorted(SCAN_PROFILES))
         raise ValueError(f"Unknown scan profile {name!r}. Choices: {choices}") from exc
     profile["name"] = name
-    profile.setdefault("input_tokens_per_llm_call", 2200)
-    profile.setdefault("output_tokens_per_llm_call", 250)
+    # Conservative billing envelope for the current corpus and GPT-5 Mini
+    # judge. The prior 2,200/250 assumptions omitted long transcript windows
+    # and hidden reasoning tokens, materially understating observed spend.
+    profile.setdefault("input_tokens_per_llm_call", 8000)
+    profile.setdefault("output_tokens_per_llm_call", 1500)
     return profile
 
 
@@ -198,7 +202,8 @@ def build_scan_plan(
 ) -> dict[str, Any]:
     by_mode: dict[str, dict[str, Any]] = {}
     eligible_checks = 0
-    planned_llm_calls = 0
+    base_llm_calls = 0
+    budget_llm_calls = 0
 
     for scenario in scenarios:
         scenario_tags = collect_scenario_tags(scenario)
@@ -217,6 +222,7 @@ def build_scan_plan(
                 mode_id,
                 {
                     "eligible": 0,
+                    "base_llm_calls": 0,
                     "planned_llm_calls": 0,
                     "route": routing_config.get("route"),
                     "layer": mode_config.get("layer"),
@@ -228,24 +234,28 @@ def build_scan_plan(
             mode_stats["eligible"] += 1
 
             if llm_enabled and route_requires_llm(routing_config):
-                calls = max(int(routing_config.get("repetitions", 1) or 0), 0)
-                calls += max(
+                base_calls = max(int(routing_config.get("repetitions", 1) or 0), 0)
+                budget_calls = base_calls
+                budget_calls += max(
                     int(routing_config.get("unclear_tiebreak_repetitions", 0) or 0),
                     0,
                 )
-                calls += max(
+                budget_calls += max(
                     int(routing_config.get("unclear_adjudication_repetitions", 0) or 0),
                     0,
                 )
-                mode_stats["planned_llm_calls"] += calls
-                planned_llm_calls += calls
+                mode_stats["base_llm_calls"] += base_calls
+                mode_stats["planned_llm_calls"] += budget_calls
+                base_llm_calls += base_calls
+                budget_llm_calls += budget_calls
 
     call_cost = _estimate_call_cost(
         judge_model,
         input_tokens=int(profile["input_tokens_per_llm_call"]),
         output_tokens=int(profile["output_tokens_per_llm_call"]),
     )
-    estimated_cost = None if call_cost is None else call_cost * planned_llm_calls
+    estimated_base_cost = None if call_cost is None else call_cost * base_llm_calls
+    estimated_budget_cost = None if call_cost is None else call_cost * budget_llm_calls
 
     return {
         "profile": profile["name"],
@@ -253,9 +263,19 @@ def build_scan_plan(
         "judge_model": judge_model,
         "transcript_count": len(scenarios),
         "eligible_checks": eligible_checks,
-        "planned_llm_calls": planned_llm_calls,
-        "estimated_cost_usd": estimated_cost,
+        "base_llm_calls": base_llm_calls,
+        "budget_llm_calls": budget_llm_calls,
+        # Backward-compatible aliases now point to the conservative budget.
+        "planned_llm_calls": budget_llm_calls,
+        "estimated_base_cost_usd": estimated_base_cost,
+        "estimated_budget_cost_usd": estimated_budget_cost,
+        "estimated_cost_usd": estimated_budget_cost,
         "pricing_known": call_cost is not None,
+        "cost_assumptions": {
+            "input_tokens_per_llm_call": int(profile["input_tokens_per_llm_call"]),
+            "output_tokens_per_llm_call": int(profile["output_tokens_per_llm_call"]),
+            "basis": "conservative corpus envelope including hidden reasoning tokens",
+        },
         "by_mode": dict(sorted(by_mode.items())),
     }
 
@@ -522,6 +542,8 @@ def _scan_pair(
             parallel=parallel,
             max_workers=max_workers,
         )
+    except CostBudgetExceededError:
+        raise
     except Exception as e:
         logger.exception("Engine crash on %s: %s", pair["scenario_id"], e)
         return None
@@ -595,6 +617,8 @@ def write_outputs(
     engine_outputs: list[ModeEngineOutput],
     run_dirs: list[Path],
     scan_plan: dict[str, Any] | None = None,
+    *,
+    cost_snapshot: dict[str, Any] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -620,8 +644,27 @@ def write_outputs(
                     "llm_enabled": scan_plan.get("llm_enabled"),
                     "judge_model": scan_plan.get("judge_model"),
                     "planned_llm_calls": scan_plan.get("planned_llm_calls"),
+                    "base_llm_calls": scan_plan.get("base_llm_calls"),
+                    "budget_llm_calls": scan_plan.get("budget_llm_calls"),
+                    "estimated_base_cost_usd": scan_plan.get("estimated_base_cost_usd"),
+                    "estimated_budget_cost_usd": scan_plan.get("estimated_budget_cost_usd"),
                     "estimated_cost_usd": scan_plan.get("estimated_cost_usd"),
                     "pricing_known": scan_plan.get("pricing_known"),
+                    "cost_assumptions": scan_plan.get("cost_assumptions"),
+                    "actual_cost_usd": (
+                        cost_snapshot.get("total") if cost_snapshot is not None else None
+                    ),
+                    "actual_billable_api_calls": (
+                        cost_snapshot.get("calls") if cost_snapshot is not None else None
+                    ),
+                    "actual_cost_by_model_usd": (
+                        cost_snapshot.get("by_model") if cost_snapshot is not None else None
+                    ),
+                    "runtime_cost_ceiling_usd": (
+                        cost_snapshot.get("max_cost_usd")
+                        if cost_snapshot is not None
+                        else None
+                    ),
                 },
                 f,
                 indent=2,
@@ -658,11 +701,28 @@ def write_outputs(
     summary_lines.append(f"- Source run dirs: {', '.join(str(d.name) for d in run_dirs)}")
     summary_lines.append(f"- Transcripts scanned: {len(outputs)}")
     if scan_plan is not None:
-        estimated = scan_plan.get("estimated_cost_usd")
-        estimated_text = "unknown" if estimated is None else f"${estimated:.4f}"
         summary_lines.append(f"- Profile: {scan_plan.get('profile')}")
-        summary_lines.append(f"- Planned verifier LLM calls: {scan_plan.get('planned_llm_calls')}")
-        summary_lines.append(f"- Estimated verifier cost: {estimated_text}")
+        summary_lines.append(
+            f"- Base verifier LLM calls: {scan_plan.get('base_llm_calls')}"
+        )
+        summary_lines.append(
+            f"- Budgeted verifier LLM calls: {scan_plan.get('budget_llm_calls')}"
+        )
+        estimated_base = scan_plan.get("estimated_base_cost_usd")
+        estimated_budget = scan_plan.get("estimated_budget_cost_usd")
+        base_text = "unknown" if estimated_base is None else f"${estimated_base:.4f}"
+        budget_text = (
+            "unknown" if estimated_budget is None else f"${estimated_budget:.4f}"
+        )
+        summary_lines.append(f"- Estimated base verifier cost: {base_text}")
+        summary_lines.append(f"- Conservative verifier budget: {budget_text}")
+    if cost_snapshot is not None:
+        summary_lines.append(
+            f"- Actual verifier cost: ${float(cost_snapshot.get('total', 0.0)):.4f}"
+        )
+        summary_lines.append(
+            f"- Actual billable API calls: {int(cost_snapshot.get('calls', 0))}"
+        )
     summary_lines.append(
         f"- Models: {', '.join(sorted(by_model.keys()))}\n"
     )

@@ -32,7 +32,12 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 DEFAULT_SCAN_OUTPUT_ROOT = REPO_ROOT / "results" / "safety_care_scan"
 
-from invisiblebench.api import DEFAULT_JUDGE_MODEL, ModelAPIClient  # noqa: E402
+from invisiblebench.api import (  # noqa: E402
+    DEFAULT_JUDGE_MODEL,
+    CostBudgetExceededError,
+    ModelAPIClient,
+    cost_tracker,
+)
 from invisiblebench.evaluation.mode_engine import (  # noqa: E402
     ModeEngine,
     ModeEngineOutput,
@@ -98,6 +103,15 @@ def main() -> int:
         "--enable-llm",
         action="store_true",
         help="Wire ModelAPIClient so LLM-primary modes run (costs tokens).",
+    )
+    ap.add_argument(
+        "--max-cost-usd",
+        type=float,
+        default=None,
+        help=(
+            "Required ceiling for a live --enable-llm scan. The conservative "
+            "scan budget must fit within this amount before any verifier calls run."
+        ),
     )
     ap.add_argument(
         "--llm-model",
@@ -230,47 +244,108 @@ def main() -> int:
                     "llm_enabled": scan_plan_dict["llm_enabled"],
                     "judge_model": scan_plan_dict["judge_model"],
                     "planned_llm_calls": scan_plan_dict["planned_llm_calls"],
+                    "base_llm_calls": scan_plan_dict["base_llm_calls"],
+                    "budget_llm_calls": scan_plan_dict["budget_llm_calls"],
+                    "estimated_base_cost_usd": scan_plan_dict[
+                        "estimated_base_cost_usd"
+                    ],
+                    "estimated_budget_cost_usd": scan_plan_dict[
+                        "estimated_budget_cost_usd"
+                    ],
                     "estimated_cost_usd": scan_plan_dict["estimated_cost_usd"],
                     "pricing_known": scan_plan_dict["pricing_known"],
+                    "cost_assumptions": scan_plan_dict["cost_assumptions"],
                 },
                 f,
                 indent=2,
             )
-        estimated = (
+        estimated_base = (
             "unknown"
-            if scan_plan_dict["estimated_cost_usd"] is None
-            else f"${scan_plan_dict['estimated_cost_usd']:.4f}"
+            if scan_plan_dict["estimated_base_cost_usd"] is None
+            else f"${scan_plan_dict['estimated_base_cost_usd']:.4f}"
+        )
+        estimated_budget = (
+            "unknown"
+            if scan_plan_dict["estimated_budget_cost_usd"] is None
+            else f"${scan_plan_dict['estimated_budget_cost_usd']:.4f}"
         )
         print(f"Scan dry run: {output_dir}")
         print(f"Profile: {scan_plan_dict['profile']}")
         print(f"Transcripts: {scan_plan_dict['transcript_count']}")
         print(f"Eligible checks: {scan_plan_dict['eligible_checks']}")
-        print(f"Planned verifier LLM calls: {scan_plan_dict['planned_llm_calls']}")
-        print(f"Estimated verifier cost: {estimated}")
+        print(f"Base verifier LLM calls: {scan_plan_dict['base_llm_calls']}")
+        print(f"Budgeted verifier LLM calls: {scan_plan_dict['budget_llm_calls']}")
+        print(f"Estimated base verifier cost: {estimated_base}")
+        print(f"Conservative verifier budget: {estimated_budget}")
         return 0
 
+    if args.enable_llm:
+        budget = scan_plan_dict["estimated_budget_cost_usd"]
+        if args.max_cost_usd is None:
+            logger.error(
+                "Refusing live LLM scan without --max-cost-usd. "
+                "Run --dry-run first, then approve an explicit ceiling."
+            )
+            return 2
+        if args.max_cost_usd < 0:
+            logger.error("--max-cost-usd must be non-negative")
+            return 2
+        if budget is None:
+            logger.error("Refusing live LLM scan because verifier pricing is unknown")
+            return 2
+        if budget > args.max_cost_usd:
+            logger.error(
+                "Refusing live LLM scan: conservative budget $%.4f exceeds "
+                "--max-cost-usd $%.4f",
+                budget,
+                args.max_cost_usd,
+            )
+            return 2
+        logger.info(
+            "Cost gate passed: conservative budget $%.4f <= ceiling $%.4f",
+            budget,
+            args.max_cost_usd,
+        )
+
+    cost_tracker.reset(max_cost_usd=args.max_cost_usd)
     all_outputs: list[dict[str, Any]] = []
     all_engine_outputs: list[ModeEngineOutput] = []
 
-    for run_dir in run_dirs:
-        outputs, engine_outputs = scan_run(
-            run_dir,
-            engine,
-            limit=args.limit,
-            filename_filter=args.filter,
-            parallel=getattr(args, "parallel", False),
-            max_workers=getattr(args, "max_workers", 8),
-            transcript_workers=max(args.transcript_workers, 1),
+    try:
+        for run_dir in run_dirs:
+            outputs, engine_outputs = scan_run(
+                run_dir,
+                engine,
+                limit=args.limit,
+                filename_filter=args.filter,
+                parallel=getattr(args, "parallel", False),
+                max_workers=getattr(args, "max_workers", 8),
+                transcript_workers=max(args.transcript_workers, 1),
+            )
+            all_outputs.extend(outputs)
+            all_engine_outputs.extend(engine_outputs)
+    except CostBudgetExceededError as exc:
+        snapshot = cost_tracker.snapshot()
+        logger.error(
+            "Scan stopped at runtime cost ceiling: %s. Recorded cost: $%.4f",
+            exc,
+            snapshot["total"],
         )
-        all_outputs.extend(outputs)
-        all_engine_outputs.extend(engine_outputs)
+        return 4
 
     if not all_outputs:
         logger.error("No transcripts scanned")
         return 3
 
     output_dir = Path(args.output_root) / time.strftime("%Y%m%d_%H%M%S")
-    write_outputs(output_dir, all_outputs, all_engine_outputs, run_dirs, scan_plan_dict)
+    write_outputs(
+        output_dir,
+        all_outputs,
+        all_engine_outputs,
+        run_dirs,
+        scan_plan_dict,
+        cost_snapshot=cost_tracker.snapshot(),
+    )
 
     print(f"\nScan complete: {output_dir}")
     print(f"See {output_dir}/summary.md for top-line blindspot rates.")

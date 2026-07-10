@@ -167,8 +167,8 @@ public_claim_surface:
   strongest: "No published Safety claim until checks are claim_ready; current claim_ready count is 0"
   moderate: "Safety/Care diagnostic transcript artifact; call an artifact strict-QA-passing only after UNCLEAR adjudication, coverage-floor validation, and scripts/qa_leaderboard.py --strict all pass"
   secondary: "Directional Care distributions by quality; never merged with Safety and never ranked"
-  strict_qa_status: "Current Phase 2 artifact is a non-strict public source; non-strict QA passes, while strict QA currently fails residual all_unclear checks pending adjudication or regeneration"
-  contrast_policy: "Contrast findings are optional and inactive unless data/leaderboard_phase2/contrasts.json exists; absent artifact means findings.contrasts is intentionally empty"
+  strict_qa_status: "No result artifact is current until a version-matched scan passes scripts/qa_leaderboard.py --strict"
+  contrast_policy: "Contrast findings are outside the lean safety-care/v1 payload and require a separately QA-gated current-version artifact"
   weak_to_avoid: "Which model is best for caregiving in general"
   legal_grounding:
     - "CA SB 243 (non-human disclosure, crisis protocols)"

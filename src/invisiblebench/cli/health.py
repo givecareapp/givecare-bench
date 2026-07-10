@@ -152,7 +152,7 @@ def append_local_web_projection_health(
     *,
     root: Path | None = None,
 ) -> None:
-    """Append read-only health warnings for the checked-in web projection.
+    """Append read-only health warnings for a generated web projection.
 
     This intentionally does not write `leaderboard_web.json`; publish/sync is
     guarded elsewhere. The health check only makes stale generated artifacts
@@ -321,9 +321,12 @@ def run_health(verbose: bool = False) -> int:
     """Run health check and print report."""
     try:
         data = load_leaderboard()
-    except FileNotFoundError as e:
-        print(f"Error running health check: {e}")
-        return 2
+    except FileNotFoundError:
+        print(
+            "No leaderboard generated yet. Run the current benchmark and use "
+            "the strict publish path to create one."
+        )
+        return 0
 
     try:
         analysis = analyze_leaderboard(data)

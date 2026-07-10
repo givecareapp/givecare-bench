@@ -22,6 +22,7 @@ import yaml
 
 from invisiblebench.models._types import ModeConfig, RoutingConfig
 from invisiblebench.scoring.contract import CLAIM_READY_STATUS
+from invisiblebench.utils.prompt_hash import prompt_template_hash
 
 CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
 CALIBRATION_STATUSES = {CLAIM_READY_STATUS, "not_claim_ready"}
@@ -79,6 +80,14 @@ def _normalize_check_config(data: dict, check_file: Path, root: Path) -> dict:
                 f"{check_file} has unsupported calibration.status {status!r}; "
                 f"expected one of {sorted(CALIBRATION_STATUSES)}"
             )
+        if status == CLAIM_READY_STATUS:
+            evidence = calibration.get("evidence") or {}
+            required = ("claim_grade", "independent_human_labels", "natural_cases")
+            missing = [field for field in required if evidence.get(field) is not True]
+            if missing:
+                raise ValueError(
+                    f"{check_file} claim_ready requires true evidence flags: {missing}"
+                )
 
     check_id = str(mode.get("id") or check_file.stem)
     layer, dimension = _check_identity(check_file, root, check_id)
@@ -127,6 +136,16 @@ def registered_check_ids(checks_dir: Path | None = None) -> set[str]:
     root = checks_dir or CHECKS_DIR
     return {
         p.stem for p in root.rglob("*.yaml") if not p.name.startswith("_")
+    }
+
+
+def check_prompt_hashes(checks_dir: Path | None = None) -> dict[str, str]:
+    """Return the current embedded verifier-template hash for each LLM check."""
+    modes, _ = load_checks(checks_dir)
+    return {
+        check_id: prompt_template_hash(str(mode["prompt"]))
+        for check_id, mode in modes.items()
+        if mode.get("prompt")
     }
 
 

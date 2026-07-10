@@ -32,22 +32,26 @@ class ModelConfig(BaseModel):
 #   Flash (3)     — cost-optimized from US labs (does speed hurt safety?)
 #   Small (3)     — edge-class open models (safety floor, what breaks first?)
 #
+# Exact IDs and list prices verified against OpenRouter on 2026-07-10.
+# Grok 4.5 is excluded because xAI rejects it in the benchmark run region;
+# Grok 4.3 is the newest xAI model that passes the live transcript canary.
+#
 MODELS_FULL = [
     # ── Frontier ──
     # US closed
     ModelConfig(
-        id="openai/gpt-5.5",
-        name="GPT-5.5",
+        id="openai/gpt-5.6-sol",
+        name="GPT-5.6 Sol",
         provider="openrouter",
         cost_per_m_input=5.00,
         cost_per_m_output=30.00,
     ),
     ModelConfig(
-        id="anthropic/claude-opus-4.8",
-        name="Claude Opus 4.8",
+        id="anthropic/claude-fable-5",
+        name="Claude Fable 5",
         provider="openrouter",
-        cost_per_m_input=5.00,
-        cost_per_m_output=25.00,
+        cost_per_m_input=10.00,
+        cost_per_m_output=50.00,
     ),
     ModelConfig(
         id="google/gemini-3.1-pro-preview",
@@ -68,8 +72,8 @@ MODELS_FULL = [
         id="moonshotai/kimi-k2.6",
         name="Kimi K2.6",
         provider="openrouter",
-        cost_per_m_input=0.74,
-        cost_per_m_output=3.50,
+        cost_per_m_input=0.66,
+        cost_per_m_output=3.41,
     ),
     ModelConfig(
         id="minimax/minimax-m3",
@@ -83,7 +87,7 @@ MODELS_FULL = [
         id="deepseek/deepseek-v4-pro",
         name="DeepSeek V4 Pro",
         provider="openrouter",
-        cost_per_m_input=0.43,
+        cost_per_m_input=0.435,
         cost_per_m_output=0.87,
     ),
     ModelConfig(
@@ -97,8 +101,8 @@ MODELS_FULL = [
         id="z-ai/glm-5.2",
         name="GLM-5.2",
         provider="openrouter",
-        cost_per_m_input=0.98,
-        cost_per_m_output=3.08,
+        cost_per_m_input=0.54,
+        cost_per_m_output=1.76,
     ),
     # ── Flash ──
     ModelConfig(
@@ -109,39 +113,39 @@ MODELS_FULL = [
         cost_per_m_output=5.00,
     ),
     ModelConfig(
-        id="openai/gpt-5-mini",
-        name="GPT-5 Mini",
+        id="openai/gpt-5.6-luna",
+        name="GPT-5.6 Luna",
         provider="openrouter",
-        cost_per_m_input=0.25,
-        cost_per_m_output=2.00,
+        cost_per_m_input=1.00,
+        cost_per_m_output=6.00,
     ),
     ModelConfig(
-        id="google/gemini-3.1-flash-lite",
-        name="Gemini 3.1 Flash Lite",
+        id="google/gemini-3.5-flash",
+        name="Gemini 3.5 Flash",
         provider="openrouter",
-        cost_per_m_input=0.25,
-        cost_per_m_output=1.50,
+        cost_per_m_input=1.50,
+        cost_per_m_output=9.00,
     ),
     # ── Small ──
     ModelConfig(
         id="nvidia/nemotron-3-super-120b-a12b",
         name="Nemotron 3 Super 120B",
         provider="openrouter",
-        cost_per_m_input=0.09,
+        cost_per_m_input=0.08,
         cost_per_m_output=0.45,
     ),
     ModelConfig(
         id="qwen/qwen3.6-35b-a3b",
         name="Qwen 3.6 35B",
         provider="openrouter",
-        cost_per_m_input=0.15,
+        cost_per_m_input=0.14,
         cost_per_m_output=1.00,
     ),
     ModelConfig(
-        id="google/gemma-4-31b-it",
-        name="Gemma 4 31B",
+        id="google/gemma-4-26b-a4b-it",
+        name="Gemma 4 26B A4B",
         provider="openrouter",
-        cost_per_m_input=0.12,
-        cost_per_m_output=0.37,
+        cost_per_m_input=0.06,
+        cost_per_m_output=0.33,
     ),
 ]

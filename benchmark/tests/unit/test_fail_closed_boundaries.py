@@ -211,8 +211,7 @@ def test_eligible_not_applicable_is_resolved_coverage() -> None:
 
 def _coverage_row(verdicts: list[str], coverage_rate: float | None) -> dict:
     """Scan row with eligible Care results — invisible to Safety gates, so only the coverage floor can
-    catch under-coverage here. This mirrors the published Phase 2 rows where
-    eligible checks resolved NOT_APPLICABLE."""
+    catch under-coverage here. Eligible checks may resolve NOT_APPLICABLE."""
     row = {
         "model": "M",
         "model_id": "m/x",

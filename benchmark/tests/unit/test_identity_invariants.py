@@ -29,6 +29,9 @@ Invariants enforced here
    eligible-scenario denominator that may differ across lines (i.e. n
    per line is not forced to equal the total scenario count).
 
+6. NO HISTORICAL FILE TREE: superseded material lives in git history, not in
+   a tracked ``archive/`` directory beside the active benchmark.
+
 Notes on trauma_awareness
 --------------------------
 The trauma_awareness directory exists as a named placeholder in
@@ -64,7 +67,6 @@ from invisiblebench.scoring.safety import (
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-REAL_SCAN = REPO_ROOT / "results" / "v3_scan" / "merged_phase2" / "per_run.jsonl"
 SCORING_PKG = REPO_ROOT / "src" / "invisiblebench" / "scoring"
 
 # The 9 ontology dimensions, split by layer.
@@ -76,6 +78,17 @@ ONTOLOGY_CARE_DIMS: frozenset[str] = frozenset(
 ONTOLOGY_POPULATED_DIMS: frozenset[str] = ONTOLOGY_SAFETY_DIMS | (
     ONTOLOGY_CARE_DIMS - {"trauma_awareness"}
 )
+
+
+def test_repository_has_no_archived_files() -> None:
+    archive = REPO_ROOT / "archive"
+    files = sorted(
+        str(path.relative_to(REPO_ROOT))
+        for path in archive.rglob("*")
+        if path.is_file()
+    )
+
+    assert files == []
 
 
 # ---------------------------------------------------------------------------
@@ -438,26 +451,6 @@ class TestCalibrationGate:
             "expected frozenset({'claim_ready'})"
         )
 
-    def test_calibrated_view_rate_leq_uncalibrated(self, tmp_path: Path) -> None:
-        """For every dimension, calibrated rate ≤ uncalibrated rate (more
-        checks → more or equal failures, never fewer)."""
-        if not REAL_SCAN.exists():
-            pytest.skip("Real scan not available")
-
-        sc_cal = build_scorecard(str(REAL_SCAN), calibrated_only=True)
-        sc_all = build_scorecard(str(REAL_SCAN), calibrated_only=False)
-
-        for m_cal, m_all in zip(sc_cal["models"], sc_all["models"], strict=True):
-            assert m_cal["model"] == m_all["model"]
-            for dim in ("crisis", "scope", "identity", "autonomy"):
-                r_cal = m_cal["safety"]["lines"][dim].get("rate") or 0.0
-                r_all = m_all["safety"]["lines"][dim].get("rate") or 0.0
-                assert r_cal <= r_all + 1e-9, (
-                    f"{m_cal['model']}/{dim}: calibrated rate {r_cal:.4f} "
-                    f"> uncalibrated rate {r_all:.4f}"
-                )
-
-
 # ---------------------------------------------------------------------------
 # INVARIANT 4 — Structure matches ontology
 # ---------------------------------------------------------------------------
@@ -573,68 +566,6 @@ class TestPerLineDenominator:
     scope/trigger eligibility, the n per line must differ across at least some
     lines in a realistic scan.
     """
-
-    @pytest.mark.skipif(
-        not REAL_SCAN.exists(),
-        reason="Real scan not available: results/v3_scan/merged_phase2/per_run.jsonl",
-    )
-    def test_line_n_values_differ_across_lines_in_real_scan(self) -> None:
-        """In the real Phase 2 scan, at least two Safety lines have different n values.
-
-        This confirms the denominator is per-line eligible, not a global total.
-        """
-        sc = build_scorecard(str(REAL_SCAN), calibrated_only=False)
-
-        for model_entry in sc["models"]:
-            ns = [
-                model_entry["safety"]["lines"][dim]["n"]
-                for dim in ("crisis", "scope", "identity", "autonomy")
-            ]
-            if len(set(ns)) > 1:
-                # At least one model shows differing n per line → invariant holds
-                return
-
-        pytest.fail(
-            "All Safety lines have identical n values for all models. "
-            "Expected n to differ across lines (eligible-scenario denominator). "
-            "Lines: " + str([
-                {dim: sc["models"][0]["safety"]["lines"][dim]["n"]
-                 for dim in ("crisis", "scope", "identity", "autonomy")}
-            ])
-        )
-
-    @pytest.mark.skipif(
-        not REAL_SCAN.exists(),
-        reason="Real scan not available: results/v3_scan/merged_phase2/per_run.jsonl",
-    )
-    def test_line_n_leq_total_scenarios(self) -> None:
-        """n per Safety line must not exceed the total scenario count for a model.
-
-        A denominator that exceeded the total scenario count would indicate
-        double-counting or a bug in the eligibility filter.
-        """
-        sc = build_scorecard(str(REAL_SCAN), calibrated_only=False)
-
-        # Total scenario count from the scan
-        rows = [
-            json.loads(line)
-            for line in REAL_SCAN.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        model_scenario_counts: dict[str, int] = {}
-        for r in rows:
-            m = str(r.get("model") or "")
-            model_scenario_counts[m] = model_scenario_counts.get(m, 0) + 1
-
-        for model_entry in sc["models"]:
-            model_name = model_entry["model"]
-            total_scenarios = model_scenario_counts.get(model_name, 0)
-            for dim in ("crisis", "scope", "identity", "autonomy"):
-                n_line = model_entry["safety"]["lines"][dim]["n"]
-                assert n_line <= total_scenarios, (
-                    f"{model_name}/{dim}: n_line={n_line} > "
-                    f"total_scenarios={total_scenarios} — denominator is overcounted"
-                )
 
     def test_per_line_n_reflects_eligible_scenarios_not_checks(
         self, tmp_path: Path

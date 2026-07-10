@@ -40,7 +40,7 @@ cannot flatter the home team while the published claim surface is empty.
 
 Version constants live in `src/invisiblebench/version.py`.
 
-- **`BENCHMARK_VERSION`** (currently `3.1.0`) — the public corpus/checks version.
+- **`BENCHMARK_VERSION`** (currently `4.0.0`) — the public corpus/checks version.
   It must match `benchmark/benchmark_inventory.json` and the generated
   leaderboard metadata. Comparability holds **within** a `BENCHMARK_VERSION`;
   cross-version comparisons are not claims.
@@ -73,8 +73,9 @@ GiveCare's involvement — the same self-serve path documented in
 
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
-uv run bench -m "your-org/your-model" -y                              # transcripts (any OpenRouter id)
-uv run python scripts/run_scan.py --profile publish --enable-llm results/run_<id>   # judge
+uv run bench -m "your-org/your-model" --dry-run                       # plan transcripts
+uv run bench -m "your-org/your-model" -y --max-cost-usd 25            # run transcripts
+uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 31 results/run_<id>   # one-model judge budget
 ```
 
 That produces the same scored surface the maintainers see. Reaching the
@@ -86,6 +87,8 @@ That produces the same scored surface the maintainers see. Reaching the
 
 `publish.sh` runs `generate → strict QA → sync` and aborts before writing the
 public target if the strict QA gate (`scripts/qa_leaderboard.py --strict`) fails.
+Strict QA also requires the artifact benchmark version, current check-template
+hash map, and hashes observed in the source scan to agree exactly.
 The web-bench copy is a projection of `data/leaderboard/leaderboard.json`, never
 hand-edited; `delivery/sync_web_bench.py` refuses to write unless the source
 bytes were just strict-QA'd. Promoting a submitted row into the public artifact

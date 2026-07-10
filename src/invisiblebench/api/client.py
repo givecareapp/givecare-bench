@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import math
 import os
 import threading
 import time
@@ -16,6 +17,7 @@ import requests
 from dotenv import load_dotenv
 
 from invisiblebench.models._types import ChatMessage
+from invisiblebench.utils.prompt_hash import prompt_hash, prompt_template_hash
 
 _project_root = Path(__file__).parent.parent.parent.parent
 _env_file = _project_root / ".env"
@@ -32,10 +34,17 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 
+# Default judge IDs live here so both runtime selection and cost accounting use
+# the same spellings.
+JUDGE_MODEL_OPENAI_ID = "gpt-5-mini-2025-08-07"
+JUDGE_MODEL_OPENROUTER_ID = "openai/gpt-5-mini"
+
 # Known pricing per million tokens (input, output)
 _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
+    JUDGE_MODEL_OPENAI_ID: (0.25, 2.00),
+    JUDGE_MODEL_OPENROUTER_ID: (0.25, 2.00),
 }
 
 
@@ -47,11 +56,31 @@ class CostTracker:
         self._total: float = 0.0
         self._calls: int = 0
         self._by_model: dict[str, float] = {}
+        self._max_cost_usd: float | None = None
 
-    def record(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    def record(
+        self,
+        model: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        *,
+        actual_cost: float | None = None,
+    ) -> float:
 
-        pricing = _MODEL_PRICING.get(model)
-        if pricing is None:
+        if actual_cost is not None:
+            try:
+                reported_cost = float(actual_cost)
+            except (TypeError, ValueError):
+                reported_cost = None
+            if reported_cost is not None and (
+                not math.isfinite(reported_cost) or reported_cost < 0
+            ):
+                reported_cost = None
+        else:
+            reported_cost = None
+
+        pricing = None if reported_cost is not None else _MODEL_PRICING.get(model)
+        if reported_cost is None and pricing is None:
             # Try to import config pricing at runtime
             try:
                 from invisiblebench.models.config import MODELS_FULL
@@ -61,12 +90,15 @@ class CostTracker:
                 pricing = _MODEL_PRICING.get(model)
             except ImportError:
                 pass
-        if pricing is None:
+        if reported_cost is None and pricing is None:
             return 0.0
 
-        cost = (prompt_tokens / 1_000_000) * pricing[0] + (
-            completion_tokens / 1_000_000
-        ) * pricing[1]
+        cost = reported_cost
+        if cost is None:
+            assert pricing is not None
+            cost = (prompt_tokens / 1_000_000) * pricing[0] + (
+                completion_tokens / 1_000_000
+            ) * pricing[1]
         with self._lock:
             self._total += cost
             self._calls += 1
@@ -90,13 +122,26 @@ class CostTracker:
                 "total": self._total,
                 "calls": self._calls,
                 "by_model": dict(self._by_model),
+                "max_cost_usd": self._max_cost_usd,
             }
 
-    def reset(self) -> None:
+    def reset(self, *, max_cost_usd: float | None = None) -> None:
         with self._lock:
             self._total = 0.0
             self._calls = 0
             self._by_model.clear()
+            self._max_cost_usd = max_cost_usd
+
+    def ensure_budget_available(self) -> None:
+        with self._lock:
+            if (
+                self._max_cost_usd is not None
+                and self._total >= self._max_cost_usd
+            ):
+                raise CostBudgetExceededError(
+                    f"Runtime cost ceiling ${self._max_cost_usd:.4f} reached "
+                    f"(recorded ${self._total:.4f})"
+                )
 
 
 cost_tracker = CostTracker()
@@ -146,6 +191,10 @@ _SCORER_RESPONSE_CACHE = _LRUCache(_SCORER_CACHE_MAX_ENTRIES)
 
 class InsufficientCreditsError(RuntimeError):
     """HTTP 402: insufficient credits."""
+
+
+class CostBudgetExceededError(RuntimeError):
+    """The process-level API cost ceiling has been reached."""
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -313,13 +362,18 @@ class ModelAPIClient:
 
         response_text = data["choices"][0]["message"]["content"]
         finish_reason = data["choices"][0].get("finish_reason")
-        usage = data.get("usage", {})
+        usage = data.get("usage") or {}
         tokens_used = usage.get("total_tokens", 0)
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
         latency_ms = (time.time() - start_time) * 1000
 
-        cost_tracker.record(model, prompt_tokens, completion_tokens)
+        cost_tracker.record(
+            model,
+            prompt_tokens,
+            completion_tokens,
+            actual_cost=usage.get("cost"),
+        )
 
         return {
             "response": response_text,
@@ -354,6 +408,7 @@ class ModelAPIClient:
 
         for attempt in range(self.config.max_retries):
             try:
+                cost_tracker.ensure_budget_available()
                 response = self.session.post(
                     f"{self.base_url}/chat/completions",
                     json=payload,
@@ -444,6 +499,7 @@ class ModelAPIClient:
             last_error: Exception | None = None
             for attempt in range(self.config.max_retries):
                 try:
+                    cost_tracker.ensure_budget_available()
                     response = await client.post(
                         f"{self.base_url}/chat/completions",
                         json=payload,
@@ -495,9 +551,6 @@ class ModelAPIClient:
 # _audit_judge_health (~line 308) flags any scan artifact whose rows carry
 # more than one distinct `judge_model` value — that's the tripwire for a
 # judge swap that happened mid-run instead of a clean cutover.
-JUDGE_MODEL_OPENAI_ID = "gpt-5-mini-2025-08-07"
-JUDGE_MODEL_OPENROUTER_ID = "openai/gpt-5-mini"
-
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
 DEFAULT_JUDGE_MODEL = JUDGE_MODEL_OPENAI_ID if _USING_OPENAI_DIRECT else JUDGE_MODEL_OPENROUTER_ID
@@ -506,9 +559,8 @@ DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "go
 
 
 def compute_prompt_hash(prompt_text: str) -> str:
-    """Return SHA256 hex digest of normalized prompt text."""
-    normalized = prompt_text.strip()
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    """Return SHA256 hex digest of trimmed prompt text."""
+    return prompt_hash(prompt_text)
 
 
 def compute_prompt_template_hash(*template_parts: str) -> str:
@@ -518,9 +570,7 @@ def compute_prompt_template_hash(*template_parts: str) -> str:
     template/static instruction text here, not fully rendered prompts containing
     scenario-specific conversation content.
     """
-    normalized_parts = [part.strip() for part in template_parts if part and part.strip()]
-    normalized = "\n\n".join(normalized_parts)
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return prompt_template_hash(*template_parts)
 
 
 def resolve_scorer_model(

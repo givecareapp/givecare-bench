@@ -45,6 +45,7 @@ from invisiblebench.adapters.givecare_v2 import (
 )
 from invisiblebench.api.client import (
     DEFAULT_JUDGE_MODEL,
+    CostBudgetExceededError,
     InsufficientCreditsError,
     cost_tracker,
 )
@@ -100,6 +101,10 @@ TOKEN_ESTIMATES = {
     2: {"input": 14000, "output": 3300},  # 8-12 turns
     3: {"input": 27000, "output": 6000},  # 20+ turns, multi-session
 }
+# The 2026-07-10 six-model live canary cost 1.34x its token-table estimate.
+# Reserve 1.5x so the number shown before a paid transcript run is a budget,
+# not a best-case point estimate.
+TRANSCRIPT_COST_SAFETY_FACTOR = 1.5
 
 # SYSTEM_PROMPT is imported from invisiblebench.cli.transcript
 
@@ -382,13 +387,14 @@ def get_scenarios(
 
 
 def estimate_cost(category: str, model: dict[str, Any]) -> float:
-    """Estimate the cost of one target-model transcript run."""
+    """Return a conservative budget for one target-model transcript run."""
     token_key = CATEGORY_TOKEN_MAP.get(category, 1)
     tokens = TOKEN_ESTIMATES.get(token_key, TOKEN_ESTIMATES[1])
 
-    return (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
+    base_cost = (tokens["input"] / 1_000_000) * model["cost_per_m_input"] + (
         tokens["output"] / 1_000_000
     ) * model["cost_per_m_output"]
+    return base_cost * TRANSCRIPT_COST_SAFETY_FACTOR
 
 
 def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
@@ -504,6 +510,7 @@ def _write_transcript_run_summary(
     scenarios: list[dict[str, Any]],
     results: list[dict[str, Any]],
     elapsed_seconds: float,
+    cost_snapshot: dict[str, Any],
     abort_reason: str | None = None,
 ) -> Path:
     ready = [r for r in results if r.get("status") == "transcript_ready"]
@@ -543,6 +550,10 @@ def _write_transcript_run_summary(
         "missing_count": missing_count,
         "abort_reason": abort_reason,
         "elapsed_seconds": round(elapsed_seconds, 3),
+        "actual_cost_usd": cost_snapshot["total"],
+        "actual_billable_api_calls": cost_snapshot["calls"],
+        "actual_cost_by_model_usd": cost_snapshot["by_model"],
+        "runtime_cost_ceiling_usd": cost_snapshot["max_cost_usd"],
         "transcripts": [
             {
                 "model": r.get("model"),
@@ -570,6 +581,7 @@ def _write_transcript_run_summary(
         "next_steps": {
             "dev_scan": (
                 "uv run python scripts/run_scan.py --profile dev --enable-llm "
+                "--max-cost-usd 25 "
                 f"--llm-model {DEFAULT_JUDGE_MODEL} "
                 f"{output_dir}"
             ),
@@ -588,6 +600,7 @@ def _write_transcript_run_summary(
 def _print_transcript_next_steps(output_dir: Path, console: Console | None = None) -> None:
     dev_cmd = (
         "uv run python scripts/run_scan.py --profile dev --enable-llm "
+        "--max-cost-usd 25 "
         f"--llm-model {DEFAULT_JUDGE_MODEL} "
         f"{output_dir}"
     )
@@ -616,6 +629,7 @@ def run_benchmark(
     parallel: int | None = None,
     scenario_parallel: int = 1,
     include_confidential: bool = False,
+    max_cost_usd: float | None = None,
 ) -> int:
     """Run the benchmark (transcript-only; judging happens later via run_scan)."""
     console = Console() if RICH_AVAILABLE else None
@@ -672,7 +686,7 @@ def run_benchmark(
         if RICH_AVAILABLE and console:
             console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
             console.print(
-                "[cyan]Estimate includes target transcript generation only. "
+                "[cyan]Conservative budget includes target transcript generation only. "
                 f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost.[/cyan]\n"
             )
             console.print("[bold]Selected models:[/bold]")
@@ -690,7 +704,7 @@ def run_benchmark(
         else:
             print("DRY RUN - No evaluations will be run")
             print(
-                "Estimate includes target transcript generation only. "
+                "Conservative budget includes target transcript generation only. "
                 f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost."
             )
             print("\nSelected models:")
@@ -703,6 +717,22 @@ def run_benchmark(
                 num = f"#{idx + 1}" if idx is not None else "#?"
                 print(f"  {num:<4} {m['name']}")
         return 0
+
+    if max_cost_usd is None:
+        print(
+            "ERROR: Live transcript generation requires --max-cost-usd. "
+            "Run with --dry-run first."
+        )
+        return 2
+    if max_cost_usd < 0:
+        print("ERROR: --max-cost-usd must be non-negative")
+        return 2
+    if total_cost > max_cost_usd:
+        print(
+            f"ERROR: Conservative transcript budget ${total_cost:.2f} exceeds "
+            f"--max-cost-usd ${max_cost_usd:.2f}"
+        )
+        return 2
 
     if not os.getenv("OPENROUTER_API_KEY"):
         print("ERROR: OPENROUTER_API_KEY not set")
@@ -717,6 +747,7 @@ def run_benchmark(
     try:
         from invisiblebench.api.client import ModelAPIClient
 
+        cost_tracker.reset(max_cost_usd=max_cost_usd)
         api_client = ModelAPIClient()
     except (ImportError, ValueError) as e:
         print(f"ERROR: Failed to initialize API client: {e}")
@@ -741,7 +772,6 @@ def run_benchmark(
     start_time = time.time()
     passed = 0
     failed = 0
-    credits_exhausted = False
 
     print(f"Generating transcripts only ({len(models)} model(s), {len(scenarios)} scenario(s))")
     print("Scoring is deferred to scripts/run_scan.py\n")
@@ -781,7 +811,7 @@ def run_benchmark(
                     f"[{len(completed)}/{len(tasks)}] {model['name']} - "
                     f"{result.get('scenario', 'unknown')} {status}"
                 )
-        except InsufficientCreditsError:
+        except (InsufficientCreditsError, CostBudgetExceededError):
             for task in tasks:
                 task.cancel()
             raise
@@ -807,13 +837,19 @@ def run_benchmark(
 
     try:
         results = asyncio.run(run_transcripts())
+    except CostBudgetExceededError as exc:
+        results = transcript_rows
+        print(f"\n{exc}. Saving transcript summary for completed scenarios.")
+        abort_reason = "cost_budget_exceeded"
     except InsufficientCreditsError:
-        credits_exhausted = True
         results = transcript_rows
         print("\nCredits exhausted. Saving transcript summary for completed scenarios.")
+        abort_reason = "credits_exhausted"
     except Exception as e:
         print(f"ERROR: Transcript generation failed: {e}")
         return 1
+    else:
+        abort_reason = None
 
     for row in results:
         if row.get("status") == "transcript_ready":
@@ -822,6 +858,8 @@ def run_benchmark(
             failed += 1
 
     elapsed = time.time() - start_time
+    cost_snapshot = cost_tracker.snapshot()
+    actual_total = cost_snapshot["total"]
     summary_path = _write_transcript_run_summary(
         output_dir=output_dir,
         manifest=manifest,
@@ -829,15 +867,16 @@ def run_benchmark(
         scenarios=scenarios,
         results=results,
         elapsed_seconds=elapsed,
-        abort_reason="credits_exhausted" if credits_exhausted else None,
+        cost_snapshot=cost_snapshot,
+        abort_reason=abort_reason,
     )
 
-    actual_total = cost_tracker.total
-    state = "Partial" if failed or credits_exhausted else "Complete"
+    was_aborted = abort_reason is not None
+    state = "Partial" if failed or was_aborted else "Complete"
     print(
         f"\n{state}: {passed} transcripts ready, {failed} errors  "
         f"${actual_total:.3f}"
     )
     print(f"Transcript summary: {summary_path}")
     _print_transcript_next_steps(output_dir, console if RICH_AVAILABLE else None)
-    return 0 if passed and not failed and not credits_exhausted else 1
+    return 0 if passed and not failed and not was_aborted else 1

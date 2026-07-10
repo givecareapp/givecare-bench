@@ -17,7 +17,10 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from invisiblebench.evaluation.check_registry import load_checks  # noqa: E402
+from invisiblebench.evaluation.check_registry import (  # noqa: E402
+    check_prompt_hashes,
+    load_checks,
+)
 
 # scoring.yaml is the single owner of threshold values; QA reads it through
 # scoring_contract so a bump never silently diverges from the gate.
@@ -34,12 +37,16 @@ from invisiblebench.scoring.contract import (  # noqa: E402
 from invisiblebench.scoring.contract import is_gate_result as _is_gate_result  # noqa: E402
 from invisiblebench.utils.artifact_validation import (  # noqa: E402
     artifact_issue_policy,
+    observed_prompt_hashes,
     scan_artifact_validation_diagnostics,
     scan_artifact_validation_summary,
     scan_current_contract_validation_diagnostics,
     scan_current_contract_validation_summary,
 )
-from invisiblebench.utils.benchmark_inventory import collect_public_scenario_ids  # noqa: E402
+from invisiblebench.utils.benchmark_inventory import (  # noqa: E402
+    collect_public_scenario_ids,
+    get_benchmark_version,
+)
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 
@@ -342,6 +349,53 @@ def _strict_current_contract_errors(validation: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _strict_provenance_errors(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    checks_dir: Path | None,
+) -> list[str]:
+    metadata = leaderboard.get("scan_metadata") or {}
+    errors: list[str] = []
+    expected_version = get_benchmark_version(REPO_ROOT)
+    actual_version = metadata.get("benchmark_version")
+    if actual_version != expected_version:
+        errors.append(
+            f"benchmark_version={actual_version!r} expected={expected_version!r}"
+        )
+
+    expected_hashes = check_prompt_hashes(checks_dir)
+    if metadata.get("check_prompt_hashes") != expected_hashes:
+        errors.append("check_prompt_hashes missing or mismatch")
+
+    observed = observed_prompt_hashes(rows)
+    if metadata.get("observed_prompt_hashes") != observed:
+        errors.append("observed_prompt_hashes missing or mismatch")
+    missing = [
+        (
+            row.get("model_id") or row.get("model"),
+            row.get("scenario_id"),
+            result.get("mode_id"),
+        )
+        for row in rows
+        for result in row.get("mode_results") or []
+        if result.get("eligible")
+        and result.get("scorer_type") == "llm_verifier"
+        and result.get("mode_id") in expected_hashes
+        and not result.get("prompt_hash")
+    ]
+    if missing:
+        errors.append(f"llm_results_missing_prompt_hash={missing[:10]}")
+    mismatches = {
+        mode_id: hashes
+        for mode_id, hashes in observed.items()
+        if mode_id in expected_hashes and hashes != [expected_hashes[mode_id]]
+    }
+    if mismatches:
+        errors.append(f"observed_prompt_hash_mismatch={mismatches}")
+    return errors
+
+
 def validate_leaderboard(
     scan_path: Path,
     leaderboard_path: Path,
@@ -418,6 +472,8 @@ def validate_leaderboard(
     )
     if strict and isinstance(current_contract_validation, dict):
         errors.extend(_strict_current_contract_errors(current_contract_validation))
+    if strict:
+        errors.extend(_strict_provenance_errors(leaderboard, rows, checks_dir=checks_dir))
 
     prompt_missing = 0
     no_verifier = 0

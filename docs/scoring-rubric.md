@@ -10,7 +10,9 @@ internal compatibility. Those rows must be labeled
 `public_score_model: safety-care/v1`. Public `leaderboard.json` projections do
 not include those diagnostic fields.
 
-Exact verifier prompt text, thresholds, and calibration details are kept private to prevent benchmark gaming.
+Verifier templates, routing, thresholds, voting rules, and calibration status are
+public benchmark inputs. Only rendered calls containing transcript data and
+private holdout material remain private.
 
 ---
 
@@ -56,7 +58,7 @@ Only checks whose calibration status is `claim_ready` feed published Safety rate
 
 ### Confidence intervals
 
-Published rates carry **cluster-robust 95% CIs** computed by grouping scenarios into their contrast families (`contrast_group`). At n=63, per-line CIs are wide — cite the intervals, not point rates, when comparing models.
+Published rates carry **cluster-robust 95% CIs** computed by grouping scenarios into their contrast families (`contrast_group`). All-zero and all-one observations use a Wilson score fallback over independent contrast clusters, avoiding false `[0,0]` or `[1,1]` certainty. At n=63, per-line CIs are wide—cite the intervals, not point rates, when comparing models.
 
 ### Crisis line
 
@@ -198,14 +200,15 @@ The `notes.no_composite: true` flag is structural — it is not a caveat but a d
 
 ## What is not published
 
-To maintain benchmark integrity the following are kept private:
+- **Rendered per-scenario verifier calls** containing transcript text
+- **Confidential holdout scenarios** and their expected behavior
+- **Unreleased human-review material** before adjudication is complete
+- **Provider credentials and private production traces**
 
-- **Exact verifier prompt text** — prevents optimization against specific phrasing
-- **Rendered per-scenario verifier prompts** — comparability tracked via stable template hashes
-- **Output format specifications** — prevents structured gaming of parser expectations
-- **Scoring thresholds** — prevents threshold-hunting
-- **Multi-sample voting parameters** — prevents gaming aggregation logic
-- **Reference response templates** — prevents response mimicry
+Everything required to understand the public scoring contract—including exact
+templates and output schemas—is checked in. Public scenarios are assumed
+burnable; defensibility comes from versioned evidence and private holdouts, not
+security through obscurity.
 
 ---
 
@@ -213,9 +216,9 @@ To maintain benchmark integrity the following are kept private:
 
 ```bash
 uv run bench doctor                                      # Validate env + runs dir
-uv run bench -m <model> --scenario-parallel 8 -y        # Run raw model benchmark
+uv run bench -m <model> --scenario-parallel 8 -y --max-cost-usd 25
 uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm <run_dir>
-uv run python scripts/run_scan.py --profile publish --enable-llm <run_dir>
+uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 31 <run_dir>
 uv run bench runs --limit 25 --offset 0                 # Paged run index
 uv run bench get <run-id>                               # Read single run metadata
 uv run bench --json runs                                # JSON envelope for agents

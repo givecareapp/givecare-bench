@@ -25,10 +25,12 @@ COMPUTE_SPREAD="$REPO_ROOT/internal/autoresearch/_compute_spread.py"
 
 # Probe models — compact trio from the current roster.
 # Override with PROBE_MODELS env var; names resolve via `bench -m` matching.
-PROBE_MODELS="${PROBE_MODELS:-Claude Opus 4.8,GPT-5 Mini,Gemini 3.1 Flash Lite}"
+PROBE_MODELS="${PROBE_MODELS:-Claude Fable 5,GPT-5.6 Luna,Gemini 3.5 Flash}"
 SCAN_PROFILE="${SCAN_PROFILE:-dev}"
 SCAN_OUTPUT_ROOT="${SCAN_OUTPUT_ROOT:-$REPO_ROOT/results/overnight_scan}"
 SCAN_ENABLE_LLM="${SCAN_ENABLE_LLM:-true}"
+TRANSCRIPT_MAX_COST_USD="${TRANSCRIPT_MAX_COST_USD:-1}"
+SCAN_MAX_COST_USD="${SCAN_MAX_COST_USD:-1}"
 
 # Guardrails (probe-level defaults from program.md)
 MIN_MODELS=3
@@ -194,6 +196,7 @@ for SCENARIO_FILE in "${SCENARIO_FILES[@]}"; do
         -m "$PROBE_MODELS" \
         -s "$SCENARIO_ID" \
         -y \
+        --max-cost-usd "$TRANSCRIPT_MAX_COST_USD" \
         2>&1)" || BENCH_EXIT=$?
 
     # Clean up temporary scenario
@@ -244,7 +247,7 @@ for SCENARIO_FILE in "${SCENARIO_FILES[@]}"; do
         --output-root "$SCAN_OUTPUT_ROOT"
     )
     if [[ "$SCAN_ENABLE_LLM" == "true" ]]; then
-        SCAN_ARGS+=(--enable-llm)
+        SCAN_ARGS+=(--enable-llm --max-cost-usd "$SCAN_MAX_COST_USD")
     fi
 
     SCAN_OUTPUT="$(timeout "${RUN_TIMEOUT}s" "${SCAN_ARGS[@]}" 2>&1)" || SCAN_EXIT=$?

@@ -93,6 +93,8 @@ def _default_contract_ids(monkeypatch):
         "_active_mode_ids",
         lambda checks_dir=None: list(_CONTRACT_IDS["checks"]),
     )
+    monkeypatch.setattr(qa_leaderboard, "check_prompt_hashes", lambda checks_dir=None: {})
+    monkeypatch.setattr(qa_leaderboard, "get_benchmark_version", lambda _root: "4.0.0")
     yield
 
 
@@ -114,6 +116,9 @@ def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
         "schema": "safety-care/v1",
         "notes": {"no_composite": True},
         "scan_metadata": {
+            "benchmark_version": "4.0.0",
+            "check_prompt_hashes": {},
+            "observed_prompt_hashes": {},
             "source_artifact": str(source),
             "total_models": models,
             "total_scenarios": scenarios,
@@ -519,3 +524,67 @@ def test_safety_care_qa_rejects_artifact_diagnostics_mismatch(tmp_path: Path) ->
     errors = validate_leaderboard(scan, leaderboard)
 
     assert "artifact_diagnostics.unclear_mode_verdicts mismatch" in errors
+
+
+def test_strict_qa_rejects_stale_benchmark_version(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["benchmark_version"] = "3.1.0"
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(scan, leaderboard, strict=True)
+
+    assert "benchmark_version='3.1.0' expected='4.0.0'" in errors
+
+
+def test_strict_qa_rejects_stale_observed_prompt_hash(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "leaderboard.json"
+    row = _scan_row("model-a", "s1")
+    row["mode_results"][0]["prompt_hash"] = "old-prompt-hash"
+    _write_jsonl(scan, [row])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["check_prompt_hashes"] = {
+        "crisis.passive-ideation": "current-prompt-hash"
+    }
+    payload["scan_metadata"]["observed_prompt_hashes"] = {
+        "crisis.passive-ideation": ["old-prompt-hash"]
+    }
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(
+        qa_leaderboard,
+        "check_prompt_hashes",
+        lambda checks_dir=None: {"crisis.passive-ideation": "current-prompt-hash"},
+    )
+
+    errors = validate_leaderboard(scan, leaderboard, strict=True)
+
+    assert any("observed_prompt_hash_mismatch" in error for error in errors)
+
+
+def test_strict_qa_rejects_llm_result_without_prompt_hash(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["check_prompt_hashes"] = {
+        "crisis.passive-ideation": "current-prompt-hash"
+    }
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(
+        qa_leaderboard,
+        "check_prompt_hashes",
+        lambda checks_dir=None: {"crisis.passive-ideation": "current-prompt-hash"},
+    )
+
+    errors = validate_leaderboard(scan, leaderboard, strict=True)
+
+    assert any("llm_results_missing_prompt_hash" in error for error in errors)

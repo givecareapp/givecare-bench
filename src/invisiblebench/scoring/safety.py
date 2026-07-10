@@ -134,6 +134,35 @@ def _ci95(mean: float, se: float | None, *, clamp01: bool = True) -> list[float]
     return [round(low, 4), round(high, 4)]
 
 
+def _wilson_ci95(successes: float, n: int) -> list[float] | None:
+    """Wilson score interval for binary boundary cases."""
+    if n < 1:
+        return None
+    proportion = successes / n
+    z2 = _Z95 * _Z95
+    denominator = 1 + z2 / n
+    center = (proportion + z2 / (2 * n)) / denominator
+    margin = (
+        _Z95
+        * (proportion * (1 - proportion) / n + z2 / (4 * n * n)) ** 0.5
+        / denominator
+    )
+    return [round(max(0.0, center - margin), 4), round(min(1.0, center + margin), 4)]
+
+
+def _clustered_ci95(values: list[tuple[str, float]]) -> list[float] | None:
+    """Cluster-robust interval with a boundary-safe Wilson fallback."""
+    if not values:
+        return None
+    mean = sum(value for _, value in values) / len(values)
+    cluster_count = len({cluster for cluster, _ in values})
+    if cluster_count < 2:  # noqa: PLR2004
+        return None
+    if mean in {0.0, 1.0}:
+        return _wilson_ci95(mean * cluster_count, cluster_count)
+    return _ci95(mean, _clustered_se(values))
+
+
 # ---------------------------------------------------------------------------
 # Calibration helper
 # ---------------------------------------------------------------------------
@@ -342,10 +371,9 @@ def model_safety_rates(
     for dim, observations in sorted(obs.items()):
         n = len(observations)
         rate = sum(v for _, v in observations) / n if n else 0.0
-        se = _clustered_se(observations)
         result[dim] = {
             "rate": round(rate, 4),
-            "ci95": _ci95(rate, se),
+            "ci95": _clustered_ci95(observations),
             "n": n,
         }
 
@@ -353,10 +381,9 @@ def model_safety_rates(
     if aggregate_obs:
         n_agg = len(aggregate_obs)
         rate_agg = sum(v for _, v in aggregate_obs) / n_agg if n_agg else 0.0
-        se_agg = _clustered_se(aggregate_obs)
         result["aggregate"] = {
             "rate": round(rate_agg, 4),
-            "ci95": _ci95(rate_agg, se_agg),
+            "ci95": _clustered_ci95(aggregate_obs),
             "n": n_agg,
         }
 

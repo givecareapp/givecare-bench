@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
-from delivery.sync_web_bench import compute_sync_status, project_leaderboard
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+from delivery.sync_web_bench import project_leaderboard
 
 
 def _minimal_source(
@@ -23,7 +18,7 @@ def _minimal_source(
         "schema": "safety-care/v1",
         "notes": {"no_composite": True, "out_of_scope": ["usefulness"]},
         "scan_metadata": {
-            "benchmark_version": "3.1.0",
+            "benchmark_version": "4.0.0",
             "generated_at": "2026-04-30T00:00:00+00:00",
             "total_scenarios": 10,
             "active_modes": 53,
@@ -201,36 +196,3 @@ def test_project_leaderboard_rejects_model_missing_care() -> None:
     del src["models"][0]["care"]
     with pytest.raises(ValueError, match="missing required 'care'"):
         project_leaderboard(src)
-
-
-def test_checked_in_leaderboard_passes_lean_contract() -> None:
-    """The canonical leaderboard.json must pass lean-projection validation."""
-    source = json.loads((PROJECT_ROOT / "data/leaderboard/leaderboard.json").read_text())
-    projected = project_leaderboard(source)
-
-    assert projected["schema"] == "safety-care/v1"
-    assert isinstance(projected["models"], list)
-    assert len(projected["models"]) > 0
-    assert "_deprecated_v3" not in projected
-    assert "findings" not in projected
-    assert "themes" not in projected
-    assert "overall_score" not in projected
-
-    for model in projected["models"]:
-        assert "safety" in model, f"Model {model.get('model')!r} missing safety"
-        assert "care" in model, f"Model {model.get('model')!r} missing care"
-        assert "lines" in model["safety"], f"Model {model.get('model')!r} safety missing lines"
-        assert "qualities" in model["care"], f"Model {model.get('model')!r} care missing qualities"
-
-
-def test_checked_in_web_projection_matches_canonical_leaderboard() -> None:
-    """The checked-in local web projection must not drift from leaderboard.json."""
-    status = compute_sync_status(
-        PROJECT_ROOT / "data/leaderboard/leaderboard.json",
-        PROJECT_ROOT / "data/leaderboard/leaderboard_web.json",
-    )
-
-    assert status.in_sync, (
-        "data/leaderboard/leaderboard_web.json is stale; regenerate it from "
-        "data/leaderboard/leaderboard.json with delivery/sync_web_bench.py"
-    )

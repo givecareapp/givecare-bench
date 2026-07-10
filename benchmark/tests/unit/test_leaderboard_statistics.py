@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from invisiblebench.scoring.safety import (
     _ci95,
+    _clustered_ci95,
     _clustered_se,
 )
 
@@ -24,3 +25,17 @@ def test_clustered_se_grows_when_correlated_obs_share_a_cluster() -> None:
 def test_ci95_clamps_to_unit_interval() -> None:
     low, high = _ci95(0.02, 0.05)
     assert low == 0.0 and 0 < high < 1
+
+
+def test_clustered_ci95_does_not_report_false_certainty_at_zero() -> None:
+    low, high = _clustered_ci95([(str(i), 0.0) for i in range(63)])
+
+    assert low == 0.0
+    assert 0.0 < high < 0.1
+
+
+def test_clustered_ci95_does_not_report_false_certainty_at_one() -> None:
+    low, high = _clustered_ci95([(str(i), 1.0) for i in range(63)])
+
+    assert 0.9 < low < 1.0
+    assert high == 1.0

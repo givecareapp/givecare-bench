@@ -17,8 +17,7 @@ givecare-bench/
 │   └── tests/           # Unit tests for schema and scoring contracts
 ├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
 ├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
-├── data/leaderboard/    # Canonical generated leaderboard artifacts
-└── archive/             # Historical docs, scripts, and remediation bundles
+└── data/leaderboard/    # Created by the fail-closed publication path
 ```
 
 | Directory | Contents | Changes often? |
@@ -26,8 +25,7 @@ givecare-bench/
 | `benchmark/` | Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests | Rarely — versioned contract |
 | `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, provider adapters, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
-| `data/leaderboard/` | Canonical leaderboard JSON projected into public web assets by `delivery/sync_web_bench.py` | Generated — never hand-edited |
-| `archive/` | Superseded docs, one-off scripts, and historical internal remediation artifacts | Rarely |
+| `data/leaderboard/` | Current-version leaderboard JSON projected into public web assets by `delivery/sync_web_bench.py` | Generated — never hand-edited |
 
 ## Scoring pipeline
 
@@ -41,19 +39,22 @@ Transcript ──► ScanPlan ──► check execution ──► results ──
 The scorer pipeline applies 50 per-check verifiers across 9 dimensions — 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy). Safety checks produce per-line conditional violation rates; Care checks produce directional distributions. There is no composite score.
 
 `ScanPlan` is explicit before expensive work starts. It records the selected
-profile, transcript count, eligible checks, planned verifier LLM calls, judge
-model, and estimated verifier cost. `scripts/run_scan.py --dry-run` writes
-`scan_plan.json` and `cost_report.json` without calling any model.
+profile, transcript count, eligible checks, base verifier calls, the larger
+tie-break/adjudication call budget, judge model, and base/conservative costs.
+`scripts/run_scan.py --dry-run` writes `scan_plan.json` and `cost_report.json`
+without calling any model. A live LLM scan requires `--max-cost-usd` and
+refuses to start when the conservative budget exceeds that ceiling. Completed
+artifacts add provider-reported actual cost, billable calls, and per-model cost.
 
 ### Safety scoring
 
 Safety checks answer a falsifiable question per line: "did the model cross this hard line?" Deterministic pattern checks run first; LLM verifiers handle the rest with K-repetition majority vote. Results are reported as **conditional violation rates** (failures ÷ eligible scenarios) per line — Crisis, Scope, Identity, Autonomy. A calibrated Safety violation blocks publication but does not produce an overall score of zero; there is no composite to zero out.
 
-The Scope line uses a three-phase design:
-
-1. **Regex candidates** — fast pattern match flags potential violations
-2. **Structured LLM confirmation** — verifier reviews each candidate in context with typed fields
-3. **LLM sweep** — catch-all pass for violations the regex missed
+Scope checks follow their declared route. Bright-line `lexicon_only` checks are
+deterministic; `regex_with_llm_edge` checks use regex as a cheap candidate
+filter and send positive or uncertain candidates to the LLM for contextual
+confirmation; semantic checks route directly to the LLM. There is no implicit
+catch-all sweep outside those declared routes.
 
 The Scope gate hard-fails on diagnosis, patient-specific prescribing/treatment directives, and false scope/capability claims (for example: invented confidentiality, deletion, or memory guarantees). It deliberately preserves allowed practical caregiving support and general/public medication information unless the model crosses into patient-specific clinical action.
 
@@ -88,10 +89,9 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 63 public scenario definitions span four categories. The checked-in Phase 2
-leaderboard scan publishes 63 frozen rows; strict QA remains blocked until the
-one retired-row/one missing-current-row mismatch is regenerated. The next live
-`--full` run includes all 63 current scenarios.
+The 63 public scenario definitions span four categories. No result artifact is
+checked in until a current-version scan covers this inventory and passes strict
+QA. The next live `--full` run includes all 63 current scenarios.
 
 | Category | Count | Focus |
 |----------|-------|-------|
@@ -114,6 +114,11 @@ For the raw harness, `--scenario-parallel N` can run multiple scenarios for a
 single model concurrently. Turns within each scenario remain sequential so
 branching behavior and conversation history are preserved.
 
+Multi-session scripts stamp `session_number`, `time_elapsed`, and
+`session_context` on transcript entries and place the current session boundary
+in the system instruction. The raw harness retains prior turns in the request
+history; this is scripted continuity, not a test of provider-side persistence.
+
 !!! warning "Experimental adapters"
     `givecare/v2` is the only active GiveCare product harness. It calls the
     gc-sms V2 HTTP contract through `/api/admin` actions and is **not** part of
@@ -132,8 +137,9 @@ branching behavior and conversation history are preserved.
 | `tx.yaml` | Texas-specific |
 | `eu.yaml` | EU (GDPR, AI Act) |
 
-The compliance scorer loads the applicable rule set based on the scenario's
-`jurisdiction` field and evaluates against that rule set's requirements.
+These files are maintained reference material and have schema tests, but no
+active check routes through them in 4.0. Jurisdictional factual verification is
+therefore not part of the current public measurement contract.
 
 ## Verifier architecture
 
@@ -165,7 +171,8 @@ For each check the engine:
    Checks tagged `any` run on every scenario.
 2. **Dispatches** to the correct verifier class based on the routing `route`
    field (`hybrid_llm`, `llm_primary`, `longitudinal_trace` -> LLMVerifier;
-   `lexicon_only`, `regex_with_llm_edge` -> RegexVerifier;
+   `lexicon_only` -> RegexVerifier; `regex_with_llm_edge` -> RegexVerifier
+   candidate filter followed by LLM confirmation on positive or uncertain candidates;
    `extract_then_corpus` -> CorpusVerifier).
 3. **Aggregates** verdicts into gate results, dimension scores, and a blindspot
    profile.
@@ -204,9 +211,9 @@ assistant-turn evidence, a scope-gate FAIL whose only evidence is a
 refusal/deferral, or a FAIL whose `rationale_code` describes a pass -- so a weak
 judge's contradictory verdict cannot carry a FAIL claim.
 
-**CorpusVerifier** -- extract-then-verify pattern for factual claims. Extracts
-assertions from the transcript, then checks each against a reference corpus.
-Used for checks like benefit-eligibility overclaims.
+**CorpusVerifier** -- implemented extract-then-verify support for factual
+claims. No active 4.0 check uses `extract_then_corpus`; it is not a current
+benchmark capability or claim surface.
 
 ### Event-window scoping
 

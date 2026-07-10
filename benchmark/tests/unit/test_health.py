@@ -7,6 +7,19 @@ from delivery.sync_web_bench import project_leaderboard
 from invisiblebench.cli import health as health_module
 
 
+def test_run_health_reports_not_generated_without_error(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(health_module, "get_project_root", lambda: tmp_path)
+
+    result = health_module.run_health()
+
+    assert result == 0
+    assert "No leaderboard generated yet" in capsys.readouterr().out
+
+
 def test_load_leaderboard_prefers_current_output_dir(tmp_path: Path, monkeypatch) -> None:
     leaderboard_dir = tmp_path / "data" / "leaderboard"
     leaderboard_dir.mkdir(parents=True)

@@ -13,8 +13,8 @@ Exit 0 when the diff is empty, 1 on any divergence, 2 on usage errors.
 This is the definition-of-done check for refactor commits (see DESIGN.md).
 
 Usage:
-    uv run python scripts/rescore_diff.py
-    uv run python scripts/rescore_diff.py --frozen results/v3_scan/merged_phase2/per_run.jsonl --limit 50
+    uv run python scripts/rescore_diff.py --frozen results/run_<id>/scan/per_run.jsonl
+    uv run python scripts/rescore_diff.py --frozen <scan>/per_run.jsonl --limit 50
 """
 
 from __future__ import annotations
@@ -62,8 +62,16 @@ def compare_row(
         mode_id = old["mode_id"]
         old_scorer = old.get("scorer_type", "")
         new = new_by_mode.get(mode_id)
+        new_scorer = new.get("scorer_type", "") if new is not None else ""
 
-        if old_scorer in DETERMINISTIC_SCORERS:
+        # A verdict is offline-reproducible only when both sides used a fully
+        # deterministic scorer. Older artifacts recorded the regex candidate
+        # stage of regex_with_llm_edge as plain "regex"; the current offline
+        # engine correctly returns UNCLEAR until an LLM resolves that edge.
+        if (
+            old_scorer in DETERMINISTIC_SCORERS
+            and new_scorer in DETERMINISTIC_SCORERS
+        ):
             if new is None:
                 diffs.append({"mode_id": mode_id, "field": "presence", "old": "present", "new": "missing"})
                 continue
@@ -85,7 +93,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--frozen",
-        default=str(REPO_ROOT / "results" / "v3_scan" / "merged_phase2" / "per_run.jsonl"),
+        required=True,
         help="Frozen scan JSONL to diff against",
     )
     ap.add_argument("--limit", type=int, default=None, help="Only check the first N rows")

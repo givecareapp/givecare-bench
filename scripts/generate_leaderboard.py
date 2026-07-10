@@ -16,10 +16,11 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from invisiblebench.evaluation.check_registry import load_checks
+from invisiblebench.evaluation.check_registry import check_prompt_hashes, load_checks
 from invisiblebench.scoring.contract import can_carry_hard_fail_claim
 from invisiblebench.utils.artifact_validation import (
     artifact_issue_policy,
+    observed_prompt_hashes,
     scan_artifact_validation_diagnostics,
     scan_artifact_validation_summary,
     scan_current_contract_validation_diagnostics,
@@ -170,8 +171,13 @@ def generate_leaderboard(
         "total_models": len({row.get("model") for row in rows}),
         "total_scenarios": scenario_count,
         "active_modes": len(active_modes),
+        "check_prompt_hashes": check_prompt_hashes(),
+        "observed_prompt_hashes": observed_prompt_hashes(rows),
         "statistics": {
-            "method": "cluster-robust standard errors (clusters = contrast-set families), 95% CIs",
+            "method": (
+                "cluster-robust normal 95% CIs; Wilson score fallback at binary boundaries "
+                "using contrast-set families as independent clusters"
+            ),
             "reference": "Anthropic, Adding Error Bars to Evals (arXiv:2411.00640)",
         },
         "artifact_validation": {

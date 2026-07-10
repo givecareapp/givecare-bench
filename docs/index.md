@@ -4,10 +4,9 @@
 It evaluates whether language models can safely and effectively support family caregivers
 across realistic multi-turn conversations.
 
-!!! warning "Key findings"
-    InvisibleBench surfaces distinctive caregiver-AI failure patterns:
-    hard-fail safety gaps, crisis-signal negation, artificial-intimacy variance,
-    and current-roster relational quality gaps. See [Key Findings](findings.md).
+!!! note "Current result status"
+    No result artifact is checked in. The next public result must be generated
+    from a 4.0 scan and pass strict QA before it is published.
 
 ## Scoring model
 
@@ -24,11 +23,12 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 
 ## Key facts
 
-- **Current checked-in public scan** covers 63 Phase 2 rows across 4 categories; the next live `--full` run covers all 63 current public scenarios
+- **Current public corpus** covers 63 scenarios across 4 categories
 - **50 checks across 9 dimensions** — 4 Safety lines + 5 Care qualities — with binary `claim_ready` / `not_claim_ready` calibration status (currently 0 `claim_ready`)
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
-- **Leaderboard artifact**: `data/leaderboard/leaderboard.json` (schema `safety-care/v1`) covers 11 models × 63 Phase 2 rows (non-strict); the current live roster is 15 models × 63 scenarios
-- Benchmark version **3.1.0** | Public harness: `llm/raw`
+- **Next live roster**: 15 models × 63 scenarios; publication creates
+  `data/leaderboard/leaderboard.json` only after strict QA
+- Benchmark version **4.0.0** | Public harness: `llm/raw`
 
 ## Publication posture
 
@@ -90,6 +90,5 @@ uv run pytest benchmark/tests -q
 - [Publishing Audit](publishing-audit.md) — two-phase publication model and web-bench narrative contract
 - [Ontology](ontology.md) — **canonical** Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)
 - [Taxonomy](taxonomy.md) — thin reference: per-dimension check-count table (the model itself is in ontology.md)
-- [Key Findings](findings.md) — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard
 - [Verifier Validation](verifier-validation.md) — verifier manifest, the binary claim model, and the `claim_ready` bar
 - [Verifier Unit Tests](verifier-unit-tests.md) — authored AI-panel spec-conformance tests (development, **not** validation)

@@ -182,13 +182,13 @@ def main(argv: list[str] | None = None) -> int:
         epilog=f"""
 Examples:
   # Model Evaluation (raw LLM capability)
-  uv run bench --full -y                    All {len(CONFIG_MODELS_FULL)} models (run --dry-run for current estimate)
-  uv run bench -m deepseek -y               Single model by name
-  uv run bench -m gpt-5.2,claude -y         Multiple models by name
-  uv run bench -m 1-4 -y                    Models 1-4 (by index)
-  uv run bench -m 7 -y                      Model 7 = DeepSeek V3.2
-  uv run bench -c safety,empathy -y         Safety + empathy categories only
-  uv run bench --harness llm --mode raw -m deepseek -y
+  uv run bench --full --dry-run             Plan all {len(CONFIG_MODELS_FULL)} models
+  uv run bench -m deepseek --dry-run        Plan a single model by name
+  uv run bench -m deepseek -y --max-cost-usd 1
+                                             Run with an explicit ceiling
+  uv run bench -m 1-4 --dry-run             Models 1-4 (by index)
+  uv run bench -m 7 --dry-run               Model 7 = DeepSeek V4 Pro
+  uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
 
   # Eval Harness (GiveCare/Mira product)
   uv run bench --harness givecare --mode v2 -y                Full V2 runtime path
@@ -197,7 +197,8 @@ Examples:
   uv run bench --harness givecare --mode v2 -c safety -y
 
   # Judge transcripts (JUDGE scan) and publish
-  uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm
+  uv run python scripts/run_scan.py <run-dir> --profile publish --dry-run --enable-llm
+  uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm --max-cost-usd <budget>
   uv run python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>
                                       Fail-closed publish path
   uv run bench leaderboard status     Health check (alias for 'bench health')
@@ -316,8 +317,18 @@ Examples:
         default=None,
         help="Harness mode. LLM: raw. GiveCare: v2",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Estimate costs only")
+    parser.add_argument("--dry-run", action="store_true", help="Plan conservative costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
+    parser.add_argument(
+        "--max-cost-usd",
+        type=float,
+        default=None,
+        metavar="USD",
+        help=(
+            "Required ceiling for live LLM transcript generation; run "
+            "--dry-run first to plan a conservative budget"
+        ),
+    )
     parser.add_argument(
         "--category",
         "-c",
@@ -358,7 +369,7 @@ Examples:
         type=str,
         default=None,
         metavar="SPEC",
-        help="Select models by name or number: 'deepseek', 'gpt-5.2,claude', '1-4', '7', '1,deepseek'",
+        help="Select models by name or number: 'deepseek', 'gpt-5.6,claude', '1-4', '7', '1,deepseek'",
     )
     parser.add_argument(
         "--provider",
@@ -506,13 +517,19 @@ Examples:
             c.print("[bold]Available models:[/bold]")
             for i, m in enumerate(all_models):
                 c.print(f"  [dim]{i+1:>2}.[/dim] {m['name']:<24} [dim]{m['id']}[/dim]")
-            c.print("\n[dim]Examples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y[/dim]")
+            c.print(
+                "\n[dim]Examples:  bench --full --dry-run  |  "
+                "bench -m deepseek -y --max-cost-usd 1[/dim]"
+            )
         else:
             print("No model selected. Use --full or -m SPEC.\n")
             print("Available models:")
             for i, m in enumerate(all_models):
                 print(f"  {i+1:>2}. {m['name']:<24} {m['id']}")
-            print("\nExamples:  bench --full -y  |  bench -m deepseek -y  |  bench -m 1-4 -y")
+            print(
+                "\nExamples:  bench --full --dry-run  |  "
+                "bench -m deepseek -y --max-cost-usd 1"
+            )
         return 1
 
     if args.output:
@@ -531,6 +548,7 @@ Examples:
         parallel=args.parallel,
         scenario_parallel=args.scenario_parallel,
         include_confidential=args.confidential,
+        max_cost_usd=args.max_cost_usd,
     )
 
 

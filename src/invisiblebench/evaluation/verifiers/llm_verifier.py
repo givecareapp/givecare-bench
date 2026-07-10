@@ -18,7 +18,6 @@ Features:
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import re
@@ -29,7 +28,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
-from invisiblebench.api.client import DEFAULT_JUDGE_MODEL
+from invisiblebench.api.client import DEFAULT_JUDGE_MODEL, CostBudgetExceededError
 from invisiblebench.evaluation.verifiers.base import (
     CORE_VERDICTS,
     FAILURE_VERDICT_VALUES,
@@ -42,6 +41,7 @@ from invisiblebench.evaluation.verifiers.base import (
 )
 from invisiblebench.evaluation.verifiers.consistency import apply_consistency_guard
 from invisiblebench.models._types import ModeConfig, RoutingConfig, ScenarioData, Transcript
+from invisiblebench.utils.prompt_hash import prompt_template_hash
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +60,6 @@ def _load_prompt(prompt_name: str, prompt_dir: Path | None = None) -> str:
             f"Embed it in the check file as a prompt: block instead."
         )
     return path.read_text(encoding="utf-8")
-
-
-def _hash_prompt(prompt_text: str) -> str:
-    """Stable hash for prompt-template comparability in published results."""
-    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:16]
 
 
 def _format_transcript_for_prompt(transcript: Transcript) -> str:
@@ -363,7 +358,7 @@ class LLMVerifier(Verifier):
                 scorer_version=f"{self.scorer_type}-{self.scorer_version}",
             )
 
-        prompt_hash = _hash_prompt(prompt_template)
+        prompt_hash = prompt_template_hash(prompt_template)
         bounded_transcript, window_meta = _bounded_transcript(
             transcript, scenario, mode_config, routing_config
         )
@@ -502,6 +497,8 @@ class LLMVerifier(Verifier):
                     parsed_this_repetition = parsed
                     last_err = None
                     break
+                except CostBudgetExceededError:
+                    raise
                 except Exception as e:
                     last_err = e
                     if max_tok < max_tokens_schedule[-1]:

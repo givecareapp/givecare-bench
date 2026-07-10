@@ -34,26 +34,28 @@ carries its own verifier — definition, routing, and prompt — in its
   2026-06-29 — a candidate judge pending per-check re-validation; the former
   per-check `routing.judge_model` overrides, scope gates on `openai/gpt-5.5` and
   crisis on `gemini-2.5-flash-lite`, were removed). LLM verifiers emit a
-  `judge_prompt_hash`.
+  per-check `prompt_hash`.
 - **4 are deterministic** — no LLM, no hash: `identity.availability` plus
   the three `autonomy.coercion` rule checks.
 
-| Verifier class       | Count | Type                          | Has `judge_prompt_hash`? |
+| Verifier class       | Count | Type                          | Has per-check `prompt_hash`? |
 |----------------------|-------|-------------------------------|--------------------------|
 | LLM-judged checks    | 46    | per-check LLM verifier, K=3 majority | yes (one per check) |
 | Deterministic checks | 4     | regex / rule scorer (`identity.availability`, three `autonomy.coercion` rule checks) | no |
 
-Each scored scenario result therefore carries a `judge_prompt_hash` for every
-LLM-judged check that fired on it; deterministic checks carry none. Per-check
+Each current-contract `mode_results` entry carries `prompt_hash` when an LLM
+judge fired; deterministic results carry none. The older single-judge result
+model names its scalar compatibility field `judge_prompt_hash`. Per-check
 judge prompts live in each `checks/<layer>/<dimension>/<ID>.yaml` as a `prompt:` block; template
 hashes are computed from that text. The rendered `.txt` files are gitignored.
 
 ## How template hashes are computed
 
-`compute_prompt_template_hash(*parts)` (in
-`src/invisiblebench/api/client.py`) takes the static prompt-template text —
-*not* the fully rendered per-scenario prompt — and returns a SHA-256 of the
-whitespace-normalized join.
+`prompt_template_hash(*parts)` in `src/invisiblebench/utils/prompt_hash.py`
+takes the static prompt-template text—not the fully rendered per-scenario
+prompt—and returns the first 16 characters of a SHA-256 digest of the
+non-empty, trimmed parts joined by one blank line. The API module re-exports the
+compatibility helper.
 
 This means:
 
@@ -64,21 +66,27 @@ This means:
 - The hash is a stable identifier for the verifier *behavior contract*, not for
   any one invocation.
 
-Every `ScenarioResult` written by the runner includes a `judge_prompt_hash` for
-each LLM-judged check that fired, pinned alongside that check's verdict in the
-per-check result records. The leaderboard artifacts under `data/leaderboard/`
-echo the per-check hashes for the checks they surface.
+Every verdict produced by an LLM judge pins `prompt_hash` alongside the
+corresponding check verdict. Generated leaderboard metadata carries both
+`check_prompt_hashes` (the current contract) and `observed_prompt_hashes` (what
+the scan actually contains). Strict QA requires the benchmark version and every
+observed hash to match the current contract.
+
+Version 4.0 also makes that trim-and-join rule the single runtime hashing rule.
+Earlier runs used inconsistent call sites, including raw-text hashing in the
+LLM verifier, so **all pre-4.0 observed prompt hashes are stale** even when a
+check's visible prompt text did not change. They must be regenerated rather
+than restamped.
 
 ## Where template hashes live
 
 Hashes are per-check, not per-scorer: there is no single global judge hash.
 Each LLM-judged check pins its own template hash, computed from the `prompt:`
-block in its `checks/<layer>/<dimension>/<ID>.yaml` (benchmark version 3.1.0).
+block in its `checks/<layer>/<dimension>/<ID>.yaml` (benchmark version 4.0.0).
 
-To extract per-check hashes from a scored run, read the per-scenario result
-JSON written by `bench` into `results/<run-id>/`. The raw result payload
-preserves the `judge_prompt_hash` for every check that fired; the leaderboard
-summary surfaces the same per-check hashes for published checks. Deterministic
+To extract per-check hashes from a scored run, read `mode_results` in the scan
+JSONL. The leaderboard metadata surfaces both expected and observed hash maps.
+Deterministic
 checks (`identity.availability`, the three `autonomy.coercion` rule checks) carry no
 hash.
 
@@ -201,7 +209,8 @@ The reported "60/60, κ=1.0" agreement on the Crisis and Scope lines is a
    reason scope.diagnosis's per-mode gold is still only a negative-heavy seed.
 3. **The gold traces are prior-generation models.** The 60-trace gold is drawn
    from sonnet-4.5, gemini-2.5-flash, gpt-5.4, qwen3.5, and kimi-k2.5 outputs.
-   The current leaderboard scores Opus 4.7, GPT-5.5, Gemini 3.1, and peers.
+   No current leaderboard is checked in; the next live roster contains
+   GPT-5.6 Sol, Claude Fable 5, Gemini 3.1 Pro, and peers.
    Failure *patterns* are expected to transfer, but verifier behavior on a
    current-generation model's phrasing is not directly validated by gold built
    on previous-generation outputs.
@@ -221,14 +230,10 @@ Current internal validation artifacts live under
 
 ## External reproducibility
 
-A third party who cannot access private prompt text can still:
-
-1. Re-run the benchmark with their own verifier prompts and compare top-line
-   deltas; absolute numbers will differ.
-2. Verify that two published runs used the same verifiers by comparing
-   `judge_prompt_hash` values per-check.
-3. Fail the run open if any check's published hash does not match a prior
-   reference: that check's verifier template has shifted.
+A third party can inspect the public prompt templates, reproduce their hashes,
+and compare them with both hash maps in the artifact. A mismatch blocks strict
+publication; re-running with a different prompt is a new measurement contract,
+not a comparable reproduction.
 
 ## Change policy
 
@@ -265,7 +270,7 @@ checks have no prompt and were not part of this batch. Two categories of change:
 
    Prior results for these three checks are inflated with false positives and should be rescored.
 
-### 2026-07-05 crisis omission judge redesign (4.0 candidate)
+### 2026-07-05 crisis omission judge redesign (4.0)
 
 Breaking prompt-hash change on **four S5 crisis-omission checks**, on branch
 `judge-redesign-40` (a versioned 4.0 event, NOT a behavior-frozen refactor —
@@ -286,16 +291,22 @@ per-check numbers do NOT carry over):
 
 | Check | new prompt-template hash |
 |---|---|
-| `crisis.passive-ideation` | `8a4f1a0c4b878553` |
-| `crisis.direct-ideation`  | `e2bd9b589f362ff7` |
-| `crisis.decay`            | `9bc87fc689551d79` |
-| `crisis.disengagement`    | `26dff2111656c132` |
+| `crisis.passive-ideation` | `2a978d040e04b8e9` |
+| `crisis.direct-ideation`  | `f48da4b3475f4a3b` |
+| `crisis.decay`            | `bf540297c05c9b16` |
+| `crisis.disengagement`    | `a201c5c6b1b849f0` |
 
 Re-measurement evidence:
 `internal/calibration/omission-redesign-results-2026-07.md`. All four remain
 `not_claim_ready` (the redesign moves natural recall off 0 on the clear
 omission/means-provision cases but does not clear the `claim_ready` bar on this
 judge — see the memo's escalation recommendation).
+
+The same 4.0 contract aligns `crisis.harm-intent` eligibility with its declared
+harm-fear scope: concrete intent is sufficient but not required when the
+caregiver reports exhaustion, cognitive fog, or fear of harming the recipient.
+Its current prompt-template hash is `a033b948f070b2a3`; prior measurements do
+not carry over.
 
 ## v3 per-mode calibration
 

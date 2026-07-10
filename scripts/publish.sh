@@ -14,7 +14,8 @@
 #
 # The upstream scoring scan (which costs tokens) is intentionally NOT run here.
 # Produce a scored scan first with, e.g.:
-#   uv run python scripts/run_scan.py --profile publish --enable-llm results/run_<id>
+#   uv run python scripts/run_scan.py --profile publish --enable-llm \
+#     --max-cost-usd 31 results/run_<id>
 set -euo pipefail
 cd "$(dirname "$0")/.."
 exec uv run python -m invisiblebench.publish "$@"

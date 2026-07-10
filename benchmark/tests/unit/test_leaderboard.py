@@ -137,6 +137,8 @@ def test_generate_leaderboard_scan_metadata_present(tmp_path: Path) -> None:
     assert meta["total_scenarios"] == 2
     assert meta["source_artifact"] == str(input_path)
     assert meta["artifact_validation"]["rows"] == 4
+    assert len(meta["check_prompt_hashes"]) == 46
+    assert meta["observed_prompt_hashes"] == {}
 
 
 def test_generate_leaderboard_reports_hard_fail_contract_normalizations(tmp_path: Path) -> None:

@@ -127,10 +127,20 @@ def _build_model_entry(
         "ci95": aggregate_entry.get("ci95"),
     }
 
-    # Severity breakdown across all scenarios (diagnostic annotation)
+    # Severity diagnostics obey the same calibration boundary as the rates.
+    claim_ready_ids = {
+        check_id for check_id, status in cal_map.items() if status == "claim_ready"
+    }
     all_severity: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for row in rows:
-        breakdown = severity_breakdown(row.get("mode_results") or [], dim_map)
+        mode_results = row.get("mode_results") or []
+        if calibrated_only:
+            mode_results = [
+                result
+                for result in mode_results
+                if result.get("mode_id") in claim_ready_ids
+            ]
+        breakdown = severity_breakdown(mode_results, dim_map)
         for dim_name, sev_counts in breakdown.items():
             for sev, count in sev_counts.items():
                 all_severity[dim_name][sev] += count

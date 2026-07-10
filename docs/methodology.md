@@ -79,12 +79,20 @@ The 19 hard-fail checks hold `authored_ai_unit_test` development evidence (AI re
 
 **What this means for public claims:**
 
-- Safety violation rates are the *intended* public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs) — but **the surface is currently empty (0 `claim_ready`)**, so no Safety rate is a public claim yet.
+- Safety violation rates are the *intended* public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs and a Wilson boundary fallback) — but **the surface is currently empty (0 `claim_ready`)**, so no Safety rate is a public claim yet.
 - Care distributions are directional signals, never claim-bearing: Belonging has inter-model κ=0.82 (development only); Attunement, Relational, and Advocacy are directional/authored; Trauma-awareness has no checks yet.
 - There is no composite or ranking key to mis-cite.
 
-**Current leaderboard artifact (`data/leaderboard/leaderboard.json`):**
-Generated from the Phase 2 transcript scan (`results/v3_scan/merged_phase2/per_run.jsonl`), currently 11 models × 63 rows, regenerated 2026-07-03 as a non-strict public source after the 50-check contract refresh and the 63-scenario inventory update. Non-strict QA passes; strict QA currently fails on one missing current scenario (`tier1_source_verification_001`), one extra retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check instances, and four residual quality-mode `UNCLEAR` verdicts, so do not describe this artifact as strict-QA-passing until `scripts/qa_leaderboard.py --strict` passes. Those missing-check instances are artifact-local to the Phase 2 source: current scans emit suppressed checks as ineligible `NOT_APPLICABLE` rows, so safety-override suppression does not create current-contract holes. `scan_metadata.artifact_validation` records eligible `NOT_APPLICABLE` counts, unresolved verdicts, fail-without-evidence counts, verifier infrastructure counts, scorer parse errors, and bounded raw-output diagnostic samples; QA recomputes those fields from the scan. The next live `--full` run targets 15 models × 63 scenarios.
+**Current result status:**
+No leaderboard is checked in. Publication begins with a fresh 4.0 transcript
+run and current-contract scan; generated artifacts preserve expected and
+observed per-check prompt hashes, and strict QA blocks any coverage, verdict,
+version, or hash mismatch. The next live `--full` run targets 15 models × 63
+scenarios. Its exact OpenRouter IDs and list prices were refreshed on
+2026-07-10; `src/invisiblebench/models/config.py` is the roster source of truth.
+The GPT-5 Mini verifier remains intentionally frozen pending separate
+per-check re-validation, so a target-roster refresh cannot silently change the
+measurement instrument.
 
 ---
 
@@ -138,7 +146,7 @@ These 10 baseline dimensions represent the minimum evaluation surface for a well
 
     InvisibleBench evaluates **conversations**, not apps or products.
 
-    **The scripted-user ceiling.** Caregiver turns are deterministic scenario scripts with rule-based branching — there is no reactive user simulator. This is a deliberate trade: determinism is what makes transcripts frozen, re-judgeable artifacts and keeps model-to-model comparisons exact. Findings are evidence about model responses to a fixed relational script, not about how the relationship would unfold with a responsive caregiver. A calibrated user simulator is the eventual path past this ceiling; it would be a new `benchmark_version`, never a quiet swap.
+    **The scripted-user ceiling.** Caregiver turns are deterministic scripts with rule-based branching—there is no reactive user simulator. Multi-session scripts preserve session number, elapsed time, and authored session context, while the raw harness still supplies prior turns in one model request history. They test scripted continuity under an explicit time gap, not product persistence or months-scale memory. Branch paths can differ by model, so exact comparisons require conditioning on the recorded `branch_id` or using fixed-path subsets. A calibrated user simulator or true persistence harness would be a new `benchmark_version`, never a quiet swap.
 
     **Privacy honesty.** If a model makes false privacy or capability claims *within* a conversation, the Scope/Identity lines catch it. Systematic product privacy evaluation requires a different methodology.
 

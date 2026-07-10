@@ -7,9 +7,8 @@ InvisibleBench publishes benchmark work in two linked phases:
    before the results are treated as public claims.
 2. **Result narrative** — the generated benchmark outputs are QA-gated, reduced
    into a web payload, and presented as caregiver-centered failure-mode analysis.
-   The current checked-in Phase 2 artifact is a non-strict public source until
-   current-contract coverage gaps and residual `UNCLEAR` verdicts are
-   adjudicated or regenerated and `scripts/qa_leaderboard.py --strict` passes.
+   No result artifact is checked in until `scripts/qa_leaderboard.py --strict`
+   passes against the current benchmark contract.
 
 This split is intentional. The benchmark should not read as a generic stack
 rank of models. The useful claim is sharper: it shows where each model is jagged
@@ -40,33 +39,20 @@ without relying on a single opaque LLM judge.
 
 ## Phase 2: Results And Scoring Narrative
 
-The result phase starts from the canonical leaderboard artifact:
+The result phase starts from a current-version scored scan:
 
-- Source: `data/leaderboard/leaderboard.json`
-- Current source artifact: `results/v3_scan/merged_phase2/per_run.jsonl`
-- Current public benchmark version: `3.1.0`
-- Current public framework: `safety-care/v1` (non-strict artifact; strict QA
-  still blocked by current-contract coverage gaps and residual `UNCLEAR`
-  verdicts)
-- Current checked-in public scan: 11 models × 63 scenarios × 50 active checks
-- Next live `--full` target: 15 models × 63 scenarios × 50 active checks
-- Current generated timestamp: read from
-  `data/leaderboard/leaderboard.json` at `scan_metadata.generated_at` rather
-  than hand-copying it into this doc.
-- Current strict QA status: not passing. Non-strict QA passes; strict QA fails
-  on one missing current scenario (`tier1_source_verification_001`), one extra
-  retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check
-  instances, and four residual quality-mode `UNCLEAR` verdicts, so it must not
-  be described as a strict-QA-passing leaderboard source. The missing-check
-  instances are in the stale Phase 2 source; current scans record
-  safety-override suppression as ineligible `NOT_APPLICABLE` rows instead of
-  dropping active checks.
-- Current artifact-validation diagnostics: 1,852 eligible `NOT_APPLICABLE`
-  mode verdicts (1,466 Safety-gate), 4 unresolved mode verdicts, 0 Safety-gate
-  unresolved verdicts, 0 fail-without-evidence rows, 0 missing prompts, 0
-  unavailable verifiers, 0 fatal verifier errors, 21 mode results with scorer
-  parse errors, 24 parse errors total, and 118 bounded raw-output diagnostic
-  samples.
+- Current benchmark contract: `4.0.0`
+- Current public framework: `safety-care/v1`
+- Live `--full` target: 15 models × 63 scenarios × 50 active checks
+- Current result artifact: none checked in
+- Generation target: `data/leaderboard/leaderboard.json`
+- Strict QA requires complete scenario/check coverage, no blocking unresolved
+  verdicts, a current benchmark version, exact expected/observed prompt hashes,
+  and a matching manual-adjudication ledger when manual results exist.
+- Safety-override suppression is represented as an ineligible
+  `NOT_APPLICABLE` result, never as a missing check.
+- Generated timestamps and validation diagnostics are read from
+  `scan_metadata`, never copied into prose.
 - The artifact also carries `scan_metadata.artifact_issue_policy`, which
   classifies eligible `NOT_APPLICABLE` as resolved coverage, literal `UNCLEAR`
   as a strict-QA blocker, and scorer parse/truncation counters as retry
@@ -79,9 +65,9 @@ The web-bench payload is a lean projection of that artifact:
   `models` — each model carrying `safety` (per-line violation rates + aggregate)
   and `care` (per-quality distributions). `delivery/sync_web_bench.py` validates
   the source and rejects non-public top-level keys before writing.
-- Local projection drift is read-only health state: `bench health` reports when
-  the checked-in `data/leaderboard/leaderboard_web.json` lags the canonical
-  `data/leaderboard/leaderboard.json`; it does not sync or write the projection.
+- Local projection drift is read-only health state: after generation,
+  `bench health` reports whether `leaderboard_web.json` lags
+  `leaderboard.json`; it does not sync or write the projection.
 - No `findings` block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.

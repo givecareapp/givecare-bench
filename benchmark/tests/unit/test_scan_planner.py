@@ -122,8 +122,13 @@ def test_publish_scan_profile_adds_unclear_tiebreak_budget() -> None:
     assert filtered_routing["attunement.infodump"]["repetitions"] == 3
     assert filtered_routing["attunement.infodump"]["unclear_tiebreak_repetitions"] == 2
     assert filtered_routing["attunement.infodump"]["unclear_adjudication_repetitions"] == 3
+    assert plan["base_llm_calls"] == 3
+    assert plan["budget_llm_calls"] == 8
     assert plan["planned_llm_calls"] == 8
     assert plan["by_mode"]["attunement.infodump"]["planned_llm_calls"] == 8
+    assert plan["estimated_base_cost_usd"] == pytest.approx(0.015)
+    assert plan["estimated_budget_cost_usd"] == pytest.approx(0.04)
+    assert plan["estimated_cost_usd"] == plan["estimated_budget_cost_usd"]
 
 
 def test_run_scan_normalizes_transcripts_subdir_to_parent(
@@ -216,6 +221,58 @@ def test_run_scan_enable_llm_aborts_when_api_client_init_fails(
     )
     assert run_scan_mod.main() == 0
     assert not scan_calls, "dry-run must not invoke scan_run"
+
+
+def test_live_llm_scan_requires_explicit_cost_ceiling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import scripts.run_scan as run_scan_mod
+
+    run_dir = tmp_path / "run_20260710_000000"
+    transcripts = run_dir / "transcripts"
+    transcripts.mkdir(parents=True)
+    transcript = transcripts / (
+        "test_model_context_regulatory_data_privacy_001.jsonl"
+    )
+    transcript.write_text(
+        '{"turn":1,"role":"user","content":"help"}\n'
+        '{"turn":1,"role":"assistant","content":"ok"}\n'
+    )
+
+    class _FakeClient:
+        pass
+
+    scan_called = False
+
+    def _unexpected_scan(*args, **kwargs):
+        nonlocal scan_called
+        scan_called = True
+        return [], []
+
+    monkeypatch.setattr(run_scan_mod, "ModelAPIClient", _FakeClient)
+    monkeypatch.setattr(run_scan_mod, "scan_run", _unexpected_scan)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["run_scan.py", "--enable-llm", str(run_dir)],
+    )
+
+    assert run_scan_mod.main() == 2
+    assert scan_called is False
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_scan.py",
+            "--enable-llm",
+            "--max-cost-usd",
+            "0",
+            str(run_dir),
+        ],
+    )
+    assert run_scan_mod.main() == 2
+    assert scan_called is False
 
 
 def test_transcripts_for_run_infers_scenario_from_known_suffix_without_results(
@@ -311,6 +368,11 @@ def test_write_outputs_notes_when_llm_verifiers_are_enabled(tmp_path: Path) -> N
             "planned_llm_calls": 3,
             "estimated_cost_usd": 0.001,
         },
+        cost_snapshot={
+            "total": 0.012345,
+            "calls": 3,
+            "by_model": {"openai/gpt-5-mini": 0.012345},
+        },
     )
 
     summary = (output_dir / "summary.md").read_text()
@@ -318,6 +380,11 @@ def test_write_outputs_notes_when_llm_verifiers_are_enabled(tmp_path: Path) -> N
     assert "no api_client wired" not in summary
     assert "Per-model raw/internal hard-fail compatibility rates" in summary
     assert "public Safety/Care output remains `safety-care/v1`" in summary
+    assert "Actual verifier cost: $0.0123" in summary
+
+    cost_report = json.loads((output_dir / "cost_report.json").read_text())
+    assert cost_report["actual_cost_usd"] == 0.012345
+    assert cost_report["actual_billable_api_calls"] == 3
 
     per_model_rates = json.loads((output_dir / "per_model_rates.json").read_text())
     assert per_model_rates["M"]["result_surface"] == "raw/internal"

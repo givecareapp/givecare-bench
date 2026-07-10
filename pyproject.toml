@@ -1,6 +1,6 @@
 [project]
 name = "invisiblebench"
-version = "3.1.0"
+version = "4.0.0"
 description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -81,7 +81,6 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 markers = [
     "v2: v2 gate+quality contract tests (run by default)",
-    "legacy: legacy compatibility tests (skip with -m 'not legacy')",
     "slow: tests requiring network or long computation",
 ]
 
@@ -168,7 +167,6 @@ disallow_incomplete_defs = true
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["archive/"]
 
 [tool.ruff.lint]
 select = [

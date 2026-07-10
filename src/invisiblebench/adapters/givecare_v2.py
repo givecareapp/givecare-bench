@@ -26,6 +26,7 @@ from invisiblebench.utils.benchmark_inventory import (
     get_project_root,
     scenario_category_for_path,
 )
+from invisiblebench.utils.scenario_sessions import iter_scenario_turns
 
 PROJECT_ROOT = get_project_root()
 load_dotenv(PROJECT_ROOT / ".env")
@@ -116,15 +117,6 @@ def get_scenario_title(scenario: dict[str, Any], scenario_path: Path) -> str:
     return scenario_id.replace("_", " ").title()
 
 
-def get_turns_from_scenario(scenario: dict[str, Any]) -> list[dict[str, Any]]:
-    if "sessions" in scenario:
-        turns: list[dict[str, Any]] = []
-        for session in scenario["sessions"]:
-            turns.extend(session.get("turns", []))
-        return turns
-    return scenario.get("turns", [])
-
-
 def run_scenario(
     provider: GiveCareV2Provider,
     scenario_path: str,
@@ -133,7 +125,6 @@ def run_scenario(
 ) -> tuple[Path, dict[str, Any]]:
     scenario = load_scenario(scenario_path)
     scenario_id = str(scenario.get("scenario_id") or Path(scenario_path).stem)
-    turns = get_turns_from_scenario(scenario)
 
     if verbose:
         print(f"\n=== {get_scenario_title(scenario, Path(scenario_path))} ===")
@@ -144,10 +135,12 @@ def run_scenario(
     from invisiblebench.evaluation.branching import resolve_branch
 
     prev_assistant_msg: str | None = None
-    for turn in turns:
+    for turn, session in iter_scenario_turns(scenario):
         turn_num = turn["turn_number"]
         user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
         user_entry: dict[str, Any] = {"turn": turn_num, "role": "user", "content": user_msg}
+        if session:
+            user_entry.update(session)
         if branch_id is not None:
             user_entry["branch_id"] = branch_id
         transcript.append(user_entry)
@@ -161,7 +154,14 @@ def run_scenario(
             user_message=user_msg,
             previous_messages=history,
         )
-        transcript.append({"turn": turn_num, "role": "assistant", "content": reply})
+        assistant_entry: dict[str, Any] = {
+            "turn": turn_num,
+            "role": "assistant",
+            "content": reply,
+        }
+        if session:
+            assistant_entry.update(session)
+        transcript.append(assistant_entry)
         history.extend([
             {"role": "user", "text": user_msg},
             {"role": "assistant", "text": reply},

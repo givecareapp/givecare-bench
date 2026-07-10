@@ -15,13 +15,12 @@ It does not contain the runtime package anymore. Runtime code now lives in `src/
 
 ## Public contract
 
-- benchmark version: `3.1.0` (canonical counts/version: `benchmark_inventory.json` + `CLAUDE.md` — do not hardcode elsewhere)
+- benchmark version: `4.0.0` (canonical source: `benchmark_inventory.json`)
 - public scope: benchmark core only
 - public harness: `llm/raw`
-- public scenarios: `63` in the checked-in Phase 2 artifact; `63` on disk and included by the next live `--full` run
+- public scenarios: `63`
 - checks: `50` (46 LLM-judged, 4 deterministic)
 
 ## Notes
 
-- `archive/scenarios/` contains historical and system-only scenario material.
 - private confidential holdouts are loaded from `INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR` and are not stored here.

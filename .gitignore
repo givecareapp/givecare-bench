@@ -87,6 +87,7 @@ DESIGN.md
 CLAUDE.md
 AGENTS.md
 internal/
-archive/
 adapters/
 /intake/
+/archive/
+/legacy/

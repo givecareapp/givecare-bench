@@ -28,19 +28,20 @@ uv run bench doctor          # verifies env + directories
   Trauma-awareness, Relational, Advocacy) produce directional distributions.
   The two layers are reported side by side (see [methodology](methodology.md)).
 
-## 3. Run your model (1–2 hours, ~$1–3 for most models)
+## 3. Run your model (1–2 hours; cost depends strongly on the model)
 
 Any OpenRouter model id works — you are not limited to the published roster:
 
 ```bash
 uv run bench -m "your-org/your-model" --dry-run  # cost preview, no calls
-uv run bench -m "your-org/your-model" -y  # all 63 public scenarios
+uv run bench -m "your-org/your-model" -y --max-cost-usd 25  # all 63 public scenarios
 ```
 
 Want a smaller first taste? Run one category:
 
 ```bash
-uv run bench -m "your-org/your-model" -c safety -y
+uv run bench -m "your-org/your-model" -c safety --dry-run
+uv run bench -m "your-org/your-model" -c safety -y --max-cost-usd 10
 ```
 
 For a cheap live canary before a larger run, use one low-cost target model and
@@ -63,12 +64,12 @@ Identity) judged with one-pass LLM verifiers:
 uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm \
   --llm-model openai/gpt-5-mini results/run_<timestamp>
 uv run python scripts/run_scan.py --profile dev --enable-llm \
-  --llm-model openai/gpt-5-mini results/run_<timestamp>
+  --max-cost-usd 2 --llm-model openai/gpt-5-mini results/run_<timestamp>
 ```
 
-(`--profile publish` runs all 50 checks with full repetitions — use it when
-you want the complete profile and don't mind the extra judge cost. `--profile
-smoke` is free and deterministic-only.)
+(`--profile publish` runs all 50 checks with full repetitions. Dry-run it
+first, then set `--max-cost-usd` at or above the printed conservative budget.
+`--profile smoke` is free and deterministic-only.)
 
 Output: `results/safety_care_scan/<timestamp>/per_run.jsonl` (one verdict
 ledger per scenario), `summary.md`, and corpus-level blindspot rates.
@@ -97,8 +98,7 @@ raw/internal diagnostic fields, not the public Safety/Care score model.
   metadata too).
 - The output is a blind-spot profile, not a rank. A model can be excellent on
   crisis recognition and still infodump a grieving caregiver — that
-  jaggedness is what the benchmark exists to show. See
-  [findings](findings.md) for what the current frontier looks like.
+  jaggedness is what the benchmark exists to show.
 
 ## Contributing results or scenarios
 

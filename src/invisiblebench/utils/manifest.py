@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.evaluation.check_registry import check_prompt_hashes
 from invisiblebench.utils.benchmark_inventory import (
     collect_confidential_scenario_paths,
     get_benchmark_version,
@@ -111,7 +112,7 @@ def generate_manifest(
         "git_dirty": _git_dirty(),
         "scenario_hash": _scenario_hash(scenarios_dir, extra_files=extra_scenario_files),
         "scoring_config_hash": _scoring_config_hash(config_path),
-        "scorer_prompt_hashes": {},
+        "scorer_prompt_hashes": check_prompt_hashes(project_root / "checks"),
         "model_ids": model_ids,
         "run_date": datetime.now(timezone.utc).isoformat(),
         "contract_version": _read_contract_version(config_path),

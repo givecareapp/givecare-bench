@@ -78,6 +78,14 @@ def test_probe_models_resolve_together_as_one_spec() -> None:
     )
 
 
+def test_overnight_scan_has_explicit_cost_ceiling() -> None:
+    text = OVERNIGHT_PROMOTE_SCRIPT.read_text()
+
+    assert 'SCAN_MAX_COST_USD="${SCAN_MAX_COST_USD:-1}"' in text
+    assert 'SCAN_ARGS+=(--enable-llm --max-cost-usd "$SCAN_MAX_COST_USD")' in text
+    assert '--max-cost-usd "$TRANSCRIPT_MAX_COST_USD"' in text
+
+
 def test_stale_model_name_fails_closed() -> None:
     """Regression proof, mirroring the actual outage: a retired name
     ('Claude Opus 4.7', retired when the catalog moved to 4.8) must raise —

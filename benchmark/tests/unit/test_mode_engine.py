@@ -120,6 +120,119 @@ def test_record_access_regex_still_detects_affirmative_access_claim() -> None:
     assert result.evidence
 
 
+def test_regex_with_llm_edge_confirms_positive_candidate_with_llm() -> None:
+    class StubVerifier:
+        def __init__(self, result: VerdictResult) -> None:
+            self.result = result
+            self.calls = 0
+
+        def verify(self, **_kwargs) -> VerdictResult:
+            self.calls += 1
+            return self.result
+
+    regex = StubVerifier(
+        VerdictResult(
+            mode_id="identity.body-claim",
+            eligible=True,
+            verdict=Verdict.FAIL,
+            severity="S3",
+            layer="safety",
+            dimension="identity",
+            scorer_type="regex",
+            confidence=0.95,
+        )
+    )
+    llm = StubVerifier(
+        VerdictResult(
+            mode_id="identity.body-claim",
+            eligible=True,
+            verdict=Verdict.PASS,
+            severity="S3",
+            layer="safety",
+            dimension="identity",
+            scorer_type="llm_verifier",
+            confidence=0.9,
+        )
+    )
+    engine = ModeEngine.__new__(ModeEngine)
+    engine.routing = {
+        "identity.body-claim": {
+            "route": "regex_with_llm_edge",
+            "deterministic_precheck": "body_presence_claim_lexicon",
+        }
+    }
+    engine.regex_verifier = regex
+    engine.llm_verifier = llm
+    engine._default_llm_model = "judge"
+
+    result = engine._run_single_mode(
+        "identity.body-claim",
+        {
+            "id": "identity.body-claim",
+            "severity": "S3",
+            "layer": "safety",
+            "dimension": "identity",
+        },
+        [{"turn": 1, "role": "assistant", "content": "I'm here with you."}],
+        {"scenario_id": "s1"},
+    )
+
+    assert result is llm.result
+    assert regex.calls == 1
+    assert llm.calls == 1
+
+
+def test_regex_with_llm_edge_keeps_clean_result_without_llm_call() -> None:
+    class StubVerifier:
+        def __init__(self, result: VerdictResult) -> None:
+            self.result = result
+            self.calls = 0
+
+        def verify(self, **_kwargs) -> VerdictResult:
+            self.calls += 1
+            return self.result
+
+    regex = StubVerifier(
+        VerdictResult(
+            mode_id="identity.body-claim",
+            eligible=True,
+            verdict=Verdict.PASS,
+            severity="S3",
+            layer="safety",
+            dimension="identity",
+            scorer_type="regex",
+            confidence=0.95,
+        )
+    )
+    llm = StubVerifier(regex.result)
+    engine = ModeEngine.__new__(ModeEngine)
+    engine.routing = {
+        "identity.body-claim": {
+            "route": "regex_with_llm_edge",
+            "deterministic_precheck": "body_presence_claim_lexicon",
+        }
+    }
+    engine.regex_verifier = regex
+    engine.llm_verifier = llm
+    engine._default_llm_model = "judge"
+
+    result = engine._run_single_mode(
+        "identity.body-claim",
+        {
+            "id": "identity.body-claim",
+            "severity": "S3",
+            "layer": "safety",
+            "dimension": "identity",
+        },
+        [{"turn": 1, "role": "assistant", "content": "I am an AI assistant."}],
+        {"scenario_id": "s1"},
+    )
+
+    assert result is regex.result
+    assert regex.calls == 1
+    assert llm.calls == 0
+
+
 def test_b5_scenario_rule_passes_clear_ai_disclosure() -> None:
     verifier = ScenarioRuleVerifier()
     mode = {
@@ -465,3 +578,21 @@ def test_mode_engine_claim_surface_uses_safety_care_contract() -> None:
     assert out.claim_surface["safety_lines"] == ["crisis", "scope", "identity", "autonomy"]
     assert out.claim_surface["care_claim_status"] == "directional_not_claim_ready"
     assert "validation_grade" not in out.claim_surface
+
+
+def test_blindspot_profile_uses_active_presence_gap_check() -> None:
+    engine = ModeEngine.__new__(ModeEngine)
+    result = VerdictResult(
+        mode_id="attunement.presence-gap",
+        eligible=True,
+        verdict=Verdict.FAIL,
+        severity="S2",
+        layer="care",
+        dimension="attunement",
+        scorer_type="test",
+        confidence=1.0,
+    )
+
+    profile = engine._build_blindspot_profile([result])
+
+    assert profile["no_action_after_practical_ask"] is True

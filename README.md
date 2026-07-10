@@ -14,11 +14,12 @@ The output model is **`safety-care/v1`** — a per-model safety **profile, not a
 
 50 verifier checks (46 LLM-judged, 4 deterministic) span these 9 dimensions. There is **no `overall_score` and no rank**; models are listed alphabetically, and at n=63 point ranks are statistically indistinguishable, so cite intervals, not positions. The canonical output model — the single source of truth — is **[docs/ontology.md](docs/ontology.md)**; see [Taxonomy](docs/taxonomy.md) for the per-check framework.
 
-The benchmark also carries a longitudinal result: the headline relational failures measured in the 2025 historical sweep (artificial intimacy, false continuity, identity misrepresentation) record zero scored failures on the 2026 Phase 2 roster, on the same historical check definitions — see [Key Findings](docs/findings.md) for the evidence and the honest caveats on both readings.
-
-The checked-in leaderboard artifact remains the 11-model × 63-scenario Phase 2
-source. The current live `--full` command targets 15 OpenRouter models × 63
-public scenarios; a 2026-07-03 dry run estimates about `$24.33`.
+No result artifact is checked in until it passes the current contract's strict
+QA gate. The live `--full` command targets 15 OpenRouter models × 63 public
+scenarios. The 2026-07-10 live-calibrated budget is about **$49.71 for
+transcript generation**, then **$171 base / $456 conservative** for the
+publication judge scan across all 15 models. Budget roughly **$221–$506 end to
+end**, not the transcript number alone.
 
 ## The calibrated core is the benchmark
 
@@ -39,23 +40,22 @@ are best cited separately:
 1. **Clinical-scope development signal** (the most-evidenced Safety surface today).
    The Scope bright-lines — diagnosis (scope.diagnosis), patient-specific prescribing
    (scope.prescribing), false scope/capability claims — plus the crisis checks with per-mode
-   gold (crisis.passive-ideation, crisis.false-reassurance) and identity continuity (identity.memory-claim) account for the majority
-   of scored violations on the current roster. This is the benchmark's strongest
-   development signal, but it is still `not_claim_ready`.
+   gold (crisis.passive-ideation, crisis.false-reassurance) and identity
+   continuity (identity.memory-claim) form the benchmark's strongest
+   development-evidence group, but remain `not_claim_ready`.
 2. **Dyadic relational-harm probe** (novel, partly human-labeled, still
    scaling). The distinctive contribution — caregiver-to-recipient harm-fear and
    recipient-endangerment (crisis.harm-intent, crisis.abuse-neglect,
    crisis.acute-medical, crisis.exploitation, autonomy.override)
-   — is what no other benchmark measures, and is the priority calibration
+   — is the benchmark's distinguishing probe and priority calibration
    backlog: `not_claim_ready` until those checks earn independent human
    calibration. Read their
    per-line rates as directional until calibration lands.
 
-Both are real. Keeping them distinct — and keeping `not_claim_ready` signal out of the
-claim surface — is what keeps the benchmark honest. See
-[docs/findings.md](docs/findings.md) for the evidence-source breakdown behind
-every headline finding, and [docs/ontology.md](docs/ontology.md) for the full
-claim posture.
+Keeping these evidence levels distinct—and keeping `not_claim_ready` signal out
+of the claim surface—is what keeps the benchmark honest. See
+[docs/verifier-validation.md](docs/verifier-validation.md) for the evidence
+ledger and [docs/ontology.md](docs/ontology.md) for the full claim posture.
 
 ## Publication framing
 
@@ -70,7 +70,7 @@ are deferred to a re-authored Safety/Care artifact-v2. See
 [Benchmark Publishing Audit](docs/publishing-audit.md) for the two-phase
 publication model and what a v2 findings layer would add.
 
-## Public, internal, and historical
+## Public and internal surfaces
 
 ### Public
 These are the parts external users should rely on:
@@ -80,21 +80,13 @@ These are the parts external users should rely on:
 - `scripts/`: benchmark pipeline (run scan, leaderboard, QA, publish, rescore gate)
 - `delivery/`: projections to consumers (web-bench sync, contrast analysis, taxonomy snapshot)
 - `docs/`: public docs
-- `data/leaderboard/`: generated public leaderboard artifact
+- `data/leaderboard/`: generated only by the fail-closed publication path
 
 ### Internal-active
 These are versioned in the repo, but they are not part of the public benchmark contract:
 - `internal/autoresearch/`: scenario optimization campaigns and spread analysis
 - `internal/evals/`: judge analysis, labeling, and scorer validation work
 - `internal/papers/`: paper source and research artifacts
-
-### Historical
-These are retained for provenance, not day-to-day use:
-- `archive/benchmark/`
-- `archive/docs/`
-- `archive/internal/`
-- `archive/scenarios/`
-- `archive/scripts/`
 
 ## Active repo shape
 
@@ -106,8 +98,7 @@ givecare-bench/
 ├── scripts/              # benchmark pipeline utilities
 ├── delivery/             # projections to consumers (web sync, snapshots)
 ├── docs/                 # public documentation
-├── data/leaderboard/     # generated public artifacts
-└── archive/              # historical material only
+└── data/leaderboard/     # created only after strict QA passes
 ```
 
 (Local working trees also carry gitignored operator directories — intake/,
@@ -121,18 +112,17 @@ internal/, results/ — that are not part of the public contract.)
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Every scenario file embeds a contamination canary GUID (`benchmark/scenarios/CANARY.txt`). Trainers should filter on it; a model that can reproduce the GUID has trained on benchmark data.
 - The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py`. New publication refreshes must use the strict QA gate (`scripts/qa_leaderboard.py --strict`; one fail-closed path: `scripts/publish.sh <scan>/per_run.jsonl <web-target>`).
-- `bench health` checks the local checked-in web projection read-only and warns
-  when `data/leaderboard/leaderboard_web.json` lags
-  `data/leaderboard/leaderboard.json`; it does not publish, sync, or write.
-- Current Phase 2 artifact status: `data/leaderboard/leaderboard.json` is a non-strict public source regenerated from the refreshed 50-check scan. Non-strict QA passes after restamping coverage semantics; strict QA still fails on one missing current scenario (`tier1_source_verification_001`), one extra retired scenario (`tier2_regulatory_001_minor_disclosure`), 77 missing check instances, and four residual quality-mode `UNCLEAR`s, so this artifact must not be described as strict-QA-passing until those are adjudicated or regenerated.
+- `bench health` reports the absence or drift of generated local projections;
+  it does not publish, sync, or write.
+- There is no checked-in result artifact. A fresh run must complete transcript
+  generation, current-contract scanning, artifact generation, and strict QA
+  before publication.
 - The active public surface is the lean `safety-care/v1` web-bench payload:
   `schema`, `notes`, `scan_metadata`, and `models` (each carrying `safety` and
   `care`). There is no `findings` block in the current payload — themes,
   contrast sets, and per-model signatures are deferred to a re-authored
   Safety/Care artifact-v2 (see [docs/publishing-audit.md](docs/publishing-audit.md)).
-  Older generated narrative markdown (e.g. the archived `model_narratives.md`)
-  is historical provenance, not the current publication surface.
-- Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only when it is `claim_ready`. Today that surface is empty (0 of 50 checks). Care distributions are complete for the frozen transcript artifact but ship as directional/`not_claim_ready`, never composited with Safety.
+- Leaderboard metadata carries a machine-readable claim surface and validation summary: the published Safety violation rates are `calibrated_only` — a check enters the claim surface only when it is `claim_ready`. Today that surface is empty (0 of 50 checks). Care distributions ship as directional/`not_claim_ready`, never composited with Safety.
 
 ## Quickstart
 
@@ -141,8 +131,9 @@ afternoon: [docs/quickstart.md](docs/quickstart.md). The short version:
 
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
-uv run bench -m "your-org/your-model" -y                                   # generate transcripts
-uv run python scripts/run_scan.py --profile dev --enable-llm --llm-model openai/gpt-5-mini results/run_<id>   # judge (core profile)
+uv run bench -m "your-org/your-model" --dry-run                            # plan transcript budget
+uv run bench -m "your-org/your-model" -y --max-cost-usd 25                 # generate transcripts
+uv run python scripts/run_scan.py --profile dev --enable-llm --max-cost-usd 25 --llm-model openai/gpt-5-mini results/run_<id>   # judge (core profile)
 uv run bench explain "your-model" <scenario> --failures --scan <scan>/per_run.jsonl  # scan evidence; raw/internal score fields
 ```
 
@@ -154,16 +145,16 @@ uv run ruff check .
 uv run bench --help
 uv run bench doctor                                 # validate env vars + runs dir
 uv run bench --full --dry-run
-uv run bench --full --scenario-parallel 8 -y
+uv run bench --full --scenario-parallel 8 -y --max-cost-usd 50
 env INVISIBLEBENCH_API_TIMEOUT_SECONDS=30 INVISIBLEBENCH_API_MAX_RETRIES=1 \
-  uv run bench -m 'flash lite' --scenario context_regulatory_data_privacy_001 -y  # cheap transcript canary
+  uv run bench -m deepseek --scenario context_regulatory_data_privacy_001 -y --max-cost-usd 0.10  # cheap transcript canary
 uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
 uv run python scripts/lint_turn_indices.py --strict
 uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm --llm-model openai/gpt-5-mini
-uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd 500 --llm-model openai/gpt-5-mini
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
 uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
 uv run python delivery/sync_web_bench.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json

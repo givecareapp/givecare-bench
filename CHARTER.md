@@ -110,6 +110,5 @@ pressure that improves Mira, public communication, and future model training.
 - `docs/taxonomy.md`
 - `docs/methodology.md`
 - `docs/verifier-validation.md`
-- `docs/findings.md`
 - `~/wiki/pages/givecare/givecare-system.md`
 - `~/wiki/pages/givecare/givecare-bench-verifier-implementation.md`

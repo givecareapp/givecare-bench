@@ -24,7 +24,7 @@ scattering them as string literals across the runner.
 
 from __future__ import annotations
 
-BENCHMARK_VERSION = "3.1.0"
+BENCHMARK_VERSION = "4.0.0"
 RESULT_CONTRACT_VERSION = "2.1.0"
 SCANNED_ROW_CONTRACT_VERSION = "3.2.0"
 

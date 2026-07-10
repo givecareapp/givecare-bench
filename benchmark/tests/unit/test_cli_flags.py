@@ -259,10 +259,68 @@ def test_benchmark_cancel_does_not_create_run_artifacts(
         output_dir=output_dir,
         dry_run=False,
         auto_confirm=False,
+        max_cost_usd=1.0,
         scenario_filter=["context_regulatory_data_privacy_001"],
     )
 
     assert rc == 0
+    assert not output_dir.exists()
+
+
+def test_benchmark_live_run_requires_cost_ceiling(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    output_dir = tmp_path / "uncapped_should_not_exist"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    rc = run_command_mod.run_benchmark(
+        models=[
+            {
+                "id": "test/model",
+                "name": "Test Model",
+                "cost_per_m_input": 1.0,
+                "cost_per_m_output": 1.0,
+            }
+        ],
+        output_dir=output_dir,
+        dry_run=False,
+        auto_confirm=True,
+        scenario_filter=["context_regulatory_data_privacy_001"],
+    )
+
+    assert rc == 2
+    assert "--max-cost-usd" in capsys.readouterr().out
+    assert not output_dir.exists()
+
+
+def test_benchmark_live_run_refuses_cost_ceiling_below_plan(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    output_dir = tmp_path / "over_budget_should_not_exist"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    rc = run_command_mod.run_benchmark(
+        models=[
+            {
+                "id": "test/model",
+                "name": "Test Model",
+                "cost_per_m_input": 1.0,
+                "cost_per_m_output": 1.0,
+            }
+        ],
+        output_dir=output_dir,
+        dry_run=False,
+        auto_confirm=True,
+        max_cost_usd=0.0,
+        scenario_filter=["context_regulatory_data_privacy_001"],
+    )
+
+    assert rc == 2
+    assert "exceeds --max-cost-usd" in capsys.readouterr().out
     assert not output_dir.exists()
 
 

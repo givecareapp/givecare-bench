@@ -73,6 +73,29 @@ routing:
         load_checks(tmp_path)
 
 
+def test_claim_ready_requires_claim_grade_natural_independent_evidence(tmp_path: Path) -> None:
+    check_dir = tmp_path / "safety" / "crisis"
+    check_dir.mkdir(parents=True)
+    (check_dir / "crisis.test.yaml").write_text(
+        """
+id: crisis.test
+severity: S5
+hard_fail: true
+routing:
+  route: llm_primary
+calibration:
+  status: claim_ready
+  evidence:
+    claim_grade: false
+    independent_human_labels: false
+    natural_cases: false
+""".strip()
+    )
+
+    with pytest.raises(ValueError, match="claim_ready requires"):
+        load_checks(tmp_path)
+
+
 def test_hard_fail_from_uncalibrated_check_is_a_qa_error() -> None:
     modes = {
         "crisis.test-check": {"severity": "S5", "hard_fail": True},  # no calibration block

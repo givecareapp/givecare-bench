@@ -10,6 +10,9 @@ from invisiblebench.cli.transcript import evaluate_scenario_async
 
 
 class _FakeAsyncClient:
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, str]]] = []
+
     async def call_model_async(
         self,
         *,
@@ -18,6 +21,7 @@ class _FakeAsyncClient:
         temperature: float,
         max_tokens: int,
     ) -> dict[str, Any]:
+        self.calls.append([dict(message) for message in messages])
         return {
             "response": "I can help with that.",
             "finish_reason": "stop",
@@ -71,6 +75,56 @@ def test_evaluate_scenario_async_transcript_only_skips_judge(tmp_path: Path) -> 
     assert Path(row["transcript_path"]).exists()
 
 
+def test_multisession_transcript_preserves_session_semantics(tmp_path: Path) -> None:
+    scenario_path = tmp_path / "multisession.json"
+    scenario_path.write_text(
+        json.dumps(
+            {
+                "scenario_id": "continuity_unit_test_001",
+                "category": "continuity",
+                "sessions": [
+                    {
+                        "session_number": 1,
+                        "time_elapsed": "Day 0",
+                        "session_context": "Initial conversation.",
+                        "turns": [{"turn_number": 1, "user_message": "My name is Jamie."}],
+                    },
+                    {
+                        "session_number": 2,
+                        "time_elapsed": "3 months later",
+                        "session_context": "Jamie returns after the appeal.",
+                        "turns": [{"turn_number": 2, "user_message": "I'm back."}],
+                    },
+                ],
+            }
+        )
+    )
+    client = _FakeAsyncClient()
+
+    row = asyncio.run(
+        evaluate_scenario_async(
+            model={"id": "test/model", "name": "Test Model"},
+            scenario={
+                "path": str(scenario_path),
+                "name": "Multi-session Scenario",
+                "category": "continuity",
+            },
+            api_client=client,  # type: ignore[arg-type]
+            output_dir=tmp_path / "run",
+            semaphore=asyncio.Semaphore(1),
+        )
+    )
+
+    transcript = [
+        json.loads(line)
+        for line in Path(row["transcript_path"]).read_text().splitlines()
+    ]
+    assert {entry["session_number"] for entry in transcript} == {1, 2}
+    assert transcript[-1]["time_elapsed"] == "3 months later"
+    assert "3 months later" in client.calls[-1][0]["content"]
+    assert "Jamie returns after the appeal" in client.calls[-1][0]["content"]
+
+
 def test_run_benchmark_transcript_only_writes_stage_artifact(
     tmp_path: Path,
     monkeypatch,
@@ -100,6 +154,12 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
         transcript_dir.mkdir(parents=True, exist_ok=True)
         transcript_path = transcript_dir / f"{model['id'].replace('/', '_')}_scenario.jsonl"
         transcript_path.write_text('{"role":"assistant","content":"ok"}\n')
+        run_command_mod.cost_tracker.record(
+            model["id"],
+            prompt_tokens=100,
+            completion_tokens=50,
+            actual_cost=0.012345,
+        )
         return {
             "artifact_type": "transcript_result/v1",
             "model": model["name"],
@@ -108,7 +168,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
             "scenario_id": scenario["scenario_id"],
             "category": scenario["category"],
             "transcript_path": str(transcript_path),
-            "cost": 0.0,
+            "cost": 0.012345,
             "status": "transcript_ready",
             "success": True,
             "run_id": kwargs["run_id"],
@@ -132,6 +192,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
         output_dir=output_dir,
         dry_run=False,
         auto_confirm=True,
+        max_cost_usd=1.0,
         scenario_filter=["context_regulatory_data_privacy_001"],
     )
 
@@ -144,6 +205,9 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert summary["artifact_type"] == "transcript_run/v1"
     assert summary["status"] == "complete"
     assert summary["transcript_count"] == 1
+    assert summary["actual_cost_usd"] == 0.012345
+    assert summary["actual_billable_api_calls"] == 1
+    assert summary["actual_cost_by_model_usd"] == {"test/model": 0.012345}
     assert "run_scan.py --profile dev" in summary["next_steps"]["dev_scan"]
     assert "--llm-model openai/gpt-5-mini" in summary["next_steps"]["dev_scan"]
 

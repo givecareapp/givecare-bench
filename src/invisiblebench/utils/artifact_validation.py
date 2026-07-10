@@ -56,6 +56,18 @@ def artifact_issue_policy() -> dict[str, dict[str, Any]]:
     return deepcopy(_ARTIFACT_ISSUE_POLICY)
 
 
+def observed_prompt_hashes(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Collect the distinct verifier-template hashes actually present in scan rows."""
+    hashes: dict[str, set[str]] = {}
+    for row in rows:
+        for result in row.get("mode_results") or []:
+            mode_id = result.get("mode_id")
+            prompt_hash = result.get("prompt_hash")
+            if mode_id and prompt_hash:
+                hashes.setdefault(str(mode_id), set()).add(str(prompt_hash))
+    return {mode_id: sorted(values) for mode_id, values in sorted(hashes.items())}
+
+
 def _list_len(value: Any) -> int:
     return len(value) if isinstance(value, list) else int(bool(value))
 
