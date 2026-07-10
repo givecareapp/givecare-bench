@@ -639,14 +639,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../findings/" class="md-nav__link">
+      <a href="../results-experience/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Key Findings
+    Results Experience
   
 
     
@@ -674,6 +674,60 @@
     
   
     Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verifier-unit-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Unit Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
   
 
     
@@ -773,9 +827,8 @@
    before the results are treated as public claims.</li>
 <li><strong>Result narrative</strong> — the generated benchmark outputs are QA-gated, reduced
    into a web payload, and presented as caregiver-centered failure-mode analysis.
-   The current checked-in Phase 2 artifact is a non-strict public source until
-   current-contract coverage gaps and residual <code>UNCLEAR</code> verdicts are
-   adjudicated or regenerated and <code>scripts/qa_leaderboard.py --strict</code> passes.</li>
+   No result artifact is checked in until <code>scripts/qa_leaderboard.py --strict</code>
+   passes against the current benchmark contract.</li>
 </ol>
 <p>This split is intentional. The benchmark should not read as a generic stack
 rank of models. The useful claim is sharper: it shows where each model is jagged
@@ -793,39 +846,50 @@ would make a caregiver AI feel brittle in practice.</p>
 <li>each check file embeds its judge prompt as a <code>prompt:</code> block.</li>
 <li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
   into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.</li>
-<li><code>scripts/run_scan.py</code>, <code>scripts/generate_leaderboard.py</code>,
-  <code>scripts/qa_leaderboard.py</code>, and <code>delivery/sync_web_bench.py</code>
-  form the release path from transcripts to public web payload.</li>
+<li><code>scripts/run_scan.py</code>, <code>delivery/combine_scans.py</code>,
+  <code>scripts/generate_leaderboard.py</code>, <code>scripts/qa_leaderboard.py</code>, and
+  <code>delivery/sync_web_bench.py</code> form the fail-closed path from complete,
+  common-profile scans to the public scorecard. <code>delivery/combine_scans.py</code>
+  requires exact scenario-set parity, one publish profile, one judge, complete
+  cost accounting, and no duplicate model/scenario rows; its manifest and
+  source hashes are embedded into leaderboard metadata.</li>
+<li><code>delivery/build_public_transcript_release.py</code> independently projects raw run
+  artifacts into allowlisted, provenance-complete public transcript bundles.
+  It verifies the exact v4 inventory and shared corpus hash and excludes local
+  paths and provider metadata.</li>
+<li><code>delivery/build_public_score_release.py</code> projects the strict-QA-ready merged
+  scan into model-specific per-check evidence bundles. It preserves check
+  verdicts, repetitions, prompt hashes, rationale codes, and transcript quotes,
+  while excluding host paths, provider metadata, and internal composite fields.</li>
+<li>Live judge scans write a durable row checkpoint and cumulative cost state
+  after every completed transcript. <code>--resume &lt;incomplete-scan-dir&gt;</code> verifies
+  the original source/options signature and skips completed rows, so a hard
+  ceiling or process failure does not turn paid work into an unusable partial.</li>
 </ul>
 <p>The publication standard is evidence-bearing: each failure should preserve the
 eligible check, the verdict, the scorer route, and quoted transcript evidence.
 The code docs should make it possible to audit how a public claim was produced
 without relying on a single opaque LLM judge.</p>
 <h2 id="phase-2-results-and-scoring-narrative">Phase 2: Results And Scoring Narrative<a class="headerlink" href="#phase-2-results-and-scoring-narrative" title="Permanent link">&para;</a></h2>
-<p>The result phase starts from the canonical leaderboard artifact:</p>
+<p>The result phase starts from a current-version scored scan:</p>
 <ul>
-<li>Source: <code>data/leaderboard/leaderboard.json</code></li>
-<li>Current source artifact: <code>results/v3_scan/merged_phase2/per_run.jsonl</code></li>
-<li>Current public benchmark version: <code>3.1.0</code></li>
-<li>Current public framework: <code>safety-care/v1</code> (non-strict artifact; strict QA
-  still blocked by current-contract coverage gaps and residual <code>UNCLEAR</code>
-  verdicts)</li>
-<li>Current checked-in public scan: 11 models × 63 scenarios × 50 active checks</li>
-<li>Next live <code>--full</code> target: 15 models × 63 scenarios × 50 active checks</li>
-<li>Current generated timestamp: read from
-  <code>data/leaderboard/leaderboard.json</code> at <code>scan_metadata.generated_at</code> rather
-  than hand-copying it into this doc.</li>
-<li>Current strict QA status: not passing. Non-strict QA passes; strict QA fails
-  on one missing current scenario (<code>tier1_source_verification_001</code>), one extra
-  retired scenario (<code>tier2_regulatory_001_minor_disclosure</code>), 77 missing check
-  instances, and four residual quality-mode <code>UNCLEAR</code> verdicts, so it must not
-  be described as a strict-QA-passing leaderboard source.</li>
-<li>Current artifact-validation diagnostics: 1,852 eligible <code>NOT_APPLICABLE</code>
-  mode verdicts (1,466 Safety-gate), 4 unresolved mode verdicts, 0 Safety-gate
-  unresolved verdicts, 0 fail-without-evidence rows, 0 missing prompts, 0
-  unavailable verifiers, 0 fatal verifier errors, 21 mode results with scorer
-  parse errors, 24 parse errors total, and 118 bounded raw-output diagnostic
-  samples.</li>
+<li>Current benchmark contract: <code>4.0.0</code></li>
+<li>Current public framework: <code>safety-care/v1</code></li>
+<li>Live <code>--full</code> target: 15 models × 63 scenarios × 50 active checks</li>
+<li>Current result artifact: <code>data/leaderboard/leaderboard.json</code>, generated from
+  the 2026-07-10 four-model v4 release and checked in only after strict QA</li>
+<li>Release scope: 4 models × 63 scenarios × 50 checks = 252 score rows and
+  12,600 per-check results under one <code>publish</code> profile and GPT-5 Mini judge</li>
+<li>Recorded verifier cost: $24.19056413 across 9,190 billed calls; transcript
+  generation is separately accounted, with two older runners lacking recorded
+  generation cost</li>
+<li>Strict QA requires complete scenario/check coverage, no blocking unresolved
+  verdicts, a current benchmark version, exact expected/observed prompt hashes,
+  and a matching manual-adjudication ledger when manual results exist.</li>
+<li>Safety-override suppression is represented as an ineligible
+  <code>NOT_APPLICABLE</code> result, never as a missing check.</li>
+<li>Generated timestamps and validation diagnostics are read from
+  <code>scan_metadata</code>, never copied into prose.</li>
 <li>The artifact also carries <code>scan_metadata.artifact_issue_policy</code>, which
   classifies eligible <code>NOT_APPLICABLE</code> as resolved coverage, literal <code>UNCLEAR</code>
   as a strict-QA blocker, and scorer parse/truncation counters as retry
@@ -838,12 +902,16 @@ without relying on a single opaque LLM judge.</p>
   <code>models</code> — each model carrying <code>safety</code> (per-line violation rates + aggregate)
   and <code>care</code> (per-quality distributions). <code>delivery/sync_web_bench.py</code> validates
   the source and rejects non-public top-level keys before writing.</li>
-<li>Local projection drift is read-only health state: <code>bench health</code> reports when
-  the checked-in <code>data/leaderboard/leaderboard_web.json</code> lags the canonical
-  <code>data/leaderboard/leaderboard.json</code>; it does not sync or write the projection.</li>
+<li>Local projection drift is read-only health state: after generation,
+  <code>bench health</code> reports whether <code>leaderboard_web.json</code> lags
+  <code>leaderboard.json</code>; it does not sync or write the projection.</li>
 <li>No <code>findings</code> block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.</li>
+<li>Public audit data complements the lean payload: <code>/bench/evidence/v4.0.0/</code>
+  contains the 252 source transcripts, and <code>/bench/scores/v4.0.0/</code> contains all
+  12,600 allowlisted per-check verdicts and evidence quotes. Both ship manifests
+  with source hashes; neither contains host-specific paths.</li>
 </ul>
 <p>The projected web surface should explain model differences, not flatten them.
 In lean <code>safety-care/v1</code> its public analysis is organized as per-model audit cards:</p>

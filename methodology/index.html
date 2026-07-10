@@ -827,14 +827,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../findings/" class="md-nav__link">
+      <a href="../results-experience/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Key Findings
+    Results Experience
   
 
     
@@ -862,6 +862,60 @@
     
   
     Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verifier-unit-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Unit Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
   
 
     
@@ -1237,7 +1291,7 @@
 </table>
 <hr />
 <h2 id="calibration-and-claims">Calibration and claims<a class="headerlink" href="#calibration-and-claims" title="Permanent link">&para;</a></h2>
-<p>InvisibleBench makes <strong>calibration-gated claims</strong> under a binary claim model: only checks whose <code>calibration:</code> block carries status <code>claim_ready</code> feed published Safety rates. As of 2026-07-01, <strong>0 of 50 checks are <code>claim_ready</code>, so the published Safety claim surface is empty.</strong></p>
+<p>InvisibleBench makes <strong>calibration-gated claims</strong> under a binary claim model: only checks whose <code>calibration:</code> block carries status <code>claim_ready</code> feed published Safety rates. As of 2026-07-10, <strong>0 of 50 checks are <code>claim_ready</code>, so the published Safety claim surface is empty.</strong></p>
 <p><strong>Claim model (2026-06-30):</strong></p>
 <table>
 <thead>
@@ -1263,12 +1317,20 @@
 <p>The 19 hard-fail checks hold <code>authored_ai_unit_test</code> development evidence (AI reference-panel labels on authored cards — not validation) and the historical 60-trace layer-level result as <code>development_only</code> evidence — neither is a public claim. <code>scope.periodic-disclosure</code> was demoted out of the hard-fail/claim layer on 2026-07-01. See <a href="../verifier-validation/">verifier-validation.md</a> for the full reading guide.</p>
 <p><strong>What this means for public claims:</strong></p>
 <ul>
-<li>Safety violation rates are the <em>intended</em> public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs) — but <strong>the surface is currently empty (0 <code>claim_ready</code>)</strong>, so no Safety rate is a public claim yet.</li>
+<li>Safety violation rates are the <em>intended</em> public-claim surface (calibration-gated, per-line, conditional-denominator rates with cluster-robust 95% CIs and a Wilson boundary fallback) — but <strong>the surface is currently empty (0 <code>claim_ready</code>)</strong>, so no Safety rate is a public claim yet.</li>
 <li>Care distributions are directional signals, never claim-bearing: Belonging has inter-model κ=0.82 (development only); Attunement, Relational, and Advocacy are directional/authored; Trauma-awareness has no checks yet.</li>
 <li>There is no composite or ranking key to mis-cite.</li>
 </ul>
-<p><strong>Current leaderboard artifact (<code>data/leaderboard/leaderboard.json</code>):</strong>
-Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/per_run.jsonl</code>), currently 11 models × 63 rows, regenerated 2026-07-03 as a non-strict public source after the 50-check contract refresh and the 63-scenario inventory update. Non-strict QA passes; strict QA currently fails on one missing current scenario (<code>tier1_source_verification_001</code>), one extra retired scenario (<code>tier2_regulatory_001_minor_disclosure</code>), 77 missing check instances, and four residual quality-mode <code>UNCLEAR</code> verdicts, so do not describe this artifact as strict-QA-passing until <code>scripts/qa_leaderboard.py --strict</code> passes. <code>scan_metadata.artifact_validation</code> records eligible <code>NOT_APPLICABLE</code> counts, unresolved verdicts, fail-without-evidence counts, verifier infrastructure counts, scorer parse errors, and bounded raw-output diagnostic samples; QA recomputes those fields from the scan. The next live <code>--full</code> run targets 15 models × 63 scenarios.</p>
+<p><strong>Current result status:</strong>
+No leaderboard is checked in. Publication begins with a fresh 4.0 transcript
+run and current-contract scan; generated artifacts preserve expected and
+observed per-check prompt hashes, and strict QA blocks any coverage, verdict,
+version, or hash mismatch. The next live <code>--full</code> run targets 15 models × 63
+scenarios. Its exact OpenRouter IDs and list prices were refreshed on
+2026-07-10; <code>src/invisiblebench/models/config.py</code> is the roster source of truth.
+The GPT-5 Mini verifier remains intentionally frozen pending separate
+per-check re-validation, so a target-roster refresh cannot silently change the
+measurement instrument.</p>
 <hr />
 <h2 id="runtime-adjudication">Runtime adjudication<a class="headerlink" href="#runtime-adjudication" title="Permanent link">&para;</a></h2>
 <p>The scoring system is a <strong>hybrid per-check verifier</strong> architecture — a deliberate departure from the monolithic LLM-as-judge paradigm.</p>
@@ -1276,7 +1338,7 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <li>Deterministic lexicon scorers catch bright-line failures fleet-wide — fast, reproducible, zero token cost.</li>
 <li>LLM verifiers adjudicate semantic edge cases on eligible checks — using token escalation (4000 → 8000 → 16000) before failing closed.</li>
 <li>Scan profiles separate cheap development feedback (<code>--profile dev</code>) from strict publication scoring (<code>--profile publish</code>).</li>
-<li>Verifier behavior is audited against the resolved human gold set (60/60 on the prior layer-level gold) — recorded as development evidence, not a public claim (0 checks are <code>claim_ready</code>).</li>
+<li>Verifier behavior has historical development evidence against the resolved layer-level gold (60/60 using Gemini 2.5 Flash Lite, not the current GPT-5 Mini judge). It is not current-judge validation or a public claim (0 checks are <code>claim_ready</code>).</li>
 <li>Strict leaderboard artifacts may include local manual adjudication of residual <code>UNCLEAR</code> verdicts, recorded with transcript paths and quoted evidence.</li>
 <li>Each check produces an independent pass/fail verdict with evidence spans — not a holistic score.</li>
 </ol>
@@ -1366,7 +1428,7 @@ Generated from the Phase 2 transcript scan (<code>results/v3_scan/merged_phase2/
 <div class="admonition note">
 <p class="admonition-title">What InvisibleBench evaluates — and what it does not</p>
 <p>InvisibleBench evaluates <strong>conversations</strong>, not apps or products.</p>
-<p><strong>The scripted-user ceiling.</strong> Caregiver turns are deterministic scenario scripts with rule-based branching — there is no reactive user simulator. This is a deliberate trade: determinism is what makes transcripts frozen, re-judgeable artifacts and keeps model-to-model comparisons exact. Findings are evidence about model responses to a fixed relational script, not about how the relationship would unfold with a responsive caregiver. A calibrated user simulator is the eventual path past this ceiling; it would be a new <code>benchmark_version</code>, never a quiet swap.</p>
+<p><strong>The scripted-user ceiling.</strong> Caregiver turns are deterministic scripts with rule-based branching—there is no reactive user simulator. Multi-session scripts preserve session number, elapsed time, and authored session context, while the raw harness still supplies prior turns in one model request history. They test scripted continuity under an explicit time gap, not product persistence or months-scale memory. Branch paths can differ by model, so exact comparisons require conditioning on the recorded <code>branch_id</code> or using fixed-path subsets. A calibrated user simulator or true persistence harness would be a new <code>benchmark_version</code>, never a quiet swap.</p>
 <p><strong>Privacy honesty.</strong> If a model makes false privacy or capability claims <em>within</em> a conversation, the Scope/Identity lines catch it. Systematic product privacy evaluation requires a different methodology.</p>
 <p><strong>Sensitive-disclosure minimization.</strong> What the app <em>solicits</em> is a product-design concern, not a property of any single conversation turn.</p>
 <p><strong>Evidence discipline.</strong> Testing whether cited resources are factually accurate requires ground-truth infrastructure that operates at a different layer than conversation evaluation.</p>

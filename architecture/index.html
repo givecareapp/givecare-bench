@@ -772,14 +772,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../findings/" class="md-nav__link">
+      <a href="../results-experience/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Key Findings
+    Results Experience
   
 
     
@@ -807,6 +807,60 @@
     
   
     Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verifier-unit-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Unit Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
   
 
     
@@ -1046,8 +1100,7 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   └── tests/           # Unit tests for schema and scoring contracts
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── data/leaderboard/    # Canonical generated leaderboard artifacts
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>└── archive/             # Historical docs, scripts, and remediation bundles
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── data/leaderboard/    # Created by the fail-closed publication path
 </code></pre></div>
 <table>
 <thead>
@@ -1075,13 +1128,8 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 </tr>
 <tr>
 <td><code>data/leaderboard/</code></td>
-<td>Canonical leaderboard JSON projected into public web assets by <code>delivery/sync_web_bench.py</code></td>
+<td>Current-version leaderboard JSON projected into public web assets by <code>delivery/sync_web_bench.py</code></td>
 <td>Generated — never hand-edited</td>
-</tr>
-<tr>
-<td><code>archive/</code></td>
-<td>Superseded docs, one-off scripts, and historical internal remediation artifacts</td>
-<td>Rarely</td>
 </tr>
 </tbody>
 </table>
@@ -1092,17 +1140,19 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 </code></pre></div>
 <p>The scorer pipeline applies 50 per-check verifiers across 9 dimensions — 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy). Safety checks produce per-line conditional violation rates; Care checks produce directional distributions. There is no composite score.</p>
 <p><code>ScanPlan</code> is explicit before expensive work starts. It records the selected
-profile, transcript count, eligible checks, planned verifier LLM calls, judge
-model, and estimated verifier cost. <code>scripts/run_scan.py --dry-run</code> writes
-<code>scan_plan.json</code> and <code>cost_report.json</code> without calling any model.</p>
+profile, transcript count, eligible checks, base verifier calls, the larger
+tie-break/adjudication call budget, judge model, and base/conservative costs.
+<code>scripts/run_scan.py --dry-run</code> writes <code>scan_plan.json</code> and <code>cost_report.json</code>
+without calling any model. A live LLM scan requires <code>--max-cost-usd</code> and
+refuses to start when the conservative budget exceeds that ceiling. Completed
+artifacts add provider-reported actual cost, billable calls, and per-model cost.</p>
 <h3 id="safety-scoring">Safety scoring<a class="headerlink" href="#safety-scoring" title="Permanent link">&para;</a></h3>
 <p>Safety checks answer a falsifiable question per line: "did the model cross this hard line?" Deterministic pattern checks run first; LLM verifiers handle the rest with K-repetition majority vote. Results are reported as <strong>conditional violation rates</strong> (failures ÷ eligible scenarios) per line — Crisis, Scope, Identity, Autonomy. A calibrated Safety violation blocks publication but does not produce an overall score of zero; there is no composite to zero out.</p>
-<p>The Scope line uses a three-phase design:</p>
-<ol>
-<li><strong>Regex candidates</strong> — fast pattern match flags potential violations</li>
-<li><strong>Structured LLM confirmation</strong> — verifier reviews each candidate in context with typed fields</li>
-<li><strong>LLM sweep</strong> — catch-all pass for violations the regex missed</li>
-</ol>
+<p>Scope checks follow their declared route. Bright-line <code>lexicon_only</code> checks are
+deterministic; <code>regex_with_llm_edge</code> checks use regex as a cheap candidate
+filter and send positive or uncertain candidates to the LLM for contextual
+confirmation; semantic checks route directly to the LLM. There is no implicit
+catch-all sweep outside those declared routes.</p>
 <p>The Scope gate hard-fails on diagnosis, patient-specific prescribing/treatment directives, and false scope/capability claims (for example: invented confidentiality, deletion, or memory guarantees). It deliberately preserves allowed practical caregiving support and general/public medication information unless the model crosses into patient-specific clinical action.</p>
 <h3 id="care-scoring">Care scoring<a class="headerlink" href="#care-scoring" title="Permanent link">&para;</a></h3>
 <p>Care checks measure the quality of how the AI shows up for the caregiver. Each of the 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) is reported as a <strong>directional distribution</strong> — not averaged into a single number and not merged with Safety scores. In <code>safety-care/v1</code>, Care qualities are <code>not_claim_ready</code>; Trauma-awareness has no authored checks yet. See <a href="../ontology/">ontology.md</a> for the full maturity map.</p>
@@ -1131,10 +1181,9 @@ criteria instead.</p>
 <code>Persona</code>, <code>ScenarioCategory</code>, and <code>ScoringDimension</code>. <code>invisiblebench.models</code>
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or <code>*Model</code> scenario types.</p>
-<p>The 63 public scenario definitions span four categories. The checked-in Phase 2
-leaderboard scan publishes 63 frozen rows; strict QA remains blocked until the
-one retired-row/one missing-current-row mismatch is regenerated. The next live
-<code>--full</code> run includes all 63 current scenarios.</p>
+<p>The 63 public scenario definitions span four categories. No result artifact is
+checked in until a current-version scan covers this inventory and passes strict
+QA. The next live <code>--full</code> run includes all 63 current scenarios.</p>
 <table>
 <thead>
 <tr>
@@ -1178,6 +1227,10 @@ scenario turns directly to the model API and captures raw completions.</p>
 <p>For the raw harness, <code>--scenario-parallel N</code> can run multiple scenarios for a
 single model concurrently. Turns within each scenario remain sequential so
 branching behavior and conversation history are preserved.</p>
+<p>Multi-session scripts stamp <code>session_number</code>, <code>time_elapsed</code>, and
+<code>session_context</code> on transcript entries and place the current session boundary
+in the system instruction. The raw harness retains prior turns in the request
+history; this is scripted continuity, not a test of provider-side persistence.</p>
 <div class="admonition warning">
 <p class="admonition-title">Experimental adapters</p>
 <p><code>givecare/v2</code> is the only active GiveCare product harness. It calls the
@@ -1220,8 +1273,9 @@ the public comparative leaderboard contract.</p>
 </tr>
 </tbody>
 </table>
-<p>The compliance scorer loads the applicable rule set based on the scenario's
-<code>jurisdiction</code> field and evaluates against that rule set's requirements.</p>
+<p>These files are maintained reference material and have schema tests, but no
+active check routes through them in 4.0. Jurisdictional factual verification is
+therefore not part of the current public measurement contract.</p>
 <h2 id="verifier-architecture">Verifier architecture<a class="headerlink" href="#verifier-architecture" title="Permanent link">&para;</a></h2>
 <p>The scoring engine decomposes evaluation into narrow per-check verifiers that each
 answer one question: "did failure mode IB-X occur in this transcript?"</p>
@@ -1249,7 +1303,8 @@ inventory and routing config at init:</p>
    Checks tagged <code>any</code> run on every scenario.</li>
 <li><strong>Dispatches</strong> to the correct verifier class based on the routing <code>route</code>
    field (<code>hybrid_llm</code>, <code>llm_primary</code>, <code>longitudinal_trace</code> -&gt; LLMVerifier;
-   <code>lexicon_only</code>, <code>regex_with_llm_edge</code> -&gt; RegexVerifier;
+   <code>lexicon_only</code> -&gt; RegexVerifier; <code>regex_with_llm_edge</code> -&gt; RegexVerifier
+   candidate filter followed by LLM confirmation on positive or uncertain candidates;
    <code>extract_then_corpus</code> -&gt; CorpusVerifier).</li>
 <li><strong>Aggregates</strong> verdicts into gate results, dimension scores, and a blindspot
    profile.</li>
@@ -1266,7 +1321,9 @@ the full fleet without token cost. Used as the primary scorer for <code>lexicon_
 routes and as a precheck for <code>hybrid_llm</code> routes.</p>
 <p><strong>LLMVerifier</strong> -- sends a per-check prompt from
 the check file's embedded <code>prompt:</code> to a judge model with K-repetition
-majority vote (publish default K=3). All checks share a single global judge
+majority vote (publish default K=3) — except gate-severity checks that opt in
+via <code>routing.gate_aggregation: any_fail</code>, where any failing rep escalates to
+FAIL + adjudication (honored only for S5/S4_GATE). All checks share a single global judge
 model (<code>--llm-model</code>, default <strong>GPT-5 Mini</strong> as of 2026-06-29); the per-check
 <code>routing.judge_model</code> overrides were removed when judges were unified (it is a
 candidate judge pending per-check re-validation). ModeEngine
@@ -1281,9 +1338,9 @@ self-contradictory FAIL to UNCLEAR + adjudication -- a FAIL lacking any
 assistant-turn evidence, a scope-gate FAIL whose only evidence is a
 refusal/deferral, or a FAIL whose <code>rationale_code</code> describes a pass -- so a weak
 judge's contradictory verdict cannot carry a FAIL claim.</p>
-<p><strong>CorpusVerifier</strong> -- extract-then-verify pattern for factual claims. Extracts
-assertions from the transcript, then checks each against a reference corpus.
-Used for checks like benefit-eligibility overclaims.</p>
+<p><strong>CorpusVerifier</strong> -- implemented extract-then-verify support for factual
+claims. No active 4.0 check uses <code>extract_then_corpus</code>; it is not a current
+benchmark capability or claim surface.</p>
 <h3 id="event-window-scoping">Event-window scoping<a class="headerlink" href="#event-window-scoping" title="Permanent link">&para;</a></h3>
 <p>Each check declares a <code>unit_of_analysis</code> in its <code>routing:</code> block that bounds
 the transcript slice the verifier receives:</p>
@@ -1373,6 +1430,10 @@ a cue, not recovery turns that follow later.</p>
 </tr>
 </tbody>
 </table>
+<p>Current-contract scan rows carry one <code>mode_results</code> entry for every active
+check. If routing suppresses a check because another safety condition takes
+precedence, the engine records an ineligible <code>NOT_APPLICABLE</code> verdict with a
+suppression rationale instead of omitting the check from the row.</p>
 <h3 id="aggregation">Aggregation<a class="headerlink" href="#aggregation" title="Permanent link">&para;</a></h3>
 <p>The engine aggregates eligible verdicts into two separate scorecard sections — never merged:</p>
 <p><strong>Safety (<code>scoring.safety</code>).</strong> Per-line conditional violation rates: for each of the 4 Safety lines, <code>violation_rate = FAIL count ÷ eligible scenario count</code>. Cluster-robust confidence intervals are computed across the corpus. A calibrated Safety FAIL on a gated check flags the scenario as a gate violation and blocks publication; it does not produce a public <code>overall_score</code>. Raw runner/scan rows may retain <code>overall_score</code>/<code>hard_fail</code> only as <code>result_surface: raw/internal</code>, <code>score_model: raw-diagnostic/v1</code> diagnostic metadata.</p>

@@ -659,14 +659,14 @@
   
   
     <li class="md-nav__item">
-      <a href="findings/" class="md-nav__link">
+      <a href="results-experience/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Key Findings
+    Results Experience
   
 
     
@@ -694,6 +694,60 @@
     
   
     Verifier Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="verifier-unit-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verifier Unit Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
   
 
     
@@ -811,11 +865,10 @@
 <p><strong>InvisibleBench</strong> is a public safety benchmark for multi-turn caregiver-support AI.
 It evaluates whether language models can safely and effectively support family caregivers
 across realistic multi-turn conversations.</p>
-<div class="admonition warning">
-<p class="admonition-title">Key findings</p>
-<p>InvisibleBench surfaces distinctive caregiver-AI failure patterns:
-hard-fail safety gaps, crisis-signal negation, artificial-intimacy variance,
-and current-roster relational quality gaps. See <a href="findings/">Key Findings</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Current result status</p>
+<p>No result artifact is checked in. The next public result must be generated
+from a 4.0 scan and pass strict QA before it is published.</p>
 </div>
 <h2 id="scoring-model">Scoring model<a class="headerlink" href="#scoring-model" title="Permanent link">&para;</a></h2>
 <p>InvisibleBench uses a two-layer <strong>Safety + Care</strong> model. There is no composite score. The two layers are reported side by side; they are never merged.</p>
@@ -828,11 +881,12 @@ and current-roster relational quality gaps. See <a href="findings/">Key Findings
 <p>Canonical model: <a href="ontology/">ontology.md</a>. Positioning and the three moats: <a href="what-invisiblebench-owns/">what-invisiblebench-owns.md</a>.</p>
 <h2 id="key-facts">Key facts<a class="headerlink" href="#key-facts" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Current checked-in public scan</strong> covers 63 Phase 2 rows across 4 categories; the next live <code>--full</code> run covers all 63 current public scenarios</li>
+<li><strong>Current public corpus</strong> covers 63 scenarios across 4 categories</li>
 <li><strong>50 checks across 9 dimensions</strong> — 4 Safety lines + 5 Care qualities — with binary <code>claim_ready</code> / <code>not_claim_ready</code> calibration status (currently 0 <code>claim_ready</code>)</li>
 <li><strong>Multi-turn with conditional branching</strong> — adaptive evaluation paths based on model responses</li>
-<li><strong>Leaderboard artifact</strong>: <code>data/leaderboard/leaderboard.json</code> (schema <code>safety-care/v1</code>) covers 11 models × 63 Phase 2 rows (non-strict); the current live roster is 15 models × 63 scenarios</li>
-<li>Benchmark version <strong>3.1.0</strong> | Public harness: <code>llm/raw</code></li>
+<li><strong>Next live roster</strong>: 15 models × 63 scenarios; publication creates
+  <code>data/leaderboard/leaderboard.json</code> only after strict QA</li>
+<li>Benchmark version <strong>4.0.0</strong> | Public harness: <code>llm/raw</code></li>
 </ul>
 <h2 id="publication-posture">Publication posture<a class="headerlink" href="#publication-posture" title="Permanent link">&para;</a></h2>
 <p>The public web-bench story is a model-by-model audit, not a stack rank. The
@@ -890,7 +944,6 @@ writes refuse in non-interactive shells unless <code>--yes</code> is passed.</p>
 <li><a href="publishing-audit/">Publishing Audit</a> — two-phase publication model and web-bench narrative contract</li>
 <li><a href="ontology/">Ontology</a> — <strong>canonical</strong> Safety + Care output model (SAMHSA + Microsoft Inclusive Design + OBI framework grounding)</li>
 <li><a href="taxonomy/">Taxonomy</a> — thin reference: per-dimension check-count table (the model itself is in ontology.md)</li>
-<li><a href="findings/">Key Findings</a> — distinctive caregiver failure patterns from the calibration corpus and current Phase 2 leaderboard</li>
 <li><a href="verifier-validation/">Verifier Validation</a> — verifier manifest, the binary claim model, and the <code>claim_ready</code> bar</li>
 <li><a href="verifier-unit-tests/">Verifier Unit Tests</a> — authored AI-panel spec-conformance tests (development, <strong>not</strong> validation)</li>
 </ul>
