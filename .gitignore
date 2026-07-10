@@ -75,6 +75,9 @@ data/overnight-campaign.tsv
 # leaderboard.json bytes (content-hash + timestamp). Machine/run-specific,
 # not shared state — a fresh clone has none and must run the publish chain.
 data/leaderboard/.qa-stamp
+# Local health-check mirror; the canonical artifact is leaderboard.json and
+# the public projection lives in gc-web.
+data/leaderboard/leaderboard_web.json
 
 # Misc
 *.tmp

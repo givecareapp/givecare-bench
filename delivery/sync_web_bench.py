@@ -120,7 +120,17 @@ def project_leaderboard(source: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"Model {model_name!r} is missing required 'care' key")
         _validate_care_claim_statuses(entry, str(model_name))
 
-    return {key: source[key] for key in ("schema", "notes", "scan_metadata", "models")}
+    scan_metadata = dict(source["scan_metadata"])
+    source_artifact = scan_metadata.get("source_artifact")
+    if isinstance(source_artifact, str) and source_artifact:
+        scan_metadata["source_artifact"] = Path(source_artifact).name
+
+    return {
+        "schema": source["schema"],
+        "notes": source["notes"],
+        "scan_metadata": scan_metadata,
+        "models": source["models"],
+    }
 
 
 def _validate_care_claim_statuses(entry: dict[str, Any], model_name: str) -> None:

@@ -197,6 +197,20 @@ class CostBudgetExceededError(RuntimeError):
     """The process-level API cost ceiling has been reached."""
 
 
+MAX_COST_CEILING_MULTIPLIER = 1.5
+MIN_COST_CEILING_HEADROOM_USD = 1.0
+
+
+def maximum_reasonable_cost_ceiling(planned_cost_usd: float) -> float:
+    """Bound live approval so a nominal ceiling remains a meaningful guardrail."""
+    if planned_cost_usd < 0:
+        raise ValueError("planned cost must be non-negative")
+    return max(
+        planned_cost_usd * MAX_COST_CEILING_MULTIPLIER,
+        planned_cost_usd + MIN_COST_CEILING_HEADROOM_USD,
+    )
+
+
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_HEADERS = {
     "HTTP-Referer": "https://github.com/givecare/invisiblebench",

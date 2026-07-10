@@ -48,6 +48,7 @@ from invisiblebench.api.client import (
     CostBudgetExceededError,
     InsufficientCreditsError,
     cost_tracker,
+    maximum_reasonable_cost_ceiling,
 )
 from invisiblebench.cli._console import make_console
 from invisiblebench.cli.display import print_banner
@@ -716,6 +717,10 @@ def run_benchmark(
                 )
                 num = f"#{idx + 1}" if idx is not None else "#?"
                 print(f"  {num:<4} {m['name']}")
+        print(
+            "Maximum accepted runtime ceiling: "
+            f"${maximum_reasonable_cost_ceiling(total_cost):.2f}"
+        )
         return 0
 
     if max_cost_usd is None:
@@ -731,6 +736,13 @@ def run_benchmark(
         print(
             f"ERROR: Conservative transcript budget ${total_cost:.2f} exceeds "
             f"--max-cost-usd ${max_cost_usd:.2f}"
+        )
+        return 2
+    maximum_ceiling = maximum_reasonable_cost_ceiling(total_cost)
+    if max_cost_usd > maximum_ceiling:
+        print(
+            f"ERROR: --max-cost-usd ${max_cost_usd:.2f} is not a meaningful guardrail "
+            f"for the ${total_cost:.2f} conservative plan; use at most ${maximum_ceiling:.2f}"
         )
         return 2
 

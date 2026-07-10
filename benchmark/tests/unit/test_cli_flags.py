@@ -324,6 +324,35 @@ def test_benchmark_live_run_refuses_cost_ceiling_below_plan(
     assert not output_dir.exists()
 
 
+def test_benchmark_live_run_refuses_meaningless_cost_ceiling(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    output_dir = tmp_path / "unbounded_ceiling_should_not_exist"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    rc = run_command_mod.run_benchmark(
+        models=[
+            {
+                "id": "test/model",
+                "name": "Test Model",
+                "cost_per_m_input": 1.0,
+                "cost_per_m_output": 1.0,
+            }
+        ],
+        output_dir=output_dir,
+        dry_run=False,
+        auto_confirm=True,
+        max_cost_usd=1_000_000.0,
+        scenario_filter=["context_regulatory_data_privacy_001"],
+    )
+
+    assert rc == 2
+    assert "not a meaningful guardrail" in capsys.readouterr().out
+    assert not output_dir.exists()
+
+
 def test_legacy_inline_score_flag_is_removed(capsys) -> None:
     with pytest.raises(SystemExit) as exc:
         runner_mod.main(["-m", "1", "--legacy-inline-score", "--dry-run"])

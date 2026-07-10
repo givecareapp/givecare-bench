@@ -14,6 +14,7 @@ from .client import (
     compute_prompt_hash,
     compute_prompt_template_hash,
     cost_tracker,
+    maximum_reasonable_cost_ceiling,
     resolve_scorer_model,
 )
 
@@ -31,5 +32,6 @@ __all__ = [
     "compute_prompt_hash",
     "compute_prompt_template_hash",
     "cost_tracker",
+    "maximum_reasonable_cost_ceiling",
     "resolve_scorer_model",
 ]

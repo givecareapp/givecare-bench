@@ -19,7 +19,12 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from invisiblebench.api import DEFAULT_JUDGE_MODEL, ModelAPIClient  # noqa: E402
+from invisiblebench.api import (  # noqa: E402
+    DEFAULT_JUDGE_MODEL,
+    ModelAPIClient,
+    cost_tracker,
+    maximum_reasonable_cost_ceiling,
+)
 from invisiblebench.evaluation.mode_engine import ModeEngine  # noqa: E402
 from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
     EvidenceSpan,
@@ -115,7 +120,8 @@ def _load_source_plan(scan_path: Path, profile_name: str, judge_model: str) -> d
             plan = {}
     else:
         plan = {}
-    plan["profile"] = f"{profile_name}+resolve-unclear"
+    plan["profile"] = profile_name
+    plan["resolution_profile"] = f"{profile_name}+resolve-unclear"
     plan["llm_enabled"] = True
     plan["judge_model"] = judge_model
     plan["resolver_source_scan"] = str(scan_path)
@@ -124,6 +130,42 @@ def _load_source_plan(scan_path: Path, profile_name: str, judge_model: str) -> d
 
 def _needs_resolution(result: dict[str, Any]) -> bool:
     return bool(result.get("eligible")) and result.get("verdict") == Verdict.UNCLEAR.value
+
+
+def _load_source_cost(scan_path: Path) -> dict[str, Any]:
+    report_path = scan_path.parent / "cost_report.json"
+    try:
+        report = json.loads(report_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not read source cost report {report_path}: {exc}") from exc
+    total = report.get("actual_cost_usd")
+    calls = report.get("actual_billable_api_calls")
+    by_model = report.get("actual_cost_by_model_usd")
+    if (
+        isinstance(total, bool)
+        or not isinstance(total, (int, float))
+        or total < 0
+        or isinstance(calls, bool)
+        or not isinstance(calls, int)
+        or calls < 0
+        or not isinstance(by_model, dict)
+    ):
+        raise ValueError(f"invalid source cost accounting in {report_path}")
+    return {"total": float(total), "calls": calls, "by_model": dict(by_model)}
+
+
+def _combined_cost(
+    previous: dict[str, Any], current: dict[str, Any], ceiling: float
+) -> dict[str, Any]:
+    by_model = {str(model): float(cost) for model, cost in previous["by_model"].items()}
+    for model, cost in (current.get("by_model") or {}).items():
+        by_model[str(model)] = by_model.get(str(model), 0.0) + float(cost)
+    return {
+        "total": previous["total"] + float(current.get("total") or 0.0),
+        "calls": previous["calls"] + int(current.get("calls") or 0),
+        "by_model": by_model,
+        "max_cost_usd": ceiling,
+    }
 
 
 def main() -> int:
@@ -143,6 +185,12 @@ def main() -> int:
         help=f"Judge model for rerun verifiers (default: {DEFAULT_JUDGE_MODEL})",
     )
     parser.add_argument(
+        "--max-cost-usd",
+        type=float,
+        default=None,
+        help="Required for live use: hard ceiling for the source scan plus resolution calls",
+    )
+    parser.add_argument(
         "--allow-remaining",
         action="store_true",
         help="Write output even if eligible UNCLEAR rows remain and exit 0.",
@@ -152,6 +200,7 @@ def main() -> int:
 
     scan_path = args.scan.resolve()
     rows = _load_jsonl(scan_path)
+    source_cost = _load_source_cost(scan_path)
     targets = [
         (row, result)
         for row in rows
@@ -175,7 +224,26 @@ def main() -> int:
             )
         return 0
 
+    if args.max_cost_usd is None:
+        raise ValueError("live resolution requires --max-cost-usd")
     profile = load_scan_profile(args.profile)
+    source_plan = _load_source_plan(scan_path, args.profile, args.llm_model)
+    planned_cost = max(
+        source_cost["total"],
+        float(source_plan.get("estimated_budget_cost_usd") or 0.0),
+    )
+    maximum_ceiling = maximum_reasonable_cost_ceiling(planned_cost)
+    if args.max_cost_usd > maximum_ceiling:
+        raise ValueError(
+            f"--max-cost-usd ${args.max_cost_usd:.4f} exceeds the maximum meaningful "
+            f"ceiling ${maximum_ceiling:.4f}"
+        )
+    remaining_ceiling = args.max_cost_usd - source_cost["total"]
+    if remaining_ceiling <= 0:
+        raise ValueError(
+            "--max-cost-usd must exceed the source scan's recorded cumulative cost"
+        )
+    cost_tracker.reset(max_cost_usd=remaining_ceiling)
     engine = ModeEngine(llm_api_client=ModelAPIClient(), llm_model=args.llm_model)
     engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)
 
@@ -245,10 +313,18 @@ def main() -> int:
     ]
 
     output_dir = Path(args.output_root) / f"resolved_{time.strftime('%Y%m%d_%H%M%S')}"
-    plan = _load_source_plan(scan_path, args.profile, args.llm_model)
+    plan = source_plan
     plan["resolved_unclear_rows"] = len(report)
     plan["remaining_unclear_rows"] = len(remaining)
-    write_outputs(output_dir, outputs, engine_outputs, _source_run_dirs(rows), plan)
+    final_cost = _combined_cost(source_cost, cost_tracker.snapshot(), args.max_cost_usd)
+    write_outputs(
+        output_dir,
+        outputs,
+        engine_outputs,
+        _source_run_dirs(rows),
+        plan,
+        cost_snapshot=final_cost,
+    )
     with (output_dir / "resolution_report.json").open("w", encoding="utf-8") as f:
         json.dump(
             {

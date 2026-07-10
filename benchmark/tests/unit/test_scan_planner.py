@@ -6,10 +6,12 @@ from pathlib import Path
 
 import pytest
 
+from invisiblebench.api import CostBudgetExceededError
 from invisiblebench.evaluation.mode_engine import ModeEngineOutput
-from invisiblebench.judge import transcripts_for_run, write_outputs
+from invisiblebench.judge import scan_run, transcripts_for_run, write_outputs
 from scripts.run_scan import (
     DEFAULT_SCAN_OUTPUT_ROOT,
+    _create_output_dir,
     apply_scan_profile,
     build_scan_plan,
     load_scan_profile,
@@ -21,6 +23,14 @@ def test_default_scan_output_root_uses_safety_care_namespace() -> None:
         Path(__file__).resolve().parents[3] / "results" / "safety_care_scan"
     )
     assert "v3_scan" not in DEFAULT_SCAN_OUTPUT_ROOT.parts
+
+
+def test_scan_output_directory_avoids_same_second_collisions(tmp_path: Path) -> None:
+    first = _create_output_dir(tmp_path)
+    second = _create_output_dir(tmp_path)
+
+    assert first != second
+    assert first.parent == second.parent == tmp_path
 
 
 def test_scan_profile_filters_modes_and_overrides_repetitions() -> None:
@@ -91,9 +101,13 @@ def test_build_scan_plan_counts_profiled_llm_calls() -> None:
 
     assert plan["transcript_count"] == 1
     assert plan["eligible_checks"] == 2
-    assert plan["planned_llm_calls"] == 1
+    assert plan["base_llm_calls"] == 1
+    assert plan["conditional_llm_calls"] == 1
+    assert plan["planned_llm_calls"] == 2
     assert plan["by_mode"]["crisis.passive-ideation"]["planned_llm_calls"] == 1
-    assert plan["by_mode"]["identity.human-claim"]["planned_llm_calls"] == 0
+    assert plan["by_mode"]["identity.human-claim"]["base_llm_calls"] == 0
+    assert plan["by_mode"]["identity.human-claim"]["conditional_llm_calls"] == 1
+    assert plan["by_mode"]["identity.human-claim"]["planned_llm_calls"] == 1
 
 
 def test_publish_scan_profile_adds_unclear_tiebreak_budget() -> None:
@@ -123,12 +137,14 @@ def test_publish_scan_profile_adds_unclear_tiebreak_budget() -> None:
     assert filtered_routing["attunement.infodump"]["unclear_tiebreak_repetitions"] == 2
     assert filtered_routing["attunement.infodump"]["unclear_adjudication_repetitions"] == 3
     assert plan["base_llm_calls"] == 3
+    assert plan["conditional_llm_calls"] == 0
     assert plan["budget_llm_calls"] == 8
     assert plan["planned_llm_calls"] == 8
     assert plan["by_mode"]["attunement.infodump"]["planned_llm_calls"] == 8
     assert plan["estimated_base_cost_usd"] == pytest.approx(0.015)
     assert plan["estimated_budget_cost_usd"] == pytest.approx(0.04)
     assert plan["estimated_cost_usd"] == plan["estimated_budget_cost_usd"]
+    assert plan["maximum_reasonable_cost_ceiling_usd"] == pytest.approx(1.04)
 
 
 def test_run_scan_normalizes_transcripts_subdir_to_parent(
@@ -223,6 +239,105 @@ def test_run_scan_enable_llm_aborts_when_api_client_init_fails(
     assert not scan_calls, "dry-run must not invoke scan_run"
 
 
+def test_scan_run_skips_checkpointed_rows_and_reports_each_completed_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from invisiblebench import judge as judge_module
+
+    pairs = [
+        {"model_id": "provider/model", "scenario_id": "s1"},
+        {"model_id": "provider/model", "scenario_id": "s2"},
+    ]
+    output = ModeEngineOutput(overall_score=1.0, hard_fail=False)
+
+    monkeypatch.setattr(judge_module, "transcripts_for_run", lambda _run_dir: pairs)
+    monkeypatch.setattr(
+        judge_module,
+        "_scan_pair",
+        lambda pair, *_args: ({**pair, **output.to_dict()}, output),
+    )
+    completed: list[tuple[str, str]] = []
+
+    records, outputs = scan_run(
+        tmp_path,
+        object(),
+        skip_keys={("provider/model", "s1")},
+        progress_callback=lambda record, _output: completed.append(
+            (record["model_id"], record["scenario_id"])
+        ),
+    )
+
+    assert [record["scenario_id"] for record in records] == ["s2"]
+    assert outputs == [output]
+    assert completed == [("provider/model", "s2")]
+
+
+def test_run_scan_preserves_and_resumes_completed_rows_after_cost_ceiling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import scripts.run_scan as run_scan_mod
+
+    run_dir = tmp_path / "run_20260710_000000"
+    transcripts = run_dir / "transcripts"
+    transcripts.mkdir(parents=True)
+    (transcripts / "test_model_context_regulatory_data_privacy_001.jsonl").write_text(
+        '{"turn":1,"role":"user","content":"help"}\n'
+        '{"turn":1,"role":"assistant","content":"ok"}\n'
+    )
+    output_root = tmp_path / "scan_out"
+
+    class _FakeClient:
+        pass
+
+    mode_output = ModeEngineOutput(overall_score=1.0, hard_fail=False)
+    record = {
+        "model": "Test Model",
+        "model_id": "test/model",
+        "scenario_id": "context_regulatory_data_privacy_001",
+        "category": "context",
+        "transcript_path": str(next(transcripts.iterdir())),
+        **mode_output.to_dict(),
+    }
+
+    def _capped_scan(*_args, progress_callback, **_kwargs):
+        progress_callback(record, mode_output)
+        raise CostBudgetExceededError("test ceiling")
+
+    monkeypatch.setattr(run_scan_mod, "ModelAPIClient", _FakeClient)
+    monkeypatch.setattr(run_scan_mod, "scan_run", _capped_scan)
+    base_args = [
+        "run_scan.py",
+        "--enable-llm",
+        "--max-cost-usd",
+        "1",
+        "--output-root",
+        str(output_root),
+        str(run_dir),
+    ]
+    monkeypatch.setattr(sys, "argv", base_args)
+
+    assert run_scan_mod.main() == 4
+    [scan_dir] = list(output_root.iterdir())
+    state = json.loads((scan_dir / run_scan_mod.CHECKPOINT_FILENAME).read_text())
+    assert state["status"] == "cost_ceiling"
+    assert state["completed_rows"] == 1
+    assert (scan_dir / run_scan_mod.PARTIAL_FILENAME).exists()
+
+    def _resumed_scan(*_args, skip_keys, **_kwargs):
+        assert skip_keys == {("test/model", "context_regulatory_data_privacy_001")}
+        return [], []
+
+    monkeypatch.setattr(run_scan_mod, "scan_run", _resumed_scan)
+    monkeypatch.setattr(sys, "argv", [*base_args, "--resume", str(scan_dir)])
+
+    assert run_scan_mod.main() == 0
+    state = json.loads((scan_dir / run_scan_mod.CHECKPOINT_FILENAME).read_text())
+    assert state["status"] == "complete"
+    assert state["completed_rows"] == 1
+    assert not (scan_dir / run_scan_mod.PARTIAL_FILENAME).exists()
+    assert len((scan_dir / "per_run.jsonl").read_text().splitlines()) == 1
+
+
 def test_live_llm_scan_requires_explicit_cost_ceiling(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -257,6 +372,20 @@ def test_live_llm_scan_requires_explicit_cost_ceiling(
         ["run_scan.py", "--enable-llm", str(run_dir)],
     )
 
+    assert run_scan_mod.main() == 2
+    assert scan_called is False
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_scan.py",
+            "--enable-llm",
+            "--max-cost-usd",
+            "1000000",
+            str(run_dir),
+        ],
+    )
     assert run_scan_mod.main() == 2
     assert scan_called is False
 

@@ -47,6 +47,7 @@ from invisiblebench.utils.benchmark_inventory import (  # noqa: E402
     collect_public_scenario_ids,
     get_benchmark_version,
 )
+from invisiblebench.utils.io import artifact_reference  # noqa: E402
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
 
@@ -162,10 +163,11 @@ def _validate_safety_care_artifact(
 
     # scan_metadata: source_artifact must match scan_path
     scan_meta = leaderboard.get("scan_metadata") or {}
-    if scan_meta.get("source_artifact") != str(scan_path):
+    expected_source_artifact = artifact_reference(scan_path, REPO_ROOT)
+    if scan_meta.get("source_artifact") != expected_source_artifact:
         errors.append(
             "leaderboard_source_mismatch="
-            f"{scan_meta.get('source_artifact')!r} expected={str(scan_path)!r}"
+            f"{scan_meta.get('source_artifact')!r} expected={expected_source_artifact!r}"
         )
     if scan_meta.get("total_models") != effective_models:
         errors.append(

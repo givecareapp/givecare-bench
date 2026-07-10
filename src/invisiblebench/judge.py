@@ -16,6 +16,7 @@ import collections
 import concurrent.futures
 import json
 import logging
+from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ from invisiblebench.api.client import (
     JUDGE_MODEL_OPENAI_ID,
     JUDGE_MODEL_OPENROUTER_ID,
     CostBudgetExceededError,
+    maximum_reasonable_cost_ceiling,
 )
 from invisiblebench.evaluation.mode_engine import (
     ModeEngine,
@@ -47,6 +49,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 SCENARIOS_ROOT = REPO_ROOT / "benchmark" / "scenarios"
 LLM_REQUIRED_ROUTES = {"hybrid_llm", "llm_primary", "longitudinal_trace"}
+LLM_EDGE_ROUTES = {"regex_with_llm_edge"}
 # Pricing keys for the two default-judge id spellings are read from
 # api.client's JUDGE_MODEL_* constants (the same source DEFAULT_JUDGE_MODEL
 # resolves from) rather than re-typed as literals here, so a future judge
@@ -203,6 +206,7 @@ def build_scan_plan(
     by_mode: dict[str, dict[str, Any]] = {}
     eligible_checks = 0
     base_llm_calls = 0
+    conditional_llm_calls = 0
     budget_llm_calls = 0
 
     for scenario in scenarios:
@@ -223,6 +227,7 @@ def build_scan_plan(
                 {
                     "eligible": 0,
                     "base_llm_calls": 0,
+                    "conditional_llm_calls": 0,
                     "planned_llm_calls": 0,
                     "route": routing_config.get("route"),
                     "layer": mode_config.get("layer"),
@@ -248,6 +253,20 @@ def build_scan_plan(
                 mode_stats["planned_llm_calls"] += budget_calls
                 base_llm_calls += base_calls
                 budget_llm_calls += budget_calls
+            elif llm_enabled and routing_config.get("route") in LLM_EDGE_ROUTES:
+                edge_calls = max(int(routing_config.get("repetitions", 1) or 0), 0)
+                edge_calls += max(
+                    int(routing_config.get("unclear_tiebreak_repetitions", 0) or 0),
+                    0,
+                )
+                edge_calls += max(
+                    int(routing_config.get("unclear_adjudication_repetitions", 0) or 0),
+                    0,
+                )
+                mode_stats["conditional_llm_calls"] += edge_calls
+                mode_stats["planned_llm_calls"] += edge_calls
+                conditional_llm_calls += edge_calls
+                budget_llm_calls += edge_calls
 
     call_cost = _estimate_call_cost(
         judge_model,
@@ -256,6 +275,11 @@ def build_scan_plan(
     )
     estimated_base_cost = None if call_cost is None else call_cost * base_llm_calls
     estimated_budget_cost = None if call_cost is None else call_cost * budget_llm_calls
+    maximum_ceiling = (
+        None
+        if estimated_budget_cost is None
+        else maximum_reasonable_cost_ceiling(estimated_budget_cost)
+    )
 
     return {
         "profile": profile["name"],
@@ -264,17 +288,22 @@ def build_scan_plan(
         "transcript_count": len(scenarios),
         "eligible_checks": eligible_checks,
         "base_llm_calls": base_llm_calls,
+        "conditional_llm_calls": conditional_llm_calls,
         "budget_llm_calls": budget_llm_calls,
         # Backward-compatible aliases now point to the conservative budget.
         "planned_llm_calls": budget_llm_calls,
         "estimated_base_cost_usd": estimated_base_cost,
         "estimated_budget_cost_usd": estimated_budget_cost,
         "estimated_cost_usd": estimated_budget_cost,
+        "maximum_reasonable_cost_ceiling_usd": maximum_ceiling,
         "pricing_known": call_cost is not None,
         "cost_assumptions": {
             "input_tokens_per_llm_call": int(profile["input_tokens_per_llm_call"]),
             "output_tokens_per_llm_call": int(profile["output_tokens_per_llm_call"]),
-            "basis": "conservative corpus envelope including hidden reasoning tokens",
+            "basis": (
+                "conservative corpus envelope including hidden reasoning tokens and "
+                "worst-case regex-edge escalation"
+            ),
         },
         "by_mode": dict(sorted(by_mode.items())),
     }
@@ -567,6 +596,8 @@ def scan_run(
     parallel: bool = False,
     max_workers: int = 8,
     transcript_workers: int = 1,
+    skip_keys: set[tuple[str, str]] | None = None,
+    progress_callback: Callable[[dict[str, Any], ModeEngineOutput], None] | None = None,
 ):
     """Run mode_engine over every transcript in a given run directory."""
     pairs = transcripts_for_run(run_dir)
@@ -577,6 +608,12 @@ def scan_run(
         ]
     if limit:
         pairs = pairs[:limit]
+    if skip_keys:
+        pairs = [
+            pair
+            for pair in pairs
+            if (str(pair["model_id"]), str(pair["scenario_id"])) not in skip_keys
+        ]
 
     logger.info("Scanning %d transcripts in %s", len(pairs), run_dir.name)
 
@@ -595,6 +632,8 @@ def scan_run(
                     record, out = result
                     outputs.append(record)
                     engine_outputs.append(out)
+                    if progress_callback is not None:
+                        progress_callback(record, out)
                 if i % 25 == 0:
                     logger.info("  scanned %d/%d", i, len(pairs))
     else:
@@ -604,6 +643,8 @@ def scan_run(
                 record, out = result
                 outputs.append(record)
                 engine_outputs.append(out)
+                if progress_callback is not None:
+                    progress_callback(record, out)
 
             if i % 25 == 0:
                 logger.info("  scanned %d/%d", i, len(pairs))
@@ -645,10 +686,14 @@ def write_outputs(
                     "judge_model": scan_plan.get("judge_model"),
                     "planned_llm_calls": scan_plan.get("planned_llm_calls"),
                     "base_llm_calls": scan_plan.get("base_llm_calls"),
+                    "conditional_llm_calls": scan_plan.get("conditional_llm_calls"),
                     "budget_llm_calls": scan_plan.get("budget_llm_calls"),
                     "estimated_base_cost_usd": scan_plan.get("estimated_base_cost_usd"),
                     "estimated_budget_cost_usd": scan_plan.get("estimated_budget_cost_usd"),
                     "estimated_cost_usd": scan_plan.get("estimated_cost_usd"),
+                    "maximum_reasonable_cost_ceiling_usd": scan_plan.get(
+                        "maximum_reasonable_cost_ceiling_usd"
+                    ),
                     "pricing_known": scan_plan.get("pricing_known"),
                     "cost_assumptions": scan_plan.get("cost_assumptions"),
                     "actual_cost_usd": (

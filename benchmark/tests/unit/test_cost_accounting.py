@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from invisiblebench.api.client import (
@@ -9,8 +12,10 @@ from invisiblebench.api.client import (
     CostBudgetExceededError,
     CostTracker,
     ModelAPIClient,
+    maximum_reasonable_cost_ceiling,
 )
 from invisiblebench.cli.run_command import estimate_cost
+from scripts.resolve_unclear_scan import _combined_cost, _load_source_cost
 
 
 def test_cost_tracker_accepts_provider_reported_cost_for_unknown_model() -> None:
@@ -87,3 +92,42 @@ def test_cost_tracker_prices_judge_when_provider_omits_cost() -> None:
     )
 
     assert charged == 2.25
+
+
+def test_reasonable_cost_ceiling_allows_headroom_without_unbounded_approval() -> None:
+    assert maximum_reasonable_cost_ceiling(10.0) == 15.0
+    assert maximum_reasonable_cost_ceiling(0.1) == 1.1
+
+
+def test_unclear_resolution_preserves_cumulative_cost_accounting(tmp_path: Path) -> None:
+    scan_dir = tmp_path / "scan"
+    scan_dir.mkdir()
+    scan = scan_dir / "per_run.jsonl"
+    scan.write_text("{}\n")
+    (scan_dir / "cost_report.json").write_text(
+        json.dumps(
+            {
+                "actual_cost_usd": 5.9,
+                "actual_billable_api_calls": 2300,
+                "actual_cost_by_model_usd": {"openai/gpt-5-mini": 5.9},
+            }
+        )
+    )
+
+    previous = _load_source_cost(scan)
+    combined = _combined_cost(
+        previous,
+        {
+            "total": 0.02,
+            "calls": 3,
+            "by_model": {"openai/gpt-5-mini": 0.02},
+        },
+        6.1,
+    )
+
+    assert combined == {
+        "total": 5.92,
+        "calls": 2303,
+        "by_model": {"openai/gpt-5-mini": 5.92},
+        "max_cost_usd": 6.1,
+    }

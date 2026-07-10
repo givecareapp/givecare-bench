@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import defaultdict
@@ -32,7 +33,8 @@ from invisiblebench.utils.benchmark_inventory import (
     get_code_version,
     load_inventory,
 )
-from invisiblebench.utils.io import load_jsonl
+from invisiblebench.utils.io import artifact_reference, load_jsonl
+from invisiblebench.version import RESULT_CONTRACT_VERSION
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -40,6 +42,77 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     if not rows:
         raise ValueError(f"No scan rows found in {path}")
     return rows
+
+
+def _load_source_merge(path: Path, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    manifest_path = path.parent / "merge_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    manifest = json.loads(manifest_path.read_text())
+    if not isinstance(manifest, dict):
+        raise ValueError(f"Expected object JSON at {manifest_path}")
+    expected = {
+        "schema": "invisiblebench-scan-merge/v1",
+        "benchmark_version": get_benchmark_version(REPO_ROOT),
+        "result_contract_version": RESULT_CONTRACT_VERSION,
+        "profile": "publish",
+        "row_count": len(rows),
+        "output_file": path.name,
+        "output_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "model_count": len({str(row.get("model_id") or "") for row in rows}),
+        "scenario_count": len({str(row.get("scenario_id") or "") for row in rows}),
+    }
+    mismatches = {
+        key: {"actual": manifest.get(key), "expected": value}
+        for key, value in expected.items()
+        if manifest.get(key) != value
+    }
+    if mismatches:
+        raise ValueError(f"Invalid merge manifest: {mismatches}")
+    sources = manifest.get("sources")
+    if not manifest.get("judge_model") or not isinstance(sources, list) or not sources:
+        raise ValueError("Invalid merge manifest: missing judge_model or sources")
+    source_rows = 0
+    source_cost = 0.0
+    source_calls = 0
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ValueError(f"Invalid merge manifest: source {index} is not an object")
+        required = {
+            "artifact_id": str,
+            "sha256": str,
+            "row_count": int,
+            "model_ids": list,
+            "transcript_source_artifacts": list,
+        }
+        invalid = [
+            key
+            for key, expected_type in required.items()
+            if not isinstance(source.get(key), expected_type) or not source.get(key)
+        ]
+        cost = source.get("actual_cost_usd")
+        calls = source.get("actual_billable_api_calls")
+        if invalid or len(source["sha256"]) != 64:
+            raise ValueError(f"Invalid merge manifest source {index}: fields={invalid}")
+        if (
+            isinstance(cost, bool)
+            or not isinstance(cost, (int, float))
+            or cost < 0
+            or isinstance(calls, bool)
+            or not isinstance(calls, int)
+            or calls < 0
+        ):
+            raise ValueError(f"Invalid merge manifest source {index}: cost accounting")
+        source_rows += source["row_count"]
+        source_cost += float(cost)
+        source_calls += calls
+    if source_rows != len(rows):
+        raise ValueError("Invalid merge manifest: source row counts do not match output")
+    if abs(source_cost - float(manifest.get("actual_cost_usd", -1))) > 1e-9:
+        raise ValueError("Invalid merge manifest: source costs do not match total")
+    if source_calls != manifest.get("actual_billable_api_calls"):
+        raise ValueError("Invalid merge manifest: source calls do not match total")
+    return manifest
 
 
 def _active_mode_ids() -> list[str]:
@@ -146,6 +219,7 @@ def generate_leaderboard(
     from invisiblebench.scoring.projection import build_scorecard
 
     rows = _load_jsonl(input_jsonl)
+    source_merge = _load_source_merge(input_jsonl, rows)
     hard_fail_normalizations = _count_hard_fail_contract_normalizations(rows)
     by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -165,7 +239,7 @@ def generate_leaderboard(
         "benchmark_version": get_benchmark_version(REPO_ROOT),
         "code_version": get_code_version(REPO_ROOT),
         "generated_at": generated_at,
-        "source_artifact": str(input_jsonl),
+        "source_artifact": artifact_reference(input_jsonl, REPO_ROOT),
         "public_scope": inventory["public_scope"],
         "public_harness": inventory["public_harness"],
         "total_models": len({row.get("model") for row in rows}),
@@ -197,6 +271,8 @@ def generate_leaderboard(
             expected_check_ids=active_modes,
         ),
     }
+    if source_merge is not None:
+        scan_metadata["source_merge"] = source_merge
 
     payload = {
         **scorecard,  # models, schema, notes
