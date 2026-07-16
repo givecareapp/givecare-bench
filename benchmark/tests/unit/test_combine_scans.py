@@ -27,6 +27,7 @@ def _write_scan(
                     "model": model_id,
                     "model_id": model_id,
                     "scenario_id": scenario_id,
+                    "contract_version": "3.2.0",
                     "transcript_path": f"/private/{name}/transcripts/{scenario_id}.jsonl",
                     "mode_results": [{"mode_id": "check.one"}],
                 }
@@ -36,7 +37,38 @@ def _write_scan(
         )
     )
     (scan_dir / "scan_plan.json").write_text(
-        json.dumps({"profile": "publish", "judge_model": judge_model})
+        json.dumps(
+            {
+                "schema": "invisiblebench-scan-plan/v2",
+                "benchmark_version": "4.0.0",
+                "result_contract_version": "3.2.0",
+                "profile": "publish",
+                "judge_model": judge_model,
+                "model_ids": [model_id],
+                "scenario_ids": sorted(scenarios),
+                "check_definition_hashes": {"check.one": "d" * 64},
+                "source_runs": [
+                    {
+                        "artifact_id": name,
+                        "run_manifest_sha256": "a" * 64,
+                        "transcript_run_sha256": "b" * 64,
+                        "complete": True,
+                    }
+                ],
+                "transcript_hashes": [
+                    {
+                        "model_id": model_id,
+                        "scenario_id": scenario_id,
+                        "sha256": "c" * 64,
+                    }
+                    for scenario_id in sorted(scenarios)
+                ],
+                "provenance_complete": True,
+                "comparability_fingerprint": "f" * 64,
+                "scenario_corpus_sha256": "e" * 64,
+                "scoring_config_sha256": "9" * 64,
+            }
+        )
     )
     (scan_dir / "cost_report.json").write_text(
         json.dumps({"actual_cost_usd": cost, "actual_billable_api_calls": 10})
@@ -57,7 +89,7 @@ def test_combine_scans_writes_uniform_rows_and_hashed_lineage(tmp_path: Path) ->
         inputs=[scan_a, scan_b],
         output=output,
         benchmark_version="4.0.0",
-        result_contract_version="2.1.0",
+        result_contract_version="3.2.0",
     )
 
     rows = [json.loads(line) for line in output.read_text().splitlines()]
@@ -68,9 +100,13 @@ def test_combine_scans_writes_uniform_rows_and_hashed_lineage(tmp_path: Path) ->
         ("provider/model-b", "s1"),
         ("provider/model-b", "s2"),
     ]
-    assert manifest["schema"] == "invisiblebench-scan-merge/v1"
+    assert manifest["schema"] == "invisiblebench-scan-merge/v2"
     assert manifest["benchmark_version"] == "4.0.0"
-    assert manifest["result_contract_version"] == "2.1.0"
+    assert manifest["result_contract_version"] == "3.2.0"
+    assert manifest["provenance_complete"] is True
+    assert manifest["comparability_fingerprint"] == "f" * 64
+    assert manifest["scenario_corpus_sha256"] == "e" * 64
+    assert manifest["scoring_config_sha256"] == "9" * 64
     assert manifest["profile"] == "publish"
     assert manifest["judge_model"] == "openai/gpt-5-mini"
     assert manifest["model_count"] == 2
@@ -79,6 +115,7 @@ def test_combine_scans_writes_uniform_rows_and_hashed_lineage(tmp_path: Path) ->
     assert manifest["actual_cost_usd"] == 2.5
     assert len(manifest["output_sha256"]) == 64
     assert all(len(source["sha256"]) == 64 for source in manifest["sources"])
+    assert all(len(source["scan_plan_sha256"]) == 64 for source in manifest["sources"])
     assert [source["transcript_source_artifacts"] for source in manifest["sources"]] == [
         ["scan_a"],
         ["scan_b"],
@@ -99,7 +136,7 @@ def test_combine_scans_rejects_mismatched_scenario_coverage(tmp_path: Path) -> N
             inputs=[scan_a, scan_b],
             output=tmp_path / "out" / "per_run.jsonl",
             benchmark_version="4.0.0",
-            result_contract_version="2.1.0",
+            result_contract_version="3.2.0",
         )
 
 
@@ -120,7 +157,7 @@ def test_combine_scans_rejects_mixed_judges(tmp_path: Path) -> None:
             inputs=[scan_a, scan_b],
             output=tmp_path / "out" / "per_run.jsonl",
             benchmark_version="4.0.0",
-            result_contract_version="2.1.0",
+            result_contract_version="3.2.0",
         )
 
 
@@ -140,5 +177,47 @@ def test_combine_scans_rejects_missing_actual_cost(tmp_path: Path) -> None:
             inputs=[scan_a, scan_b],
             output=tmp_path / "out" / "per_run.jsonl",
             benchmark_version="4.0.0",
-            result_contract_version="2.1.0",
+            result_contract_version="3.2.0",
+        )
+
+
+def test_combine_scans_rejects_incomplete_provenance(tmp_path: Path) -> None:
+    scan_a = _write_scan(
+        tmp_path, name="scan_a", model_id="provider/model-a", scenarios=["s1"]
+    )
+    scan_b = _write_scan(
+        tmp_path, name="scan_b", model_id="provider/model-b", scenarios=["s1"]
+    )
+    plan = json.loads((scan_b.parent / "scan_plan.json").read_text())
+    plan["provenance_complete"] = False
+    (scan_b.parent / "scan_plan.json").write_text(json.dumps(plan))
+
+    with pytest.raises(ValueError, match="incomplete scan provenance"):
+        combine_scans(
+            inputs=[scan_a, scan_b],
+            output=tmp_path / "out" / "per_run.jsonl",
+            benchmark_version="4.0.0",
+            result_contract_version="3.2.0",
+        )
+
+
+def test_combine_scans_rejects_mixed_comparability_fingerprints(
+    tmp_path: Path,
+) -> None:
+    scan_a = _write_scan(
+        tmp_path, name="scan_a", model_id="provider/model-a", scenarios=["s1"]
+    )
+    scan_b = _write_scan(
+        tmp_path, name="scan_b", model_id="provider/model-b", scenarios=["s1"]
+    )
+    plan = json.loads((scan_b.parent / "scan_plan.json").read_text())
+    plan["comparability_fingerprint"] = "e" * 64
+    (scan_b.parent / "scan_plan.json").write_text(json.dumps(plan))
+
+    with pytest.raises(ValueError, match="mixed comparability fingerprints"):
+        combine_scans(
+            inputs=[scan_a, scan_b],
+            output=tmp_path / "out" / "per_run.jsonl",
+            benchmark_version="4.0.0",
+            result_contract_version="3.2.0",
         )

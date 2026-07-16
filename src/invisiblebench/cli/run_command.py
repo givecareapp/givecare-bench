@@ -14,35 +14,11 @@ import logging
 import os
 import time
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
-from invisiblebench.adapters.givecare_v2 import (
-    MODEL_ID as GIVECARE_V2_MODEL_ID,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    MODEL_NAME as GIVECARE_V2_MODEL_NAME,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    PROVIDER_NAME as GIVECARE_V2_PROVIDER_NAME,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    PROVIDER_VERSION as GIVECARE_V2_PROVIDER_VERSION,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    GiveCareV2Provider,
-    get_category_from_path,
-    get_scenario_title,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    get_scenarios as get_givecare_scenarios,
-)
-from invisiblebench.adapters.givecare_v2 import (
-    run_scenario as run_givecare_v2_scenario,
-)
 from invisiblebench.api.client import (
     DEFAULT_JUDGE_MODEL,
     CostBudgetExceededError,
@@ -55,21 +31,12 @@ from invisiblebench.cli.display import print_banner
 from invisiblebench.cli.result_helpers import (
     _compute_success as _compute_success,  # re-exported: tests import from this module
 )
-from invisiblebench.cli.result_helpers import (
-    _make_harness_error_result,
-    _safe_load_scenario_data,
-)
 from invisiblebench.cli.transcript import (
     evaluate_scenario_async,
+    transcript_policy,
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
-from invisiblebench.models.results import (
-    PUBLIC_SCORE_MODEL,
-    RAW_RESULT_SURFACE,
-    RAW_SCORE_MODEL,
-    is_result_success,
-)
-from invisiblebench.results_io import write_json, write_model_results
+from invisiblebench.results_io import write_json
 from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
@@ -110,210 +77,6 @@ TRANSCRIPT_COST_SAFETY_FACTOR = 1.5
 # SYSTEM_PROMPT is imported from invisiblebench.cli.transcript
 
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
-
-
-def run_givecare_eval(
-    category_filter: list[str] | None = None,
-    scenario_filter: list[str] | None = None,
-    include_confidential: bool = False,
-    verbose: bool = True,
-    dry_run: bool = False,
-    auto_confirm: bool = False,
-    output_dir: Path | None = None,
-    adapter_name: str = "givecare-v2",
-    harness_mode: str = "v2",
-) -> int:
-    """Run the GiveCare V2 system harness against the benchmark core."""
-    root = get_project_root()
-
-    MODEL_ID = GIVECARE_V2_MODEL_ID
-    MODEL_NAME = GIVECARE_V2_MODEL_NAME
-    PROVIDER_NAME = GIVECARE_V2_PROVIDER_NAME
-    PROVIDER_VERSION = GIVECARE_V2_PROVIDER_VERSION
-
-    scenarios_dir = root / "benchmark" / "scenarios"
-    if output_dir is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = root / "results" / "givecare" / f"run_{timestamp}"
-
-    try:
-        scenario_paths = get_givecare_scenarios(
-            scenarios_dir,
-            category_filter=category_filter,
-            include_confidential=include_confidential,
-        )
-    except RuntimeError as e:
-        print(str(e))
-        return 1
-    if scenario_filter:
-        scenario_paths = [
-            path
-            for path in scenario_paths
-            if any(
-                _scenario_matches_filter(
-                    {"path": str(path), "name": path.stem.replace("_", " "), "scenario_id": path.stem},
-                    pattern,
-                )
-                for pattern in scenario_filter
-            )
-        ]
-
-    if not scenario_paths:
-        print("No scenarios found")
-        return 1
-
-    scenario_count = len(scenario_paths)
-    conf_note = " (including private confidential set)" if include_confidential else ""
-    print(
-        f"GiveCare V2 System Harness [{harness_mode}]: "
-        f"{scenario_count} scenario(s){conf_note}"
-    )
-
-    if dry_run:
-        print("\nDry run - no transcripts will be generated")
-        for p in scenario_paths:
-            print(f"  - {p.stem}")
-        return 0
-
-    if not auto_confirm:
-        confirm = input(
-            f"\nRun {scenario_count} scenarios against the GiveCare V2 system harness? [y/N] "
-        )
-        if confirm.lower() != "y":
-            print("Aborted")
-            return 0
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    manifest = generate_manifest(
-        project_root=root,
-        model_ids=[MODEL_ID],
-        harness="givecare",
-        mode=harness_mode,
-        include_confidential=include_confidential,
-    )
-    write_manifest(manifest, output_dir)
-
-    # Run scenarios
-    try:
-        provider = GiveCareV2Provider()
-        if verbose:
-            print(f"Health: {json.dumps(provider.healthcheck(), indent=2)}")
-    except (ValueError, RuntimeError, OSError) as e:
-        print(f"Error: GiveCare V2 harness is not ready: {e}")
-        return 1
-    transcript_data = []
-    results: list[dict[str, Any]] = []
-
-    try:
-        for scenario_path in scenario_paths:
-            try:
-                transcript_path, scenario_data = run_givecare_v2_scenario(
-                    provider,
-                    str(scenario_path),
-                    output_dir / "transcripts",
-                    verbose=verbose,
-                )
-                transcript_data.append((transcript_path, scenario_path, scenario_data))
-            except Exception as e:
-                scenario_data = _safe_load_scenario_data(scenario_path)
-                results.append(
-                    _make_harness_error_result(
-                        model_name=MODEL_NAME,
-                        model_id=MODEL_ID,
-                        provider=PROVIDER_NAME,
-                        scenario_name=get_scenario_title(scenario_data, scenario_path),
-                        scenario_id=scenario_data.get("scenario_id", scenario_path.stem),
-                        category=get_category_from_path(scenario_path),
-                        reason=f"Transcript generation failed: {e}",
-                    )
-                )
-                print(f"  {scenario_path.stem}: ERROR ({e})")
-    finally:
-        provider.close()
-
-    print(f"\nGenerated {len(transcript_data)} transcript(s)")
-
-    run_timestamp = datetime.now().isoformat()
-    output_data = {
-        "metadata": {
-            "provider": PROVIDER_NAME,
-            "provider_version": PROVIDER_VERSION,
-            "model": MODEL_NAME,
-            "model_id": MODEL_ID,
-            "timestamp": run_timestamp,
-            "scenario_count": len(scenario_paths),
-            "include_confidential": include_confidential,
-        },
-        "results": results,
-    }
-
-    model_results_dir = output_dir / "model_results"
-    write_model_results(
-        results,
-        model_results_dir,
-        benchmark_version=manifest.get("benchmark_version", "unknown"),
-        timestamp=run_timestamp,
-        mode=adapter_name,
-        run_metadata={
-            "adapter": adapter_name,
-            "provider": PROVIDER_NAME,
-            "include_confidential": include_confidential,
-        },
-    )
-
-    write_json(output_dir / "all_results.json", results)
-    results_path = output_dir / "givecare_results.json"
-    write_json(results_path, output_data)
-
-    # When transcripts were generated but no inline result rows exist (the normal
-    # path: V2 inline scoring was superseded by the ModeEngine), skip the
-    # raw zero-row summary and BLOCK audit printout — they are misleading.
-    # Instead emit a single actionable status line and return success.
-    if transcript_data and not results:
-        print(
-            f"\n{len(transcript_data)} transcripts generated; "
-            "inline V2 scoring is deprecated — score with: "
-            f"uv run python scripts/run_scan.py {output_dir}"
-        )
-        # Write audit artifacts for downstream contract consumers, but suppress
-        # the console summary (which would read "BLOCK | valid=no" for zero rows).
-        _write_run_audit(
-            results_path,
-            output_dir=output_dir,
-            expected_scenario_count=len(scenario_paths),
-            harness="givecare",
-            mode=harness_mode,
-        )
-        return 0
-
-    audit = _write_run_audit(
-        results_path,
-        output_dir=output_dir,
-        expected_scenario_count=len(scenario_paths),
-        harness="givecare",
-        mode=harness_mode,
-    )
-
-    # Summary
-    passed = sum(1 for r in results if is_result_success(r))
-    failed = len(results) - passed
-    avg_score = sum(r["overall_score"] for r in results) / len(results) * 100 if results else 0
-
-    print(f"\n{'='*50}")
-    print("GiveCare V2 Eval Results")
-    print(f"{'='*50}")
-    print(f"Scenarios: {len(results)}")
-    print(f"Passed:    {passed}")
-    print(f"Failed:    {failed}")
-    print(f"Surface:   {RAW_RESULT_SURFACE} ({RAW_SCORE_MODEL}); public model {PUBLIC_SCORE_MODEL}")
-    print(f"Average:   {avg_score:.1f}% raw diagnostic score")
-    print(f"{'='*50}")
-    print(f"Saved: {results_path}")
-
-    _print_audit_summary(audit)
-    print(f"Audit files: {output_dir / 'run_audit.json'} , {output_dir / 'run_audit.md'}")
-
-    return 0 if failed == 0 else 1
 
 
 # Map categories to token estimate keys (for cost calculation)
@@ -555,6 +318,20 @@ def _write_transcript_run_summary(
         "actual_billable_api_calls": cost_snapshot["calls"],
         "actual_cost_by_model_usd": cost_snapshot["by_model"],
         "runtime_cost_ceiling_usd": cost_snapshot["max_cost_usd"],
+        "resolved_model_ids": sorted(
+            {
+                model_id
+                for result in ready
+                for model_id in result.get("resolved_model_ids") or []
+            }
+        ),
+        "resolved_providers": sorted(
+            {
+                provider
+                for result in ready
+                for provider in result.get("resolved_providers") or []
+            }
+        ),
         "transcripts": [
             {
                 "model": r.get("model"),
@@ -563,6 +340,8 @@ def _write_transcript_run_summary(
                 "scenario_id": r.get("scenario_id"),
                 "category": r.get("category"),
                 "transcript_path": _artifact_transcript_path(r),
+                "resolved_model_ids": r.get("resolved_model_ids") or [],
+                "resolved_providers": r.get("resolved_providers") or [],
             }
             for r in ready
         ],
@@ -771,6 +550,8 @@ def run_benchmark(
     manifest = generate_manifest(
         project_root=root,
         model_ids=[m["id"] for m in models],
+        scenario_ids=[str(scenario["scenario_id"]) for scenario in scenarios],
+        transcript_policy=transcript_policy(api_client),
         run_id=run_id,
         harness="llm",
         mode="raw",

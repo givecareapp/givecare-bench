@@ -72,10 +72,6 @@ def test_main_passes_confidential_flag_to_llm_benchmark(monkeypatch) -> None:
     monkeypatch.setattr(runner, "run_benchmark", fake_run_benchmark)
 
     exit_code = runner.main([
-        "--harness",
-        "llm",
-        "--mode",
-        "raw",
         "-m",
         "1",
         "--dry-run",

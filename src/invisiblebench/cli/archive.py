@@ -86,7 +86,7 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
     elif manifest_file.exists():
         has_partial_artifacts = any(
             (run_path / name).exists()
-            for name in ("model_results", "transcripts", "givecare_results.json")
+            for name in ("model_results", "transcripts")
         )
         info["artifact_state"] = (
             "incomplete_no_results" if has_partial_artifacts else "aborted_manifest_only"

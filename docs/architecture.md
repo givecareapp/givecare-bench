@@ -7,24 +7,29 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 
 ## Repo layout
 
-The codebase separates five concerns:
+The codebase separates versioned inputs, runtime, tooling, delivery, and
+generated output:
 
 ```
 givecare-bench/
+├── checks/              # Versioned Safety/Care check taxonomy and judge prompts
 ├── benchmark/           # Public corpus — data only, no runtime code
 │   ├── scenarios/       # 63 scenario JSON files (includes 7 contrast-set variants)
 │   ├── configs/         # Scoring weights, prompts, jurisdiction rules
 │   └── tests/           # Unit tests for schema and scoring contracts
-├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
+├── src/invisiblebench/  # Runtime package (CLI, scanners, loaders, model API, stats)
 ├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
+├── delivery/            # Scan merge, evidence release, and web projections
 └── data/leaderboard/    # Created by the fail-closed publication path
 ```
 
 | Directory | Contents | Changes often? |
 |-----------|----------|---------------|
-| `benchmark/` | Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests | Rarely — versioned contract |
-| `src/invisiblebench/` | CLI entry point, scorer implementations, YAML/JSON loaders, provider adapters, statistical analysis | Yes — runtime logic |
+| `checks/` | One YAML per active check: definition, routing, and judge prompt | Versioned contract |
+| `benchmark/` | Scenario JSON, scoring config, jurisdiction rules, tests | Rarely — versioned contract |
+| `src/invisiblebench/` | CLI entry point, verifier implementations, YAML/JSON loaders, model API, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
+| `delivery/` | Deterministic scan assembly, public evidence builders, and consumer projections | With publication contract changes |
 | `data/leaderboard/` | Current-version leaderboard JSON projected into public web assets by `delivery/sync_web_bench.py` | Generated — never hand-edited |
 
 ## Scoring pipeline
@@ -33,18 +38,33 @@ Every evaluation run follows a single data flow:
 
 ```
 scenario JSON ──► RunPlan ──► harness (transcript generation) ──► Transcript
-Transcript ──► ScanPlan ──► check execution ──► results ──► leaderboard
+Transcript ──► ScanPlan ──► check execution ──► per-run scan
+per-run scans ──► deterministic merge ──► strict QA ──► scorecard + evidence bundles
 ```
 
 The scorer pipeline applies 50 per-check verifiers across 9 dimensions — 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy). Safety checks produce per-line conditional violation rates; Care checks produce directional distributions. There is no composite score.
 
 `ScanPlan` is explicit before expensive work starts. It records the selected
 profile, transcript count, eligible checks, base verifier calls, the larger
-tie-break/adjudication call budget, judge model, and base/conservative costs.
+tie-break/adjudication call budget, worst-case conditional regex-edge
+escalation, judge model, and base/conservative costs.
 `scripts/run_scan.py --dry-run` writes `scan_plan.json` and `cost_report.json`
 without calling any model. A live LLM scan requires `--max-cost-usd` and
-refuses to start when the conservative budget exceeds that ceiling. Completed
-artifacts add provider-reported actual cost, billable calls, and per-model cost.
+refuses undersized or meaninglessly oversized ceilings. Live scans durably
+checkpoint each completed row and can resume only when the source/options
+signature matches. Completed artifacts add provider-reported actual cost,
+billable calls, and per-model cost.
+
+Transcript runs write `run_manifest.json` v2 with the exact scenario IDs, full
+check-definition hashes, corpus hash, harness/mode, and transcript-generation
+policy. The completion summary records provider-resolved model identities and
+routes when the API returns them. A live scan upgrades its dry-run plan to
+scan-plan v2 by hashing the selected transcript bytes, source run manifests,
+current scenario corpus, and scoring contract. The comparability
+fingerprint deliberately excludes model identity while binding the benchmark,
+scenario roster, check definitions, judge/profile, and transcript policy. The
+merge boundary rejects incomplete or mixed fingerprints instead of guessing
+that two scans are comparable.
 
 ### Safety scoring
 
@@ -89,9 +109,10 @@ The runtime now uses a single canonical scenario model layer in
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or `*Model` scenario types.
 
-The 63 public scenario definitions span four categories. No result artifact is
-checked in until a current-version scan covers this inventory and passes strict
-QA. The next live `--full` run includes all 63 current scenarios.
+The public scenario definitions span four categories; the inventory file owns
+their exact current count. The checked-in scorecard is a historical research
+snapshot whose v1 merge predates the current provenance gate. Future
+replacements must cover the exact current inventory under v2 lineage.
 
 | Category | Count | Focus |
 |----------|-------|-------|
@@ -119,10 +140,9 @@ Multi-session scripts stamp `session_number`, `time_elapsed`, and
 in the system instruction. The raw harness retains prior turns in the request
 history; this is scripted continuity, not a test of provider-side persistence.
 
-!!! warning "Experimental adapters"
-    `givecare/v2` is the only active GiveCare product harness. It calls the
-    gc-sms V2 HTTP contract through `/api/admin` actions and is **not** part of
-    the public comparative leaderboard contract.
+Private product simulations are generated and owned in `gc-sms`, not through a
+benchmark HTTP adapter. If a product transcript is later evaluated here, the
+benchmark must explicitly own that intake and its verifier selection.
 
 ## Jurisdiction rules
 
@@ -264,6 +284,12 @@ this coverage policy is machine-readable: eligible `NOT_APPLICABLE` is resolved
 coverage; literal `UNCLEAR` is a strict-QA blocker; scorer parse errors and
 truncated raw-output samples are retry diagnostics, with the final resolved
 verdict remaining authoritative.
+
+They also carry `scan_metadata.check_coverage`, with per-model/per-check counts
+for eligible, ineligible, PASS, FAIL, NOT_APPLICABLE, UNCLEAR, scorer errors,
+and retry parse errors. An ineligible result is the explicit "not triggered"
+state; it is not a fifth verdict and is never represented by an omitted check.
+QA recomputes these counts from the scan rows.
 
 ### Blindspot profile
 

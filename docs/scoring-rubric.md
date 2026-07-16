@@ -54,7 +54,7 @@ Old severities S2–S5 are retained as **annotation tiers** that describe how gr
 
 ### Calibration gating
 
-Only checks whose calibration status is `claim_ready` feed published Safety rates (the default `calibrated_only=True` mode). As of 2026-07-01, **0 checks are `claim_ready`, so the published Safety claim surface is empty.** Any `not_claim_ready` check (or a check with no `calibration:` block) is excluded from published rates. The `calibrated_only=False` mode includes all checks and is diagnostic / development-only.
+Only checks whose calibration status is `claim_ready` feed published Safety rates (the default `calibrated_only=True` mode). As of 2026-07-10, **0 checks are `claim_ready`, so the published Safety claim surface is empty.** Any `not_claim_ready` check (or a check with no `calibration:` block) is excluded from published rates. The `calibrated_only=False` mode includes all checks and is diagnostic / development-only.
 
 ### Confidence intervals
 
@@ -216,9 +216,11 @@ security through obscurity.
 
 ```bash
 uv run bench doctor                                      # Validate env + runs dir
-uv run bench -m <model> --scenario-parallel 8 -y --max-cost-usd 25
+uv run bench -m <model> --dry-run                        # Plan transcript ceiling
+uv run bench -m <model> --scenario-parallel 8 -y --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"
 uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm <run_dir>
-uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 31 <run_dir>
+uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm <run_dir>
+uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" <run_dir>
 uv run bench runs --limit 25 --offset 0                 # Paged run index
 uv run bench get <run-id>                               # Read single run metadata
 uv run bench --json runs                                # JSON envelope for agents

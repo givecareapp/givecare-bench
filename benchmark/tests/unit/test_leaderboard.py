@@ -20,6 +20,7 @@ def _row(model: str, scenario_id: str, *, score: float, hard_fail: bool = False)
         "model": model,
         "model_id": model.lower().replace(" ", "/"),
         "scenario_id": scenario_id,
+        "contract_version": "3.2.0",
         "overall_score": score,
         "hard_fail": hard_fail,
         "dimension_scores": {
@@ -140,8 +141,46 @@ def test_generate_leaderboard_scan_metadata_present(tmp_path: Path) -> None:
     assert meta["total_scenarios"] == 2
     assert meta["source_artifact"] == input_path.name
     assert meta["artifact_validation"]["rows"] == 4
+    assert meta["check_coverage"]["schema"] == "invisiblebench-check-coverage/v1"
     assert len(meta["check_prompt_hashes"]) == 46
     assert meta["observed_prompt_hashes"] == {}
+
+
+def test_generate_leaderboard_reports_per_check_coverage(tmp_path: Path) -> None:
+    input_path = tmp_path / "per_run.jsonl"
+    pass_row = _row("model-a", "s1", score=0.8)
+    unclear_row = _row("model-a", "s2", score=0.8)
+    unclear_row["mode_results"][0].update(
+        {
+            "verdict": "UNCLEAR",
+            "rationale_code": "verifier_exception: timeout",
+            "extra": {"parse_errors": ["bad json"]},
+        }
+    )
+    input_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in (pass_row, unclear_row))
+    )
+
+    out_path = generate_leaderboard(input_path, tmp_path / "out")
+    records = json.loads(out_path.read_text())["scan_metadata"]["check_coverage"][
+        "records"
+    ]
+    crisis = next(record for record in records if record["check_id"] == "crisis.passive-ideation")
+
+    assert crisis == {
+        "model": "model-a",
+        "model_id": "model-a",
+        "check_id": "crisis.passive-ideation",
+        "total": 2,
+        "eligible": 2,
+        "ineligible": 0,
+        "pass": 1,
+        "fail": 0,
+        "not_applicable": 0,
+        "unclear": 1,
+        "scorer_errors": 1,
+        "retry_parse_errors": 1,
+    }
 
 
 def test_generate_leaderboard_embeds_validated_merge_lineage(tmp_path: Path) -> None:
@@ -149,9 +188,14 @@ def test_generate_leaderboard_embeds_validated_merge_lineage(tmp_path: Path) -> 
     input_path.write_text(json.dumps(_row("model-a", "s1", score=0.8)) + "\n")
     scan_sha = hashlib.sha256(input_path.read_bytes()).hexdigest()
     merge_manifest = {
-        "schema": "invisiblebench-scan-merge/v1",
+        "schema": "invisiblebench-scan-merge/v2",
         "benchmark_version": "4.0.0",
-        "result_contract_version": "2.1.0",
+        "result_contract_version": "3.2.0",
+        "provenance_complete": True,
+        "comparability_fingerprint": "f" * 64,
+        "scenario_corpus_sha256": "e" * 64,
+        "scoring_config_sha256": "9" * 64,
+        "check_definition_hashes": {"check.one": "d" * 64},
         "profile": "publish",
         "judge_model": "openai/gpt-5-mini",
         "model_count": 1,
@@ -166,6 +210,7 @@ def test_generate_leaderboard_embeds_validated_merge_lineage(tmp_path: Path) -> 
                 "artifact_id": "scan_a",
                 "file": "per_run.jsonl",
                 "sha256": "a" * 64,
+                "scan_plan_sha256": "b" * 64,
                 "row_count": 1,
                 "model_ids": ["model-a"],
                 "transcript_source_artifacts": ["run_a"],

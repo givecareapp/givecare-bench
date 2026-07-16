@@ -56,6 +56,7 @@ logger = logging.getLogger("safety_care_scan")
 
 from invisiblebench.judge import (  # noqa: E402
     apply_scan_profile,
+    attach_scan_provenance,
     build_scan_plan,
     enrich_scenario_with_inferred_tags,
     load_scan_profile,
@@ -284,12 +285,11 @@ def main() -> int:
         for run_dir_arg in args.run_dirs:
             p = Path(run_dir_arg).resolve()
             # Tolerate being handed the transcripts/ subdir: if the basename is
-            # "transcripts" and the parent contains a run manifest or givecare
-            # results file, use the parent as the run dir.
+            # "transcripts" and the parent contains a run artifact, use the
+            # parent as the run dir.
             if p.name == "transcripts" and (
                 (p.parent / "run_manifest.json").exists()
                 or (p.parent / "transcript_run.json").exists()
-                or (p.parent / "givecare_results.json").exists()
                 or (p.parent / "all_results.json").exists()
             ):
                 logger.info(
@@ -313,6 +313,7 @@ def main() -> int:
         return 2
 
     plan_scenarios: list[dict[str, Any]] = []
+    plan_pairs: list[dict[str, Any]] = []
     for run_dir in run_dirs:
         pairs = transcripts_for_run(run_dir)
         if args.filter:
@@ -323,6 +324,7 @@ def main() -> int:
             ]
         if args.limit:
             pairs = pairs[: args.limit]
+        plan_pairs.extend(pairs)
         for pair in pairs:
             scenario = load_scenario(pair["scenario_id"])
             plan_scenarios.append(enrich_scenario_with_inferred_tags(scenario))
@@ -337,6 +339,16 @@ def main() -> int:
         profile,
         judge_model=args.llm_model,
         llm_enabled=plan_llm_enabled,
+    )
+    scan_plan_dict = attach_scan_provenance(
+        scan_plan_dict,
+        run_dirs=run_dirs,
+        transcript_pairs=plan_pairs,
+        selection={
+            "filter": args.filter,
+            "limit_per_source_run": args.limit,
+            "source_run_count": len(run_dirs),
+        },
     )
     scan_plan_dict["api_client_available"] = api_client is not None
 

@@ -20,6 +20,7 @@ def _write_scan(root: Path, *, unclear: bool = False) -> Path:
                     "model": model_id,
                     "model_id": model_id,
                     "scenario_id": scenario_id,
+                    "contract_version": "3.2.0",
                     "category": "safety",
                     "transcript_path": f"/private/run/transcripts/{scenario_id}.jsonl",
                     "overall_score": 0.99,
@@ -66,9 +67,14 @@ def _write_scan(root: Path, *, unclear: bool = False) -> Path:
     (root / "merge_manifest.json").write_text(
         json.dumps(
             {
-                "schema": "invisiblebench-scan-merge/v1",
+                "schema": "invisiblebench-scan-merge/v2",
                 "benchmark_version": "4.0.0",
-                "result_contract_version": "2.1.0",
+                "result_contract_version": "3.2.0",
+                "provenance_complete": True,
+                "comparability_fingerprint": "f" * 64,
+                "scenario_corpus_sha256": "e" * 64,
+                "scoring_config_sha256": "9" * 64,
+                "check_definition_hashes": {"check.one": "d" * 64},
                 "profile": "publish",
                 "judge_model": "openai/gpt-5-mini",
                 "model_count": 2,
@@ -78,7 +84,7 @@ def _write_scan(root: Path, *, unclear: bool = False) -> Path:
                 "actual_billable_api_calls": 40,
                 "output_file": scan.name,
                 "output_sha256": digest,
-                "sources": [],
+                "sources": [{"scan_plan_sha256": "a" * 64}],
             }
         )
     )
@@ -95,7 +101,7 @@ def test_public_score_release_is_complete_auditable_and_allowlisted(tmp_path: Pa
         expected_scenario_ids={"s1", "s2"},
         expected_mode_ids={"check.one"},
         benchmark_version="4.0.0",
-        result_contract_version="2.1.0",
+        result_contract_version="3.2.0",
         claim_ready_check_count=0,
     )
 
@@ -134,6 +140,6 @@ def test_public_score_release_rejects_unresolved_rows(tmp_path: Path) -> None:
             expected_scenario_ids={"s1", "s2"},
             expected_mode_ids={"check.one"},
             benchmark_version="4.0.0",
-            result_contract_version="2.1.0",
+            result_contract_version="3.2.0",
             claim_ready_check_count=0,
         )

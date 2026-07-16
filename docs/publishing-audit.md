@@ -33,8 +33,13 @@ The code documentation phase makes the procedure inspectable:
   `delivery/sync_web_bench.py` form the fail-closed path from complete,
   common-profile scans to the public scorecard. `delivery/combine_scans.py`
   requires exact scenario-set parity, one publish profile, one judge, complete
-  cost accounting, and no duplicate model/scenario rows; its manifest and
-  source hashes are embedded into leaderboard metadata.
+  cost accounting, and no duplicate model/scenario rows. It accepts only scan
+  plan v2 artifacts with complete source-run and transcript hashes, identical
+  full check-definition snapshots, and one comparability fingerprint.
+- Transcript `run_manifest.json` v2 pins the exact scenario roster, corpus and
+  check definitions, harness and mode, system-prompt/tool policy, generation
+  parameters, retries, and source revision. `scan_plan.json` v2 then binds the
+  exact selected transcript bytes to that run policy.
 - `delivery/build_public_transcript_release.py` independently projects raw run
   artifacts into allowlisted, provenance-complete public transcript bundles.
   It verifies the exact v4 inventory and shared corpus hash and excludes local
@@ -55,21 +60,18 @@ without relying on a single opaque LLM judge.
 
 ## Phase 2: Results And Scoring Narrative
 
-The result phase starts from a current-version scored scan:
+The result phase starts from a current-version scored scan. The checked-in v4
+scorecard is a historical research snapshot: its source merge is v1 and cannot
+pass the current v2 provenance gate. A publication replacement must come from
+newly complete v2 run and scan manifests; the gate does not infer missing
+lineage from old artifacts.
 
-- Current benchmark contract: `4.0.0`
-- Current public framework: `safety-care/v1`
-- Live `--full` target: 15 models × 63 scenarios × 50 active checks
-- Current result artifact: `data/leaderboard/leaderboard.json`, generated from
-  the 2026-07-10 four-model v4 release and checked in only after strict QA
-- Release scope: 4 models × 63 scenarios × 50 checks = 252 score rows and
-  12,600 per-check results under one `publish` profile and GPT-5 Mini judge
-- Recorded verifier cost: $24.19056413 across 9,190 billed calls; transcript
-  generation is separately accounted, with two older runners lacking recorded
-  generation cost
+- The current public framework is `safety-care/v1`; runtime versions and exact
+  inventory come from their machine-readable sources.
 - Strict QA requires complete scenario/check coverage, no blocking unresolved
-  verdicts, a current benchmark version, exact expected/observed prompt hashes,
-  and a matching manual-adjudication ledger when manual results exist.
+  verdicts, a current benchmark version, exact observed prompt and full
+  check-definition hashes, complete v2 merge provenance, and a matching
+  manual-adjudication ledger when manual results exist.
 - Safety-override suppression is represented as an ineligible
   `NOT_APPLICABLE` result, never as a missing check.
 - Generated timestamps and validation diagnostics are read from
@@ -78,6 +80,10 @@ The result phase starts from a current-version scored scan:
   classifies eligible `NOT_APPLICABLE` as resolved coverage, literal `UNCLEAR`
   as a strict-QA blocker, and scorer parse/truncation counters as retry
   diagnostics whose final resolved verdict remains authoritative.
+- `scan_metadata.check_coverage` reports, for every model/check pair, total,
+  eligible, ineligible, PASS, FAIL, NOT_APPLICABLE, UNCLEAR, scorer-error, and
+  retry-parse-error counts. QA recomputes it from the scan; it is metadata, not
+  a score.
 
 The web-bench payload is a lean projection of that artifact:
 
@@ -92,10 +98,10 @@ The web-bench payload is a lean projection of that artifact:
 - No `findings` block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.
-- Public audit data complements the lean payload: `/bench/evidence/v4.0.0/`
-  contains the 252 source transcripts, and `/bench/scores/v4.0.0/` contains all
-  12,600 allowlisted per-check verdicts and evidence quotes. Both ship manifests
-  with source hashes; neither contains host-specific paths.
+- The historical public audit bundles remain inspectable, but their older
+  manifests do not satisfy the current scan-merge v2 provenance gate. New
+  transcript and score bundles remain allowlisted and exclude host-specific
+  paths.
 
 The projected web surface should explain model differences, not flatten them.
 In lean `safety-care/v1` its public analysis is organized as per-model audit cards:

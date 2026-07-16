@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -7,8 +8,16 @@ from pathlib import Path
 import pytest
 
 from invisiblebench.api import CostBudgetExceededError
+from invisiblebench.evaluation.check_registry import check_definition_hashes
 from invisiblebench.evaluation.mode_engine import ModeEngineOutput
-from invisiblebench.judge import scan_run, transcripts_for_run, write_outputs
+from invisiblebench.judge import (
+    REPO_ROOT,
+    attach_scan_provenance,
+    scan_run,
+    transcripts_for_run,
+    write_outputs,
+)
+from invisiblebench.utils.manifest import scenario_corpus_hash
 from scripts.run_scan import (
     DEFAULT_SCAN_OUTPUT_ROOT,
     _create_output_dir,
@@ -31,6 +40,121 @@ def test_scan_output_directory_avoids_same_second_collisions(tmp_path: Path) -> 
 
     assert first != second
     assert first.parent == second.parent == tmp_path
+
+
+def test_scan_provenance_pins_exact_transcripts_and_behavior_contract(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run_1"
+    transcript = run_dir / "transcripts" / "model_s1.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text('{"role":"assistant","content":"hello"}\n')
+    manifest = {
+        "schema": "invisiblebench-run-manifest/v2",
+        "run_id": "run-id",
+        "git_sha": "a" * 40,
+        "git_dirty": False,
+        "benchmark_version": "4.0.0",
+        "scenario_hash": scenario_corpus_hash(REPO_ROOT),
+        "scenario_ids": ["s1"],
+        "scoring_config_hash": hashlib.sha256(
+            (REPO_ROOT / "benchmark" / "configs" / "scoring.yaml").read_bytes()
+        ).hexdigest(),
+        "check_definition_hashes": check_definition_hashes(),
+        "model_ids": ["provider/model"],
+        "harness": "llm",
+        "mode": "raw",
+        "transcript_policy": {
+            "system_prompt_hash": "c" * 64,
+            "temperature": 0.7,
+        },
+    }
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest))
+    (run_dir / "transcript_run.json").write_text(
+        json.dumps(
+            {
+                "artifact_type": "transcript_run/v1",
+                "run_id": "run-id",
+                "status": "complete",
+                "model_ids": ["provider/model"],
+                "expected_transcripts": 1,
+                "transcript_count": 1,
+                "error_count": 0,
+                "missing_count": 0,
+                "resolved_model_ids": ["provider/model-version"],
+                "resolved_providers": ["provider"],
+                "transcripts": [
+                    {
+                        "model_id": "provider/model",
+                        "scenario_id": "s1",
+                        "transcript_path": "transcripts/model_s1.jsonl",
+                    }
+                ],
+            }
+        )
+    )
+
+    plan = attach_scan_provenance(
+        {"profile": "publish", "judge_model": "openai/gpt-5-mini"},
+        run_dirs=[run_dir],
+        transcript_pairs=[
+            {
+                "model_id": "provider/model",
+                "scenario_id": "s1",
+                "transcript_path": transcript,
+            }
+        ],
+    )
+
+    assert plan["schema"] == "invisiblebench-scan-plan/v2"
+    assert plan["provenance_complete"] is True
+    assert plan["model_ids"] == ["provider/model"]
+    assert plan["scenario_ids"] == ["s1"]
+    assert len(plan["comparability_fingerprint"]) == 64
+    assert len(plan["scenario_corpus_sha256"]) == 64
+    assert len(plan["scoring_config_sha256"]) == 64
+    assert len(plan["transcript_hashes"][0]["sha256"]) == 64
+    assert plan["source_runs"][0]["artifact_id"] == "run_1"
+    assert str(tmp_path) not in json.dumps(plan)
+
+    summary_path = run_dir / "transcript_run.json"
+    summary = json.loads(summary_path.read_text())
+    summary["status"] = "partial"
+    summary_path.write_text(json.dumps(summary))
+    incomplete = attach_scan_provenance(
+        {"profile": "publish", "judge_model": "openai/gpt-5-mini"},
+        run_dirs=[run_dir],
+        transcript_pairs=[
+            {
+                "model_id": "provider/model",
+                "scenario_id": "s1",
+                "transcript_path": transcript,
+            }
+        ],
+    )
+    assert incomplete["provenance_complete"] is False
+
+
+def test_scan_provenance_marks_old_source_manifest_incomplete(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run_1"
+    transcript = run_dir / "transcripts" / "model_s1.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text('{"role":"assistant","content":"hello"}\n')
+    (run_dir / "run_manifest.json").write_text(json.dumps({"run_id": "old"}))
+
+    plan = attach_scan_provenance(
+        {"profile": "publish", "judge_model": "openai/gpt-5-mini"},
+        run_dirs=[run_dir],
+        transcript_pairs=[
+            {
+                "model_id": "provider/model",
+                "scenario_id": "s1",
+                "transcript_path": transcript,
+            }
+        ],
+    )
+
+    assert plan["provenance_complete"] is False
 
 
 def test_scan_profile_filters_modes_and_overrides_repetitions() -> None:

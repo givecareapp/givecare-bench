@@ -14,19 +14,13 @@ The output model is **`safety-care/v1`** — a per-model safety **profile, not a
 
 50 verifier checks (35 direct-LLM routes, 10 regex-first checks with conditional LLM review, and 5 no-LLM rules) span these 9 dimensions. There is **no `overall_score` and no rank**; models are listed alphabetically, and at n=63 point ranks are statistically indistinguishable, so cite intervals, not positions. The canonical output model — the single source of truth — is **[docs/ontology.md](docs/ontology.md)**; see [Taxonomy](docs/taxonomy.md) for the per-check framework.
 
-The current four-model v4 research scorecard passed the current contract's
-strict QA gate on 2026-07-10 and is checked in at
-`data/leaderboard/leaderboard.json`. It covers 252 complete model/scenario rows
-and 12,600 per-check results under one GPT-5 Mini publish profile; the verifier
-pass cost **$24.19 across 9,190 billed calls**. Safety remains withheld because
-0 checks are claim-ready; Care is directional. The live `--full` command
-targets 15 OpenRouter models × 63 public scenarios. The 2026-07-10
-live-calibrated budget is about **$49.71 for
-transcript generation**, then **$171 base / $503.25 conservative** for the
-publication judge scan across all 15 models, including worst-case regex-edge
-escalation. Budget
-roughly **$220.71 base / $552.96 conservative end to end**, not the transcript
-number alone.
+The checked-in v4 scorecard is a historical research snapshot. Its source merge
+predates the current v2 provenance contract, so current strict QA rejects it as
+a publication replacement. Do not cite it as a current publication-grade
+comparison. The next replacement must preserve exact run policy, transcript,
+check-definition, scan-plan, and merge hashes through the fail-closed publish
+path. Current inventories, model IDs, and prices live in their machine-readable
+sources and each dry-run cost plan rather than in this document.
 
 ## The calibrated core is the benchmark
 
@@ -77,11 +71,12 @@ are deferred to a re-authored Safety/Care artifact-v2. See
 [Benchmark Publishing Audit](docs/publishing-audit.md) for the two-phase
 publication model and what a v2 findings layer would add.
 
-Public evidence is independently inspectable at
+The historical snapshot's evidence remains independently inspectable at
 [the transcript manifest](https://bench.givecareapp.com/bench/evidence/v4.0.0/manifest.json)
-for all 252 transcripts and
+and
 [the score-evidence manifest](https://bench.givecareapp.com/bench/scores/v4.0.0/manifest.json)
-for all 12,600 named check verdicts and evidence quotes.
+for named check verdicts and evidence quotes. Those manifests do not satisfy
+the newer scan-merge v2 provenance gate.
 
 ## Public and internal surfaces
 
@@ -89,7 +84,7 @@ for all 12,600 named check verdicts and evidence quotes.
 These are the parts external users should rely on:
 - `checks/`: the taxonomy — one YAML per check (definition, routing, judge prompt)
 - `benchmark/`: public scenario corpus, scoring contract, tests
-- `src/invisiblebench/`: runtime package, scoring, CLI, adapters
+- `src/invisiblebench/`: runtime package, verifier/scanner logic, CLI, and model API
 - `scripts/`: benchmark pipeline (run scan, leaderboard, QA, publish, rescore gate)
 - `delivery/`: auditable release assembly and projections to consumers
 - `docs/`: public docs
@@ -121,7 +116,7 @@ internal/, results/ — that are not part of the public contract.)
 
 - Public leaderboard scope is benchmark-core only.
 - Publicly comparable runs use the raw `llm` surface.
-- GiveCare/Mira V2 product runs use `--harness givecare --mode v2` and are not part of the public comparative leaderboard.
+- Private GiveCare/Mira simulations are generated and retained by `gc-sms` unless an explicit benchmark-owned intake is performed; there is no automatic product-to-benchmark seam, and product runs are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Every scenario file embeds a contamination canary GUID (`benchmark/scenarios/CANARY.txt`). Trainers should filter on it; a model that can reproduce the GUID has trained on benchmark data.
 - The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py`. New publication refreshes must use the strict QA gate (`scripts/qa_leaderboard.py --strict`; one fail-closed path: `scripts/publish.sh <scan>/per_run.jsonl <web-target>`).

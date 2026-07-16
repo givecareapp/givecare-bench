@@ -1,7 +1,6 @@
 """Helpers for loading and rebuilding run artifacts.
 
-Supports flat aggregate files (all_results.json), provider-specific wrapper files
-(givecare_results.json), per-model result documents, and run directories.
+Supports flat aggregate files, per-model result documents, and run directories.
 """
 from __future__ import annotations
 
@@ -75,10 +74,6 @@ def load_result_rows(source: Path) -> list[ResultRow]:
         if all_results.exists():
             return load_result_rows(all_results)
 
-        givecare_results = source / "givecare_results.json"
-        if givecare_results.exists():
-            return load_result_rows(givecare_results)
-
         return flatten_model_results(load_model_result_documents(source))
 
     raise ArtifactLoadError(f"Unsupported results source: {source}")
@@ -97,7 +92,7 @@ def detect_transcripts_dir(source: Path) -> Path | None:
         return None
 
     parent = source.parent
-    if source.name in {"all_results.json", "givecare_results.json"}:
+    if source.name == "all_results.json":
         candidate = parent / "transcripts"
         return candidate if candidate.exists() else None
 

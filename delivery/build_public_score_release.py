@@ -154,9 +154,10 @@ def build_release(
 
     merge = _read_object(scan_path.parent / "merge_manifest.json")
     expected_merge = {
-        "schema": "invisiblebench-scan-merge/v1",
+        "schema": "invisiblebench-scan-merge/v2",
         "benchmark_version": benchmark_version,
         "result_contract_version": result_contract_version,
+        "provenance_complete": True,
         "profile": "publish",
         "output_file": scan_path.name,
         "output_sha256": _sha256(scan_path),
@@ -168,11 +169,32 @@ def build_release(
     }
     if mismatches:
         raise ValueError(f"invalid merge manifest: {mismatches}")
+    if (
+        not isinstance(merge.get("comparability_fingerprint"), str)
+        or len(merge["comparability_fingerprint"]) != 64
+        or not isinstance(merge.get("scenario_corpus_sha256"), str)
+        or len(merge["scenario_corpus_sha256"]) != 64
+        or not isinstance(merge.get("scoring_config_sha256"), str)
+        or len(merge["scoring_config_sha256"]) != 64
+        or not isinstance(merge.get("check_definition_hashes"), dict)
+        or not merge["check_definition_hashes"]
+        or not isinstance(merge.get("sources"), list)
+        or not merge["sources"]
+        or any(
+            not isinstance(source, dict)
+            or not isinstance(source.get("scan_plan_sha256"), str)
+            or len(source["scan_plan_sha256"]) != 64
+            for source in merge["sources"]
+        )
+    ):
+        raise ValueError("invalid merge manifest: incomplete provenance")
 
     rows_by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
     model_names: dict[str, set[str]] = defaultdict(set)
     raw_rows = _read_rows(scan_path)
     for row in raw_rows:
+        if row.get("contract_version") != result_contract_version:
+            raise ValueError("scan row contract does not match merge manifest")
         model_id = str(row.get("model_id") or "")
         scenario_id = str(row.get("scenario_id") or "")
         if not model_id or not scenario_id:
@@ -259,7 +281,7 @@ def build_release(
 def main(argv: list[str] | None = None) -> int:
     from invisiblebench.evaluation.check_registry import load_checks
     from invisiblebench.utils.benchmark_inventory import collect_public_scenario_ids
-    from invisiblebench.version import BENCHMARK_VERSION, RESULT_CONTRACT_VERSION
+    from invisiblebench.version import BENCHMARK_VERSION, SCANNED_ROW_CONTRACT_VERSION
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
@@ -279,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             expected_scenario_ids=collect_public_scenario_ids(REPO_ROOT),
             expected_mode_ids=modes,
             benchmark_version=BENCHMARK_VERSION,
-            result_contract_version=RESULT_CONTRACT_VERSION,
+            result_contract_version=SCANNED_ROW_CONTRACT_VERSION,
             claim_ready_check_count=claim_ready_count,
         )
     except (OSError, json.JSONDecodeError, ValueError) as exc:

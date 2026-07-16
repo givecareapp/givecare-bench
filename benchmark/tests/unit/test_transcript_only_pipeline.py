@@ -201,9 +201,19 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert (output_dir / "transcript_run.json").exists()
     assert not (output_dir / "all_results.json").exists()
 
+    manifest = json.loads((output_dir / "run_manifest.json").read_text())
+    assert manifest["schema"] == "invisiblebench-run-manifest/v2"
+    assert manifest["scenario_ids"] == ["context_regulatory_data_privacy_001"]
+    assert manifest["transcript_policy"]["system_prompt_hash"]
+    assert manifest["transcript_policy"]["temperature"] == 0.7
+    assert manifest["transcript_policy"]["max_reply_tokens"] == 4000
+    assert manifest["transcript_policy"]["tools"] == "none"
+
     summary = json.loads((output_dir / "transcript_run.json").read_text())
     assert summary["artifact_type"] == "transcript_run/v1"
     assert summary["status"] == "complete"
+    assert "resolved_model_ids" in summary
+    assert "resolved_providers" in summary
     assert summary["transcript_count"] == 1
     assert summary["actual_cost_usd"] == 0.012345
     assert summary["actual_billable_api_calls"] == 1

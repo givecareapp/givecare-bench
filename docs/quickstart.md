@@ -34,14 +34,16 @@ Any OpenRouter model id works — you are not limited to the published roster:
 
 ```bash
 uv run bench -m "your-org/your-model" --dry-run  # cost preview, no calls
-uv run bench -m "your-org/your-model" -y --max-cost-usd 25  # all 63 public scenarios
+uv run bench -m "your-org/your-model" -y \
+  --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"  # use the plan's printed range
 ```
 
 Want a smaller first taste? Run one category:
 
 ```bash
 uv run bench -m "your-org/your-model" -c safety --dry-run
-uv run bench -m "your-org/your-model" -c safety -y --max-cost-usd 10
+uv run bench -m "your-org/your-model" -c safety -y \
+  --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"
 ```
 
 For a cheap live canary before a larger run, use one low-cost target model and
@@ -50,25 +52,30 @@ one scenario. The GPT-5 Mini judge runs in the scan step, not in `bench`:
 ```bash
 env INVISIBLEBENCH_API_TIMEOUT_SECONDS=10 INVISIBLEBENCH_API_MAX_RETRIES=1 \
   uv run bench -m "flash lite" --scenario context_regulatory_data_privacy_001 \
-  -y
+  --dry-run
+env INVISIBLEBENCH_API_TIMEOUT_SECONDS=10 INVISIBLEBENCH_API_MAX_RETRIES=1 \
+  uv run bench -m "flash lite" --scenario context_regulatory_data_privacy_001 \
+  -y --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"
 ```
 
 This produces `results/run_<timestamp>/` with one transcript per scenario.
 
-## 4. Judge the transcripts (10–30 minutes, ~$1 with the core profile)
+## 4. Judge the transcripts (10–30 minutes; use the dry-run cost plan)
 
-The `dev` profile is the calibrated core: the Safety-line checks (Crisis, Scope,
-Identity) judged with one-pass LLM verifiers:
+The `dev` profile is the cheaper development subset: Crisis, Scope, and
+Identity checks judged with one-pass LLM verifiers. It is not a claim-ready
+calibration surface:
 
 ```bash
 uv run python scripts/run_scan.py --profile dev --dry-run --enable-llm \
   --llm-model openai/gpt-5-mini results/run_<timestamp>
 uv run python scripts/run_scan.py --profile dev --enable-llm \
-  --max-cost-usd 2 --llm-model openai/gpt-5-mini results/run_<timestamp>
+  --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini \
+  results/run_<timestamp>
 ```
 
 (`--profile publish` runs all 50 checks with full repetitions. Dry-run it
-first, then set `--max-cost-usd` at or above the printed conservative budget.
+first, then choose `--max-cost-usd` inside the printed accepted range.
 `--profile smoke` is free and deterministic-only.)
 
 Output: `results/safety_care_scan/<timestamp>/per_run.jsonl` (one verdict

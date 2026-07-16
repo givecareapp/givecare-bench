@@ -42,12 +42,6 @@ def test_load_result_rows_from_all_results(tmp_path: Path) -> None:
     assert rows == SAMPLE_ROWS
 
 
-def test_load_result_rows_from_provider_wrapper(tmp_path: Path) -> None:
-    path = write_json(tmp_path / "givecare_results.json", {"metadata": {}, "results": SAMPLE_ROWS})
-    rows = load_result_rows(path)
-    assert rows == SAMPLE_ROWS
-
-
 def test_load_result_rows_from_model_results_dir(tmp_path: Path) -> None:
     model_dir = tmp_path / "model_results"
     write_model_results(SAMPLE_ROWS, model_dir, benchmark_version="1.2.0")

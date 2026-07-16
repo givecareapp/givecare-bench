@@ -16,6 +16,7 @@ Adding a check is adding a file; retiring one is deleting it.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import yaml
@@ -146,6 +147,21 @@ def check_prompt_hashes(checks_dir: Path | None = None) -> dict[str, str]:
         check_id: prompt_template_hash(str(mode["prompt"]))
         for check_id, mode in modes.items()
         if mode.get("prompt")
+    }
+
+
+def check_definition_hashes(checks_dir: Path | None = None) -> dict[str, str]:
+    """Hash each complete check definition for artifact comparability.
+
+    Prompt hashes intentionally answer a narrower question. These hashes also
+    cover routing, eligibility, severity, and calibration state so a scan
+    cannot look comparable after any behavior- or claim-affecting check edit.
+    """
+    root = checks_dir or CHECKS_DIR
+    return {
+        check_file.stem: hashlib.sha256(check_file.read_bytes()).hexdigest()
+        for check_file in sorted(root.rglob("*.yaml"))
+        if not check_file.name.startswith("_")
     }
 
 

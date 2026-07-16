@@ -5,8 +5,10 @@ It evaluates whether language models can safely and effectively support family c
 across realistic multi-turn conversations.
 
 !!! note "Current result status"
-    No result artifact is checked in. The next public result must be generated
-    from a 4.0 scan and pass strict QA before it is published.
+    The checked-in v4 scorecard is a historical research snapshot. Its source
+    merge predates the current v2 provenance contract, so it does not pass the
+    current strict publication gate. Safety claims remain calibration-gated;
+    Care results remain directional.
 
 ## Scoring model
 
@@ -26,9 +28,9 @@ Canonical model: [ontology.md](ontology.md). Positioning and the three moats: [w
 - **Current public corpus** covers 63 scenarios across 4 categories
 - **50 checks across 9 dimensions** — 4 Safety lines + 5 Care qualities — with binary `claim_ready` / `not_claim_ready` calibration status (currently 0 `claim_ready`)
 - **Multi-turn with conditional branching** — adaptive evaluation paths based on model responses
-- **Next live roster**: 15 models × 63 scenarios; publication creates
-  `data/leaderboard/leaderboard.json` only after strict QA
-- Benchmark version **4.0.0** | Public harness: `llm/raw`
+- Machine-readable inventory, versions, roster, and prices are read from the
+  benchmark inventory, version module, model catalog, and dry-run plans
+- Public harness: `llm/raw`
 
 ## Publication posture
 

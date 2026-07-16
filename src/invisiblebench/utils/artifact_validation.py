@@ -68,6 +68,65 @@ def observed_prompt_hashes(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
     return {mode_id: sorted(values) for mode_id, values in sorted(hashes.items())}
 
 
+def scan_check_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return per-model, per-check coverage without deriving a score or rank."""
+    records: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for row in rows:
+        model = str(row.get("model") or "")
+        model_id = str(row.get("model_id") or model)
+        for result in row.get("mode_results") or []:
+            check_id = str(result.get("mode_id") or "")
+            if not check_id:
+                continue
+            key = (model, model_id, check_id)
+            record = records.setdefault(
+                key,
+                {
+                    "model": model,
+                    "model_id": model_id,
+                    "check_id": check_id,
+                    "total": 0,
+                    "eligible": 0,
+                    "ineligible": 0,
+                    "pass": 0,
+                    "fail": 0,
+                    "not_applicable": 0,
+                    "unclear": 0,
+                    "scorer_errors": 0,
+                    "retry_parse_errors": 0,
+                },
+            )
+            record["total"] += 1
+            record["eligible" if result.get("eligible") else "ineligible"] += 1
+            verdict_key = {
+                Verdict.PASS.value: "pass",
+                Verdict.FAIL.value: "fail",
+                Verdict.NOT_APPLICABLE.value: "not_applicable",
+                Verdict.UNCLEAR.value: "unclear",
+            }.get(result.get("verdict"))
+            if verdict_key:
+                record[verdict_key] += 1
+
+            rationale = str(result.get("rationale_code") or "")
+            if (
+                rationale in {
+                    "prompt_missing",
+                    "missing_verifier_prompt",
+                    "no_verifier_available",
+                }
+                or rationale.startswith("prompt_file_missing:")
+                or rationale.startswith("verifier_exception")
+            ):
+                record["scorer_errors"] += 1
+            extra = result.get("extra") if isinstance(result.get("extra"), dict) else {}
+            record["retry_parse_errors"] += _list_len(extra.get("parse_errors"))
+
+    return {
+        "schema": "invisiblebench-check-coverage/v1",
+        "records": [records[key] for key in sorted(records)],
+    }
+
+
 def _list_len(value: Any) -> int:
     return len(value) if isinstance(value, list) else int(bool(value))
 

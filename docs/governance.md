@@ -16,14 +16,14 @@ is credible only under explicit rules, enforced in code where possible:
   text, verifier prompts, or expected behaviors. Pressure transfers only through
   the public taxonomy and findings — a scenario script never becomes a product
   prompt.
-- **Same contract for the home team.** The GiveCare/Mira product is evaluated
-  through the same V2 HTTP harness (`bench --harness givecare --mode v2`), the
-  same scenario contract, and the same verifier path as any other model. There
-  is no special path for the home team.
+- **No automatic product-benchmark seam.** Private GiveCare/Mira testing
+  scenarios run inside `gc-sms`. Any later evaluation here requires an explicit,
+  benchmark-owned intake; the product receives no benchmark scenario text or
+  verifier prompt, and this repo has no privileged product HTTP adapter.
 - **Product runs are excluded from the public comparative leaderboard.** Per the
-  public release policy, GiveCare/Mira V2 runs use `--harness givecare --mode v2`
-  and are not part of the public comparative leaderboard; publicly comparable
-  runs use the raw `llm` surface.
+  public release policy, private GiveCare/Mira transcript runs are not part of
+  the public comparative leaderboard; publicly comparable runs come from this
+  repo's model runner.
 - **Public scenarios are burnable.** Assume every published scenario enters
   training corpora. Staging (the gitignored `intake/`) is the standing refresh
   source, and a private slice is held back as a contamination probe before large
@@ -74,8 +74,9 @@ GiveCare's involvement — the same self-serve path documented in
 ```bash
 uv sync --extra dev && export OPENROUTER_API_KEY=...
 uv run bench -m "your-org/your-model" --dry-run                       # plan transcripts
-uv run bench -m "your-org/your-model" -y --max-cost-usd 25            # run transcripts
-uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd 34 results/run_<id>   # one-model conservative judge ceiling
+uv run bench -m "your-org/your-model" -y --max-cost-usd "$TRANSCRIPT_MAX_COST_USD"
+uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm results/run_<id>
+uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" results/run_<id>
 ```
 
 Live scans checkpoint every completed model/scenario row. If the explicit
@@ -96,7 +97,8 @@ That produces the same scored surface the maintainers see. Reaching the
 `publish.sh` runs `generate → strict QA → sync` and aborts before writing the
 public target if the strict QA gate (`scripts/qa_leaderboard.py --strict`) fails.
 Strict QA also requires the artifact benchmark version, current check-template
-hash map, and hashes observed in the source scan to agree exactly.
+hash map, full check-definition snapshot, source scan bytes, and v2
+comparability lineage to agree exactly.
 The web-bench copy is a projection of `data/leaderboard/leaderboard.json`, never
 hand-edited; `delivery/sync_web_bench.py` refuses to write unless the source
 bytes were just strict-QA'd. Promoting a submitted row into the public artifact
@@ -107,6 +109,22 @@ Third-party verifier or scenario contributions follow the same discipline as
 internal work: every candidate lands in staging, is probed, and is promoted only
 by human review; verifier contributions carry the calibration bar. There is no
 fast path. See `CONTRIBUTING.md` in the repository root.
+
+## Incident-derived benchmark evolution
+
+Observed failures enter a private, gitignored JSONL registry and are validated
+with `scripts/intake/incident_registry.py`. The tracked repository contains the
+contract and validator, never the incident records or source transcripts.
+References must be opaque and marked de-identified. An incident can advance to
+candidate status only with a privacy-reviewed contrast pair, a viable scorer
+route, evidence that the check is discriminating and renderable without a real
+person's text, and either recurrence or high consequence. Registry status never
+auto-promotes a scenario or check; human review remains required.
+
+Blinded pairwise review is permitted only as exploratory Care research on a
+fixed, consented, de-identified sample with model identity hidden and reviewer
+agreement recorded. It may identify missing Care checks; it may not rank models
+publicly, label a Safety hard fail, or bypass per-check calibration.
 
 ## Annotation and ethics
 

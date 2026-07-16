@@ -9,6 +9,7 @@ never calls a model or external service.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -18,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.check_registry import (  # noqa: E402
+    check_definition_hashes,
     check_prompt_hashes,
     load_checks,
 )
@@ -40,6 +42,7 @@ from invisiblebench.utils.artifact_validation import (  # noqa: E402
     observed_prompt_hashes,
     scan_artifact_validation_diagnostics,
     scan_artifact_validation_summary,
+    scan_check_coverage,
     scan_current_contract_validation_diagnostics,
     scan_current_contract_validation_summary,
 )
@@ -50,6 +53,8 @@ from invisiblebench.utils.benchmark_inventory import (  # noqa: E402
 from invisiblebench.utils.io import artifact_reference  # noqa: E402
 from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
 from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
+from invisiblebench.utils.manifest import scenario_corpus_hash  # noqa: E402
+from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION  # noqa: E402
 
 # Statuses allowed to carry a published hard-fail claim. Binary claim model:
 # only `claim_ready` publishes; everything else is disclosed development evidence.
@@ -183,6 +188,8 @@ def _validate_safety_care_artifact(
         errors.append("scan_metadata.artifact_validation missing or not an object")
     if not isinstance(scan_meta.get("artifact_diagnostics"), dict):
         errors.append("scan_metadata.artifact_diagnostics missing or not an object")
+    if not isinstance(scan_meta.get("check_coverage"), dict):
+        errors.append("scan_metadata.check_coverage missing or not an object")
     # Presence is required unconditionally: without this the current-contract
     # strict gate (missing scenarios / check instances) is only run when the
     # block happens to be present, so an artifact that omits it silently
@@ -282,6 +289,18 @@ def _validate_artifact_diagnostics_metadata(
     return errors
 
 
+def _validate_check_coverage_metadata(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> list[str]:
+    coverage = (leaderboard.get("scan_metadata") or {}).get("check_coverage")
+    if not isinstance(coverage, dict):
+        return []
+    if coverage != scan_check_coverage(rows):
+        return ["scan_metadata.check_coverage mismatch"]
+    return []
+
+
 def _active_mode_ids(checks_dir: Path | None = None) -> list[str]:
     modes, routing = load_checks(checks_dir)
     return sorted(
@@ -355,6 +374,7 @@ def _strict_provenance_errors(
     leaderboard: dict[str, Any],
     rows: list[dict[str, Any]],
     *,
+    scan_path: Path,
     checks_dir: Path | None,
 ) -> list[str]:
     metadata = leaderboard.get("scan_metadata") or {}
@@ -365,6 +385,48 @@ def _strict_provenance_errors(
         errors.append(
             f"benchmark_version={actual_version!r} expected={expected_version!r}"
         )
+
+    source_merge = metadata.get("source_merge")
+    if not isinstance(source_merge, dict):
+        errors.append("source_merge missing or not an object")
+    else:
+        expected_merge = {
+            "schema": "invisiblebench-scan-merge/v2",
+            "benchmark_version": expected_version,
+            "result_contract_version": SCANNED_ROW_CONTRACT_VERSION,
+            "provenance_complete": True,
+            "profile": "publish",
+            "row_count": len(rows),
+            "output_file": scan_path.name,
+            "output_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
+            "scenario_corpus_sha256": scenario_corpus_hash(REPO_ROOT),
+            "scoring_config_sha256": hashlib.sha256(
+                (REPO_ROOT / "benchmark" / "configs" / "scoring.yaml").read_bytes()
+            ).hexdigest(),
+        }
+        for field, expected in expected_merge.items():
+            if source_merge.get(field) != expected:
+                errors.append(f"source_merge.{field} mismatch")
+        fingerprint = source_merge.get("comparability_fingerprint")
+        if not isinstance(fingerprint, str) or len(fingerprint) != 64:
+            errors.append("source_merge.comparability_fingerprint missing or invalid")
+        expected_definitions = check_definition_hashes(checks_dir)
+        if source_merge.get("check_definition_hashes") != expected_definitions:
+            errors.append("source_merge.check_definition_hashes missing or mismatch")
+        sources = source_merge.get("sources")
+        if not isinstance(sources, list) or not sources:
+            errors.append("source_merge.sources missing or empty")
+        elif any(
+            not isinstance(source, dict)
+            or not isinstance(source.get("scan_plan_sha256"), str)
+            or len(source["scan_plan_sha256"]) != 64
+            for source in sources
+        ):
+            errors.append("source_merge.sources scan plan hashes missing or invalid")
+    if {row.get("contract_version") for row in rows} != {
+        SCANNED_ROW_CONTRACT_VERSION
+    }:
+        errors.append("scan row contract mismatch")
 
     expected_hashes = check_prompt_hashes(checks_dir)
     if metadata.get("check_prompt_hashes") != expected_hashes:
@@ -468,6 +530,7 @@ def validate_leaderboard(
     )
     errors.extend(_validate_artifact_validation_metadata(leaderboard, rows))
     errors.extend(_validate_artifact_diagnostics_metadata(leaderboard, rows))
+    errors.extend(_validate_check_coverage_metadata(leaderboard, rows))
     errors.extend(_validate_current_contract_metadata(leaderboard, rows, checks_dir=checks_dir))
     current_contract_validation = (leaderboard.get("scan_metadata") or {}).get(
         "current_contract_validation"
@@ -475,7 +538,14 @@ def validate_leaderboard(
     if strict and isinstance(current_contract_validation, dict):
         errors.extend(_strict_current_contract_errors(current_contract_validation))
     if strict:
-        errors.extend(_strict_provenance_errors(leaderboard, rows, checks_dir=checks_dir))
+        errors.extend(
+            _strict_provenance_errors(
+                leaderboard,
+                rows,
+                scan_path=scan_path,
+                checks_dir=checks_dir,
+            )
+        )
 
     prompt_missing = 0
     no_verifier = 0

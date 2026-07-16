@@ -26,7 +26,6 @@ from invisiblebench.cli.agent_commands import (
 from invisiblebench.cli.result_helpers import (
     _compute_success as _compute_success,  # re-exported: tests import from this module
 )
-from invisiblebench.harnesses import adapter_name, is_mode_implemented, resolve_harness_mode
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 
 try:
@@ -72,9 +71,6 @@ from invisiblebench.cli.run_command import (  # noqa: E402,F401
 )
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
     run_benchmark as run_benchmark,
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    run_givecare_eval as run_givecare_eval,
 )
 
 # ---------- agent-friendly helpers ----------
@@ -190,12 +186,6 @@ Examples:
   uv run bench -m 7 --dry-run               Model 7 = DeepSeek V4 Pro
   uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
 
-  # Eval Harness (GiveCare/Mira product)
-  uv run bench --harness givecare --mode v2 -y                Full V2 runtime path
-  uv run bench --provider givecare -y                         Alias for givecare/v2
-  INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR=/path/to/private/confidential uv run bench --harness givecare --mode v2 -y --confidential
-  uv run bench --harness givecare --mode v2 -c safety -y
-
   # Judge transcripts (JUDGE scan) and publish
   uv run python scripts/run_scan.py <run-dir> --profile publish --dry-run --enable-llm
   uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm --max-cost-usd <budget>
@@ -304,19 +294,6 @@ Examples:
     parser.add_argument("--full", action="store_true", help=f"All {len(CONFIG_MODELS_FULL)} models × all scenarios")
 
     parser.add_argument("--output", type=Path, default=None, help="Output directory")
-    parser.add_argument(
-        "--harness",
-        type=str,
-        choices=["llm", "givecare"],
-        default=None,
-        help="Evaluation surface to run: 'llm' (benchmark core) or 'givecare' (system harnesses)",
-    )
-    parser.add_argument(
-        "--mode",
-        type=str,
-        default=None,
-        help="Harness mode. LLM: raw. GiveCare: v2",
-    )
     parser.add_argument("--dry-run", action="store_true", help="Plan conservative costs only")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
     parser.add_argument(
@@ -370,13 +347,6 @@ Examples:
         default=None,
         metavar="SPEC",
         help="Select models by name or number: 'deepseek', 'gpt-5.6,claude', '1-4', '7', '1,deepseek'",
-    )
-    parser.add_argument(
-        "--provider",
-        type=str,
-        choices=["openrouter", "givecare"],
-        default="openrouter",
-        help="Select the eval harness target (openrouter=LLM, givecare=V2 system)",
     )
     parser.add_argument(
         "--confidential",
@@ -453,36 +423,6 @@ Examples:
     scenario_filter = None
     if args.scenario:
         scenario_filter = [s.strip().lower() for s in args.scenario.split(",")]
-
-    try:
-        harness_name, harness_mode = resolve_harness_mode(
-            harness=args.harness,
-            provider=args.provider,
-            mode=args.mode,
-        )
-    except ValueError as e:
-        print(str(e))
-        return 1
-
-    if not is_mode_implemented(harness_name, harness_mode):
-        print(
-            f"Harness mode not implemented yet: {harness_name}/{harness_mode}. "
-            f"Use '{harness_name}/{'v2' if harness_name == 'givecare' else 'raw'}' for now."
-        )
-        return 1
-
-    if harness_name == "givecare":
-        return run_givecare_eval(
-            category_filter=category_filter,
-            scenario_filter=scenario_filter,
-            include_confidential=args.confidential,
-            verbose=True,
-            dry_run=args.dry_run,
-            auto_confirm=args.yes,
-            output_dir=args.output,
-            adapter_name=adapter_name(harness_name, harness_mode),
-            harness_mode=harness_mode,
-        )
 
     # Default: raw LLM benchmark via llm/raw harness
     all_models = MODELS_FULL

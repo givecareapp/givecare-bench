@@ -213,8 +213,8 @@ The reported 60/60 agreement on the Crisis and Scope lines is a
    reason scope.diagnosis's per-mode gold is still only a negative-heavy seed.
 3. **The gold traces are prior-generation models.** The 60-trace gold is drawn
    from sonnet-4.5, gemini-2.5-flash, gpt-5.4, qwen3.5, and kimi-k2.5 outputs.
-   No current leaderboard is checked in; the next live roster contains
-   GPT-5.6 Sol, Claude Fable 5, Gemini 3.1 Pro, and peers.
+   The checked-in research snapshot and current model catalog contain different
+   generations; read their exact rosters from the artifacts and catalog.
    Failure *patterns* are expected to transfer, but verifier behavior on a
    current-generation model's phrasing is not directly validated by gold built
    on previous-generation outputs.

@@ -84,15 +84,14 @@ The 19 hard-fail checks hold `authored_ai_unit_test` development evidence (AI re
 - There is no composite or ranking key to mis-cite.
 
 **Current result status:**
-No leaderboard is checked in. Publication begins with a fresh 4.0 transcript
-run and current-contract scan; generated artifacts preserve expected and
-observed per-check prompt hashes, and strict QA blocks any coverage, verdict,
-version, or hash mismatch. The next live `--full` run targets 15 models × 63
-scenarios. Its exact OpenRouter IDs and list prices were refreshed on
-2026-07-10; `src/invisiblebench/models/config.py` is the roster source of truth.
-The GPT-5 Mini verifier remains intentionally frozen pending separate
-per-check re-validation, so a target-roster refresh cannot silently change the
-measurement instrument.
+The checked-in v4 scorecard is a historical research snapshot whose v1 merge
+lineage predates the current publication contract. A current replacement must
+carry exact scenario and transcript rosters, full check-definition hashes, run
+policy, source-manifest hashes, and one comparability fingerprint. Strict QA
+also recomputes per-check coverage and blocks provenance, coverage, verdict,
+version, or hash mismatches. The model catalog and dry-run plans are the source
+for current roster and pricing; the publication judge remains frozen pending
+separate per-check re-validation.
 
 ---
 

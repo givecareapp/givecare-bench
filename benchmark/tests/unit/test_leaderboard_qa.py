@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,9 +13,11 @@ from invisiblebench.utils.artifact_validation import (
     artifact_issue_policy,
     scan_artifact_validation_diagnostics,
     scan_artifact_validation_summary,
+    scan_check_coverage,
     scan_current_contract_validation_diagnostics,
     scan_current_contract_validation_summary,
 )
+from invisiblebench.utils.manifest import scenario_corpus_hash
 from scripts.qa_leaderboard import validate_leaderboard
 
 
@@ -43,6 +46,7 @@ def _scan_row(
         "model": model,
         "model_id": model.lower(),
         "scenario_id": scenario_id,
+        "contract_version": "3.2.0",
         "overall_score": 1.0,
         "hard_fail": verdict == "FAIL" and layer == "safety" and severity in {"S5", "S4_GATE"},
         "mode_results": [
@@ -94,6 +98,11 @@ def _default_contract_ids(monkeypatch):
         lambda checks_dir=None: list(_CONTRACT_IDS["checks"]),
     )
     monkeypatch.setattr(qa_leaderboard, "check_prompt_hashes", lambda checks_dir=None: {})
+    monkeypatch.setattr(
+        qa_leaderboard,
+        "check_definition_hashes",
+        lambda checks_dir=None: {"fixture.check": "d" * 64},
+    )
     monkeypatch.setattr(qa_leaderboard, "get_benchmark_version", lambda _root: "4.0.0")
     yield
 
@@ -124,6 +133,7 @@ def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
             "total_scenarios": scenarios,
             "artifact_validation": scan_artifact_validation_summary(rows),
             "artifact_diagnostics": scan_artifact_validation_diagnostics(rows),
+            "check_coverage": scan_check_coverage(rows),
             "current_contract_validation": scan_current_contract_validation_summary(
                 rows,
                 expected_scenario_ids=scenario_ids,
@@ -135,6 +145,30 @@ def _leaderboard(source: Path, *, models: int = 1, scenarios: int = 1) -> dict:
                 expected_check_ids=check_ids,
             ),
             "artifact_issue_policy": artifact_issue_policy(),
+            "source_merge": {
+                "schema": "invisiblebench-scan-merge/v2",
+                "benchmark_version": "4.0.0",
+                "result_contract_version": "3.2.0",
+                "provenance_complete": True,
+                "comparability_fingerprint": "f" * 64,
+                "scenario_corpus_sha256": scenario_corpus_hash(
+                    qa_leaderboard.REPO_ROOT
+                ),
+                "scoring_config_sha256": hashlib.sha256(
+                    (
+                        qa_leaderboard.REPO_ROOT
+                        / "benchmark"
+                        / "configs"
+                        / "scoring.yaml"
+                    ).read_bytes()
+                ).hexdigest(),
+                "check_definition_hashes": {"fixture.check": "d" * 64},
+                "profile": "publish",
+                "row_count": len(rows),
+                "output_file": source.name,
+                "output_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                "sources": [{"scan_plan_sha256": "a" * 64}],
+            },
         },
         "models": [],
     }
@@ -499,6 +533,19 @@ def test_safety_care_qa_rejects_missing_artifact_diagnostics(tmp_path: Path) -> 
     assert "scan_metadata.artifact_diagnostics missing or not an object" in errors
 
 
+def test_safety_care_qa_rejects_stale_check_coverage(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "safety_care_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["check_coverage"]["records"][0]["pass"] = 0
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(scan, leaderboard)
+
+    assert "scan_metadata.check_coverage mismatch" in errors
+
+
 def test_safety_care_qa_rejects_missing_artifact_issue_policy(tmp_path: Path) -> None:
     scan = tmp_path / "per_run.jsonl"
     leaderboard = tmp_path / "safety_care_leaderboard.json"
@@ -537,6 +584,19 @@ def test_strict_qa_rejects_stale_benchmark_version(tmp_path: Path) -> None:
     errors = validate_leaderboard(scan, leaderboard, strict=True)
 
     assert "benchmark_version='3.1.0' expected='4.0.0'" in errors
+
+
+def test_strict_qa_rejects_incomplete_merge_provenance(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["source_merge"]["provenance_complete"] = False
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(scan, leaderboard, strict=True)
+
+    assert "source_merge.provenance_complete mismatch" in errors
 
 
 def test_strict_qa_rejects_stale_observed_prompt_hash(

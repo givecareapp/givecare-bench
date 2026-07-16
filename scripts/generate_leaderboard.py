@@ -24,6 +24,7 @@ from invisiblebench.utils.artifact_validation import (
     observed_prompt_hashes,
     scan_artifact_validation_diagnostics,
     scan_artifact_validation_summary,
+    scan_check_coverage,
     scan_current_contract_validation_diagnostics,
     scan_current_contract_validation_summary,
 )
@@ -34,7 +35,7 @@ from invisiblebench.utils.benchmark_inventory import (
     load_inventory,
 )
 from invisiblebench.utils.io import artifact_reference, load_jsonl
-from invisiblebench.version import RESULT_CONTRACT_VERSION
+from invisiblebench.version import RESULT_CONTRACT_VERSION, SCANNED_ROW_CONTRACT_VERSION
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -51,10 +52,16 @@ def _load_source_merge(path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]
     manifest = json.loads(manifest_path.read_text())
     if not isinstance(manifest, dict):
         raise ValueError(f"Expected object JSON at {manifest_path}")
+    schema = manifest.get("schema")
+    expected_contract = {
+        "invisiblebench-scan-merge/v1": RESULT_CONTRACT_VERSION,
+        "invisiblebench-scan-merge/v2": SCANNED_ROW_CONTRACT_VERSION,
+    }.get(schema)
+    if expected_contract is None:
+        raise ValueError(f"Invalid merge manifest schema: {schema!r}")
     expected = {
-        "schema": "invisiblebench-scan-merge/v1",
         "benchmark_version": get_benchmark_version(REPO_ROOT),
-        "result_contract_version": RESULT_CONTRACT_VERSION,
+        "result_contract_version": expected_contract,
         "profile": "publish",
         "row_count": len(rows),
         "output_file": path.name,
@@ -69,6 +76,27 @@ def _load_source_merge(path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]
     }
     if mismatches:
         raise ValueError(f"Invalid merge manifest: {mismatches}")
+    if schema == "invisiblebench-scan-merge/v2":
+        fingerprint = manifest.get("comparability_fingerprint")
+        scenario_corpus = manifest.get("scenario_corpus_sha256")
+        scoring_config = manifest.get("scoring_config_sha256")
+        check_hashes = manifest.get("check_definition_hashes")
+        if (
+            manifest.get("provenance_complete") is not True
+            or not isinstance(fingerprint, str)
+            or len(fingerprint) != 64
+            or not isinstance(scenario_corpus, str)
+            or len(scenario_corpus) != 64
+            or not isinstance(scoring_config, str)
+            or len(scoring_config) != 64
+            or not isinstance(check_hashes, dict)
+            or not check_hashes
+            or any(not isinstance(value, str) or len(value) != 64 for value in check_hashes.values())
+        ):
+            raise ValueError("Invalid merge manifest: incomplete v2 provenance")
+        row_contracts = {row.get("contract_version") for row in rows}
+        if row_contracts != {SCANNED_ROW_CONTRACT_VERSION}:
+            raise ValueError("Invalid merge manifest: scan row contract mismatch")
     sources = manifest.get("sources")
     if not manifest.get("judge_model") or not isinstance(sources, list) or not sources:
         raise ValueError("Invalid merge manifest: missing judge_model or sources")
@@ -85,6 +113,8 @@ def _load_source_merge(path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]
             "model_ids": list,
             "transcript_source_artifacts": list,
         }
+        if schema == "invisiblebench-scan-merge/v2":
+            required["scan_plan_sha256"] = str
         invalid = [
             key
             for key, expected_type in required.items()
@@ -92,7 +122,12 @@ def _load_source_merge(path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]
         ]
         cost = source.get("actual_cost_usd")
         calls = source.get("actual_billable_api_calls")
-        if invalid or len(source["sha256"]) != 64:
+        invalid_hashes = [
+            key
+            for key in ("sha256", "scan_plan_sha256")
+            if key in required and len(source.get(key) or "") != 64
+        ]
+        if invalid or invalid_hashes:
             raise ValueError(f"Invalid merge manifest source {index}: fields={invalid}")
         if (
             isinstance(cost, bool)
@@ -259,6 +294,7 @@ def generate_leaderboard(
             "hard_fail_contract_normalizations": hard_fail_normalizations,
         },
         "artifact_diagnostics": scan_artifact_validation_diagnostics(rows),
+        "check_coverage": scan_check_coverage(rows),
         "artifact_issue_policy": artifact_issue_policy(),
         "current_contract_validation": scan_current_contract_validation_summary(
             rows,

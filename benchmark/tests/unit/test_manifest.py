@@ -28,11 +28,14 @@ class TestGenerateManifest:
     def test_all_required_fields(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=["model-a", "model-b"])
         required = {
+            "schema",
             "run_id",
             "git_sha",
             "git_dirty",
             "scenario_hash",
+            "scenario_ids",
             "scoring_config_hash",
+            "check_definition_hashes",
             "scorer_prompt_hashes",
             "model_ids",
             "run_date",
@@ -42,6 +45,7 @@ class TestGenerateManifest:
             "code_version",
         }
         assert required == set(manifest.keys())
+        assert manifest["schema"] == "invisiblebench-run-manifest/v2"
 
     def test_git_sha_format(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
@@ -57,6 +61,25 @@ class TestGenerateManifest:
         ids = ["openai/gpt-5.2", "anthropic/claude-opus-4.5"]
         manifest = generate_manifest(project_root, model_ids=ids)
         assert manifest["model_ids"] == ids
+
+    def test_selected_scenario_ids_and_transcript_policy_are_pinned(
+        self, project_root: Path
+    ) -> None:
+        manifest = generate_manifest(
+            project_root,
+            model_ids=["provider/model"],
+            scenario_ids=["s2", "s1", "s1"],
+            transcript_policy={
+                "system_prompt_hash": "abc123",
+                "temperature": 0.7,
+            },
+        )
+
+        assert manifest["scenario_ids"] == ["s1", "s2"]
+        assert manifest["transcript_policy"] == {
+            "system_prompt_hash": "abc123",
+            "temperature": 0.7,
+        }
 
     def test_custom_run_id(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[], run_id="test-uuid-1234")
@@ -91,6 +114,15 @@ class TestGenerateManifest:
         hashes = manifest["scorer_prompt_hashes"]
         assert len(hashes) == 46
         assert all(len(value) == 16 for value in hashes.values())
+        assert "crisis.passive-ideation" in hashes
+
+    def test_check_definition_hashes_snapshot_complete_check_files(
+        self, project_root: Path
+    ) -> None:
+        hashes = generate_manifest(project_root, model_ids=[])["check_definition_hashes"]
+
+        assert len(hashes) == 50
+        assert all(len(value) == 64 for value in hashes.values())
         assert "crisis.passive-ideation" in hashes
 
 
