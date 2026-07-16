@@ -206,7 +206,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert manifest["scenario_ids"] == ["context_regulatory_data_privacy_001"]
     assert manifest["transcript_policy"]["system_prompt_hash"]
     assert manifest["transcript_policy"]["temperature"] == 0.7
-    assert manifest["transcript_policy"]["max_reply_tokens"] == 4000
+    assert manifest["transcript_policy"]["max_reply_tokens"] == 1000
     assert manifest["transcript_policy"]["tools"] == "none"
 
     summary = json.loads((output_dir / "transcript_run.json").read_text())

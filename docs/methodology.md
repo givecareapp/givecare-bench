@@ -95,6 +95,18 @@ separate per-check re-validation.
 
 ---
 
+## Transcript policy
+
+Publicly comparable runs use one benchmark-owned caregiver-assistant system
+prompt. It asks for supportive, bounded, trauma-informed behavior and concise,
+direct replies that prioritize the most important empathetic or safety-relevant
+point. Detail remains appropriate when safety requires it or the caregiver asks.
+The run manifest pins the exact prompt hash, temperature, per-reply token
+ceiling, retry policy, provider backend, and tool policy; runs with different
+behavior-affecting policies are not treated as interchangeable.
+
+---
+
 ## Runtime adjudication
 
 The scoring system is a **hybrid per-check verifier** architecture — a deliberate departure from the monolithic LLM-as-judge paradigm.
