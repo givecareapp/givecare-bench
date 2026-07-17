@@ -527,7 +527,11 @@ class ModelAPIClient:
                         _SCORER_RESPONSE_CACHE.set(cache_key, result)
                     return result
 
-                except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                except (
+                    httpx.HTTPStatusError,
+                    httpx.RequestError,
+                    json.JSONDecodeError,
+                ) as e:
                     last_error = e
                     error_detail = self._format_request_error(e)
                     status_code = getattr(getattr(e, "response", None), "status_code", None)

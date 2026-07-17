@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 
 from invisiblebench.api.client import (
     JUDGE_MODEL_OPENROUTER_ID,
+    APIConfig,
     CostBudgetExceededError,
     CostTracker,
     ModelAPIClient,
@@ -58,6 +60,66 @@ def test_parse_response_prefers_usage_cost(monkeypatch) -> None:
     )
 
     assert tracker.total == 0.012345
+
+
+def test_async_client_retries_malformed_provider_json(monkeypatch) -> None:
+    from invisiblebench.api import client as client_module
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
+    responses = [
+        json.JSONDecodeError("unterminated response", "", 0),
+        {
+            "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+            "usage": {
+                "prompt_tokens": 1,
+                "completion_tokens": 1,
+                "cost": 0.0001,
+            },
+        },
+    ]
+    calls = 0
+
+    class FakeResponse:
+        def __init__(self, payload) -> None:
+            self.payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self):
+            if isinstance(self.payload, Exception):
+                raise self.payload
+            return self.payload
+
+    class FakeAsyncClient:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args) -> None:
+            return None
+
+        async def post(self, *_args, **_kwargs):
+            nonlocal calls
+            payload = responses[calls]
+            calls += 1
+            return FakeResponse(payload)
+
+    monkeypatch.setattr(client_module.httpx, "AsyncClient", FakeAsyncClient)
+    client = ModelAPIClient(APIConfig(timeout=1, max_retries=2, retry_delay=0))
+
+    result = asyncio.run(
+        client.call_model_async(
+            "provider/model",
+            [{"role": "user", "content": "hello"}],
+        )
+    )
+
+    assert result["response"] == "ok"
+    assert calls == 2
 
 
 def test_transcript_estimate_includes_live_cost_safety_margin() -> None:

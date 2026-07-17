@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.cli import run_command as run_command_mod
 from invisiblebench.cli.transcript import evaluate_scenario_async
 
@@ -73,6 +76,30 @@ def test_evaluate_scenario_async_transcript_only_skips_judge(tmp_path: Path) -> 
     assert row["status"] == "transcript_ready"
     assert row["run_id"] == "run-id"
     assert Path(row["transcript_path"]).exists()
+
+
+def test_evaluate_scenario_async_propagates_cost_ceiling(tmp_path: Path) -> None:
+    scenario_path = tmp_path / "scenario.json"
+    _write_scenario(scenario_path)
+
+    class BudgetExceededClient:
+        async def call_model_async(self, **_kwargs: Any) -> dict[str, Any]:
+            raise CostBudgetExceededError("test ceiling")
+
+    with pytest.raises(CostBudgetExceededError, match="test ceiling"):
+        asyncio.run(
+            evaluate_scenario_async(
+                model={"id": "test/model", "name": "Test Model"},
+                scenario={
+                    "path": str(scenario_path),
+                    "name": "Unit Test Scenario",
+                    "category": "context",
+                },
+                api_client=BudgetExceededClient(),  # type: ignore[arg-type]
+                output_dir=tmp_path / "run",
+                semaphore=asyncio.Semaphore(1),
+            )
+        )
 
 
 def test_multisession_transcript_preserves_session_semantics(tmp_path: Path) -> None:
@@ -206,7 +233,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert manifest["scenario_ids"] == ["context_regulatory_data_privacy_001"]
     assert manifest["transcript_policy"]["system_prompt_hash"]
     assert manifest["transcript_policy"]["temperature"] == 0.7
-    assert manifest["transcript_policy"]["max_reply_tokens"] == 1000
+    assert manifest["transcript_policy"]["max_reply_tokens"] == 4000
     assert manifest["transcript_policy"]["tools"] == "none"
 
     summary = json.loads((output_dir / "transcript_run.json").read_text())

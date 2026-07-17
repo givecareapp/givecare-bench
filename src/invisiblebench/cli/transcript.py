@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from invisiblebench.api.client import InsufficientCreditsError, cost_tracker
+from invisiblebench.api.client import (
+    CostBudgetExceededError,
+    InsufficientCreditsError,
+    cost_tracker,
+)
 from invisiblebench.cli.result_helpers import (
     _make_error_result,
     _make_transcript_result,
@@ -18,10 +22,11 @@ from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
 
-# Ceiling for a model's per-turn reply. Any reply that still exhausts it is
-# stamped `truncated: True` on its transcript entry (finish_reason == "length")
-# so annotators/scorers can see the cut.
-MAX_REPLY_TOKENS = 1000
+# Ceiling for a model's per-turn reply, including provider reasoning tokens.
+# Visible concision is prompt-governed; this ceiling preserves enough headroom
+# to avoid systematically truncating reasoning-model routes. Any reply that
+# still exhausts it is stamped `truncated: True` for annotators/scorers.
+MAX_REPLY_TOKENS = 4000
 TRANSCRIPT_TEMPERATURE = 0.7
 EMPTY_RESPONSE_RETRIES = 3
 
@@ -157,7 +162,7 @@ async def evaluate_scenario_async(
                     transcript.append(assistant_entry)
                     conversation_history.append({"role": "assistant", "content": assistant_msg})
                     prev_assistant_msg = assistant_msg
-                except InsufficientCreditsError:
+                except (CostBudgetExceededError, InsufficientCreditsError):
                     raise  # Abort immediately — don't retry or continue
                 except Exception as e:
                     error_msg = f"Turn {turn_num}: {e}"
@@ -180,7 +185,7 @@ async def evaluate_scenario_async(
             if errors:
                 raise RuntimeError(f"Transcript generation had {len(errors)} error(s): {errors[0]}")
 
-        except InsufficientCreditsError:
+        except (CostBudgetExceededError, InsufficientCreditsError):
             raise  # Abort immediately — propagate to runner
         except Exception as e:
             actual_cost = cost_tracker.total - cost_before
