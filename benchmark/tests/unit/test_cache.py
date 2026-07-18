@@ -103,6 +103,13 @@ class TestAPIConfig:
         assert config.max_retries == 1
         assert config.retry_delay == 0.25
 
+    def test_from_env_reads_connection_pool_size(self, monkeypatch):
+        monkeypatch.setenv("INVISIBLEBENCH_API_POOL_MAXSIZE", "24")
+
+        config = APIConfig.from_env()
+
+        assert config.pool_maxsize == 24
+
     def test_from_env_ignores_invalid_timeout_and_retry_knobs(self, monkeypatch):
         monkeypatch.setenv("INVISIBLEBENCH_API_TIMEOUT_SECONDS", "bogus")
         monkeypatch.setenv("INVISIBLEBENCH_API_MAX_RETRIES", "0")
@@ -113,3 +120,14 @@ class TestAPIConfig:
         assert config.timeout == 120
         assert config.max_retries == 3
         assert config.retry_delay == 2.0
+        assert config.pool_maxsize == 32
+
+
+class TestConnectionPool:
+    def test_client_mounts_configured_pool(self, monkeypatch):
+        monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
+        monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+        client = ModelAPIClient(APIConfig(pool_maxsize=24))
+
+        assert client.session.get_adapter("https://")._pool_maxsize == 24
+        assert client.session.get_adapter("http://")._pool_maxsize == 24

@@ -299,7 +299,16 @@ def test_run_scan_normalizes_transcripts_subdir_to_parent(
         return [], []
 
     monkeypatch.setattr(run_scan_mod, "scan_run", _stub_scan_run)
-    monkeypatch.setattr(sys, "argv", ["run_scan.py", str(transcripts_dir)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_scan.py",
+            "--output-root",
+            str(tmp_path / "scan_out"),
+            str(transcripts_dir),
+        ],
+    )
 
     rc = run_scan_mod.main()
 

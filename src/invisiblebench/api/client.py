@@ -229,6 +229,7 @@ class APIConfig:
     timeout: int = 120
     max_retries: int = 3
     retry_delay: float = 2.0
+    pool_maxsize: int = 32
 
     @classmethod
     def from_env(cls) -> "APIConfig":
@@ -238,6 +239,9 @@ class APIConfig:
             timeout=_env_number("INVISIBLEBENCH_API_TIMEOUT_SECONDS", 120, minimum=0),
             max_retries=int(_env_number("INVISIBLEBENCH_API_MAX_RETRIES", 3, minimum=1)),
             retry_delay=_env_number("INVISIBLEBENCH_API_RETRY_DELAY_SECONDS", 2.0, minimum=0),
+            pool_maxsize=int(
+                _env_number("INVISIBLEBENCH_API_POOL_MAXSIZE", 32, minimum=1)
+            ),
         )
 
 
@@ -302,6 +306,12 @@ class ModelAPIClient:
 
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=self.config.pool_maxsize,
+            pool_maxsize=self.config.pool_maxsize,
+        )
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     @staticmethod
     def _format_request_error(exc: Exception) -> str:

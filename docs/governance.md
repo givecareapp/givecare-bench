@@ -94,6 +94,13 @@ That produces the same scored surface the maintainers see. Reaching the
 ./scripts/publish.sh <scan>/per_run.jsonl <web-target>
 ```
 
+Before publication, any eligible UNCLEAR, gate escalation, evidence-free FAIL,
+or machine-vote adjudication is exported as a blind human-review batch. The
+reviewer sees the transcript and one check rubric, never the model identity or
+machine verdict. Applying completed review writes a new scan, preserves the
+source scan unchanged, recomputes row aggregates, and emits the
+`manual_adjudications.json` audit file strict QA requires.
+
 `publish.sh` runs `generate → strict QA → sync` and aborts before writing the
 public target if the strict QA gate (`scripts/qa_leaderboard.py --strict`) fails.
 Strict QA also requires the artifact benchmark version, current check-template

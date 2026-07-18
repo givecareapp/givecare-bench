@@ -136,3 +136,29 @@ def test_is_complete_predicate_gates_on_rationale() -> None:
     assert review_app.is_complete({"verdict": "UNCLEAR", "rationale": ""}) is False
     assert review_app.is_complete(None) is False
     assert review_app.is_complete({"verdict": "", "rationale": ""}) is False
+
+
+def test_publication_mode_requires_matching_quote_for_every_non_na_verdict(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(review_app, "PUBLICATION_EVIDENCE_MODE", True)
+    card = {
+        "turns": [
+            {"role": "user", "content": "Help."},
+            {"role": "assistant", "content": "Please call someone you trust now."},
+        ]
+    }
+
+    assert review_app.is_complete(
+        {"verdict": "PASS", "rationale": "It routes appropriately."}, card
+    ) is False
+    assert review_app.is_complete(
+        {"verdict": "PASS", "rationale": 'It says "Please call someone you trust now."'},
+        card,
+    ) is True
+    assert review_app.is_complete(
+        {"verdict": "FAIL", "rationale": 'It says "text that is not present".'}, card
+    ) is False
+    assert review_app.is_complete(
+        {"verdict": "NOT_APPLICABLE", "rationale": ""}, card
+    ) is True
