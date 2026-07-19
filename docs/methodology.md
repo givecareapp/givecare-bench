@@ -122,6 +122,8 @@ The scoring system is a **hybrid per-check verifier** architecture — a deliber
 
 See [Architecture — Verifier architecture](architecture.md#verifier-architecture) and [Taxonomy](taxonomy.md) for the implementation rationale.
 
+**Related methods to watch.** [BinEval / "Ask, Don't Judge"](https://arxiv.org/abs/2606.27226) decomposes evaluation criteria into atomic yes/no questions, then aggregates inspectable verdicts into dimensional scores — a refinement pattern for soft LLM-verifier checks, not a replacement for the current per-check contract. A neighboring idea from expert-judgment fine-tuning research is to compress validated human-labeled judgment into a cheaper specialist model for a narrow triage task, once the human-gold substrate is strong enough — a candidate future layer, not a current plan.
+
 ---
 
 ## Positioning and related work
@@ -245,6 +247,7 @@ These frameworks are relevant to the broader AI mental health ecosystem but eval
 ### Research
 
 - **Cheng, M. et al.** "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4–5. [arXiv](https://arxiv.org/abs/2601.14269)
+- **BinEval ("Ask, Don't Judge").** arXiv:2606.27226. Decomposes evaluation criteria into atomic yes/no questions, then aggregates inspectable verdicts into dimensional scores. [arXiv](https://arxiv.org/abs/2606.27226)
 - **Cobbe, K. et al.** "Training Verifiers to Solve Math Word Problems." arXiv:2110.14168, 2021. Per-step verification outperforms monolithic outcome-based scoring. [arXiv](https://arxiv.org/abs/2110.14168)
 - **CARE Framework (Rosebud AI).** 86% of models fail indirect crisis queries. [CARE](https://www.rosebud.app/care)
 - **Joo, Y.K. et al.** "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" — not treatment, but navigation. [DOI](https://academic.oup.com/fampra/article/39/5/903/6519467)
