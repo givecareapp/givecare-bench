@@ -1092,15 +1092,18 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 <p><strong>This page reflects the v1 Safety/Care model.</strong> <code>checks/</code> is organized into <code>checks/safety/*</code> + <code>checks/care/*</code> (9 dimensions, recursive loader). The scoring engine in <code>src/invisiblebench/scoring/</code> contains <code>contract.py</code> (gate predicate), <code>safety.py</code> (per-line violation rates, calibration-aware), <code>care.py</code> (directional distributions), and <code>projection.py</code> (<code>build_scorecard</code> → the <code>{safety, care}</code> payload). The canonical leaderboard output is <code>data/leaderboard/leaderboard.json</code> (schema <code>safety-care/v1</code>): per-line Safety conditional violation rates + directional Care distributions, no composite. See <a href="../ontology/">ontology.md</a> for the canonical model.</p>
 </blockquote>
 <h2 id="repo-layout">Repo layout<a class="headerlink" href="#repo-layout" title="Permanent link">&para;</a></h2>
-<p>The codebase separates five concerns:</p>
+<p>The codebase separates versioned inputs, runtime, tooling, delivery, and
+generated output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>givecare-bench/
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── benchmark/           # Public corpus — data only, no runtime code
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── scenarios/       # 63 scenario JSON files (includes 7 contrast-set variants)
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── configs/         # Scoring weights, prompts, jurisdiction rules
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   └── tests/           # Unit tests for schema and scoring contracts
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── src/invisiblebench/  # Runtime package (CLI, scorers, loaders, adapters, stats)
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── data/leaderboard/    # Created by the fail-closed publication path
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── checks/              # Versioned Safety/Care check taxonomy and judge prompts
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── benchmark/           # Public corpus — data only, no runtime code
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── scenarios/       # 63 scenario JSON files (includes 7 contrast-set variants)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── configs/         # Scoring weights, prompts, jurisdiction rules
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   └── tests/           # Unit tests for schema and scoring contracts
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── src/invisiblebench/  # Runtime package (CLI, scanners, loaders, model API, stats)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── delivery/            # Scan merge, evidence release, and web projections
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>└── data/leaderboard/    # Created by the fail-closed publication path
 </code></pre></div>
 <table>
 <thead>
@@ -1112,19 +1115,29 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 </thead>
 <tbody>
 <tr>
+<td><code>checks/</code></td>
+<td>One YAML per active check: definition, routing, and judge prompt</td>
+<td>Versioned contract</td>
+</tr>
+<tr>
 <td><code>benchmark/</code></td>
-<td>Scenario JSON, scoring config, verifier prompts, jurisdiction rules, tests</td>
+<td>Scenario JSON, scoring config, jurisdiction rules, tests</td>
 <td>Rarely — versioned contract</td>
 </tr>
 <tr>
 <td><code>src/invisiblebench/</code></td>
-<td>CLI entry point, scorer implementations, YAML/JSON loaders, provider adapters, statistical analysis</td>
+<td>CLI entry point, verifier implementations, YAML/JSON loaders, model API, statistical analysis</td>
 <td>Yes — runtime logic</td>
 </tr>
 <tr>
 <td><code>scripts/</code></td>
 <td>Active utilities such as <code>generate_leaderboard.py</code>, <code>lint_turn_indices.py</code>, <code>generate_verifier_corpus.py</code>, and golden-set tooling</td>
 <td>Occasionally</td>
+</tr>
+<tr>
+<td><code>delivery/</code></td>
+<td>Deterministic scan assembly, public evidence builders, and consumer projections</td>
+<td>With publication contract changes</td>
 </tr>
 <tr>
 <td><code>data/leaderboard/</code></td>
@@ -1136,16 +1149,30 @@ This page describes the repo layout, scoring pipeline, scenario format, and key 
 <h2 id="scoring-pipeline">Scoring pipeline<a class="headerlink" href="#scoring-pipeline" title="Permanent link">&para;</a></h2>
 <p>Every evaluation run follows a single data flow:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>scenario JSON ──► RunPlan ──► harness (transcript generation) ──► Transcript
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Transcript ──► ScanPlan ──► check execution ──► results ──► leaderboard
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Transcript ──► ScanPlan ──► check execution ──► per-run scan
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>per-run scans ──► deterministic merge ──► strict QA ──► scorecard + evidence bundles
 </code></pre></div>
 <p>The scorer pipeline applies 50 per-check verifiers across 9 dimensions — 4 Safety lines (Crisis, Scope, Identity, Autonomy) and 5 Care qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy). Safety checks produce per-line conditional violation rates; Care checks produce directional distributions. There is no composite score.</p>
 <p><code>ScanPlan</code> is explicit before expensive work starts. It records the selected
 profile, transcript count, eligible checks, base verifier calls, the larger
-tie-break/adjudication call budget, judge model, and base/conservative costs.
+tie-break/adjudication call budget, worst-case conditional regex-edge
+escalation, judge model, and base/conservative costs.
 <code>scripts/run_scan.py --dry-run</code> writes <code>scan_plan.json</code> and <code>cost_report.json</code>
 without calling any model. A live LLM scan requires <code>--max-cost-usd</code> and
-refuses to start when the conservative budget exceeds that ceiling. Completed
-artifacts add provider-reported actual cost, billable calls, and per-model cost.</p>
+refuses undersized or meaninglessly oversized ceilings. Live scans durably
+checkpoint each completed row and can resume only when the source/options
+signature matches. Completed artifacts add provider-reported actual cost,
+billable calls, and per-model cost.</p>
+<p>Transcript runs write <code>run_manifest.json</code> v2 with the exact scenario IDs, full
+check-definition hashes, corpus hash, harness/mode, and transcript-generation
+policy. The completion summary records provider-resolved model identities and
+routes when the API returns them. A live scan upgrades its dry-run plan to
+scan-plan v2 by hashing the selected transcript bytes, source run manifests,
+current scenario corpus, and scoring contract. The comparability
+fingerprint deliberately excludes model identity while binding the benchmark,
+scenario roster, check definitions, judge/profile, and transcript policy. The
+merge boundary rejects incomplete or mixed fingerprints instead of guessing
+that two scans are comparable.</p>
 <h3 id="safety-scoring">Safety scoring<a class="headerlink" href="#safety-scoring" title="Permanent link">&para;</a></h3>
 <p>Safety checks answer a falsifiable question per line: "did the model cross this hard line?" Deterministic pattern checks run first; LLM verifiers handle the rest with K-repetition majority vote. Results are reported as <strong>conditional violation rates</strong> (failures ÷ eligible scenarios) per line — Crisis, Scope, Identity, Autonomy. A calibrated Safety violation blocks publication but does not produce an overall score of zero; there is no composite to zero out.</p>
 <p>Scope checks follow their declared route. Bright-line <code>lexicon_only</code> checks are
@@ -1181,9 +1208,10 @@ criteria instead.</p>
 <code>Persona</code>, <code>ScenarioCategory</code>, and <code>ScoringDimension</code>. <code>invisiblebench.models</code>
 re-exports those names for callers; the repo no longer maintains parallel
 wrapper or <code>*Model</code> scenario types.</p>
-<p>The 63 public scenario definitions span four categories. No result artifact is
-checked in until a current-version scan covers this inventory and passes strict
-QA. The next live <code>--full</code> run includes all 63 current scenarios.</p>
+<p>The public scenario definitions span four categories; the inventory file owns
+their exact current count. The checked-in scorecard is a historical research
+snapshot whose v1 merge predates the current provenance gate. Future
+replacements must cover the exact current inventory under v2 lineage.</p>
 <table>
 <thead>
 <tr>
@@ -1231,12 +1259,9 @@ branching behavior and conversation history are preserved.</p>
 <code>session_context</code> on transcript entries and place the current session boundary
 in the system instruction. The raw harness retains prior turns in the request
 history; this is scripted continuity, not a test of provider-side persistence.</p>
-<div class="admonition warning">
-<p class="admonition-title">Experimental adapters</p>
-<p><code>givecare/v2</code> is the only active GiveCare product harness. It calls the
-gc-sms V2 HTTP contract through <code>/api/admin</code> actions and is <strong>not</strong> part of
-the public comparative leaderboard contract.</p>
-</div>
+<p>Private product simulations are generated and owned in <code>gc-sms</code>, not through a
+benchmark HTTP adapter. If a product transcript is later evaluated here, the
+benchmark must explicitly own that intake and its verifier selection.</p>
 <h2 id="jurisdiction-rules">Jurisdiction rules<a class="headerlink" href="#jurisdiction-rules" title="Permanent link">&para;</a></h2>
 <p><code>benchmark/configs/rules/</code> contains per-jurisdiction compliance rule sets:</p>
 <table>
@@ -1443,6 +1468,11 @@ this coverage policy is machine-readable: eligible <code>NOT_APPLICABLE</code> i
 coverage; literal <code>UNCLEAR</code> is a strict-QA blocker; scorer parse errors and
 truncated raw-output samples are retry diagnostics, with the final resolved
 verdict remaining authoritative.</p>
+<p>They also carry <code>scan_metadata.check_coverage</code>, with per-model/per-check counts
+for eligible, ineligible, PASS, FAIL, NOT_APPLICABLE, UNCLEAR, scorer errors,
+and retry parse errors. An ineligible result is the explicit "not triggered"
+state; it is not a fifth verdict and is never represented by an omitted check.
+QA recomputes these counts from the scan rows.</p>
 <h3 id="blindspot-profile">Blindspot profile<a class="headerlink" href="#blindspot-profile" title="Permanent link">&para;</a></h3>
 <p>Each scenario run produces a set of named failure flags (e.g.
 <code>masked_crisis_miss</code>, <code>false_reassurance_in_crisis</code>, <code>self_sacrifice_affirmation</code>)

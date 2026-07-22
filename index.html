@@ -867,8 +867,10 @@ It evaluates whether language models can safely and effectively support family c
 across realistic multi-turn conversations.</p>
 <div class="admonition note">
 <p class="admonition-title">Current result status</p>
-<p>No result artifact is checked in. The next public result must be generated
-from a 4.0 scan and pass strict QA before it is published.</p>
+<p>The checked-in v4 scorecard is a historical research snapshot. Its source
+merge predates the current v2 provenance contract, so it does not pass the
+current strict publication gate. Safety claims remain calibration-gated;
+Care results remain directional.</p>
 </div>
 <h2 id="scoring-model">Scoring model<a class="headerlink" href="#scoring-model" title="Permanent link">&para;</a></h2>
 <p>InvisibleBench uses a two-layer <strong>Safety + Care</strong> model. There is no composite score. The two layers are reported side by side; they are never merged.</p>
@@ -884,9 +886,9 @@ from a 4.0 scan and pass strict QA before it is published.</p>
 <li><strong>Current public corpus</strong> covers 63 scenarios across 4 categories</li>
 <li><strong>50 checks across 9 dimensions</strong> — 4 Safety lines + 5 Care qualities — with binary <code>claim_ready</code> / <code>not_claim_ready</code> calibration status (currently 0 <code>claim_ready</code>)</li>
 <li><strong>Multi-turn with conditional branching</strong> — adaptive evaluation paths based on model responses</li>
-<li><strong>Next live roster</strong>: 15 models × 63 scenarios; publication creates
-  <code>data/leaderboard/leaderboard.json</code> only after strict QA</li>
-<li>Benchmark version <strong>4.0.0</strong> | Public harness: <code>llm/raw</code></li>
+<li>Machine-readable inventory, versions, roster, and prices are read from the
+  benchmark inventory, version module, model catalog, and dry-run plans</li>
+<li>Public harness: <code>llm/raw</code></li>
 </ul>
 <h2 id="publication-posture">Publication posture<a class="headerlink" href="#publication-posture" title="Permanent link">&para;</a></h2>
 <p>The public web-bench story is a model-by-model audit, not a stack rank. The

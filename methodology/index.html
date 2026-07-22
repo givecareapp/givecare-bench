@@ -594,6 +594,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#transcript-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transcript policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#runtime-adjudication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1038,6 +1049,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#transcript-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transcript policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#runtime-adjudication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1322,15 +1344,23 @@
 <li>There is no composite or ranking key to mis-cite.</li>
 </ul>
 <p><strong>Current result status:</strong>
-No leaderboard is checked in. Publication begins with a fresh 4.0 transcript
-run and current-contract scan; generated artifacts preserve expected and
-observed per-check prompt hashes, and strict QA blocks any coverage, verdict,
-version, or hash mismatch. The next live <code>--full</code> run targets 15 models × 63
-scenarios. Its exact OpenRouter IDs and list prices were refreshed on
-2026-07-10; <code>src/invisiblebench/models/config.py</code> is the roster source of truth.
-The GPT-5 Mini verifier remains intentionally frozen pending separate
-per-check re-validation, so a target-roster refresh cannot silently change the
-measurement instrument.</p>
+The checked-in v4 scorecard is a historical research snapshot whose v1 merge
+lineage predates the current publication contract. A current replacement must
+carry exact scenario and transcript rosters, full check-definition hashes, run
+policy, source-manifest hashes, and one comparability fingerprint. Strict QA
+also recomputes per-check coverage and blocks provenance, coverage, verdict,
+version, or hash mismatches. The model catalog and dry-run plans are the source
+for current roster and pricing; the publication judge remains frozen pending
+separate per-check re-validation.</p>
+<hr />
+<h2 id="transcript-policy">Transcript policy<a class="headerlink" href="#transcript-policy" title="Permanent link">&para;</a></h2>
+<p>Publicly comparable runs use one benchmark-owned caregiver-assistant system
+prompt. It asks for supportive, bounded, trauma-informed behavior and concise,
+direct replies that prioritize the most important empathetic or safety-relevant
+point. Detail remains appropriate when safety requires it or the caregiver asks.
+The run manifest pins the exact prompt hash, temperature, per-reply token
+ceiling, retry policy, provider backend, and tool policy; runs with different
+behavior-affecting policies are not treated as interchangeable.</p>
 <hr />
 <h2 id="runtime-adjudication">Runtime adjudication<a class="headerlink" href="#runtime-adjudication" title="Permanent link">&para;</a></h2>
 <p>The scoring system is a <strong>hybrid per-check verifier</strong> architecture — a deliberate departure from the monolithic LLM-as-judge paradigm.</p>
@@ -1344,6 +1374,7 @@ measurement instrument.</p>
 </ol>
 <p><strong>Fail-closed design:</strong> LLM-verifier retry exhaustion fails closed (FAIL, after token escalation). Unexpected verifier crashes yield <code>UNCLEAR + adjudication_required</code> — never a fabricated FAIL. FAIL is a public claim requiring evidence; QA enforces <code>fail_without_evidence=0</code>.</p>
 <p>See <a href="../architecture/#verifier-architecture">Architecture — Verifier architecture</a> and <a href="../taxonomy/">Taxonomy</a> for the implementation rationale.</p>
+<p><strong>Related methods to watch.</strong> <a href="https://arxiv.org/abs/2606.27226">BinEval / "Ask, Don't Judge"</a> decomposes evaluation criteria into atomic yes/no questions, then aggregates inspectable verdicts into dimensional scores — a refinement pattern for soft LLM-verifier checks, not a replacement for the current per-check contract. A neighboring idea from expert-judgment fine-tuning research is to compress validated human-labeled judgment into a cheaper specialist model for a narrow triage task, once the human-gold substrate is strong enough — a candidate future layer, not a current plan.</p>
 <hr />
 <h2 id="positioning-and-related-work">Positioning and related work<a class="headerlink" href="#positioning-and-related-work" title="Permanent link">&para;</a></h2>
 <p>The positioning analysis, the three moats, and the related-work comparison (RubRIX, ADRD-Bench, MindEval, MHSafeEval, HealthBench, MedHELM, crisis benchmarks) live in <strong><a href="../what-invisiblebench-owns/">what-invisiblebench-owns.md</a></strong> — not duplicated here.</p>
@@ -1536,6 +1567,7 @@ measurement instrument.</p>
 <h3 id="research">Research<a class="headerlink" href="#research" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Cheng, M. et al.</strong> "Slow Drift of Support." arXiv 2601.14269. 88% chatbot failure in mental health; drift begins around turn 4–5. <a href="https://arxiv.org/abs/2601.14269">arXiv</a></li>
+<li><strong>BinEval ("Ask, Don't Judge").</strong> arXiv:2606.27226. Decomposes evaluation criteria into atomic yes/no questions, then aggregates inspectable verdicts into dimensional scores. <a href="https://arxiv.org/abs/2606.27226">arXiv</a></li>
 <li><strong>Cobbe, K. et al.</strong> "Training Verifiers to Solve Math Word Problems." arXiv:2110.14168, 2021. Per-step verification outperforms monolithic outcome-based scoring. <a href="https://arxiv.org/abs/2110.14168">arXiv</a></li>
 <li><strong>CARE Framework (Rosebud AI).</strong> 86% of models fail indirect crisis queries. <a href="https://www.rosebud.app/care">CARE</a></li>
 <li><strong>Joo, Y.K. et al.</strong> "Peer Support Research." 2022. Peer support provides "guidance in navigating the health system" — not treatment, but navigation. <a href="https://academic.oup.com/fampra/article/39/5/903/6519467">DOI</a></li>

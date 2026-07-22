@@ -731,6 +731,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#incident-derived-benchmark-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incident-derived benchmark evolution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#annotation-and-ethics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -809,6 +820,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#incident-derived-benchmark-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incident-derived benchmark evolution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#annotation-and-ethics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -856,14 +878,14 @@ is credible only under explicit rules, enforced in code where possible:</p>
   text, verifier prompts, or expected behaviors. Pressure transfers only through
   the public taxonomy and findings — a scenario script never becomes a product
   prompt.</li>
-<li><strong>Same contract for the home team.</strong> The GiveCare/Mira product is evaluated
-  through the same V2 HTTP harness (<code>bench --harness givecare --mode v2</code>), the
-  same scenario contract, and the same verifier path as any other model. There
-  is no special path for the home team.</li>
+<li><strong>No automatic product-benchmark seam.</strong> Private GiveCare/Mira testing
+  scenarios run inside <code>gc-sms</code>. Any later evaluation here requires an explicit,
+  benchmark-owned intake; the product receives no benchmark scenario text or
+  verifier prompt, and this repo has no privileged product HTTP adapter.</li>
 <li><strong>Product runs are excluded from the public comparative leaderboard.</strong> Per the
-  public release policy, GiveCare/Mira V2 runs use <code>--harness givecare --mode v2</code>
-  and are not part of the public comparative leaderboard; publicly comparable
-  runs use the raw <code>llm</code> surface.</li>
+  public release policy, private GiveCare/Mira transcript runs are not part of
+  the public comparative leaderboard; publicly comparable runs come from this
+  repo's model runner.</li>
 <li><strong>Public scenarios are burnable.</strong> Assume every published scenario enters
   training corpora. Staging (the gitignored <code>intake/</code>) is the standing refresh
   source, and a private slice is held back as a contamination probe before large
@@ -909,8 +931,9 @@ GiveCare's involvement — the same self-serve path documented in
 <a href="../quickstart/">quickstart.md</a>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span>...
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;your-org/your-model&quot;</span><span class="w"> </span>--dry-run<span class="w">                       </span><span class="c1"># plan transcripts</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;your-org/your-model&quot;</span><span class="w"> </span>-y<span class="w"> </span>--max-cost-usd<span class="w"> </span><span class="m">25</span><span class="w">            </span><span class="c1"># run transcripts</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/run_scan.py<span class="w"> </span>--profile<span class="w"> </span>publish<span class="w"> </span>--enable-llm<span class="w"> </span>--max-cost-usd<span class="w"> </span><span class="m">34</span><span class="w"> </span>results/run_&lt;id&gt;<span class="w">   </span><span class="c1"># one-model conservative judge ceiling</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;your-org/your-model&quot;</span><span class="w"> </span>-y<span class="w"> </span>--max-cost-usd<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TRANSCRIPT_MAX_COST_USD</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/run_scan.py<span class="w"> </span>--profile<span class="w"> </span>publish<span class="w"> </span>--dry-run<span class="w"> </span>--enable-llm<span class="w"> </span>results/run_&lt;id&gt;
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/run_scan.py<span class="w"> </span>--profile<span class="w"> </span>publish<span class="w"> </span>--enable-llm<span class="w"> </span>--max-cost-usd<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SCAN_MAX_COST_USD</span><span class="s2">&quot;</span><span class="w"> </span>results/run_&lt;id&gt;
 </code></pre></div>
 <p>Live scans checkpoint every completed model/scenario row. If the explicit
 ceiling or the process stops the scan, repeat the same command with
@@ -923,10 +946,17 @@ hard ceiling cannot be replaced with a meaningless unbounded approval.</p>
 <strong>public</strong> leaderboard is a separate, fail-closed step — there is no side door:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./scripts/publish.sh<span class="w"> </span>&lt;scan&gt;/per_run.jsonl<span class="w"> </span>&lt;web-target&gt;
 </code></pre></div>
+<p>Before publication, any eligible UNCLEAR, gate escalation, evidence-free FAIL,
+or machine-vote adjudication is exported as a blind human-review batch. The
+reviewer sees the transcript and one check rubric, never the model identity or
+machine verdict. Applying completed review writes a new scan, preserves the
+source scan unchanged, recomputes row aggregates, and emits the
+<code>manual_adjudications.json</code> audit file strict QA requires.</p>
 <p><code>publish.sh</code> runs <code>generate → strict QA → sync</code> and aborts before writing the
 public target if the strict QA gate (<code>scripts/qa_leaderboard.py --strict</code>) fails.
 Strict QA also requires the artifact benchmark version, current check-template
-hash map, and hashes observed in the source scan to agree exactly.
+hash map, full check-definition snapshot, source scan bytes, and v2
+comparability lineage to agree exactly.
 The web-bench copy is a projection of <code>data/leaderboard/leaderboard.json</code>, never
 hand-edited; <code>delivery/sync_web_bench.py</code> refuses to write unless the source
 bytes were just strict-QA'd. Promoting a submitted row into the public artifact
@@ -936,6 +966,19 @@ what is publishable at all.</p>
 internal work: every candidate lands in staging, is probed, and is promoted only
 by human review; verifier contributions carry the calibration bar. There is no
 fast path. See <code>CONTRIBUTING.md</code> in the repository root.</p>
+<h2 id="incident-derived-benchmark-evolution">Incident-derived benchmark evolution<a class="headerlink" href="#incident-derived-benchmark-evolution" title="Permanent link">&para;</a></h2>
+<p>Observed failures enter a private, gitignored JSONL registry and are validated
+with <code>scripts/intake/incident_registry.py</code>. The tracked repository contains the
+contract and validator, never the incident records or source transcripts.
+References must be opaque and marked de-identified. An incident can advance to
+candidate status only with a privacy-reviewed contrast pair, a viable scorer
+route, evidence that the check is discriminating and renderable without a real
+person's text, and either recurrence or high consequence. Registry status never
+auto-promotes a scenario or check; human review remains required.</p>
+<p>Blinded pairwise review is permitted only as exploratory Care research on a
+fixed, consented, de-identified sample with model identity hidden and reviewer
+agreement recorded. It may identify missing Care checks; it may not rank models
+publicly, label a Safety hard fail, or bypass per-check calibration.</p>
 <h2 id="annotation-and-ethics">Annotation and ethics<a class="headerlink" href="#annotation-and-ethics" title="Permanent link">&para;</a></h2>
 <p><strong>Scenarios are synthetic; no human subjects.</strong> Every scenario is
 researcher-generated fiction grounded in aggregated caregiving statistics (AARP,
