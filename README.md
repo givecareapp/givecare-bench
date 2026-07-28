@@ -166,6 +166,9 @@ uv run bench runs --limit 25 --offset 0             # list runs (paged)
 uv run bench get <run-id>                           # read a single run's metadata
 uv run bench --json runs                            # JSON envelope for agents
 uv run bench --json runs --out /tmp/runs.json       # write full payload to file; stdout = summary envelope
+uv run bench --json review status                   # batch/progress/server state; never prints token values
+uv run bench review build --out-dir internal/review --yes
+uv run bench review serve --dir internal/review     # loopback by default
 uv run python scripts/lint_turn_indices.py --strict
 uv run python scripts/run_scan.py results/run_... --profile dev --dry-run --enable-llm --llm-model openai/gpt-5-mini
 uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini
@@ -198,7 +201,10 @@ mirror the paged run index. `--out PATH` (on `runs`, `get`, and `leaderboard
 status`) writes the full payload to disk and emits a
 `{path, byte_count, record_count}` summary. Live writes (`leaderboard
 add/rebuild`, `archive`) refuse in non-interactive shells unless `--yes` is
-passed.
+passed. `bench review` exposes the existing blind-review workflow: `status`
+reports only aggregate progress, `build` delegates to the canonical blind
+exporters, and `serve` runs the self-contained app on loopback unless a
+non-loopback bind is explicitly confirmed.
 
 ## Contributing and reporting
 

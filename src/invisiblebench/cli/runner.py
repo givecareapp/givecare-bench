@@ -197,6 +197,8 @@ Examples:
   uv run bench explain <model> <scenario> --failures   Trace scan evidence
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
+  uv run bench review status          Inspect the blind-review batch and server
+  uv run bench review serve           Serve the current batch on loopback
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -229,6 +231,28 @@ Examples:
     # Health subcommand
     health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
     health_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
+
+    # Blind-review workflow
+    review_parser = subparsers.add_parser(
+        "review", help="Inspect, build, or serve a blind human-review batch"
+    )
+    review_subparsers = review_parser.add_subparsers(dest="review_action", required=True)
+    review_status = review_subparsers.add_parser(
+        "status", help="Show batch, progress, and server state"
+    )
+    review_status.add_argument("--dir", type=Path, default=None, dest="review_dir")
+    review_status.add_argument("--host", default="127.0.0.1")
+    review_status.add_argument("--port", type=int, default=3090)
+    review_build = review_subparsers.add_parser("build", help="Build a blind review batch")
+    review_build.add_argument("--out-dir", type=Path, default=None, dest="review_dir")
+    review_build.add_argument("--scan", type=Path, default=None)
+    review_build.add_argument("--yes", action="store_true")
+    review_serve = review_subparsers.add_parser("serve", help="Run the existing review app")
+    review_serve.add_argument("--dir", type=Path, default=None, dest="review_dir")
+    review_serve.add_argument("--host", default="127.0.0.1")
+    review_serve.add_argument("--port", type=int, default=3090)
+    review_serve.add_argument("--publication", action="store_true")
+    review_serve.add_argument("--yes", action="store_true")
 
     # Archive subcommand
     archive_parser = subparsers.add_parser("archive", help="Archive old benchmark runs")
@@ -379,6 +403,34 @@ Examples:
         from invisiblebench.cli.health import run_health
 
         return run_health(verbose=args.verbose)
+
+    if args.command == "review":
+        from invisiblebench.cli.review import (
+            run_review_build,
+            run_review_serve,
+            run_review_status,
+        )
+
+        if args.review_action == "status":
+            return run_review_status(
+                review_dir=args.review_dir,
+                host=args.host,
+                port=args.port,
+                json_output=json_output,
+            )
+        if args.review_action == "build":
+            return run_review_build(
+                review_dir=args.review_dir,
+                scan=args.scan,
+                yes=args.yes,
+            )
+        return run_review_serve(
+            review_dir=args.review_dir,
+            host=args.host,
+            port=args.port,
+            publication=args.publication,
+            yes=args.yes,
+        )
 
     if args.command == "archive":
         from invisiblebench.cli.archive import run_archive, run_list
