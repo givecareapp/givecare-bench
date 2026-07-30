@@ -39,7 +39,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, abort, g, jsonify, redirect, request
+from flask import Flask, Response, abort, g, jsonify, redirect, request, send_from_directory
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REVIEW_DIR = Path(os.environ.get("REVIEW_DIR", REPO_ROOT / "internal" / "review"))
@@ -68,6 +68,26 @@ WIKI_QUEUE_DONE_DIR = WIKI_QUEUE_DIR / "done"
 WIKI_DECISIONS_PATH = WIKI_QUEUE_DIR / "decisions.jsonl"
 WIKI_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
+# --------------------------------------------------------------------------- #
+# Approval-queue extensions — Hound plans + social package. Same posture as
+# the wiki queue: read/decide-only. Every effect is the gate's own native
+# artifact (`hound approve` writes hound.approval.v1; the social hold is the
+# HOLD file social_autopost already honors), so enforcement stays in the
+# gates and deleting these routes returns the system exactly to before.
+# Every decision is appended to the workspace decisions ledger.
+# --------------------------------------------------------------------------- #
+GIVECARE_ROOT = Path(os.environ.get("GIVECARE_ROOT", "/home/deploy/repos/givecare"))
+HOUND_REPOS = ("gc-intel", "gc-wiki", "gc-web", "gc-benefits")
+HOUND_BIN = os.environ.get("HOUND_BIN", str(Path.home() / ".local" / "bin" / "hound"))
+SOCIAL_ASSETS = Path(
+    os.environ.get("SOCIAL_ASSETS", "/home/deploy/agents/helm/log/digests/assets")
+)
+SOCIAL_PKG_RE = re.compile(r"^givecare-authority-\d{4}-\d{2}-\d{2}$")
+SOCIAL_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.png$")
+DECISIONS_PATH = GIVECARE_ROOT / ".agents" / "decisions.jsonl"
+PLAN_STEM_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+PLAN_JSON_CAP = 40_000  # chars of pretty-printed plan JSON shown per card
+
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 
@@ -82,7 +102,12 @@ _BATCH_SHA: str | None = None
 # or a re-export is picked up without a service restart.
 # --------------------------------------------------------------------------- #
 def load_batch() -> list[dict[str, Any]]:
-    return json.loads(BATCH_PATH.read_text(encoding="utf-8"))
+    """The exported gold-card batch; [] when none has been exported yet."""
+    try:
+        batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return batch if isinstance(batch, list) else []
 
 
 def load_tokens() -> dict[str, dict[str, str]]:
@@ -137,7 +162,10 @@ def assert_batch_frozen() -> None:
     and pins ``_BATCH_SHA``; any later mismatch aborts 409 instead of writing.
     """
     global _BATCH_SHA
-    digest = hashlib.sha256(BATCH_PATH.read_bytes()).hexdigest()
+    try:
+        digest = hashlib.sha256(BATCH_PATH.read_bytes()).hexdigest()
+    except OSError:
+        abort(409)  # no batch on disk — nothing a pos-based write may touch
     if _BATCH_SHA is None:
         _BATCH_SHA = digest
     elif digest != _BATCH_SHA:
@@ -359,6 +387,12 @@ line-height:1.05;letter-spacing:-.015em;margin:.15em 0 .45em}
 .progress>span{display:block;height:100%;background:var(--primary);width:0}
 .count{font-family:var(--mono);color:var(--mut);font-size:12px}
 .topbar .count{white-space:nowrap}
+.crumbs{font-family:var(--mono);font-size:12.5px;color:var(--mut);min-width:0;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumbs a{color:var(--mut);text-decoration:none}
+.crumbs a:hover,.crumbs a:focus-visible{text-decoration:underline;color:var(--link)}
+.crumbs .here{color:var(--fg);font-weight:500}
+.crumbs .sep{margin:0 7px;color:var(--line)}
 .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;margin-top:16px}
 .grid>*{min-width:0}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
@@ -429,8 +463,94 @@ margin-top:16px}
 table{border-collapse:collapse;width:100%;font-size:14px}
 td,th{border:1px solid var(--line);padding:6px 9px;text-align:left}
 th{background:var(--input)}
+/* Approval queue — a ruled ledger, not cards. Hairline row rules, a heavier
+   rule under the header, mono for data columns, no fills or edge accents. */
+table.q{width:100%;border-collapse:collapse;margin-top:6px;font-size:14.5px}
+.q th{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
+text-transform:uppercase;color:var(--mut);text-align:left;font-weight:500;
+padding:8px 16px 7px 0;border:0;border-bottom:1.5px solid var(--fg);background:none}
+.q td{border:0;border-bottom:1px solid var(--line);padding:12px 16px 12px 0;
+vertical-align:baseline}
+.q tr:last-child td{border-bottom:1.5px solid var(--fg)}
+.q td.item a{font-family:var(--display);font-weight:650;color:var(--fg);
+text-decoration:none}
+.q td.item a:hover,.q td.item a:focus-visible{text-decoration:underline;
+text-decoration-thickness:1.5px;text-underline-offset:3px}
+.q td.kind{font-family:var(--mono);font-size:12px;color:var(--mut);white-space:nowrap}
+.q td.stat{font-family:var(--mono);font-size:12px;color:var(--mut)}
+.q .ok{color:var(--pass)}.q .bad{color:var(--fail)}.q .heldc{color:var(--unclear)}
+.q td.age{font-family:var(--mono);font-size:12px;color:var(--mut);
+text-align:right;white-space:nowrap;padding-right:0}
+@media(max-width:640px){.q td.stat,.q th.stat{display:none}}
+.bignone{padding:48px 20px;text-align:center;font-family:var(--serif);
+font-style:italic;font-size:20px;color:var(--mut);background:var(--panel);
+border:1px solid var(--line);border-radius:12px;margin-top:16px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid var(--line);
+font-family:var(--mono);font-size:11px;white-space:nowrap}
+.pill.ok{background:var(--pass-bg);color:var(--pass);border-color:var(--pass)}
+.pill.bad{background:var(--fail-bg);color:var(--fail);border-color:var(--fail)}
+.pill.hold{background:var(--unclear-bg);color:var(--unclear);border-color:var(--unclear)}
+details.fold{margin-top:10px}
+details.fold summary{cursor:pointer;font-family:var(--mono);font-size:12px;
+color:var(--link);padding:4px 0}
+.actions{padding:12px 0 2px;margin-top:4px}
+.actions .btn{flex:1;text-align:center;padding:13px 16px;font-size:15px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;
+font-size:14px;font-family:var(--sans)}
+.facts dt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+text-transform:uppercase;color:var(--mut);align-self:baseline;margin:0}
+.facts dd{margin:0;overflow-wrap:anywhere}
 """
 
+
+_CONSOLE_STYLE = """
+/* Console expression — internal operator pages only, keyed by body.dashboard.
+   Token values from @givecare/theme/console.css (calm, utility-dense, light).
+   Overrides the editorial variables; components below restate structure. */
+body.dashboard{
+--bg:oklch(98.5% 0.004 75);--panel:#fff;--line:oklch(91.5% 0.006 75);
+--fg:oklch(26% 0.018 55);--mut:oklch(50% 0.018 55);--input:oklch(95% 0.006 75);
+--primary:oklch(52% 0.16 46);--primary-fg:oklch(99% 0.01 75);
+--link:oklch(45% 0.13 46);--fail:oklch(55% 0.17 28);--pass:oklch(56% 0.12 150);
+--unclear:oklch(62% 0.12 65);
+background:var(--bg);font-family:var(--display);font-size:15px}
+body.dashboard .topbar{background:var(--bg)}
+body.dashboard .topbar h1,body.dashboard h1.title{font-family:var(--display);
+letter-spacing:-.01em}
+body.dashboard .card,body.dashboard .panel{background:var(--panel);
+border:1px solid var(--line);border-radius:8px}
+body.dashboard .btn,body.dashboard textarea{border-radius:6px}
+body.dashboard .btn.primary{color:var(--primary-fg)}
+/* ops-frame: page header module — title, hero count, load timestamp */
+.ops-frame{display:flex;align-items:flex-end;justify-content:space-between;
+gap:18px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+border-radius:8px;padding:18px 20px;margin-top:14px}
+.ops-frame h1{margin:0;font-family:var(--display);font-size:21px;
+font-weight:700;letter-spacing:-.01em}
+.ops-frame .sub{font-family:var(--mono);font-size:12px;color:var(--mut);
+margin-top:5px}
+.hero-num{font-family:var(--mono);font-size:42px;line-height:.95;
+font-weight:500;text-align:right}
+.hero-den{font-family:var(--mono);font-size:11.5px;color:var(--mut);
+text-align:right;margin-top:4px}
+/* panel + in-panel section labels: sections are rules, not nested cards */
+.panel{padding:16px 18px;margin-top:12px}
+body.dashboard .sec{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+text-transform:uppercase;color:var(--mut);margin:0 0 8px}
+.panel hr{border:0;border-top:1px solid var(--line);margin:15px -18px}
+.panel.accent{border-left:3px solid var(--primary)}
+.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+gap:12px;margin-top:12px}
+.chgrid .card{padding:13px 14px}
+body.dashboard table.q{background:var(--panel);border:1px solid var(--line);
+border-radius:8px;border-collapse:separate;border-spacing:0;margin-top:12px}
+body.dashboard .q th{padding:10px 16px 8px;border-bottom:1px solid var(--fg)}
+body.dashboard .q td{padding:12px 16px;border-bottom:1px solid var(--line)}
+body.dashboard .q tr:last-child td{border-bottom:0}
+body.dashboard .q td.age{padding-right:16px}
+body.dashboard .q th:last-child{padding-right:16px}
+body.dashboard .actions{background:var(--bg)}
+"""
 
 _FONTS = (
     "<link rel=preconnect href='https://fonts.googleapis.com'>"
@@ -442,15 +562,25 @@ _FONTS = (
 )
 
 
-def _page(title: str, body: str, script: str = "", public: bool = False) -> Response:
+def _page(
+    title: str,
+    body: str,
+    script: str = "",
+    public: bool = False,
+    console: bool = False,
+) -> Response:
+    """Two governed expressions (gc-web DESIGN.md): reviewer/public pages keep
+    the warm editorial voice; operator pages set ``console=True`` for the
+    internal console expression (``.dashboard`` scope, à la console.css)."""
     robots = "" if public else "<meta name=robots content='noindex,nofollow'>"
+    cls = " class=dashboard" if console else ""
     html = (
         "<!doctype html><html lang=en><head><meta charset=utf-8>"
         "<meta name=viewport content='width=device-width,initial-scale=1'>"
         f"{robots}{_FONTS}"
         "<link rel=icon href='https://givecareapp.com/favicon.ico'>"
-        f"<title>{escape(title)}</title><style>{_STYLE}</style></head>"
-        f"<body><div class=wrap>{body}</div>{script}</body></html>"
+        f"<title>{escape(title)}</title><style>{_STYLE}{_CONSOLE_STYLE}</style></head>"
+        f"<body{cls}><div class=wrap>{body}</div>{script}</body></html>"
     )
     return Response(html, mimetype="text/html")
 
@@ -1071,7 +1201,8 @@ def admin_progress(token: str) -> Response:
             f"<td>{complete} / {len(batch)}</td><td>{answered}</td><td>{flagged}</td></tr>"
         )
     body = (
-        "<div class=topbar><h1>Review admin — progress</h1></div>"
+        f"<div class=topbar>{_crumbs(token, ('Gold cards', None))}"
+        "<div class=count>review admin</div></div>"
         f"<p class=count>Batch: {len(batch)} cards · {len(reviewers)} reviewers</p>"
         "<table><thead><tr><th>reviewer</th><th>slot</th><th>complete</th>"
         "<th>answered</th><th>flagged</th></tr></thead><tbody>"
@@ -1079,7 +1210,7 @@ def admin_progress(token: str) -> Response:
         f"<p class=row><a class='btn primary' href='/admin/{escape(token)}/export'>"
         "Download JSONL export</a></p>"
     )
-    return _page("Review admin", body)
+    return _page("Review admin", body, console=True)
 
 
 @app.get("/admin/<token>/progress.json")
@@ -1208,14 +1339,15 @@ def _run_git(*args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
 def _wiki_error_page(token: str, title: str, message: str, status: int) -> Response:
     """Friendly 4xx/5xx page for git/queue failures — never a raw traceback."""
     body = (
-        "<div class=topbar><h1>Wiki draft review</h1></div>"
+        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), ('Error', None))}"
+        "</div>"
         "<div class=card style='margin-top:16px;border-color:var(--fail)'>"
         f"<h3>{escape(title)}</h3>"
         f"<p style='white-space:pre-wrap'>{escape(message)}</p>"
         f"<p class=row><a class=btn href='/wiki/{token}'>&larr; Back to queue</a></p>"
         "</div>"
     )
-    resp = _page(f"Wiki draft review — {title}", body)
+    resp = _page(f"Wiki draft review — {title}", body, console=True)
     resp.status_code = status
     return resp
 
@@ -1241,7 +1373,11 @@ def wiki_queue(token: str) -> Response:
     msg = request.args.get("msg", "")
     if ":" in msg:
         kind, _, slug = msg.partition(":")
-        label = {"approve": "Approved and merged", "drop": "Dropped"}.get(kind)
+        label = {
+            "approve": "Approved and merged",
+            "drop": "Dropped",
+            "archive": "Archived stale card",
+        }.get(kind)
         if label:
             banner = (
                 "<div class=card style='margin-bottom:16px'>"
@@ -1249,7 +1385,7 @@ def wiki_queue(token: str) -> Response:
             )
 
     header = (
-        "<div class=topbar><h1>Wiki draft review</h1>"
+        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', None))}"
         f"<div class=count>{len(cards)} open</div></div>"
     )
 
@@ -1258,7 +1394,7 @@ def wiki_queue(token: str) -> Response:
             "<div class=card style='margin-top:16px'><h3>No drafts waiting</h3>"
             "<p>The queue is empty &mdash; nothing needs review right now.</p></div>"
         )
-        return _page("Wiki draft review", body)
+        return _page("Wiki draft review", body, console=True)
 
     rows = "".join(
         "<tr>"
@@ -1275,7 +1411,7 @@ def wiki_queue(token: str) -> Response:
         "<th>provenance</th></tr></thead><tbody>"
         f"{rows}</tbody></table>"
     )
-    return _page("Wiki draft review", body)
+    return _page("Wiki draft review", body, console=True)
 
 
 @app.get("/wiki/<token>/draft/<slug>")
@@ -1288,7 +1424,53 @@ def wiki_draft(token: str, slug: str) -> Response:
         abort(404)
 
     branch = card.get("branch", "")
+    branch_exists = False
     if isinstance(branch, str) and branch.startswith("ingest/"):
+        try:
+            branch_exists = (
+                _run_git(
+                    "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"
+                ).returncode
+                == 0
+            )
+        except subprocess.TimeoutExpired:
+            pass
+
+    # Stale card: the branch is gone, so approve/drop have nothing to act on.
+    # Show what the repo says happened and offer archival, not a dead end.
+    if isinstance(branch, str) and branch.startswith("ingest/") and not branch_exists:
+        files = [str(p) for p in (card.get("files") or [])]
+        in_main = [p for p in files if (WIKI_REPO / p).is_file()]
+        if files and len(in_main) == len(files):
+            verdict = (
+                "All listed files exist in <code>main</code> &mdash; this "
+                "draft appears to have been <b>merged outside this queue</b> "
+                "and its branch pruned."
+            )
+        else:
+            verdict = (
+                "The branch was deleted and "
+                f"{len(files) - len(in_main)} of {len(files)} listed files are "
+                "not in <code>main</code> &mdash; this draft appears to have "
+                "been <b>abandoned</b>."
+            )
+        body = (
+            f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), (slug, None))}"
+            "</div>"
+            f"<h1 class=title style='font-size:1.7rem'>{escape(str(card.get('title') or slug))}</h1>"
+            "<div class=card><h3>Stale card</h3>"
+            f"<p>Branch <code>{escape(str(branch))}</code> no longer exists. {verdict}</p>"
+            f"<form method=post action='/wiki/{escape(token)}/draft/{escape(slug)}/decide'>"
+            "<input type=hidden name=decision value=archive>"
+            "<label>Note (optional)</label>"
+            "<textarea name=note placeholder='For the record'></textarea>"
+            "<div class=row><button class='btn primary' type=submit>Archive card</button></div>"
+            "</form></div>"
+            f"<p class=row><a class=btn href='/wiki/{escape(token)}'>&larr; Back to queue</a></p>"
+        )
+        return _page(f"Draft — {card.get('title') or slug}", body, console=True)
+
+    if branch_exists:
         try:
             proc = _run_git("diff", f"main...{branch}")
         except subprocess.TimeoutExpired:
@@ -1324,8 +1506,8 @@ def wiki_draft(token: str, slug: str) -> Response:
     ) or "<li class=count>None.</li>"
 
     header = (
-        "<div class=topbar><h1>Wiki draft review</h1>"
-        f"<div class=count>{escape(slug)}</div></div>"
+        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), (slug, None))}"
+        "</div>"
     )
 
     body = header + (
@@ -1359,7 +1541,7 @@ def wiki_draft(token: str, slug: str) -> Response:
         f"<div class=card><h3>Diff (main...{escape(str(branch))})</h3>{diff_html}</div>"
         f"<p class=row><a class=btn href='/wiki/{escape(token)}'>&larr; Back to queue</a></p>"
     )
-    return _page(f"Draft — {card.get('title') or slug}", body)
+    return _page(f"Draft — {card.get('title') or slug}", body, console=True)
 
 
 @app.post("/wiki/<token>/draft/<slug>/decide")
@@ -1380,7 +1562,7 @@ def wiki_decide(token: str, slug: str) -> Response:
 
     decision = (request.form.get("decision") or "").strip()
     note = (request.form.get("note") or "").strip()
-    if decision not in ("approve", "drop"):
+    if decision not in ("approve", "drop", "archive"):
         abort(400)
     if len(note) > 4000:
         abort(400)
@@ -1389,6 +1571,19 @@ def wiki_decide(token: str, slug: str) -> Response:
         branch_ref = _run_git("show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
     except subprocess.TimeoutExpired:
         return _wiki_error_page(token, "Git timed out", "git show-ref timed out.", 500)
+
+    # Archive is bookkeeping for a stale card — legal only when the branch is
+    # really gone, so it can never be used to skip the merge/drop path.
+    if decision == "archive":
+        if branch_ref.returncode == 0:
+            return _wiki_error_page(
+                token, "Branch still exists",
+                f"Branch {branch} exists — approve or drop it instead.", 409,
+            )
+        _move_wiki_card_to_done(slug)
+        _append_wiki_decision(slug, "archive", note, entry["id"])
+        return redirect(f"/wiki/{token}?msg=archive:{slug}")
+
     if branch_ref.returncode != 0:
         return _wiki_error_page(
             token, "Branch missing", f"Branch {branch} does not exist in gc-wiki.", 409
@@ -1438,6 +1633,772 @@ def wiki_decide(token: str, slug: str) -> Response:
         return _wiki_error_page(token, "Git timed out", "A git operation timed out after 30s.", 500)
 
     return redirect(f"/wiki/{token}?msg={decision}:{slug}")
+
+
+# --------------------------------------------------------------------------- #
+# Decisions ledger — one append per decision taken through this surface.
+# Shares the workspace state-file contract ({ts, key, status} minimum).
+# --------------------------------------------------------------------------- #
+def _append_decision(queue: str, key: str, verb: str, note: str, by: str) -> None:
+    record = {
+        "ts": _now(),
+        "key": f"{queue}:{key}",
+        "status": "decided",
+        "queue": queue,
+        "verb": verb,
+        "note": note,
+        "by": by,
+    }
+    DECISIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with DECISIONS_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+# --------------------------------------------------------------------------- #
+# Hound plan queue — pending human-gated plans across the polyrepo.
+# Approve runs `hound approve` (the native artifact producer); Hound itself
+# still re-verifies plan/scope hashes at execute time, so this surface can
+# never widen a gate. Decline archives the plan file to plans/declined/.
+# --------------------------------------------------------------------------- #
+def _hound_dirs(repo: str) -> tuple[Path, Path]:
+    root = GIVECARE_ROOT / repo / ".hound"
+    return root / "plans", root / "approvals"
+
+
+def _approved_plan_ids(approvals_dir: Path) -> set[str]:
+    ids: set[str] = set()
+    if not approvals_dir.is_dir():
+        return ids
+    for path in approvals_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict) and data.get("plan_id"):
+            ids.add(str(data["plan_id"]))
+    return ids
+
+
+def load_pending_plans() -> list[dict[str, Any]]:
+    pending: list[dict[str, Any]] = []
+    for repo in HOUND_REPOS:
+        plans_dir, approvals_dir = _hound_dirs(repo)
+        if not plans_dir.is_dir():
+            continue
+        approved = _approved_plan_ids(approvals_dir)
+        for path in sorted(plans_dir.glob("*.json")):
+            try:
+                plan = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(plan, dict) or plan.get("gate") != "human":
+                continue
+            if str(plan.get("plan_id", "")) in approved:
+                continue
+            pending.append(
+                {
+                    "repo": repo,
+                    "stem": path.stem,
+                    "path": path,
+                    "mtime": path.stat().st_mtime,
+                    "operation": str(plan.get("operation", "")),
+                    "effect": str(plan.get("effect", "")),
+                    "as_of": str(plan.get("as_of", "")),
+                    "driver_id": str(plan.get("driver_id", "")),
+                    "plan_id": str(plan.get("plan_id", "")),
+                }
+            )
+    pending.sort(key=lambda p: (p["repo"], p["stem"]))
+    return pending
+
+
+def load_plan(repo: str, stem: str) -> tuple[dict[str, Any] | None, Path]:
+    plans_dir, _ = _hound_dirs(repo)
+    path = plans_dir / f"{stem}.json"
+    if not path.is_file():
+        return None, path
+    try:
+        plan = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, path
+    return (plan if isinstance(plan, dict) else None), path
+
+
+def _check_plan_ref(repo: str, stem: str) -> None:
+    if repo not in HOUND_REPOS or not PLAN_STEM_RE.match(stem):
+        abort(404)
+
+
+def _crumbs(token: str, *parts: tuple[str, str | None]) -> str:
+    """Breadcrumb trail for admin pages: Queue › … › current (last unlinked)."""
+    items: list[tuple[str, str | None]] = [("Queue", f"/q/{token}"), *parts]
+    out = []
+    for label, href in items:
+        if href:
+            out.append(f"<a href='{href}'>{escape(label)}</a>")
+        else:
+            out.append(f"<span class=here>{escape(label)}</span>")
+    return "<nav class=crumbs>" + "<span class=sep>&rsaquo;</span>".join(out) + "</nav>"
+
+
+def _age_label(ts: float) -> str:
+    days = int((datetime.now(timezone.utc).timestamp() - ts) // 86400)
+    return "today" if days <= 0 else f"waiting {days}d"
+
+
+def _banner(msg: str) -> str:
+    kind, _, name = msg.partition(":")
+    label = {
+        "approve": "Approved",
+        "decline": "Declined and archived",
+        "hold": "HOLD placed",
+        "release": "HOLD released",
+    }.get(kind)
+    if not label or not name:
+        return ""
+    return (
+        "<div class=card style='margin-top:14px'>"
+        f"<p class=saved style='margin:0'>&#10003; {escape(label)}: {escape(name)}</p></div>"
+    )
+
+
+def _plan_overview(plan: dict[str, Any]) -> list[tuple[str, str]]:
+    """Human-scale summary of what the plan writes: field -> size or preview.
+
+    Drivers wrap the payload in a response envelope (ok/outcome/proofs/...);
+    the reviewer cares about the payload, so unwrap ``proposal.data`` when it
+    is a dict and skip envelope bookkeeping keys.
+    """
+    prop = plan.get("proposal")
+    rows: list[tuple[str, str]] = []
+    if not isinstance(prop, dict):
+        return rows
+    payload = prop.get("data") if isinstance(prop.get("data"), dict) else prop
+    skip = {
+        "ok", "proofs", "diagnostics", "schema_version", "artifacts",
+        "data_schema", "projection_sha256", "records",
+    }
+    for key, value in list(payload.items())[:14]:
+        if key in skip:
+            continue
+        if isinstance(value, list):
+            rows.append((key, f"{len(value)} item{'s' if len(value) != 1 else ''}"))
+        elif isinstance(value, dict):
+            rows.append((key, f"{len(value)} field{'s' if len(value) != 1 else ''}"))
+        else:
+            rows.append((key, str(value)[:120]))
+    return rows
+
+
+_RECORD_SKIP = {
+    "schema_version", "capture_id", "content_sha256", "source_ids", "slug",
+    "media_type", "id",
+}
+
+
+def _render_records(payload: dict[str, Any]) -> str:
+    """The content a human actually judges: each proposed record, readable.
+
+    corpus.apply payloads carry ``records`` (or top-level) lists of dicts —
+    claims / organizations / sources. Hashes and schema bookkeeping are
+    Hound's to verify, so they are skipped here; the full JSON stays in the
+    audit fold.
+    """
+    records = payload.get("records") if isinstance(payload.get("records"), dict) else payload
+    if not isinstance(records, dict):
+        return ""
+    out: list[str] = []
+    for group, items in records.items():
+        if not isinstance(items, list) or not items:
+            continue
+        if not all(isinstance(i, dict) for i in items):
+            continue
+        entries: list[str] = []
+        for rec in items[:20]:
+            flat: list[tuple[str, str]] = []
+            for k, v in rec.items():
+                if k in _RECORD_SKIP:
+                    continue
+                if isinstance(v, dict):
+                    flat.extend(
+                        (f"{k}.{k2}", str(v2)) for k2, v2 in v.items()
+                        if k2 not in _RECORD_SKIP and not isinstance(v2, (dict, list))
+                    )
+                elif isinstance(v, list):
+                    continue
+                else:
+                    flat.append((k, str(v)))
+            name = str(
+                rec.get("name") or rec.get("title") or rec.get("id") or "record"
+            )
+            url = str(rec.get("canonical_url") or rec.get("source_url") or "")
+            head = (
+                f"<a href='{escape(url)}' rel='noopener noreferrer'>{escape(name)}</a>"
+                if url
+                else escape(name)
+            )
+            dl = "".join(
+                f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>"
+                for k, v in flat
+                if v and k not in ("name", "title", "canonical_url", "source_url")
+            )
+            entries.append(
+                f"<div style='margin:10px 0 0'><b>{head}</b>"
+                f"<dl class=facts style='margin-top:6px'>{dl}</dl></div>"
+            )
+        out.append(
+            f"<hr><p class=sec>{escape(group)} &middot; {len(items)} proposed</p>"
+            + "".join(entries)
+        )
+    return "".join(out)
+
+
+def _display_plan_json(plan: dict[str, Any]) -> str:
+    """Pretty JSON with the machine-verification walls elided for reading.
+
+    The approval binds the plan on disk; this is display only. The
+    repo-fingerprint file-hash table is replaced with a count so the fold is
+    scannable."""
+    shown = dict(plan)
+    fp = shown.get("repo_fingerprint")
+    if isinstance(fp, dict):
+        fp = dict(fp)
+        for key in ("tracked", "untracked"):
+            if isinstance(fp.get(key), dict):
+                fp[key] = f"<{len(fp[key])} file hashes elided for display>"
+        shown["repo_fingerprint"] = fp
+    return json.dumps(shown, indent=2, ensure_ascii=False)
+
+
+def _queue_error_page(
+    token: str, back: str, title: str, message: str, status: int
+) -> Response:
+    body = (
+        f"<div class=topbar>{_crumbs(token, ('Error', None))}</div>"
+        "<div class=card style='margin-top:16px;border-color:var(--fail)'>"
+        f"<h3>{escape(title)}</h3>"
+        f"<p style='white-space:pre-wrap'>{escape(message)}</p>"
+        f"<p class=row><a class=btn href='{back}'>&larr; Back</a></p>"
+        "</div>"
+    )
+    resp = _page(f"Approval queue — {title}", body, console=True)
+    resp.status_code = status
+    return resp
+
+
+@app.get("/hound/<token>")
+def hound_queue(token: str) -> Response:
+    """Folded into the /q feed; old links keep working."""
+    require_admin(token)
+    msg = request.args.get("msg", "")
+    return redirect(f"/q/{token}" + (f"?msg={msg}" if msg else ""))
+
+
+@app.get("/hound/<token>/plan/<repo>/<stem>")
+def hound_plan_view(token: str, repo: str, stem: str) -> Response:
+    require_admin(token)
+    _check_plan_ref(repo, stem)
+    plan, _path = load_plan(repo, stem)
+    if plan is None:
+        abort(404)
+
+    scopes = plan.get("write_scopes") or []
+    scopes_html = "".join(
+        f"<li><code>{escape(json.dumps(s) if isinstance(s, (dict, list)) else str(s))}</code></li>"
+        for s in scopes
+    ) or "<li class=count>None declared.</li>"
+
+    overview = _plan_overview(plan)
+    overview_html = (
+        "<hr><p class=sec>What it writes</p><dl class=facts>"
+        + "".join(f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in overview)
+        + "</dl>"
+        if overview
+        else ""
+    )
+
+    prop = plan.get("proposal") if isinstance(plan.get("proposal"), dict) else {}
+    payload = prop.get("data") if isinstance(prop.get("data"), dict) else prop
+    records_html = _render_records(payload) if isinstance(payload, dict) else ""
+
+    pretty = _display_plan_json(plan)
+    truncated = ""
+    if len(pretty) > PLAN_JSON_CAP:
+        pretty = pretty[:PLAN_JSON_CAP]
+        truncated = (
+            "<p class=warn>Truncated for display — the approval binds the "
+            "full plan on disk, not this rendering.</p>"
+        )
+
+    action = f"/hound/{escape(token)}/plan/{escape(repo)}/{escape(stem)}/decide"
+    body = (
+        f"<div class=topbar>{_crumbs(token, ('Hound plans', None), (stem, None))}"
+        f"<div class=count>{escape(repo)}</div></div>"
+        "<div class=ops-frame><div>"
+        f"<h1>{escape(stem)}</h1>"
+        f"<div class=sub>{escape(str(plan.get('driver_id', repo)))} &middot; "
+        f"{escape(str(plan.get('operation', '')))} &middot; effect "
+        f"{escape(str(plan.get('effect', '')))} &middot; evidence as of "
+        f"{escape(str(plan.get('as_of', '')))}</div></div>"
+        "<div><div class=hero-num style='font-size:15px;font-weight:500'>human gate</div>"
+        "<div class=hero-den>approval binds plan + scope;<br>Hound re-verifies at execute</div>"
+        "</div></div>"
+        "<div class=panel>"
+        f"{overview_html.removeprefix('<hr>') or '<p class=sec>Proposal</p><p class=count>No structured summary available.</p>'}"
+        f"{records_html}"
+        f"<hr><p class=sec>Where it may write</p><ul style='margin:0;padding-left:20px'>{scopes_html}</ul>"
+        "<hr><p class=sec>Identity</p><dl class=facts>"
+        f"<dt>plan id</dt><dd><code>{escape(str(plan.get('plan_id', ''))[:20])}&hellip;</code></dd>"
+        f"<dt>scope sha</dt><dd><code>{escape(str(plan.get('write_scope_sha256', ''))[:20])}&hellip;</code></dd>"
+        "</dl>"
+        f"<details class=fold><summary>Full plan JSON</summary>{truncated}"
+        "<pre style='white-space:pre-wrap;overflow-x:auto;font-family:var(--mono);"
+        f"font-size:12px'>{escape(pretty)}</pre></details>"
+        "</div>"
+        f"<form method=post action='{action}'><div class='panel accent'>"
+        "<p class=sec>Decision</p>"
+        "<label>Note for the record (optional)</label>"
+        "<textarea name=note placeholder='Why, for the decisions ledger'></textarea>"
+        "<div class='actions row'>"
+        "<button class='btn primary' type=submit name=decision value=approve "
+        "onclick=\"return confirm('Approve this plan? The approval artifact is written immediately.')\">"
+        "Approve</button>"
+        "<button class=btn type=submit name=decision value=decline>Decline</button>"
+        "</div></div></form>"
+    )
+    return _page(f"Plan — {stem}", body, console=True)
+
+
+@app.post("/hound/<token>/plan/<repo>/<stem>/decide")
+def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
+    require_admin(token)
+    entry = resolve_token(token)
+    _check_plan_ref(repo, stem)
+    plan, plan_path = load_plan(repo, stem)
+    back = f"/hound/{token}"
+    if plan is None:
+        abort(404)
+
+    decision = (request.form.get("decision") or "").strip()
+    note = (request.form.get("note") or "").strip()
+    if decision not in ("approve", "decline"):
+        abort(400)
+    if len(note) > 4000:
+        abort(400)
+
+    plans_dir, approvals_dir = _hound_dirs(repo)
+    key = f"{repo}/{stem}"
+
+    if decision == "approve":
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        out_path = approvals_dir / f"{stem}.approval.json"
+        if out_path.exists():
+            return _queue_error_page(
+                token, back, "Already approved",
+                f"An approval artifact already exists at {out_path.name}.", 409,
+            )
+        reviewer = f"{entry['id']} (via review UI)"
+        try:
+            proc = subprocess.run(
+                [
+                    HOUND_BIN, "approve",
+                    "--plan", str(plan_path),
+                    "--reviewer", reviewer,
+                    "--output", str(out_path),
+                ],
+                capture_output=True, text=True, timeout=60,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            return _queue_error_page(
+                token, back, "hound approve failed", str(exc), 500
+            )
+        if proc.returncode != 0:
+            return _queue_error_page(
+                token, back, "hound approve failed",
+                proc.stderr or proc.stdout or "unknown hound error", 409,
+            )
+        try:
+            out_path.chmod(0o600)
+        except OSError:
+            pass
+        _append_decision("hound", key, "approve", note, entry["id"])
+    else:
+        declined_dir = plans_dir / "declined"
+        declined_dir.mkdir(parents=True, exist_ok=True)
+        plan_path.rename(declined_dir / plan_path.name)
+        _append_decision("hound", key, "decline", note, entry["id"])
+
+    return redirect(f"/q/{token}?msg={decision}:{stem}")
+
+
+# --------------------------------------------------------------------------- #
+# Social package queue — today's campaign preview rendered from disk (never
+# from an agent's self-report), with the HOLD file as the decide lever.
+# social_autopost.py honors HOLD on every publish attempt; the bb-thread veto
+# channel is unchanged and remains available in parallel.
+# --------------------------------------------------------------------------- #
+def load_social_packages(limit: int = 2) -> list[dict[str, Any]]:
+    if not SOCIAL_ASSETS.is_dir():
+        return []
+    dirs = sorted(
+        (d for d in SOCIAL_ASSETS.iterdir() if d.is_dir() and SOCIAL_PKG_RE.match(d.name)),
+        key=lambda d: d.name,
+        reverse=True,
+    )[:limit]
+    packages: list[dict[str, Any]] = []
+    for d in dirs:
+        pkg: dict[str, Any] = {"name": d.name, "dir": d, "campaign": None, "receipt": None}
+        for field, fname in (("campaign", "campaign.json"), ("receipt", "receipt.json")):
+            try:
+                data = json.loads((d / fname).read_text(encoding="utf-8"))
+                pkg[field] = data if isinstance(data, dict) else None
+            except (OSError, json.JSONDecodeError):
+                pass
+        hold = d / "HOLD"
+        pkg["hold"] = hold.exists()
+        pkg["hold_note"] = ""
+        if pkg["hold"]:
+            try:
+                pkg["hold_note"] = hold.read_text(encoding="utf-8").strip()[:500]
+            except OSError:
+                pass
+        packages.append(pkg)
+    return packages
+
+
+SOCIAL_LEDGER = GIVECARE_ROOT / ".agents" / "social-ledger.jsonl"
+SOCIAL_WINDOW_END = (9, 0)  # ET; 07:15 publish + retry tail, decisions moot after
+
+
+def social_posted(pkg_name: str) -> list[dict[str, Any]]:
+    """Publish-time truth: ledger lines posted for this package's campaign.
+
+    The receipt is package-time truth and can be overwritten by a later
+    re-package run (seen 2026-07-29: five channels posted at 07:16 ET, then a
+    19:48 ET re-render left PACKAGE_FAILED on disk). Only the ledger says
+    whether anything actually went out.
+    """
+    rows: list[dict[str, Any]] = []
+    try:
+        lines = SOCIAL_LEDGER.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return rows
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(rec, dict)
+            and rec.get("status") == "posted"
+            and str(rec.get("campaign_id", "")).startswith(pkg_name)
+        ):
+            rows.append(rec)
+    return rows
+
+
+def social_window_open(pkg_name: str) -> bool:
+    """True while a hold/release decision can still change the outcome."""
+    from zoneinfo import ZoneInfo
+
+    date_part = pkg_name.removeprefix("givecare-authority-")
+    now = datetime.now(ZoneInfo("America/New_York"))
+    if date_part != now.strftime("%Y-%m-%d"):
+        return False
+    return (now.hour, now.minute) < SOCIAL_WINDOW_END
+
+
+def _social_pkg_dir(name: str) -> Path:
+    if not SOCIAL_PKG_RE.match(name):
+        abort(404)
+    d = SOCIAL_ASSETS / name
+    if not d.is_dir():
+        abort(404)
+    return d
+
+
+@app.get("/social/<token>")
+def social_queue(token: str) -> Response:
+    require_admin(token)
+    packages = load_social_packages()
+    banner = _banner(request.args.get("msg", ""))
+
+    header = (
+        f"<div class=topbar>{_crumbs(token, ('Social', None))}"
+        "<div class=count>veto window</div></div>"
+    )
+    if not packages:
+        body = header + banner + (
+            "<div class=bignone>No campaign package on disk.</div>"
+        )
+        return _page("Social packages", body, console=True)
+
+    sections: list[str] = []
+    for pkg in packages:
+        campaign = pkg["campaign"] or {}
+        receipt = pkg["receipt"] or {}
+        status = str(receipt.get("status", "no receipt"))
+        ready = status == "PACKAGE_READY"
+        issues = "".join(
+            f"<li>{escape(str(e))}</li>"
+            for e in list(receipt.get("errors") or []) + list(receipt.get("warnings") or [])
+        )
+        issues_html = (
+            "<div class=panel><p class=sec>QA issues</p>"
+            f"<ul style='margin:0;padding-left:20px'>{issues}</ul></div>"
+            if issues
+            else ""
+        )
+
+        # The one sentence that matters: did/will this publish? Ledger first
+        # (publish-time truth), then the window, then the receipt.
+        posted = social_posted(pkg["name"])
+        window_open = social_window_open(pkg["name"])
+        if posted:
+            when = str(posted[-1].get("ts", ""))[11:16]
+            fate = (
+                f"<span class='pill ok'>PUBLISHED</span> {len(posted)} channel"
+                f"{'s' if len(posted) != 1 else ''} posted (last {escape(when)} UTC). "
+                "Nothing left to decide."
+            )
+        elif not window_open:
+            fate = (
+                "<span class='pill'>WINDOW CLOSED</span> The publish window has "
+                "passed; nothing posted and no attempt remains."
+            )
+        elif pkg["hold"]:
+            fate = (
+                "<span class='pill hold'>HELD</span> Will <b>not</b> publish "
+                "until the HOLD is released."
+            )
+        elif ready:
+            fate = (
+                "<span class='pill ok'>READY</span> Publishes to all five "
+                "channels at <b>07:15 ET</b> unless held or vetoed."
+            )
+        else:
+            fate = (
+                f"<span class='pill bad'>{escape(status)}</span> Failed QA "
+                "&mdash; autopost will <b>not</b> publish this package."
+            )
+
+        hold_note = ""
+        if pkg["hold"] and pkg["hold_note"]:
+            hold_note = f"<p class=warn>HOLD reason: {escape(pkg['hold_note'])}</p>"
+
+        action = f"/social/{escape(token)}/pkg/{escape(pkg['name'])}/decide"
+        if posted or not window_open:
+            form = "<p class=count>Decision closed for this package.</p>"
+        elif pkg["hold"]:
+            form = (
+                f"<form method=post action='{action}'>"
+                "<input type=hidden name=decision value=release>"
+                "<label>Note (optional)</label>"
+                "<textarea name=note placeholder='Why this can publish'></textarea>"
+                "<div class=row><button class='btn primary' type=submit>"
+                "Release HOLD</button></div></form>"
+            )
+        else:
+            form = (
+                f"<form method=post action='{action}'>"
+                "<input type=hidden name=decision value=hold>"
+                "<label>Reason (kept in the HOLD file)</label>"
+                "<textarea name=note placeholder='Why this must not publish'></textarea>"
+                "<div class=row><button class='btn primary' type=submit>"
+                "Place HOLD</button></div></form>"
+            )
+
+        channels = campaign.get("channels") or {}
+        channel_cards = []
+        for cname, ch in channels.items():
+            if not isinstance(ch, dict):
+                continue
+            media = str(ch.get("media", ""))
+            img = (
+                f"<img src='/social/{escape(token)}/asset/{escape(pkg['name'])}/{escape(media)}' "
+                "alt='' loading=lazy style='max-width:100%;border:1px solid var(--line);"
+                "border-radius:8px;margin-bottom:10px'>"
+                if media and SOCIAL_FILE_RE.match(media)
+                else ""
+            )
+            channel_cards.append(
+                f"<div class=card><h3>{escape(cname)}</h3>{img}"
+                f"<p style='white-space:pre-wrap;font-size:13.5px;line-height:1.55;"
+                f"margin:0 0 8px'>{escape(str(ch.get('text', '')))}</p>"
+                f"<p class=count style='margin:0'>{escape(str(ch.get('link', '')))}"
+                f" &middot; {escape(str(ch.get('dimensions', '')))}</p></div>"
+            )
+
+        sections.append(
+            "<div class=ops-frame><div>"
+            f"<h1>{escape(pkg['name'].removeprefix('givecare-authority-'))} campaign</h1>"
+            f"<div class=sub>{escape(pkg['name'])}</div></div>"
+            f"<div style='max-width:340px;font-size:14px'>{fate}</div></div>"
+            f"{hold_note}"
+            f"<div class='panel accent'><p class=sec>Publish control</p>{form}"
+            "<p class=count style='margin-top:10px'>The HOLD file blocks every "
+            "autopost attempt until released; the bb-thread veto works in "
+            "parallel.</p></div>"
+            f"{issues_html}"
+            f"<p class=sec style='margin:18px 0 0'>Channel previews</p>"
+            f"<div class=chgrid>{''.join(channel_cards)}</div>"
+        )
+
+    body = header + banner + "".join(sections)
+    return _page("Social packages", body, console=True)
+
+
+@app.get("/social/<token>/asset/<pkg>/<name>")
+def social_asset(token: str, pkg: str, name: str) -> Response:
+    require_admin(token)
+    d = _social_pkg_dir(pkg)
+    if not SOCIAL_FILE_RE.match(name):
+        abort(404)
+    return send_from_directory(d, name)
+
+
+@app.post("/social/<token>/pkg/<pkg>/decide")
+def social_decide(token: str, pkg: str) -> Response:
+    require_admin(token)
+    entry = resolve_token(token)
+    d = _social_pkg_dir(pkg)
+
+    decision = (request.form.get("decision") or "").strip()
+    note = (request.form.get("note") or "").strip()
+    if decision not in ("hold", "release"):
+        abort(400)
+    if len(note) > 4000:
+        abort(400)
+
+    hold = d / "HOLD"
+    if decision == "hold":
+        hold.write_text(
+            json.dumps({"ts": _now(), "by": entry["id"], "note": note}) + "\n",
+            encoding="utf-8",
+        )
+    else:
+        try:
+            hold.unlink()
+        except FileNotFoundError:
+            pass
+    _append_decision("social", pkg, decision, note, entry["id"])
+    return redirect(f"/social/{token}?msg={decision}:{pkg}")
+
+
+# --------------------------------------------------------------------------- #
+# Admin home — one page linking every queue this surface serves.
+# --------------------------------------------------------------------------- #
+@app.get("/q/<token>")
+def queue_home(token: str) -> Response:
+    """The queue itself: one feed of everything waiting on a decision.
+
+    Order: today's social package first (time-boxed), then wiki drafts,
+    then Hound plans oldest-first (age = the only rank that matters).
+    """
+    require_admin(token)
+    plans = sorted(load_pending_plans(), key=lambda p: p["mtime"])
+    packages = load_social_packages(limit=1)
+    wiki_cards = load_wiki_cards()
+    batch = load_batch()
+    t = escape(token)
+
+    def tr(href: str, title: str, kind: str, stat: str, age: str) -> str:
+        return (
+            "<tr>"
+            f"<td class=item><a href='{href}'>{title}</a></td>"
+            f"<td class=kind>{kind}</td>"
+            f"<td class=stat>{stat}</td>"
+            f"<td class=age>{age}</td></tr>"
+        )
+
+    rows: list[str] = []
+
+    # The social package is a decision only while the outcome is still open:
+    # today's package, publish window not passed, nothing posted yet, QA-ready.
+    # Published / expired / failed packages are history, not "needs you" —
+    # they leave the feed by absence, never by a manual clear.
+    if packages:
+        pkg = packages[0]
+        status = str((pkg["receipt"] or {}).get("status", "no receipt"))
+        actionable = (
+            social_window_open(pkg["name"])
+            and not social_posted(pkg["name"])
+            and (status == "PACKAGE_READY" or pkg["hold"])
+        )
+        if actionable:
+            if pkg["hold"]:
+                stat = "<span class=heldc>HELD</span> &mdash; will not publish"
+            else:
+                stat = "<span class=ok>READY</span> &mdash; publishes 07:15 ET unless held"
+            rows.append(
+                tr(
+                    f"/social/{t}",
+                    "Today&rsquo;s social package",
+                    "social",
+                    stat,
+                    escape(pkg["name"].removeprefix("givecare-authority-")),
+                )
+            )
+
+    for c in wiki_cards:
+        slug = str(c["slug"])
+        rows.append(
+            tr(
+                f"/wiki/{t}/draft/{escape(slug)}",
+                escape(str(c.get("title") or slug)),
+                "wiki draft",
+                f"risk {escape(str(c.get('risk', '?')))}",
+                escape(str(c.get("created", ""))[:10]),
+            )
+        )
+
+    for p in plans:
+        rows.append(
+            tr(
+                f"/hound/{t}/plan/{escape(p['repo'])}/{escape(p['stem'])}",
+                escape(p["stem"]),
+                escape(p["repo"]),
+                escape(p["operation"]),
+                escape(_age_label(p["mtime"])),
+            )
+        )
+
+    n = len(rows)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    oldest = (
+        _age_label(min(p["mtime"] for p in plans)).removeprefix("waiting ")
+        if plans
+        else "&mdash;"
+    )
+    header = (
+        "<div class=topbar><nav class=crumbs><span class=here>Queue</span></nav>"
+        "<div class=count>givecare review</div></div>"
+        "<div class=ops-frame><div><h1>Approval queue</h1>"
+        f"<div class=sub>loaded {now} &middot; hound plans &middot; social window "
+        "&middot; wiki drafts</div></div>"
+        f"<div><div class=hero-num>{n}</div>"
+        f"<div class=hero-den>waiting &middot; oldest {oldest}</div></div></div>"
+    )
+    banner = _banner(request.args.get("msg", ""))
+    feed = (
+        "<table class=q><thead><tr><th>item</th><th>queue</th>"
+        f"<th class=stat>status</th><th style='text-align:right'>age</th>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+        if rows
+        else "<div class=bignone>Nothing needs you.</div>"
+    )
+
+    gold = (
+        f"<a href='/admin/{t}/progress'>gold-card batch: {len(batch)} cards</a>"
+        if batch
+        else "no gold-card batch exported"
+    )
+    footer = (
+        "<p class=count style='margin-top:18px'>"
+        f"{gold} &middot; <a href='/wiki/{t}'>wiki queue</a>"
+        f" &middot; <a href='/social/{t}'>social</a></p>"
+    )
+    return _page("Approval queue", header + banner + feed + footer, console=True)
 
 
 if __name__ == "__main__":
