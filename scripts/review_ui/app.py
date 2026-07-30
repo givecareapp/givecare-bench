@@ -550,6 +550,17 @@ body.dashboard .q tr:last-child td{border-bottom:0}
 body.dashboard .q td.age{padding-right:16px}
 body.dashboard .q th:last-child{padding-right:16px}
 body.dashboard .actions{background:var(--bg)}
+/* Activity thread on item pages */
+.act{padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.act:first-of-type{border-top:0}
+.act .who{font-family:var(--display);font-weight:650}
+.act .verb{font-family:var(--mono);font-size:10.5px;color:var(--mut);
+text-transform:uppercase;letter-spacing:.07em;margin:0 9px}
+.act .when{font-family:var(--mono);font-size:11px;color:var(--mut)}
+.act .say{margin-top:4px;white-space:pre-wrap;line-height:1.5}
+/* Whole queue rows are tappable (data-href + 4-line script in _page) */
+.q tbody tr[data-href]{cursor:pointer}
+.q tbody tr[data-href]:hover td{background:var(--input)}
 """
 
 _FONTS = (
@@ -1357,6 +1368,30 @@ def _move_wiki_card_to_done(slug: str) -> None:
     (WIKI_QUEUE_DIR / f"{slug}.json").rename(WIKI_QUEUE_DONE_DIR / f"{slug}.json")
 
 
+def _wiki_activity(slug: str) -> list[dict[str, Any]]:
+    """History for one wiki card, normalized to the activity-panel shape."""
+    try:
+        lines = WIKI_DECISIONS_PATH.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    out: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(rec, dict) and rec.get("slug") == slug:
+            out.append(
+                {
+                    "by": rec.get("by"),
+                    "verb": rec.get("decision"),
+                    "ts": rec.get("at"),
+                    "note": rec.get("note"),
+                }
+            )
+    return out
+
+
 def _append_wiki_decision(slug: str, decision: str, note: str, by: str) -> None:
     WIKI_QUEUE_DIR.mkdir(parents=True, exist_ok=True)
     record = {"slug": slug, "decision": decision, "note": note, "by": by, "at": _now()}
@@ -1525,6 +1560,7 @@ def wiki_draft(token: str, slug: str) -> Response:
         "<div class=card><h3>Runtime exposure</h3>"
         f"<p>{escape(str(card.get('runtime_exposure', '')))}</p></div>"
         f"<div class=card><h3>Post-merge notes</h3><ul>{post_merge_html}</ul></div>"
+        f"{_activity_panel(_wiki_activity(slug), f'/wiki/{escape(token)}/draft/{escape(slug)}/decide')}"
         "<div class=card><h3>Decision</h3>"
         f"<form method=post action='/wiki/{escape(token)}/draft/{escape(slug)}/decide' style='margin-bottom:14px'>"
         "<input type=hidden name=decision value=approve>"
@@ -1562,10 +1598,16 @@ def wiki_decide(token: str, slug: str) -> Response:
 
     decision = (request.form.get("decision") or "").strip()
     note = (request.form.get("note") or "").strip()
-    if decision not in ("approve", "drop", "archive"):
+    if decision not in ("approve", "drop", "archive", "note"):
         abort(400)
     if len(note) > 4000:
         abort(400)
+
+    if decision == "note":
+        if not note:
+            abort(400)
+        _append_wiki_decision(slug, "note", note, entry["id"])
+        return redirect(f"/wiki/{token}/draft/{slug}?msg=note:{slug}")
 
     try:
         branch_ref = _run_git("show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
@@ -1639,11 +1681,13 @@ def wiki_decide(token: str, slug: str) -> Response:
 # Decisions ledger — one append per decision taken through this surface.
 # Shares the workspace state-file contract ({ts, key, status} minimum).
 # --------------------------------------------------------------------------- #
-def _append_decision(queue: str, key: str, verb: str, note: str, by: str) -> None:
+def _append_decision(
+    queue: str, key: str, verb: str, note: str, by: str, status: str = "decided"
+) -> None:
     record = {
         "ts": _now(),
         "key": f"{queue}:{key}",
-        "status": "decided",
+        "status": status,
         "queue": queue,
         "verb": verb,
         "note": note,
@@ -1652,6 +1696,52 @@ def _append_decision(queue: str, key: str, verb: str, note: str, by: str) -> Non
     DECISIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with DECISIONS_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _activity(key: str) -> list[dict[str, Any]]:
+    """Full history for one item key from the workspace decisions ledger."""
+    try:
+        lines = DECISIONS_PATH.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    out: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(rec, dict) and rec.get("key") == key:
+            out.append(rec)
+    return out
+
+
+def _activity_panel(records: list[dict[str, Any]], action: str) -> str:
+    """Item thread: every decision and note, plus a post-a-note form.
+
+    Notes are the route-down half of the loop — lanes read open notes on
+    their items before planning (see .agents/approval-queue.md)."""
+    items = "".join(
+        "<div class=act>"
+        f"<span class=who>{escape(str(r.get('by', '?')))}</span>"
+        f"<span class=verb>{escape(str(r.get('verb', '')))}</span>"
+        f"<span class=when>{escape(str(r.get('ts', ''))[:16].replace('T', ' '))}</span>"
+        + (
+            f"<div class=say>{escape(str(r.get('note', '')))}</div>"
+            if r.get("note")
+            else ""
+        )
+        + "</div>"
+        for r in records
+    ) or "<p class=count style='margin:0 0 4px'>No activity yet.</p>"
+    return (
+        "<div class=panel><p class=sec>Activity</p>"
+        f"{items}"
+        f"<form method=post action='{action}' style='margin-top:12px'>"
+        "<input type=hidden name=decision value=note>"
+        "<textarea name=note placeholder='Leave a note — the lane reads it before its next run'></textarea>"
+        "<div class=row><button class=btn type=submit>Post note</button></div>"
+        "</form></div>"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -1753,6 +1843,7 @@ def _banner(msg: str) -> str:
         "decline": "Declined and archived",
         "hold": "HOLD placed",
         "release": "HOLD released",
+        "note": "Note posted",
     }.get(kind)
     if not label or not name:
         return ""
@@ -1934,6 +2025,7 @@ def hound_plan_view(token: str, repo: str, stem: str) -> Response:
     body = (
         f"<div class=topbar>{_crumbs(token, ('Hound plans', None), (stem, None))}"
         f"<div class=count>{escape(repo)}</div></div>"
+        f"{_banner(request.args.get('msg', ''))}"
         "<div class=ops-frame><div>"
         f"<h1>{escape(stem)}</h1>"
         f"<div class=sub>{escape(str(plan.get('driver_id', repo)))} &middot; "
@@ -1955,17 +2047,37 @@ def hound_plan_view(token: str, repo: str, stem: str) -> Response:
         "<pre style='white-space:pre-wrap;overflow-x:auto;font-family:var(--mono);"
         f"font-size:12px'>{escape(pretty)}</pre></details>"
         "</div>"
-        f"<form method=post action='{action}'><div class='panel accent'>"
-        "<p class=sec>Decision</p>"
-        "<label>Note for the record (optional)</label>"
-        "<textarea name=note placeholder='Why, for the decisions ledger'></textarea>"
-        "<div class='actions row'>"
-        "<button class='btn primary' type=submit name=decision value=approve "
-        "onclick=\"return confirm('Approve this plan? The approval artifact is written immediately.')\">"
-        "Approve</button>"
-        "<button class=btn type=submit name=decision value=decline>Decline</button>"
-        "</div></div></form>"
+        f"{_activity_panel(_activity(f'hound:{repo}/{stem}'), action)}"
     )
+
+    # An existing approval closes the decision; show it instead of buttons.
+    _, approvals_dir = _hound_dirs(repo)
+    approval_path = approvals_dir / f"{stem}.approval.json"
+    if approval_path.is_file():
+        try:
+            appr = json.loads(approval_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            appr = {}
+        body += (
+            "<div class='panel accent'><p class=sec>Decision</p>"
+            f"<p style='margin:0'><span class='pill ok'>APPROVED</span> by "
+            f"{escape(str(appr.get('reviewer', 'unknown')))} at "
+            f"{escape(str(appr.get('approved_at', ''))[:16].replace('T', ' '))} UTC. "
+            "Executes on the lane's next run.</p></div>"
+        )
+    else:
+        body += (
+            f"<form method=post action='{action}'><div class='panel accent'>"
+            "<p class=sec>Decision</p>"
+            "<label>Note for the record (optional)</label>"
+            "<textarea name=note placeholder='Why, for the decisions ledger'></textarea>"
+            "<div class='actions row'>"
+            "<button class='btn primary' type=submit name=decision value=approve "
+            "onclick=\"return confirm('Approve this plan? The approval artifact is written immediately.')\">"
+            "Approve</button>"
+            "<button class=btn type=submit name=decision value=decline>Decline</button>"
+            "</div></div></form>"
+        )
     return _page(f"Plan — {stem}", body, console=True)
 
 
@@ -1981,13 +2093,20 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
 
     decision = (request.form.get("decision") or "").strip()
     note = (request.form.get("note") or "").strip()
-    if decision not in ("approve", "decline"):
+    if decision not in ("approve", "decline", "note"):
         abort(400)
     if len(note) > 4000:
         abort(400)
 
     plans_dir, approvals_dir = _hound_dirs(repo)
     key = f"{repo}/{stem}"
+
+    # A note is conversation, not a decision: append and stay on the item.
+    if decision == "note":
+        if not note:
+            abort(400)
+        _append_decision("hound", key, "note", note, entry["id"], status="noted")
+        return redirect(f"/hound/{token}/plan/{repo}/{stem}?msg=note:{stem}")
 
     if decision == "approve":
         approvals_dir.mkdir(parents=True, exist_ok=True)
@@ -2028,6 +2147,19 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
         plan_path.rename(declined_dir / plan_path.name)
         _append_decision("hound", key, "decline", note, entry["id"])
 
+    # Worklist flow: advance straight to the next pending plan, if any.
+    nxt = next(
+        (
+            p
+            for p in load_pending_plans()
+            if not (p["repo"] == repo and p["stem"] == stem)
+        ),
+        None,
+    )
+    if nxt:
+        return redirect(
+            f"/hound/{token}/plan/{nxt['repo']}/{nxt['stem']}?msg={decision}:{stem}"
+        )
     return redirect(f"/q/{token}?msg={decision}:{stem}")
 
 
@@ -2239,6 +2371,7 @@ def social_queue(token: str) -> Response:
             "<p class=count style='margin-top:10px'>The HOLD file blocks every "
             "autopost attempt until released; the bb-thread veto works in "
             "parallel.</p></div>"
+            f"{_activity_panel(_activity(f'social:{pkg['name']}'), f'/social/{escape(token)}/pkg/{escape(pkg['name'])}/decide')}"
             f"{issues_html}"
             f"<p class=sec style='margin:18px 0 0'>Channel previews</p>"
             f"<div class=chgrid>{''.join(channel_cards)}</div>"
@@ -2265,10 +2398,16 @@ def social_decide(token: str, pkg: str) -> Response:
 
     decision = (request.form.get("decision") or "").strip()
     note = (request.form.get("note") or "").strip()
-    if decision not in ("hold", "release"):
+    if decision not in ("hold", "release", "note"):
         abort(400)
     if len(note) > 4000:
         abort(400)
+
+    if decision == "note":
+        if not note:
+            abort(400)
+        _append_decision("social", pkg, "note", note, entry["id"], status="noted")
+        return redirect(f"/social/{token}?msg=note:{pkg}")
 
     hold = d / "HOLD"
     if decision == "hold":
@@ -2304,7 +2443,7 @@ def queue_home(token: str) -> Response:
 
     def tr(href: str, title: str, kind: str, stat: str, age: str) -> str:
         return (
-            "<tr>"
+            f"<tr data-href='{href}'>"
             f"<td class=item><a href='{href}'>{title}</a></td>"
             f"<td class=kind>{kind}</td>"
             f"<td class=stat>{stat}</td>"
@@ -2398,7 +2537,17 @@ def queue_home(token: str) -> Response:
         f"{gold} &middot; <a href='/wiki/{t}'>wiki queue</a>"
         f" &middot; <a href='/social/{t}'>social</a></p>"
     )
-    return _page("Approval queue", header + banner + feed + footer, console=True)
+    row_script = (
+        "<script>document.querySelectorAll('tr[data-href]').forEach(r=>"
+        "r.addEventListener('click',e=>{if(!e.target.closest('a'))"
+        "location=r.dataset.href}))</script>"
+    )
+    return _page(
+        "Approval queue",
+        header + banner + feed + footer,
+        script=row_script,
+        console=True,
+    )
 
 
 if __name__ == "__main__":
