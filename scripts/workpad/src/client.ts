@@ -531,11 +531,11 @@ function renderShell() {
     <main class="workspace">
       <section class="page-wrap" aria-label="Workpad document">
         <nav class="format-bar" aria-label="Text formatting">
-          <button type="button" data-command="paragraph" aria-label="Paragraph"
+          <button type="button" data-command="paragraph"
             title="Paragraph">Text</button>
-          <button type="button" data-command="h1" aria-label="Heading 1"
+          <button type="button" data-command="h1"
             title="Heading 1">H1</button>
-          <button type="button" data-command="h2" aria-label="Heading 2"
+          <button type="button" data-command="h2"
             title="Heading 2">H2</button>
           <span class="tool-separator" aria-hidden="true"></span>
           <button type="button" data-command="bold" aria-label="Bold"
@@ -543,13 +543,13 @@ function renderShell() {
           <button type="button" data-command="italic" aria-label="Italic"
             title="Italic"><em>I</em></button>
           <button type="button" data-command="strike" aria-label="Strikethrough"
-            title="Strikethrough">S̶</button>
+            title="Strikethrough"><s>S</s></button>
           <button type="button" data-command="code" aria-label="Inline code"
             title="Inline code">&lt;/&gt;</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button type="button" data-command="bullet" aria-label="Bullet list"
+          <button type="button" data-command="bullet"
             title="Bullet list">• List</button>
-          <button type="button" data-command="ordered" aria-label="Numbered list"
+          <button type="button" data-command="ordered"
             title="Numbered list">1. List</button>
           <button type="button" data-command="quote" aria-label="Block quote"
             title="Block quote">“ ”</button>
