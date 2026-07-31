@@ -15,6 +15,7 @@
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * {
@@ -225,15 +226,7 @@ textarea:focus-visible,
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 0;
   min-height: calc(100vh - 58px);
-  transition: grid-template-columns 200ms var(--ease-out);
-}
-
-.trail-open .workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 25vw);
-  transition: grid-template-columns 260ms var(--ease-out);
 }
 
 .page-wrap {
@@ -481,32 +474,31 @@ textarea:focus-visible,
 }
 
 .trail {
-  position: sticky;
+  position: fixed;
+  z-index: 30;
   top: 58px;
-  width: 100%;
+  right: 0;
+  width: min(420px, 92vw);
   height: calc(100vh - 58px);
   padding: 26px 22px 48px;
   overflow: auto;
   border-left: 1px solid var(--line-strong);
   background: #f5eee2;
-  opacity: 0;
-  transform: translateX(32px);
+  box-shadow: -18px 0 45px rgb(63 45 27 / 18%);
+  transform: translateX(100%);
   pointer-events: none;
   visibility: hidden;
+  will-change: transform;
   transition:
-    opacity 120ms ease-out,
-    transform 180ms var(--ease-out),
-    visibility 0s linear 180ms;
+    transform 200ms var(--ease-drawer),
+    visibility 0s linear 200ms;
 }
 
 .trail-open .trail {
-  opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
   visibility: visible;
-  transition:
-    opacity 180ms ease-out,
-    transform 240ms var(--ease-out);
+  transition: transform 280ms var(--ease-drawer);
 }
 
 .trail-scrim {
@@ -517,6 +509,11 @@ textarea:focus-visible,
   opacity: 0;
   pointer-events: none;
   transition: opacity 200ms ease;
+}
+
+.trail-open .trail-scrim {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .trail-heading {
@@ -890,11 +887,6 @@ textarea:focus-visible,
     margin-left: 12px;
   }
 
-  .workspace,
-  .trail-open .workspace {
-    display: block;
-  }
-
   .page-wrap {
     padding: 22px 0 48px;
   }
@@ -925,20 +917,6 @@ textarea:focus-visible,
     font-size: 17px;
   }
 
-  .trail {
-    position: fixed;
-    z-index: 30;
-    top: 58px;
-    right: 0;
-    width: min(92vw, 380px);
-    border-left: 1px solid var(--line-strong);
-    box-shadow: -18px 0 45px rgb(63 45 27 / 18%);
-  }
-
-  .trail-open .trail-scrim {
-    opacity: 1;
-    pointer-events: auto;
-  }
 
   .document-footnote {
     padding: 0 20px;
