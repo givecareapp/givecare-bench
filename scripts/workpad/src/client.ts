@@ -26,6 +26,8 @@ type DocumentState = {
 
 type SaveResult = {
   event: ActivityEvent | null;
+  markdown?: string;
+  merged?: boolean;
   saved?: boolean;
   sha: string;
 };
@@ -342,15 +344,23 @@ async function start() {
                 });
           baseSha = result.sha;
           if (result.event) activity = [result.event, ...activity];
+          if (result.merged && !dirty && result.markdown !== undefined) {
+            editor.commands.setContent(editor.markdown!.parse(result.markdown), {
+              emitUpdate: false,
+            });
+            source.value = result.markdown;
+          }
           renderRevision();
           renderActivity();
           if (!dirty) {
             setStatus(
-              result.saved === false
-                ? "No changes"
-                : mode === "demo"
-                  ? "Saved locally"
-                  : "Saved",
+              result.merged
+                ? "Merged"
+                : result.saved === false
+                  ? "No changes"
+                  : mode === "demo"
+                    ? "Saved locally"
+                    : "Saved",
               "saved",
             );
           }
@@ -434,6 +444,44 @@ async function start() {
         item.append(note);
       }
       list.append(item);
+    }
+  }
+
+  if (mode === "private") {
+    const liveEvents = new EventSource("/workpad/api/events");
+    liveEvents.addEventListener("change", (event) => {
+      let sha: string | undefined;
+      try {
+        sha = (JSON.parse((event as MessageEvent).data) as { sha?: string }).sha;
+      } catch {
+        return;
+      }
+      if (!sha || sha === baseSha) return;
+      if (dirty) {
+        document.body.classList.add("conflicted");
+        setStatus("Newer revision available", "conflict");
+        return;
+      }
+      if (saveInFlight) return;
+      void applyRemoteDocument();
+    });
+  }
+
+  async function applyRemoteDocument() {
+    try {
+      const fresh = await requestJSON<DocumentState>("/workpad/api/document");
+      if (dirty || saveInFlight) return;
+      baseSha = fresh.sha;
+      activity = fresh.activity;
+      editor.commands.setContent(editor.markdown!.parse(fresh.markdown), {
+        emitUpdate: false,
+      });
+      source.value = fresh.markdown;
+      renderRevision();
+      renderActivity();
+    } catch {
+      // Ignore transient fetch errors; EventSource auto-reconnects and the
+      // next change event retries.
     }
   }
 }
