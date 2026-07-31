@@ -1,0 +1,25 @@
+{
+  "name": "@givecare/workpad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm build:client && pnpm build:server",
+    "build:client": "esbuild src/client.ts --bundle --minify --supported:template-literal=false --outdir=public --entry-names=workpad",
+    "build:server": "esbuild src/server.ts --bundle --platform=node --format=esm --minify --outfile=dist/server.mjs",
+    "start": "node dist/server.mjs",
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.29.2",
+    "@tiptap/markdown": "3.29.2",
+    "@tiptap/pm": "3.29.2",
+    "@tiptap/starter-kit": "3.29.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3"
+  }
+}

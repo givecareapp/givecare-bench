@@ -673,7 +673,8 @@ def index() -> Response:
         "<a href='https://github.com/givecareapp/givecare-bench'>"
         "github.com/givecareapp/givecare-bench</a> &middot; method and "
         "findings at <a href='https://bench.givecareapp.com'>"
-        "bench.givecareapp.com</a>. Reviewer pages are private and "
+        "bench.givecareapp.com</a> &middot; "
+        "<a href='/workpad/demo'>try the Workpad demo</a>. Reviewer pages are private and "
         "unindexed.</p>"
         "</div>"
     )
