@@ -151,22 +151,24 @@ textarea:focus-visible,
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--moss);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 12%, transparent);
+  background: currentcolor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 12%, transparent);
+  color: var(--moss);
+  transition: color 200ms ease;
 }
 
 .save-state[data-state="dirty"] .save-dot {
-  background: #b47a25;
+  color: #b47a25;
 }
 
 .save-state[data-state="saving"] .save-dot {
   animation: save-pulse 900ms ease-in-out infinite alternate;
-  background: var(--cobalt);
+  color: var(--cobalt);
 }
 
 .save-state[data-state="conflict"] .save-dot,
 .save-state[data-state="error"] .save-dot {
-  background: var(--vermilion);
+  color: var(--vermilion);
 }
 
 #revision {
@@ -215,19 +217,23 @@ textarea:focus-visible,
 .trail-button:active,
 .format-bar button:active,
 .note-form button:active,
+.icon-button:active,
+.logout-button:active,
+.conflict-banner button:active,
 .access-button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 0;
   min-height: calc(100vh - 58px);
-  transition: grid-template-columns 240ms var(--ease-out);
+  transition: grid-template-columns 200ms var(--ease-out);
 }
 
 .trail-open .workspace {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 25vw);
+  transition: grid-template-columns 260ms var(--ease-out);
 }
 
 .page-wrap {
@@ -278,7 +284,6 @@ textarea:focus-visible,
     transform 100ms ease;
 }
 
-.format-bar button:hover,
 .format-bar button[aria-pressed="true"] {
   background: var(--cobalt-soft);
   color: var(--cobalt);
@@ -349,11 +354,18 @@ textarea:focus-visible,
 .ProseMirror {
   min-height: calc(74vh - 152px);
   outline: 0;
+  caret-color: var(--cobalt);
   color: var(--ink);
   font-family: var(--serif);
   font-size: 18px;
   line-height: 1.72;
   overflow-wrap: anywhere;
+}
+
+.ProseMirror ::selection,
+.ProseMirror::selection,
+#source-editor::selection {
+  background: color-mix(in srgb, var(--cobalt) 15%, transparent);
 }
 
 .ProseMirror > *:first-child {
@@ -480,15 +492,31 @@ textarea:focus-visible,
   opacity: 0;
   transform: translateX(32px);
   pointer-events: none;
+  visibility: hidden;
   transition:
-    opacity 180ms ease-out,
-    transform 240ms var(--ease-out);
+    opacity 120ms ease-out,
+    transform 180ms var(--ease-out),
+    visibility 0s linear 180ms;
 }
 
 .trail-open .trail {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
+  visibility: visible;
+  transition:
+    opacity 180ms ease-out,
+    transform 240ms var(--ease-out);
+}
+
+.trail-scrim {
+  position: fixed;
+  z-index: 25;
+  inset: 0;
+  background: rgb(37 34 30 / 18%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
 }
 
 .trail-heading {
@@ -527,6 +555,7 @@ textarea:focus-visible,
   cursor: pointer;
   font-family: var(--serif);
   font-size: 22px;
+  transition: transform 100ms ease-out, border-color 150ms ease;
 }
 
 .trail-intro {
@@ -549,11 +578,7 @@ textarea:focus-visible,
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
-}
-
-.logout-button:hover {
-  border-color: var(--ink);
-  color: var(--ink);
+  transition: transform 100ms ease-out, border-color 150ms ease, color 150ms ease;
 }
 
 .logout-button:disabled {
@@ -628,6 +653,10 @@ textarea:focus-visible,
   margin: 0 0 24px;
 }
 
+.activity-item.is-new {
+  animation: activity-in 200ms var(--ease-out);
+}
+
 .activity-marker {
   position: absolute;
   top: 4px;
@@ -693,7 +722,7 @@ textarea:focus-visible,
   z-index: 40;
   top: 69px;
   left: 50%;
-  display: none;
+  display: flex;
   align-items: center;
   gap: 14px;
   padding: 10px 12px 10px 15px;
@@ -703,11 +732,24 @@ textarea:focus-visible,
   box-shadow: 0 12px 30px rgb(95 42 29 / 16%);
   color: #7a2d20;
   font-size: 12px;
-  transform: translateX(-50%);
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms var(--ease-out),
+    visibility 0s linear 150ms;
 }
 
 .conflicted .conflict-banner {
-  display: flex;
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    opacity 220ms ease-out,
+    transform 220ms var(--ease-out);
 }
 
 .conflict-banner button {
@@ -753,12 +795,15 @@ textarea:focus-visible,
   width: fit-content;
   margin-top: 12px;
   padding: 11px 15px;
+  border: 0;
   border-radius: 4px;
   background: var(--ink);
   color: white;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
+  transition: transform 120ms ease-out, background-color 150ms ease;
 }
 
 @keyframes save-pulse {
@@ -768,6 +813,22 @@ textarea:focus-visible,
   }
 }
 
+@keyframes activity-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.paper {
+  transition: filter 160ms ease, opacity 160ms ease;
+}
+
+.paper.remote-swap {
+  filter: blur(2px);
+  opacity: 0.75;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .trail-button:hover {
     background: var(--cobalt);
@@ -775,6 +836,20 @@ textarea:focus-visible,
 
   .icon-button:hover {
     border-color: var(--ink);
+  }
+
+  .format-bar button:hover {
+    background: var(--cobalt-soft);
+    color: var(--cobalt);
+  }
+
+  .logout-button:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .access-button:hover {
+    background: color-mix(in srgb, var(--ink) 84%, var(--cobalt));
   }
 }
 
@@ -860,8 +935,28 @@ textarea:focus-visible,
     box-shadow: -18px 0 45px rgb(63 45 27 / 18%);
   }
 
+  .trail-open .trail-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .document-footnote {
     padding: 0 20px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-bar {
+    background: var(--paper-warm);
+    backdrop-filter: none;
+  }
+
+  .format-bar {
+    background: var(--paper);
+  }
+
+  .save-state {
+    background: var(--paper);
   }
 }
 

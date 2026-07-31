@@ -157,12 +157,10 @@ async function start() {
     trailToggle.setAttribute("aria-expanded", "false");
     trail.setAttribute("aria-hidden", "true");
     trail.inert = true;
-    trail.hidden = true;
     trailToggle.focus();
   }
 
   function openTrail() {
-    trail.hidden = false;
     trail.inert = false;
     trail.setAttribute("aria-hidden", "false");
     document.body.classList.add("trail-open");
@@ -176,6 +174,7 @@ async function start() {
   });
 
   trailClose.addEventListener("click", closeTrail);
+  required<HTMLElement>("#trail-scrim").addEventListener("click", closeTrail);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && document.body.classList.contains("trail-open")) {
       closeTrail();
@@ -405,6 +404,7 @@ async function start() {
   function renderActivity() {
     trailCount.textContent = String(activity.length);
     const list = required<HTMLElement>("#activity-list");
+    const previousTop = list.querySelector(".activity-item")?.getAttribute("data-event");
     list.replaceChildren();
     if (activity.length === 0) {
       const empty = document.createElement("p");
@@ -413,9 +413,15 @@ async function start() {
       list.append(empty);
       return;
     }
+    let first = true;
     for (const event of activity) {
       const item = document.createElement("article");
       item.className = "activity-item";
+      if (event.event_id) item.setAttribute("data-event", event.event_id);
+      if (first && previousTop && event.event_id && event.event_id !== previousTop) {
+        item.classList.add("is-new");
+      }
+      first = false;
 
       const marker = document.createElement("span");
       marker.className = `activity-marker ${event.verb === "noted" ? "is-note" : ""}`;
@@ -471,6 +477,8 @@ async function start() {
     try {
       const fresh = await requestJSON<DocumentState>("/workpad/api/document");
       if (dirty || saveInFlight) return;
+      const paper = document.querySelector(".paper");
+      paper?.classList.add("remote-swap");
       baseSha = fresh.sha;
       activity = fresh.activity;
       editor.commands.setContent(editor.markdown!.parse(fresh.markdown), {
@@ -479,6 +487,9 @@ async function start() {
       source.value = fresh.markdown;
       renderRevision();
       renderActivity();
+      const from = fresh.activity[0]?.actor?.id;
+      setStatus(from ? `Updated · ${from}` : "Updated", "saved");
+      window.setTimeout(() => paper?.classList.remove("remote-swap"), 220);
     } catch {
       // Ignore transient fetch errors; EventSource auto-reconnects and the
       // next change event retries.
@@ -564,7 +575,8 @@ function renderShell() {
         </p>
       </section>
 
-      <aside id="trail" class="trail" hidden inert aria-hidden="true"
+      <div id="trail-scrim" class="trail-scrim" aria-hidden="true"></div>
+      <aside id="trail" class="trail" inert aria-hidden="true"
         aria-label="Provenance trail">
         <div class="trail-heading">
           <div>
