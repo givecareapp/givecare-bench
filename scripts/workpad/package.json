@@ -9,7 +9,7 @@
   "scripts": {
     "build": "pnpm build:client && pnpm build:server && pnpm build:cli",
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --packages=external --banner:js='#!/usr/bin/env node' --outfile=dist/cli.mjs",
-    "build:client": "esbuild src/client.ts --bundle --minify --supported:template-literal=false --outdir=public --entry-names=workpad",
+    "build:client": "esbuild src/client.ts --bundle --minify --supported:template-literal=false --outdir=public --entry-names=workpad && esbuild src/intake-ledger-client.ts --bundle --minify --supported:template-literal=false --outdir=public --entry-names=intake-ledger",
     "build:server": "esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --minify --outfile=dist/server.mjs",
     "start": "node dist/server.mjs",
     "test": "node --test src/*.test.ts",

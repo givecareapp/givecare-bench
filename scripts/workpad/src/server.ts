@@ -19,6 +19,12 @@ import {
   type Actor,
   type DocRef,
 } from "./store.ts";
+import {
+  LedgerNotFoundError,
+  LedgerUnavailableError,
+  requestIntakeLedger,
+  type LedgerBridgeConfig,
+} from "./intake-ledger.ts";
 
 export type WorkpadConfig = {
   dataDir: string;
@@ -26,6 +32,12 @@ export type WorkpadConfig = {
   seedPath: string;
   sessionsPath: string;
   tokensPath: string;
+  houndSocket?: string;
+  houndProducerOwnerId?: string;
+  houndProducerRunId?: string;
+  houndPolicyId?: string;
+  houndRequestedAccess?: "public" | "workspace" | "restricted";
+  houndLedgerLimit?: number;
 };
 
 const COOKIE_NAME = "givecare_workpad";
@@ -120,6 +132,19 @@ function shell(
     "<noscript>Workpad requires JavaScript.</noscript></div>" +
     '<script type=module src="/workpad/assets/workpad.js"></script></body></html>';
   send(response, mode === "locked" ? 401 : 200, html, "text/html; charset=utf-8");
+}
+
+function intakeLedgerShell(response: ServerResponse) {
+  const html =
+    "<!doctype html><html lang=en><head><meta charset=utf-8>" +
+    "<meta name=viewport content='width=device-width,initial-scale=1'>" +
+    "<meta name=robots content='noindex,nofollow'>" +
+    "<title>Intake ledger — GiveCare Review</title>" +
+    '<link rel=stylesheet href="/workpad/assets/intake-ledger.css"></head><body>' +
+    '<main id="intake-ledger-app" aria-busy="true">' +
+    '<noscript>The intake ledger requires JavaScript.</noscript></main>' +
+    '<script type=module src="/workpad/assets/intake-ledger.js"></script></body></html>';
+  send(response, 200, html, "text/html; charset=utf-8");
 }
 
 function invitePage(token: string): string {
@@ -310,7 +335,12 @@ async function actorFor(
 }
 
 async function asset(response: ServerResponse, config: WorkpadConfig, name: string) {
-  if (name !== "workpad.js" && name !== "workpad.css") {
+  if (
+    name !== "workpad.js" &&
+    name !== "workpad.css" &&
+    name !== "intake-ledger.js" &&
+    name !== "intake-ledger.css"
+  ) {
     json(response, 404, { error: "Not found." });
     return;
   }
@@ -327,6 +357,57 @@ async function asset(response: ServerResponse, config: WorkpadConfig, name: stri
   } catch {
     json(response, 404, { error: "Not found." });
   }
+}
+
+function ledgerBridgeConfig(config: WorkpadConfig): LedgerBridgeConfig {
+  const isExactText = (value: unknown): value is string =>
+    typeof value === "string" && value.length > 0 && value.trim() === value;
+  const socketPath = config.houndSocket;
+  const ownerId = config.houndProducerOwnerId;
+  const runId = config.houndProducerRunId;
+  const policyId = config.houndPolicyId;
+  const requestedAccess = config.houndRequestedAccess;
+  const limit = config.houndLedgerLimit;
+  if (
+    !isExactText(socketPath) ||
+    !socketPath.startsWith("/") ||
+    !isExactText(ownerId) ||
+    !isExactText(runId) ||
+    !isExactText(policyId) ||
+    (requestedAccess !== "public" &&
+      requestedAccess !== "workspace" &&
+      requestedAccess !== "restricted") ||
+    typeof limit !== "number" ||
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 100
+  ) {
+    throw new LedgerUnavailableError();
+  }
+  return {
+    socketPath,
+    producerOwnerId: ownerId,
+    producerRunId: runId,
+    policyId,
+    requestedAccess,
+    limit,
+    timeoutMs: 1_000,
+  };
+}
+
+function ledgerCursor(url: URL): string | undefined {
+  const keys = [...url.searchParams.keys()];
+  if (keys.length === 0) return undefined;
+  if (keys.length !== 1 || keys[0] !== "cursor") throw new TypeError("Invalid ledger query.");
+  const values = url.searchParams.getAll("cursor");
+  if (values.length !== 1 || !values[0]) throw new TypeError("Invalid ledger query.");
+  return values[0];
+}
+
+function emptyGetRequest(request: IncomingMessage): boolean {
+  const transferEncoding = request.headers["transfer-encoding"];
+  const contentLength = request.headers["content-length"];
+  return transferEncoding === undefined && (contentLength === undefined || contentLength === "0");
 }
 
 function writeError(response: ServerResponse, error: unknown) {
@@ -442,6 +523,48 @@ export function createWorkpadServer(config: WorkpadConfig) {
           return;
         }
         shell(response, "private", access.actor, csrfForToken(access.token));
+        return;
+      }
+
+      if (method === "GET" && path === "/workpad/intake-ledger") {
+        const access = await actorFor(request, config);
+        if (!access) {
+          json(response, 404, { error: "Not found." });
+          return;
+        }
+        intakeLedgerShell(response);
+        return;
+      }
+
+      if (method === "GET" && path === "/workpad/api/intake-ledger") {
+        const access = await actorFor(request, config);
+        if (!access) {
+          json(response, 404, { error: "Not found." });
+          return;
+        }
+        if (!emptyGetRequest(request)) {
+          json(response, 400, { error: "Invalid intake ledger request." });
+          return;
+        }
+        let cursor: string | undefined;
+        try {
+          cursor = ledgerCursor(url);
+          const page = await requestIntakeLedger(ledgerBridgeConfig(config), cursor);
+          json(response, 200, {
+            status: "ready",
+            projection: page.projection,
+            rows: page.rows,
+            ...(page.cursor ? { cursor: page.cursor } : {}),
+          });
+        } catch (error) {
+          if (error instanceof LedgerNotFoundError) {
+            json(response, 404, { error: "Not found." });
+          } else if (error instanceof TypeError) {
+            json(response, 400, { error: "Invalid intake ledger request." });
+          } else {
+            json(response, 503, { error: "The intake ledger is unavailable." });
+          }
+        }
         return;
       }
 
@@ -578,6 +701,21 @@ function defaultConfig(): WorkpadConfig {
     seedPath: process.env.WORKPAD_SEED_PATH ?? join(packageRoot, "seed.md"),
     sessionsPath: process.env.WORKPAD_SESSIONS_PATH ?? join(dataDir, "sessions.jsonl"),
     tokensPath: process.env.WORKPAD_TOKENS_PATH ?? join(dataDir, "tokens.txt"),
+    houndSocket: process.env.HOUND_SOCKET,
+    houndProducerOwnerId: process.env.HOUND_LEDGER_PRODUCER_OWNER_ID,
+    houndProducerRunId: process.env.HOUND_LEDGER_PRODUCER_RUN_ID,
+    houndPolicyId: process.env.HOUND_LEDGER_POLICY_ID,
+    houndRequestedAccess:
+      process.env.HOUND_LEDGER_REQUESTED_ACCESS === "public" ||
+      process.env.HOUND_LEDGER_REQUESTED_ACCESS === "workspace" ||
+      process.env.HOUND_LEDGER_REQUESTED_ACCESS === "restricted"
+        ? process.env.HOUND_LEDGER_REQUESTED_ACCESS
+        : undefined,
+    houndLedgerLimit:
+      typeof process.env.HOUND_LEDGER_LIMIT === "string" &&
+      /^(?:[1-9]|[1-9][0-9]|100)$/.test(process.env.HOUND_LEDGER_LIMIT)
+        ? Number(process.env.HOUND_LEDGER_LIMIT)
+        : undefined,
   };
 }
 

@@ -60,6 +60,12 @@ machine-readable output.
 - `/workpad/api/events` — session-gated SSE stream; the editor live-reloads
   when another actor (e.g. the CLI) saves, and merges instead when local edits
   are in flight.
+- `/workpad/intake-ledger` — session-gated, read-only Hound intake chronology.
+  The browser reaches only this Workpad page; the server makes one bounded
+  `AF_UNIX` request to the fixed `HOUND_SOCKET` and never reads or writes the
+  Workpad document, revision, activity, draft, or SSE stores for this route.
+  Its Hound producer, policy, access ceiling, page size, and filter are fixed
+  server configuration (`HOUND_LEDGER_*`), never browser input.
 - `/workpad/health` — service-specific deployment probe.
 - Trail → “Sign out of this workpad” — revoke the current server-side session
   and clear its cookie through the CSRF-protected logout API.
