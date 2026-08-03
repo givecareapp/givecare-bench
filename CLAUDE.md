@@ -87,11 +87,10 @@ queue behavior.
   `../.agents/decisions.jsonl` (site-made wiki decisions also append
   `../gc-wiki/.review-queue/decisions.jsonl`).
 
-`scripts/workpad/` is the separate TypeScript Workpad service. Review links to
-its `/workpad/demo`, but its scoped invitations, Markdown/revision storage, and
-provenance ledger do not share Flask/admin authority. See
-`scripts/workpad/README.md`; proof is `pnpm test && pnpm typecheck && pnpm build`
-from that directory.
+Review links to the separately owned Workpad service at `/workpad/demo`.
+Workpad source, scoped invitations, Markdown revisions, and provenance live
+outside gc-bench at `/home/deploy/repos/workpad`; Flask/admin authority remains
+separate.
 
 ## Candidate intake
 
