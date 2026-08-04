@@ -72,6 +72,26 @@ def test_health_reports_valid_batch_as_healthy_active(health_client: Any) -> Non
     assert response.get_json() == {"cards": 1, "state": "active", "status": "ok"}
 
 
+def test_health_rejects_valid_card_with_boolean_turn(health_client: Any) -> None:
+    card = deepcopy(_VALID_CARD)
+    card["turns"][0]["turn"] = True
+    review_app.BATCH_PATH.write_text(json.dumps([card]), encoding="utf-8")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
+def test_health_rejects_valid_card_with_boolean_cue_turn(health_client: Any) -> None:
+    card = deepcopy(_VALID_CARD)
+    card["cue"] = {"cue_turn": True}
+    review_app.BATCH_PATH.write_text(json.dumps([card]), encoding="utf-8")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
 def test_health_rejects_valid_card_with_verdict(health_client: Any) -> None:
     card = deepcopy(_VALID_CARD)
     card["verdict"] = "PASS"

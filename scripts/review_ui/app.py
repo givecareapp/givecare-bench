@@ -172,7 +172,7 @@ def _valid_review_card(card: Any) -> bool:
         return False
     if not all(
         isinstance(turn, dict)
-        and isinstance(turn.get("turn"), int)
+        and type(turn.get("turn")) is int
         and turn.get("role") in {"user", "assistant", "system"}
         and isinstance(turn.get("content"), str)
         and bool(turn["content"].strip())
@@ -181,7 +181,7 @@ def _valid_review_card(card: Any) -> bool:
         return False
     cue = card["cue"]
     return cue is None or (
-        isinstance(cue, dict) and isinstance(cue.get("cue_turn"), int)
+        isinstance(cue, dict) and type(cue.get("cue_turn")) is int
     )
 
 
