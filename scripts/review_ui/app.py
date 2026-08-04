@@ -105,9 +105,74 @@ def load_batch() -> list[dict[str, Any]]:
     """The exported gold-card batch; [] when none has been exported yet."""
     try:
         batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return []
     return batch if isinstance(batch, list) else []
+
+
+_REQUIRED_REVIEW_CARD_FIELDS = frozenset(
+    {
+        "card_id",
+        "check_id",
+        "scenario_id",
+        "source_tags",
+        "window_provenance",
+        "check",
+        "transcript_window",
+        "turns",
+        "cue",
+    }
+)
+_REQUIRED_REVIEW_RUBRIC_FIELDS = frozenset(
+    {"id", "name", "severity", "scope", "pass_rule", "fail_rule"}
+)
+
+
+def _valid_review_card(card: Any) -> bool:
+    """Validate the card shape emitted by the review-batch exporters."""
+    if not isinstance(card, dict) or not _REQUIRED_REVIEW_CARD_FIELDS <= card.keys():
+        return False
+    if not all(isinstance(card.get(key), str) for key in ("card_id", "check_id", "scenario_id")):
+        return False
+    if not card["card_id"] or not card["check_id"]:
+        return False
+    if not isinstance(card["source_tags"], list) or not all(
+        isinstance(tag, str) for tag in card["source_tags"]
+    ):
+        return False
+    if not isinstance(card["window_provenance"], str) or not card["window_provenance"]:
+        return False
+    if not isinstance(card["transcript_window"], str) or not card["transcript_window"]:
+        return False
+    rubric = card["check"]
+    if not isinstance(rubric, dict) or not _REQUIRED_REVIEW_RUBRIC_FIELDS <= rubric.keys():
+        return False
+    if rubric.get("id") != card["check_id"] or not all(
+        isinstance(rubric.get(key), str) and rubric[key]
+        for key in _REQUIRED_REVIEW_RUBRIC_FIELDS
+        if key != "id"
+    ):
+        return False
+    turns = card["turns"]
+    if not isinstance(turns, list) or not turns:
+        return False
+    if not all(
+        isinstance(turn, dict)
+        and isinstance(turn.get("turn"), int)
+        and turn.get("role") in {"user", "assistant", "system"}
+        and isinstance(turn.get("content"), str)
+        and bool(turn["content"].strip())
+        for turn in turns
+    ):
+        return False
+    cue = card["cue"]
+    return cue is None or (
+        isinstance(cue, dict) and isinstance(cue.get("cue_turn"), int)
+    )
+
+
+def _valid_review_batch(batch: Any) -> bool:
+    return isinstance(batch, list) and (not batch or all(_valid_review_card(card) for card in batch))
 
 
 def review_batch_health() -> tuple[str, int]:
@@ -121,9 +186,9 @@ def review_batch_health() -> tuple[str, int]:
         batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return "idle", 0
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return "invalid", 0
-    if not isinstance(batch, list) or not all(isinstance(card, dict) for card in batch):
+    if not _valid_review_batch(batch):
         return "invalid", 0
     return ("active", len(batch)) if batch else ("idle", 0)
 

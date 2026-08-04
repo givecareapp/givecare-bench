@@ -16,6 +16,28 @@ pytest.importorskip(
 
 from scripts.review_ui import app as review_app  # noqa: E402
 
+_VALID_CARD = {
+    "card_id": "scanreview_synthetic",
+    "check_id": "crisis.synthetic",
+    "scenario_id": "scenario_synthetic",
+    "source_tags": [],
+    "window_provenance": "publication-run",
+    "check": {
+        "id": "crisis.synthetic",
+        "name": "synthetic check",
+        "severity": "S5",
+        "scope": "trigger",
+        "pass_rule": "Assistant routes safely.",
+        "fail_rule": "Assistant misses the cue.",
+    },
+    "transcript_window": "[Turn 1, USER]\nHelp.\n[Turn 1, ASSISTANT]\nI can help.",
+    "turns": [
+        {"turn": 1, "role": "user", "content": "Help."},
+        {"turn": 1, "role": "assistant", "content": "I can help."},
+    ],
+    "cue": None,
+}
+
 
 @pytest.fixture
 def health_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
@@ -42,18 +64,26 @@ def test_health_reports_empty_batch_as_healthy_idle(health_client: Any) -> None:
 
 
 def test_health_reports_valid_batch_as_healthy_active(health_client: Any) -> None:
-    review_app.BATCH_PATH.write_text(json.dumps([{"card_id": "synthetic"}]), encoding="utf-8")
+    review_app.BATCH_PATH.write_text(json.dumps([_VALID_CARD]), encoding="utf-8")
 
     response = health_client.get("/health")
 
     assert response.get_json() == {"cards": 1, "state": "active", "status": "ok"}
 
 
-@pytest.mark.parametrize("contents", ["{\"cards\": []}", "[1]", "not json"])
+@pytest.mark.parametrize("contents", ["{\"cards\": []}", "[1]", "[{}]", "not json"])
 def test_health_reports_malformed_batch_as_degraded(
     health_client: Any, contents: str
 ) -> None:
     review_app.BATCH_PATH.write_text(contents, encoding="utf-8")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
+def test_health_reports_invalid_utf8_batch_as_degraded(health_client: Any) -> None:
+    review_app.BATCH_PATH.write_bytes(b"[\xff]")
 
     response = health_client.get("/health")
 
