@@ -110,6 +110,24 @@ def load_batch() -> list[dict[str, Any]]:
     return batch if isinstance(batch, list) else []
 
 
+def review_batch_health() -> tuple[str, int]:
+    """Return the active review batch state and card count.
+
+    A missing or empty top-level batch is the normal idle state between review
+    sessions. A non-empty JSON array is an active session. Any other file state
+    is malformed or unreadable and must stay visible as a dependency failure.
+    """
+    try:
+        batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return "idle", 0
+    except (OSError, json.JSONDecodeError):
+        return "invalid", 0
+    if not isinstance(batch, list) or not all(isinstance(card, dict) for card in batch):
+        return "invalid", 0
+    return ("active", len(batch)) if batch else ("idle", 0)
+
+
 def load_tokens() -> dict[str, dict[str, str]]:
     """Parse tokens.txt into ``{token: {role, id, slot, seed, ...}}``."""
     tokens: dict[str, dict[str, str]] = {}
@@ -601,8 +619,8 @@ def _page(
 # --------------------------------------------------------------------------- #
 @app.get("/health")
 def health() -> Response:
-    ok = BATCH_PATH.exists()
-    return jsonify(status="ok" if ok else "degraded", cards=len(load_batch()) if ok else 0)
+    state, cards = review_batch_health()
+    return jsonify(status="ok" if state != "invalid" else "degraded", state=state, cards=cards)
 
 
 _APPLY_EMAIL = "ali@givecareapp.com"
