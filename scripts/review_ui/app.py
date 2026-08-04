@@ -34,6 +34,7 @@ import random
 import re
 import sqlite3
 import subprocess
+import sys
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -42,6 +43,13 @@ from typing import Any
 from flask import Flask, Response, abort, g, jsonify, redirect, request, send_from_directory
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from scripts.review_ui import batch_contract as _batch_contract  # noqa: E402
+
+BANNED_LABEL_KEYS = _batch_contract.BANNED_LABEL_KEYS
+banned_label_keys = _batch_contract.banned_label_keys
+
 REVIEW_DIR = Path(os.environ.get("REVIEW_DIR", REPO_ROOT / "internal" / "review"))
 BATCH_PATH = REVIEW_DIR / "batch.json"
 DB_PATH = REVIEW_DIR / "reviews.db"
@@ -104,8 +112,12 @@ _BATCH_SHA: str | None = None
 def load_batch() -> list[dict[str, Any]]:
     """The exported gold-card batch; [] when none has been exported yet."""
     try:
-        batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raw = BATCH_PATH.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        batch = json.loads(raw)
+    except ValueError:
         return []
     return batch if isinstance(batch, list) else []
 
@@ -131,6 +143,8 @@ _REQUIRED_REVIEW_RUBRIC_FIELDS = frozenset(
 def _valid_review_card(card: Any) -> bool:
     """Validate the card shape emitted by the review-batch exporters."""
     if not isinstance(card, dict) or not _REQUIRED_REVIEW_CARD_FIELDS <= card.keys():
+        return False
+    if banned_label_keys(card):
         return False
     if not all(isinstance(card.get(key), str) for key in ("card_id", "check_id", "scenario_id")):
         return False
@@ -183,10 +197,14 @@ def review_batch_health() -> tuple[str, int]:
     is malformed or unreadable and must stay visible as a dependency failure.
     """
     try:
-        batch = json.loads(BATCH_PATH.read_text(encoding="utf-8"))
+        raw = BATCH_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
         return "idle", 0
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError):
+        return "invalid", 0
+    try:
+        batch = json.loads(raw)
+    except ValueError:
         return "invalid", 0
     if not _valid_review_batch(batch):
         return "invalid", 0

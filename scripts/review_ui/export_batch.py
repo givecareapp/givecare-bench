@@ -36,54 +36,19 @@ from typing import Any
 
 import yaml
 
+try:
+    from scripts.review_ui.batch_contract import BANNED_LABEL_KEYS
+except ModuleNotFoundError:  # direct ``python scripts/review_ui/export_batch.py``
+    from batch_contract import BANNED_LABEL_KEYS
+
+__all__ = ("BANNED_LABEL_KEYS",)
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CALIB_DIR = REPO_ROOT / "internal" / "calibration"
 RECARDABLE_DIR = CALIB_DIR / "natural_gold_2026-06-30" / "recardable"
 GOLD_JOINED = CALIB_DIR / "natural_gold_2026-06-30" / "source" / "gold_joined.jsonl"
 CHECKS_DIR = REPO_ROOT / "checks"
 DEFAULT_OUT = REPO_ROOT / "internal" / "review" / "batch.json"
-
-# --------------------------------------------------------------------------- #
-# Blindness contract — every field a prior label could hide in. The export
-# NEVER copies a source dict through; it rebuilds each card from the allowlist
-# below. This frozenset is the negative pin the unit test asserts against.
-# --------------------------------------------------------------------------- #
-BANNED_LABEL_KEYS: frozenset[str] = frozenset(
-    {
-        "verdict",
-        "final_gold",
-        "final_verdict",
-        "gold",
-        "gold_verdict",
-        "label",
-        "human",
-        "human_verdict",
-        "annotator_1",
-        "annotator_2",
-        "annotator_1_id",
-        "annotator_2_id",
-        "annotator_1_verdict",
-        "annotator_2_verdict",
-        "annotator_1_note",
-        "annotator_2_note",
-        "adjudicated_verdict",
-        "adjudicated_by",
-        "adjudication_notes",
-        "reps",
-        "post_guard",
-        "pre_guard",
-        "any_fail",
-        "guard_fired",
-        "rationale_code",
-        "rationale",
-        "confidence",
-        "pass_rule_result",
-        "fail_rule_result",
-        "score",
-        "overall_score",
-        "hard_fail_reason",
-    }
-)
 
 # Only these check-definition fields reach the reviewer. The verifier `prompt:`,
 # `scorer:`, `routing:`, `calibration:` (carries a status), and `source_grounding`

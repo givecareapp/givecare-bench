@@ -21,8 +21,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from invisiblebench.judge import load_transcript  # noqa: E402
+from scripts.review_ui.batch_contract import banned_label_keys  # noqa: E402
 from scripts.review_ui.export_batch import (  # noqa: E402
-    BANNED_LABEL_KEYS,
     _scenario_cue_index,
     canonical_cue_turn,
     load_check_rubric,
@@ -72,16 +72,7 @@ def _render_transcript(turns: list[dict[str, Any]]) -> str:
 
 
 def _banned_keys(value: Any) -> set[str]:
-    found: set[str] = set()
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if str(key).lower() in BANNED_LABEL_KEYS:
-                found.add(str(key))
-            found.update(_banned_keys(item))
-    elif isinstance(value, list):
-        for item in value:
-            found.update(_banned_keys(item))
-    return found
+    return banned_label_keys(value)
 
 
 def build_review_artifacts(

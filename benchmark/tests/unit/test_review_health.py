@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,16 @@ def test_health_reports_valid_batch_as_healthy_active(health_client: Any) -> Non
     assert response.get_json() == {"cards": 1, "state": "active", "status": "ok"}
 
 
+def test_health_rejects_valid_card_with_verdict(health_client: Any) -> None:
+    card = deepcopy(_VALID_CARD)
+    card["verdict"] = "PASS"
+    review_app.BATCH_PATH.write_text(json.dumps([card]), encoding="utf-8")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
 @pytest.mark.parametrize("contents", ["{\"cards\": []}", "[1]", "[{}]", "not json"])
 def test_health_reports_malformed_batch_as_degraded(
     health_client: Any, contents: str
@@ -84,6 +95,27 @@ def test_health_reports_malformed_batch_as_degraded(
 
 def test_health_reports_invalid_utf8_batch_as_degraded(health_client: Any) -> None:
     review_app.BATCH_PATH.write_bytes(b"[\xff]")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
+def test_health_reports_integer_digit_cap_as_degraded(health_client: Any) -> None:
+    review_app.BATCH_PATH.write_text("9" * 5000, encoding="utf-8")
+
+    response = health_client.get("/health")
+
+    assert response.get_json() == {"cards": 0, "state": "invalid", "status": "degraded"}
+
+
+@pytest.mark.parametrize("forbidden_key", sorted(review_app.BANNED_LABEL_KEYS))
+def test_health_rejects_every_exporter_forbidden_key(
+    health_client: Any, forbidden_key: str
+) -> None:
+    card = deepcopy(_VALID_CARD)
+    card[forbidden_key] = "forbidden"
+    review_app.BATCH_PATH.write_text(json.dumps([card]), encoding="utf-8")
 
     response = health_client.get("/health")
 
