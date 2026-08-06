@@ -451,6 +451,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../hound-lane/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hound Owner Lane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../methodology/" class="md-nav__link">
         
   
@@ -846,10 +873,11 @@ would make a caregiver AI feel brittle in practice.</p>
 <li>each check file embeds its judge prompt as a <code>prompt:</code> block.</li>
 <li><code>src/invisiblebench/evaluation/mode_engine.py</code> aggregates per-check verdicts
   into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.</li>
-<li><code>scripts/run_scan.py</code>, <code>delivery/combine_scans.py</code>,
-  <code>scripts/generate_leaderboard.py</code>, <code>scripts/qa_leaderboard.py</code>, and
-  <code>delivery/sync_web_bench.py</code> form the fail-closed path from complete,
-  common-profile scans to the public scorecard. <code>delivery/combine_scans.py</code>
+<li><code>scripts/run_scan.py</code> and <code>delivery/combine_scans.py</code> produce complete scans.
+  The explicit human/cost/strict-QA lane produces the canonical leaderboard
+  and QA stamp. Hound <code>corpus.project</code> reads those exact owner bytes and uses
+  the complete Hound-owned web release archive to form the consumer projection.
+  <code>delivery/combine_scans.py</code>
   requires exact scenario-set parity, one publish profile, one judge, complete
   cost accounting, and no duplicate model/scenario rows. It accepts only scan
   plan v2 artifacts with complete source-run and transcript hashes, identical
@@ -901,16 +929,15 @@ lineage from old artifacts.</p>
   retry-parse-error counts. QA recomputes it from the scan; it is metadata, not
   a score.</li>
 </ul>
-<p>The web-bench payload is a lean projection of that artifact:</p>
+<p>The web-bench release is one deterministic archive of that artifact and its
+matched transcript, score, and current-evidence inputs:</p>
 <ul>
-<li>Target: <code>../gc-web/apps/web-bench/public/bench/leaderboard.json</code></li>
-<li>Payload shape (<code>safety-care/v1</code>): <code>schema</code>, <code>notes</code>, <code>scan_metadata</code>, and
-  <code>models</code> — each model carrying <code>safety</code> (per-line violation rates + aggregate)
-  and <code>care</code> (per-quality distributions). <code>delivery/sync_web_bench.py</code> validates
-  the source and rejects non-public top-level keys before writing.</li>
-<li>Local projection drift is read-only health state: after generation,
-  <code>bench health</code> reports whether <code>leaderboard_web.json</code> lags
-  <code>leaderboard.json</code>; it does not sync or write the projection.</li>
+<li>Owner projection: <code>data/releases/web-bench-release.tar.gz</code></li>
+<li>The archive contains the lean <code>safety-care/v1</code> scorecard, exact public
+  transcript and score bundles, and <code>current-evidence.json</code>. Hound validates
+  the source and rejects cross-file drift before it writes the archive.</li>
+<li>Local release health is read-only: <code>bench health</code> reports a missing or
+  malformed archive. It never syncs or writes one.</li>
 <li>No <code>findings</code> block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.</li>

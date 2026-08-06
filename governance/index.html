@@ -449,6 +449,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../hound-lane/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hound Owner Lane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../methodology/" class="md-nav__link">
         
   
@@ -944,28 +971,30 @@ the larger of 1.5× the conservative plan or the plan plus $1, so the required
 hard ceiling cannot be replaced with a meaningless unbounded approval.</p>
 <p>That produces the same scored surface the maintainers see. Reaching the
 <strong>public</strong> leaderboard is a separate, fail-closed step — there is no side door:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./scripts/publish.sh<span class="w"> </span>&lt;scan&gt;/per_run.jsonl<span class="w"> </span>&lt;web-target&gt;
-</code></pre></div>
+<p>Use the deterministic <code>corpus.project</code> Hound capability. See
+<code>docs/hound-lane.md</code> for the exact plan, execution, and verification commands.</p>
 <p>Before publication, any eligible UNCLEAR, gate escalation, evidence-free FAIL,
 or machine-vote adjudication is exported as a blind human-review batch. The
 reviewer sees the transcript and one check rubric, never the model identity or
 machine verdict. Applying completed review writes a new scan, preserves the
 source scan unchanged, recomputes row aggregates, and emits the
 <code>manual_adjudications.json</code> audit file strict QA requires.</p>
-<p><code>publish.sh</code> runs <code>generate → strict QA → sync</code> and aborts before writing the
-public target if the strict QA gate (<code>scripts/qa_leaderboard.py --strict</code>) fails.
+<p>The explicit publication lane runs <code>generate_leaderboard.py</code>, then
+<code>qa_leaderboard.py --strict --stamp</code>. The Hound driver
+accepts only the exact canonical leaderboard and matching strict-QA stamp. It
+writes only the owner-local consumer projection.
 Strict QA also requires the artifact benchmark version, current check-template
 hash map, full check-definition snapshot, source scan bytes, and v2
 comparability lineage to agree exactly.
-The web-bench copy is a projection of <code>data/leaderboard/leaderboard.json</code>, never
-hand-edited; <code>delivery/sync_web_bench.py</code> refuses to write unless the source
-bytes were just strict-QA'd. Promoting a submitted row into the public artifact
+The consumer copy comes from committed <code>data/releases/web-bench-release.tar.gz</code>,
+never from a cross-repo owner write. Promoting a submitted row into the public artifact
 stays a maintainer action, but the QA gate — not maintainer discretion — decides
 what is publishable at all.</p>
 <p>Third-party verifier or scenario contributions follow the same discipline as
-internal work: every candidate lands in staging, is probed, and is promoted only
-by human review; verifier contributions carry the calibration bar. There is no
-fast path. See <code>CONTRIBUTING.md</code> in the repository root.</p>
+internal work. One scenario can enter canonical truth only through one exact,
+human-approved Hound plan and a reviewed Git diff. Verifier contributions carry
+the calibration bar. There is no fast path. See <code>CONTRIBUTING.md</code> in the
+repository root.</p>
 <h2 id="incident-derived-benchmark-evolution">Incident-derived benchmark evolution<a class="headerlink" href="#incident-derived-benchmark-evolution" title="Permanent link">&para;</a></h2>
 <p>Observed failures enter a private, gitignored JSONL registry and are validated
 with <code>scripts/intake/incident_registry.py</code>. The tracked repository contains the
