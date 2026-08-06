@@ -1,0 +1,245 @@
+{
+  "schema_version": "givecare.module/v1",
+  "repository": "gc-bench",
+  "modules": [
+    {
+      "id": "bench.measure",
+      "authority": {
+        "kind": "git",
+        "ref": "benchmark/benchmark_inventory.json"
+      },
+      "truth": [
+        {
+          "kind": "checks",
+          "ref": "checks/"
+        },
+        {
+          "kind": "scenarios",
+          "ref": "benchmark/scenarios/"
+        },
+        {
+          "kind": "scoring-contract",
+          "ref": "benchmark/configs/scoring.yaml"
+        },
+        {
+          "kind": "calibration",
+          "ref": "docs/verifier-validation.md"
+        }
+      ],
+      "verifiers": [
+        "uv run ruff check .",
+        "uv run pytest benchmark/tests -q",
+        "uv run python scripts/lint_turn_indices.py --strict"
+      ],
+      "capabilities": [
+        {
+          "name": "benchmark.transcripts.plan",
+          "effect": "read",
+          "gate": "none",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run bench --full --dry-run"
+          },
+          "accepts": [],
+          "emits": []
+        },
+        {
+          "name": "benchmark.transcripts.generate",
+          "effect": "external",
+          "gate": "human",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run bench --full -y --max-cost-usd <budget>"
+          },
+          "accepts": [
+            "invisiblebench.scenario/safety-care-v1"
+          ],
+          "emits": [
+            "invisiblebench-run-manifest/v2",
+            "invisiblebench-result-row/2.1.0"
+          ]
+        },
+        {
+          "name": "benchmark.scan.plan",
+          "effect": "read",
+          "gate": "none",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm <run>"
+          },
+          "accepts": [
+            "invisiblebench-run-manifest/v2"
+          ],
+          "emits": [
+            "invisiblebench-scan-plan/v2"
+          ]
+        },
+        {
+          "name": "benchmark.scan",
+          "effect": "external",
+          "gate": "human",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run python scripts/run_scan.py --profile publish --enable-llm --max-cost-usd <budget> <run>"
+          },
+          "accepts": [
+            "invisiblebench-run-manifest/v2",
+            "invisiblebench-scan-plan/v2"
+          ],
+          "emits": [
+            "invisiblebench-scanned-row/3.2.0",
+            "invisiblebench-scan-checkpoint/v1"
+          ]
+        },
+        {
+          "name": "benchmark.inspect",
+          "effect": "read",
+          "gate": "none",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run bench explain <model> <scenario> --failures"
+          },
+          "accepts": [
+            "invisiblebench-scanned-row/3.2.0"
+          ],
+          "emits": []
+        }
+      ]
+    },
+    {
+      "id": "bench.review",
+      "authority": {
+        "kind": "human-review",
+        "ref": "scripts/review_ui/app.py"
+      },
+      "truth": [
+        {
+          "kind": "calibration",
+          "ref": "internal/calibration/"
+        },
+        {
+          "kind": "review-tool",
+          "ref": "scripts/review_ui/"
+        },
+        {
+          "kind": "candidate-intake",
+          "ref": "scripts/intake/"
+        }
+      ],
+      "verifiers": [
+        "uv run pytest benchmark/tests -q",
+        "hound driver check --driver hound-driver.json"
+      ],
+      "capabilities": [
+        {
+          "name": "benchmark.adjudicate",
+          "effect": "write",
+          "gate": "human",
+          "adapter": {
+            "kind": "cli",
+            "ref": "uv run python scripts/review_ui/apply_scan_adjudications.py --scan <scan>/per_run.jsonl --source-map internal/review/<batch>/source_map.json --annotations internal/review/<batch>/review_annotations.jsonl"
+          },
+          "accepts": [
+            "invisiblebench-scanned-row/3.2.0",
+            "invisiblebench-scan-review-map/v1"
+          ],
+          "emits": [
+            "invisiblebench-manual-adjudications/v1"
+          ]
+        },
+        {
+          "name": "benchmark.scenarios.apply",
+          "effect": "write",
+          "gate": "human",
+          "adapter": {
+            "kind": "hound-operation",
+            "ref": "hound-driver.json#corpus.apply"
+          },
+          "accepts": [
+            "gc-bench.candidate-intake.input/v1"
+          ],
+          "emits": [
+            "gc-bench.candidate-intake.result/v1",
+            "invisiblebench.candidate-scenario/v1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bench.publish",
+      "authority": {
+        "kind": "git",
+        "ref": "data/leaderboard/leaderboard.json"
+      },
+      "truth": [
+        {
+          "kind": "leaderboard",
+          "ref": "data/leaderboard/leaderboard.json"
+        },
+        {
+          "kind": "publication-gate",
+          "ref": "scripts/hound_driver.py"
+        },
+        {
+          "kind": "projection",
+          "ref": "data/leaderboard/leaderboard_web.json"
+        },
+        {
+          "kind": "hound-driver",
+          "ref": "hound-driver.json"
+        }
+      ],
+      "verifiers": [
+        "uv run pytest benchmark/tests -q",
+        "hound driver check --driver hound-driver.json"
+      ],
+      "capabilities": [
+        {
+          "name": "benchmark.leaderboard.read",
+          "effect": "read",
+          "gate": "none",
+          "adapter": {
+            "kind": "file",
+            "ref": "data/leaderboard/leaderboard.json"
+          },
+          "accepts": [],
+          "emits": [
+            "safety-care/v1"
+          ]
+        },
+        {
+          "name": "benchmark.leaderboard.projection.read",
+          "effect": "read",
+          "gate": "none",
+          "adapter": {
+            "kind": "file",
+            "ref": "data/leaderboard/leaderboard_web.json"
+          },
+          "accepts": [
+            "gc-bench.leaderboard-projection/v1"
+          ],
+          "emits": [
+            "safety-care/v1"
+          ]
+        },
+        {
+          "name": "benchmark.leaderboard.project",
+          "effect": "write",
+          "gate": "none",
+          "adapter": {
+            "kind": "hound-operation",
+            "ref": "hound-driver.json#corpus.project"
+          },
+          "accepts": [
+            "gc-bench.leaderboard-projection.input/v1"
+          ],
+          "emits": [
+            "safety-care/v1",
+            "gc-bench.leaderboard-projection/v1",
+            "givecare.artifact-ref/v1"
+          ]
+        }
+      ]
+    }
+  ]
+}

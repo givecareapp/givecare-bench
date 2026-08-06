@@ -90,9 +90,8 @@ hard ceiling cannot be replaced with a meaningless unbounded approval.
 That produces the same scored surface the maintainers see. Reaching the
 **public** leaderboard is a separate, fail-closed step — there is no side door:
 
-```bash
-./scripts/publish.sh <scan>/per_run.jsonl <web-target>
-```
+Use the deterministic `corpus.project` Hound capability. See
+`docs/hound-lane.md` for the exact plan, execution, and verification commands.
 
 Before publication, any eligible UNCLEAR, gate escalation, evidence-free FAIL,
 or machine-vote adjudication is exported as a blind human-review batch. The
@@ -101,21 +100,23 @@ machine verdict. Applying completed review writes a new scan, preserves the
 source scan unchanged, recomputes row aggregates, and emits the
 `manual_adjudications.json` audit file strict QA requires.
 
-`publish.sh` runs `generate → strict QA → sync` and aborts before writing the
-public target if the strict QA gate (`scripts/qa_leaderboard.py --strict`) fails.
+The explicit publication lane runs `generate_leaderboard.py`, then
+`qa_leaderboard.py --strict --stamp`. The Hound driver
+accepts only the exact canonical leaderboard and matching strict-QA stamp. It
+writes only the owner-local consumer projection.
 Strict QA also requires the artifact benchmark version, current check-template
 hash map, full check-definition snapshot, source scan bytes, and v2
 comparability lineage to agree exactly.
-The web-bench copy is a projection of `data/leaderboard/leaderboard.json`, never
-hand-edited; `delivery/sync_web_bench.py` refuses to write unless the source
-bytes were just strict-QA'd. Promoting a submitted row into the public artifact
+The consumer copy comes from committed `data/leaderboard/leaderboard_web.json`,
+never from a cross-repo owner write. Promoting a submitted row into the public artifact
 stays a maintainer action, but the QA gate — not maintainer discretion — decides
 what is publishable at all.
 
 Third-party verifier or scenario contributions follow the same discipline as
-internal work: every candidate lands in staging, is probed, and is promoted only
-by human review; verifier contributions carry the calibration bar. There is no
-fast path. See `CONTRIBUTING.md` in the repository root.
+internal work. One scenario can enter canonical truth only through one exact,
+human-approved Hound plan and a reviewed Git diff. Verifier contributions carry
+the calibration bar. There is no fast path. See `CONTRIBUTING.md` in the
+repository root.
 
 ## Incident-derived benchmark evolution
 

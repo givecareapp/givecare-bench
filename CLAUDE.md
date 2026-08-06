@@ -54,12 +54,20 @@ uv run bench review serve --dir internal/review/<batch> --publication
 uv run python scripts/review_ui/apply_scan_adjudications.py \
   --scan <scan>/per_run.jsonl --source-map internal/review/<batch>/source_map.json \
   --annotations internal/review/<batch>/review_annotations.jsonl
-bash scripts/publish.sh <scan>/per_run.jsonl \
-  ../gc-web/apps/web-bench/public/bench/leaderboard.json
+uv run python scripts/generate_leaderboard.py \
+  --input <scan>/per_run.jsonl --output data/leaderboard
+uv run python scripts/qa_leaderboard.py \
+  --scan <scan>/per_run.jsonl \
+  --leaderboard data/leaderboard/leaderboard.json \
+  --manual-adjudications <scan>/manual_adjudications.json --strict --stamp
+hound plan --driver hound-driver.json --operation corpus.project \
+  --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
+  --output /tmp/gc-bench-leaderboard-plan.json
 ```
 
-`publish.sh` owns generate -> strict QA -> sync. The QA stamp proves exact
-leaderboard bytes; direct sync without a fresh stamp must fail.
+The explicit commands above own the canonical leaderboard and fixed QA stamp.
+Hound binds those exact digests and writes only the local consumer
+projection. See `docs/hound-lane.md`. Consumers pull the verified projection.
 
 `delivery/combine_scans.py` accepts only provenance-complete scan plan v2
 artifacts with one comparability fingerprint. Use
@@ -71,7 +79,7 @@ escalations use the blind review export/apply pair above. Use
 
 `scripts/review_ui/app.py` is a self-contained Flask app with two jobs: the
 blind gold-card reviewer flow (this repo's calibration evidence) and the
-**ecosystem approval queue** (Hound plans, social veto window, wiki drafts)
+**ecosystem approval queue** (Hound plans and the social veto window)
 at https://review.givecareapp.com. Contract, mechanisms, and truth rules:
 `../.agents/approval-queue.md` (workspace level) — read it before touching
 queue behavior.
@@ -83,9 +91,10 @@ queue behavior.
   `token=<urlsafe> role=admin|reviewer id=<name>`; re-read per request.
 - Expressions per gc-web `DESIGN.md`: reviewer pages editorial (external
   humans), admin pages console (`.dashboard` scope) — do not mix.
-- Decisions land in the gates' native artifacts plus
-  `../.agents/decisions.jsonl` (site-made wiki decisions also append
-  `../gc-wiki/.review-queue/decisions.jsonl`).
+- Hound decisions land in native approval artifacts plus
+  `../.agents/decisions.jsonl`.
+- The queue discovers human-gated Hound repositories from the workspace
+  protocol registry. If discovery fails, the Hound queue is unavailable.
 
 Review links to the separately owned Workpad service at `/workpad/demo`.
 Workpad source, scoped invitations, Markdown revisions, and provenance live
@@ -95,17 +104,21 @@ separate.
 ## Candidate intake
 
 ```bash
-uv run python scripts/intake/import_evals.py --evals-dir ../gc-evals/data --dry-run
+uv run python scripts/intake/import_evals.py \
+  --source-plan-id <exact-plan-id> --selected-id <eval-record-id> \
+  --output /tmp/gc-bench-candidates.json
+hound plan --driver hound-driver.json --operation candidate.intake \
+  --input /tmp/gc-bench-candidates.json --as-of YYYY-MM-DD \
+  --output /tmp/gc-bench-candidate-plan.json
 uv run python scripts/intake/incident_registry.py intake/incidents.jsonl
-bash scripts/intake/overnight-promote.sh --dry-run
 ```
 
-The registry and candidate data stay under gitignored `intake/`; tracked code
-contains only validators and import tooling. Candidate advancement requires
-de-identification, privacy review, a contrast pair, a viable scorer route, and
-recurrence or high consequence. The historical probe filename remains, but the
-probe is manual and on demand. Results stay in `intake/review/` until human
-promotion.
+The registry and request data stay under gitignored `intake/`; tracked code
+contains only validators and request tooling. Hound requires human approval of
+the exact plan before it writes canonical `benchmark/scenarios` truth. The
+approved plan binds the Evals ArtifactRef, selected ID, scenario bytes, and
+target paths. Review the resulting Git diff before commit. No staging or
+out-of-band promotion path exists.
 
 ## Local gate
 

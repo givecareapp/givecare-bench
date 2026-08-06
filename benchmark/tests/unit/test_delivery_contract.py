@@ -1,7 +1,6 @@
 """Delivery artifact contract tests.
 
-These projections are consumed by other repos, so they must stay in lockstep
-with the authoritative check YAMLs instead of preserving stale generated state.
+Owner-local projections must stay in lockstep with their authoritative inputs.
 """
 
 from __future__ import annotations
@@ -13,47 +12,11 @@ import pytest
 import yaml
 
 from delivery.contrast_analysis import CONTRAST_ANALYSIS_SCHEMA, analyze
-from delivery.export_taxonomy_snapshot import build_snapshot
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.verifiers.base import GATE_SEVERITIES
 from invisiblebench.models.results import PUBLIC_SCORE_MODEL, RAW_RESULT_SURFACE, RAW_SCORE_MODEL
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-
-
-def test_checked_in_taxonomy_snapshot_matches_generated_checks() -> None:
-    checked_in = (REPO_ROOT / "delivery" / "taxonomy-snapshot.yaml").read_text()
-
-    assert checked_in == build_snapshot()
-
-
-def test_taxonomy_snapshot_has_exactly_current_check_ids() -> None:
-    modes, _routing = load_checks()
-    snapshot = yaml.safe_load((REPO_ROOT / "delivery" / "taxonomy-snapshot.yaml").read_text())
-    snapshot_ids = {entry["id"] for entry in snapshot["modes"]}
-
-    assert snapshot_ids == set(modes)
-
-
-def test_taxonomy_snapshot_uses_safety_care_contract_fields() -> None:
-    snapshot = yaml.safe_load((REPO_ROOT / "delivery" / "taxonomy-snapshot.yaml").read_text())
-    entries = snapshot["modes"]
-
-    assert entries
-    for entry in entries:
-        assert set(entry) == {
-            "id",
-            "name",
-            "layer",
-            "dimension",
-            "severity",
-            "scope",
-            "claim_status",
-        }
-        assert entry["layer"] in {"safety", "care"}
-        assert entry["claim_status"] in {"claim_ready", "not_claim_ready"}
-        assert "primary_bucket" not in entry
-        assert "hard_fail" not in entry
 
 
 def test_check_yaml_has_no_retired_source_fields() -> None:

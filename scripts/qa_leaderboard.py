@@ -10,8 +10,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
+import os
 import sys
+import tempfile
 from collections import Counter, defaultdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -468,8 +472,6 @@ def validate_leaderboard(
     expected_rows: int | None = None,
     expected_models: int | None = None,
     expected_scenarios: int | None = None,
-    expected_contract: str | None = None,
-    expected_stage: str | None = None,
     strict: bool = False,
     checks_dir: Path | None = None,
 ) -> list[str]:
@@ -670,6 +672,47 @@ def validate_leaderboard(
     return errors
 
 
+def write_qa_stamp(
+    scan_path: Path,
+    leaderboard_path: Path,
+    *,
+    repo_root: Path = REPO_ROOT,
+) -> Path:
+    """Atomically record strict QA for exact scan and leaderboard bytes."""
+    for path, label in ((scan_path, "scan"), (leaderboard_path, "leaderboard")):
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"{label} must be a regular file")
+    stamp_path = repo_root / "data" / "leaderboard" / ".qa-stamp"
+    stamp_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "leaderboard_sha256": hashlib.sha256(leaderboard_path.read_bytes()).hexdigest(),
+        "scan_path": str(scan_path),
+        "scan_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
+        "strict": True,
+        "qa_passed_at": datetime.now(UTC).isoformat(),
+    }
+    content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".qa-stamp-", dir=stamp_path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o644)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, stamp_path)
+        directory = os.open(stamp_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return stamp_path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="QA scan + safety-care/v1 leaderboard artifact")
     parser.add_argument("--scan", required=True, type=Path, help="per_run.jsonl scan artifact")
@@ -678,16 +721,18 @@ def main() -> int:
     parser.add_argument("--expected-rows", type=int, default=None)
     parser.add_argument("--expected-models", type=int, default=None)
     parser.add_argument("--expected-scenarios", type=int, default=None)
-    parser.add_argument(
-        "--expected-contract", default=None,
-        help="Retired compatibility option; ignored in safety-care/v1 validation",
-    )
-    parser.add_argument(
-        "--expected-stage", default=None,
-        help="Retired compatibility option; ignored in safety-care/v1 validation",
-    )
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
+    parser.add_argument(
+        "--stamp",
+        action="store_true",
+        help="Write the fixed owner QA stamp after strict QA passes",
+    )
     args = parser.parse_args()
+    if args.stamp and not args.strict:
+        parser.error("--stamp requires --strict")
+    canonical_leaderboard = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
+    if args.stamp and args.leaderboard.resolve() != canonical_leaderboard.resolve():
+        parser.error("--stamp requires the canonical data/leaderboard/leaderboard.json")
 
     errors = validate_leaderboard(
         args.scan,
@@ -696,8 +741,6 @@ def main() -> int:
         expected_rows=args.expected_rows,
         expected_models=args.expected_models,
         expected_scenarios=args.expected_scenarios,
-        expected_contract=args.expected_contract,
-        expected_stage=args.expected_stage,
         strict=args.strict,
     )
     if errors:
@@ -706,7 +749,11 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("Leaderboard QA passed")
+    if args.stamp:
+        stamp_path = write_qa_stamp(args.scan, args.leaderboard)
+        print(f"Leaderboard QA passed; wrote {stamp_path.relative_to(REPO_ROOT)}")
+    else:
+        print("Leaderboard QA passed")
     return 0
 
 

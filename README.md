@@ -119,7 +119,7 @@ internal/, results/ — that are not part of the public contract.)
 - Private GiveCare/Mira simulations are generated and retained by `gc-sms` unless an explicit benchmark-owned intake is performed; there is no automatic product-to-benchmark seam, and product runs are not part of the public comparative leaderboard.
 - Private confidential scenarios are loaded externally and are not stored in this repo.
 - Every scenario file embeds a contamination canary GUID (`benchmark/scenarios/CANARY.txt`). Trainers should filter on it; a model that can reproduce the GUID has trained on benchmark data.
-- The public leaderboard artifact is `data/leaderboard/leaderboard.json`, projected into `gc-web/apps/web-bench/public/bench/leaderboard.json` with `delivery/sync_web_bench.py`. New publication refreshes must use the strict QA gate (`scripts/qa_leaderboard.py --strict`; one fail-closed path: `scripts/publish.sh <scan>/per_run.jsonl <web-target>`).
+- The explicit scan and strict-QA lane owns `data/leaderboard/leaderboard.json`. Hound deterministically projects it into `data/leaderboard/leaderboard_web.json` from the exact canonical bytes and QA stamp. Consumers pull the verified owner projection. This repo never writes into a consumer repo.
 - `bench health` reports the absence or drift of generated local projections;
   it does not publish, sync, or write.
 - A result artifact may be checked in only after transcript generation,
@@ -175,15 +175,14 @@ uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm
 uv run python scripts/run_scan.py results/run_... --profile publish --enable-llm --max-cost-usd "$SCAN_MAX_COST_USD" --llm-model openai/gpt-5-mini --resume <incomplete-scan-dir>
 uv run python delivery/combine_scans.py --input <scan-a>/per_run.jsonl --input <scan-b>/per_run.jsonl --output <release>/per_run.jsonl
 uv run python scripts/generate_leaderboard.py --input <scan>/per_run.jsonl --output data/leaderboard
-uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict
-uv run python delivery/sync_web_bench.py --source data/leaderboard/leaderboard.json --target /path/to/givecare/gc-web/apps/web-bench/public/bench/leaderboard.json
-uv run python delivery/build_public_transcript_release.py --source model/id=results/run_... --output /path/to/gc-web/apps/web-bench/public/bench/evidence/v4.0.0
-uv run python delivery/build_public_score_release.py --input <release>/per_run.jsonl --output /path/to/gc-web/apps/web-bench/public/bench/scores/v4.0.0
-
-# Or run generate -> strict QA -> sync as one fail-closed command.
-# Aborts before writing the web target if the QA gate fails:
-./scripts/publish.sh <scan>/per_run.jsonl /path/to/gc-web/apps/web-bench/public/bench/leaderboard.json
+uv run python scripts/qa_leaderboard.py --scan <scan>/per_run.jsonl --leaderboard data/leaderboard/leaderboard.json --manual-adjudications <scan>/manual_adjudications.json --strict --stamp
+hound driver check --driver hound-driver.json
+hound plan --driver hound-driver.json --operation corpus.project --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD --output /tmp/gc-bench-leaderboard-plan.json
+uv run python delivery/build_public_transcript_release.py --source model/id=results/run_... --output data/releases/evidence/v4.0.0
+uv run python delivery/build_public_score_release.py --input <release>/per_run.jsonl --output data/releases/scores/v4.0.0
 ```
+
+See `docs/hound-lane.md` for the exact approval, execution, and verification steps.
 
 Live scans durably checkpoint each completed model/scenario row. A runtime
 ceiling or process failure leaves `scan_state.json` plus

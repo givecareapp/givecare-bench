@@ -109,6 +109,6 @@ raw/internal diagnostic fields, not the public Safety/Care score model.
 
 ## Contributing results or scenarios
 
-Open an issue or PR — scenario candidates go through staged probing and
-human review before promotion (no fast path, including for us). See
+Open an issue or PR. Scenario candidates become canonical only through an
+exact human-approved Hound plan and a reviewed Git diff. See
 `CONTRIBUTING.md` in the repository root.

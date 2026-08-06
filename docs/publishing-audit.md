@@ -28,10 +28,11 @@ The code documentation phase makes the procedure inspectable:
 - each check file embeds its judge prompt as a `prompt:` block.
 - `src/invisiblebench/evaluation/mode_engine.py` aggregates per-check verdicts
   into Safety gate results, per-line violation rates, Care distributions, and blind-spot flags.
-- `scripts/run_scan.py`, `delivery/combine_scans.py`,
-  `scripts/generate_leaderboard.py`, `scripts/qa_leaderboard.py`, and
-  `delivery/sync_web_bench.py` form the fail-closed path from complete,
-  common-profile scans to the public scorecard. `delivery/combine_scans.py`
+- `scripts/run_scan.py` and `delivery/combine_scans.py` produce complete scans.
+  The explicit human/cost/strict-QA lane produces the canonical leaderboard
+  and QA stamp. Hound `corpus.project` reads those exact owner bytes and uses
+  `delivery/sync_web_bench.py` to form the consumer projection.
+  `delivery/combine_scans.py`
   requires exact scenario-set parity, one publish profile, one judge, complete
   cost accounting, and no duplicate model/scenario rows. It accepts only scan
   plan v2 artifacts with complete source-run and transcript hashes, identical
@@ -87,11 +88,11 @@ lineage from old artifacts.
 
 The web-bench payload is a lean projection of that artifact:
 
-- Target: `../gc-web/apps/web-bench/public/bench/leaderboard.json`
+- Owner projection: `data/leaderboard/leaderboard_web.json`
 - Payload shape (`safety-care/v1`): `schema`, `notes`, `scan_metadata`, and
   `models` — each model carrying `safety` (per-line violation rates + aggregate)
   and `care` (per-quality distributions). `delivery/sync_web_bench.py` validates
-  the source and rejects non-public top-level keys before writing.
+  the source and rejects non-public top-level keys. Hound writes the projection.
 - Local projection drift is read-only health state: after generation,
   `bench health` reports whether `leaderboard_web.json` lags
   `leaderboard.json`; it does not sync or write the projection.

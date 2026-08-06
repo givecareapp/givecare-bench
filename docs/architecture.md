@@ -20,7 +20,7 @@ givecare-bench/
 ├── src/invisiblebench/  # Runtime package (CLI, scanners, loaders, model API, stats)
 ├── scripts/             # Active utilities (benchmark maintenance + verifier tooling)
 ├── delivery/            # Scan merge, evidence release, and web projections
-└── data/leaderboard/    # Created by the fail-closed publication path
+└── data/leaderboard/    # canonical leaderboard and Hound consumer projection
 ```
 
 | Directory | Contents | Changes often? |
@@ -30,7 +30,7 @@ givecare-bench/
 | `src/invisiblebench/` | CLI entry point, verifier implementations, YAML/JSON loaders, model API, statistical analysis | Yes — runtime logic |
 | `scripts/` | Active utilities such as `generate_leaderboard.py`, `lint_turn_indices.py`, `generate_verifier_corpus.py`, and golden-set tooling | Occasionally |
 | `delivery/` | Deterministic scan assembly, public evidence builders, and consumer projections | With publication contract changes |
-| `data/leaderboard/` | Current-version leaderboard JSON projected into public web assets by `delivery/sync_web_bench.py` | Generated — never hand-edited |
+| `data/leaderboard/` | Strict-QA canonical leaderboard and Hound consumer projection | Generated — never hand-edited |
 
 ## Scoring pipeline
 

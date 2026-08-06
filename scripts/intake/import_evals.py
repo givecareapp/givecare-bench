@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
-"""Import givecare-evals JSONL records into gc-bench scenario staging.
+"""Build a bounded Hound candidate-intake request from gc-evals records.
 
-Reads givecare-evals data/*.jsonl files, converts each eval case to a
-gc-bench candidate scenario JSON, deduplicates against existing scenarios
-in benchmark/scenarios/, and writes new candidates to benchmark/staging/.
-
-Usage:
-    uv run python scripts/intake/import_evals.py
-    uv run python scripts/intake/import_evals.py --evals-dir ../givecare-evals/data
-    uv run python scripts/intake/import_evals.py --dry-run
+This compiler never writes benchmark truth. Hound owns the human-gated final
+write into ``benchmark/scenarios``.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_EVALS_DIR = REPO_ROOT.parent / "givecare-evals" / "data"
-SCENARIOS_DIR = REPO_ROOT / "benchmark" / "scenarios"
-STAGING_DIR = REPO_ROOT / "intake" / "staging"
+GIVECARE_ROOT = REPO_ROOT.parent
+GIVECARE_PROTOCOL = GIVECARE_ROOT / "scripts" / "givecare_protocol.py"
 
 # Eval categories → gc-bench ScenarioCategory
 CATEGORY_MAP: dict[str, str] = {
@@ -265,7 +260,7 @@ def eval_to_scenario(rec: dict[str, Any]) -> dict[str, Any]:
             ],
             "source_eval_id": rec_id,
             "source_split": rec.get("split", ""),
-            "notes": "Candidate scenario from givecare-evals. Needs persona enrichment, multi-turn expansion, and expert review before promotion.",
+            "notes": "Promoted from the exact gc-evals owner projection by a human-approved Hound plan.",
         },
     }
 
@@ -370,179 +365,148 @@ def find_near_duplicates(
     return near
 
 
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def load_verified_projection(
+    *,
+    source_plan_id: str,
+) -> tuple[dict[str, Any], bytes, list[dict[str, Any]]]:
+    """Use the shared verifier, then load only its exact owner projection."""
+    if re.fullmatch(r"[0-9a-f]{64}", source_plan_id) is None:
+        raise ValueError("--source-plan-id must be a lowercase SHA-256 Hound plan id")
+    owner_root = (GIVECARE_ROOT / "gc-evals").resolve()
+    project_run = owner_root / ".hound" / "runs" / source_plan_id
+    verification = subprocess.run(
+        [
+            sys.executable,
+            str(GIVECARE_PROTOCOL),
+            "--root",
+            str(GIVECARE_ROOT),
+            "projection-ref",
+            "--run-dir",
+            str(project_run),
+            "--owner-repo",
+            "gc-evals",
+            "--driver-id",
+            "gc-evals",
+            "--artifact-owner",
+            "evals.dataset",
+            "--artifact-id",
+            "data/all.jsonl",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if verification.returncode != 0:
+        detail = verification.stderr.strip() or verification.stdout.strip()
+        raise ValueError(f"gc-evals Hound projection verification failed: {detail}")
+
+    try:
+        source = json.loads(verification.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError("shared projection verifier emitted invalid JSON") from error
+    expected_fields = {
+        "schema_version",
+        "owner",
+        "kind",
+        "artifact_id",
+        "revision",
+        "sha256",
+        "access",
+    }
+    if not isinstance(source, dict) or set(source) != expected_fields:
+        raise ValueError("shared verifier returned an invalid projection ArtifactRef")
+    digest = source.get("sha256")
+    if source != {
+        "schema_version": "givecare.artifact-ref/v1",
+        "owner": "evals.dataset",
+        "kind": "owner-projection",
+        "artifact_id": "data/all.jsonl",
+        "revision": f"sha256:{digest}",
+        "sha256": digest,
+        "access": "public",
+    }:
+        raise ValueError("verified projection ArtifactRef does not match the gc-evals contract")
+
+    projection = (owner_root / source["artifact_id"]).resolve()
+    try:
+        projection.relative_to(owner_root)
+        projection_bytes = projection.read_bytes()
+    except (OSError, ValueError) as error:
+        raise ValueError("gc-evals projection is unreadable") from error
+    if _sha256(projection_bytes) != digest:
+        raise ValueError("gc-evals projection bytes do not match the Hound ArtifactRef")
+
+    records: list[dict[str, Any]] = []
+    for line_number, line in enumerate(projection_bytes.splitlines(), start=1):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"gc-evals projection line {line_number} is invalid JSON") from error
+        if not isinstance(record, dict):
+            raise ValueError(f"gc-evals projection line {line_number} is not an object")
+        records.append(record)
+    if not records:
+        raise ValueError("gc-evals projection is empty")
+
+    return source, projection_bytes, records
+
+
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Import givecare-evals into gc-bench staging.",
+        description="Compile a verified gc-evals Hound projection for gc-bench intake.",
     )
     parser.add_argument(
-        "--evals-dir",
+        "--source-plan-id",
+        required=True,
+        help="Exact verified gc-evals corpus.project Hound plan id",
+    )
+    parser.add_argument(
+        "--output",
         type=Path,
-        default=DEFAULT_EVALS_DIR,
-        help="Path to givecare-evals/data/ directory",
+        required=True,
+        help="Write the exact Hound input JSON to this path",
     )
     parser.add_argument(
-        "--staging-dir",
-        type=Path,
-        default=STAGING_DIR,
-        help="Output directory for candidate scenarios",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print summary without writing files",
-    )
-    parser.add_argument(
-        "--splits",
-        nargs="*",
-        default=["core-behaviors", "red-team", "reddit-caregivers", "multi-turn"],
-        help="Which JSONL splits to import (default: all four)",
-    )
-    parser.add_argument(
-        "--similarity-threshold",
-        type=float,
-        default=0.6,
-        help="Jaccard threshold for near-duplicate warnings (default: 0.6)",
+        "--selected-id",
+        required=True,
+        help="One exact eval record id selected for the human-gated plan",
     )
     args = parser.parse_args()
 
-    evals_dir: Path = args.evals_dir
-    staging_dir: Path = args.staging_dir
-
-    if not evals_dir.is_dir():
-        print(f"ERROR: evals directory not found: {evals_dir}", file=sys.stderr)
+    try:
+        _source, _projection_bytes, all_records = load_verified_projection(
+            source_plan_id=args.source_plan_id,
+        )
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
         sys.exit(1)
 
-    # Load existing scenario fingerprints
-    print(f"Loading existing scenarios from {SCENARIOS_DIR} ...")
-    fingerprints = load_existing_scenario_fingerprints(SCENARIOS_DIR)
-    print(f"  {len(fingerprints['ids'])} scenario IDs, "
-          f"{len(fingerprints['messages'])} unique first-turn messages")
-
-    # Also load already-staged scenarios to avoid re-staging
-    if staging_dir.is_dir():
-        staged_fp = load_existing_scenario_fingerprints(staging_dir)
-        for key in fingerprints:
-            fingerprints[key] |= staged_fp[key]
-        print(f"  + {len(staged_fp['ids'])} already-staged scenarios")
-
-    # Read all eval records
-    all_records: list[dict[str, Any]] = []
-    for split_name in args.splits:
-        jsonl_path = evals_dir / f"{split_name}.jsonl"
-        if not jsonl_path.exists():
-            print(f"  WARN: {jsonl_path} not found, skipping", file=sys.stderr)
-            continue
-        with open(jsonl_path) as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    all_records.append(rec)
-                except json.JSONDecodeError as e:
-                    print(f"  WARN: {jsonl_path}:{line_num} bad JSON: {e}",
-                          file=sys.stderr)
-
-    print(f"\nLoaded {len(all_records)} eval records from {len(args.splits)} splits")
-
-    # Convert and deduplicate
-    imported = 0
-    duplicates = 0
-    near_dupes = 0
-    skipped_no_input = 0
-    by_category: dict[str, int] = {}
-    by_split: dict[str, int] = {}
-
-    if not args.dry_run:
-        staging_dir.mkdir(parents=True, exist_ok=True)
-
-    for rec in all_records:
-        if not rec.get("input"):
-            skipped_no_input += 1
-            continue
-
-        scenario = eval_to_scenario(rec)
-        bench_cat, bench_sub = resolve_bench_category(rec)
-
-        # Check exact duplicate
-        dup_reason = is_duplicate(scenario, fingerprints)
-        if dup_reason:
-            duplicates += 1
-            continue
-
-        # Check near-duplicates (warn but still import)
-        near = find_near_duplicates(scenario, fingerprints, args.similarity_threshold)
-        if near:
-            near_dupes += 1
-            scenario["metadata"]["near_duplicates"] = near
-
-        # Determine output path
-        subdir_parts = [bench_cat]
-        if bench_sub:
-            subdir_parts.append(bench_sub)
-        out_dir = staging_dir / "/".join(subdir_parts)
-
-        filename = f"{slugify(rec['id'])}.json"
-
-        if not args.dry_run:
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out_path = out_dir / filename
-            with open(out_path, "w") as f:
-                json.dump(scenario, f, indent=2, ensure_ascii=False)
-                f.write("\n")
-
-        # Track for fingerprint set (prevent self-duplicates within batch)
-        fingerprints["ids"].add(scenario["scenario_id"])
-        turns = scenario.get("turns", [])
-        if turns:
-            msg = turns[0].get("user_message", "").lower().strip()
-            if msg:
-                fingerprints["messages"].add(msg)
-
-        imported += 1
-        by_category[bench_cat] = by_category.get(bench_cat, 0) + 1
-        split = rec.get("split", "unknown")
-        by_split[split] = by_split.get(split, 0) + 1
-
-    # Print summary
-    print("\n" + "=" * 60)
-    print("IMPORT SUMMARY")
-    print("=" * 60)
-    print(f"  Total eval records read:  {len(all_records)}")
-    print(f"  Imported (new candidates): {imported}")
-    print(f"  Exact duplicates skipped:  {duplicates}")
-    print(f"  Near-duplicates flagged:   {near_dupes}")
-    if skipped_no_input:
-        print(f"  Skipped (no input):        {skipped_no_input}")
-    print()
-    print("  By gc-bench category:")
-    for cat in sorted(by_category):
-        print(f"    {cat}: {by_category[cat]}")
-    print()
-    print("  By source split:")
-    for split in sorted(by_split):
-        print(f"    {split}: {by_split[split]}")
-    print()
-
-    if args.dry_run:
-        print("  (dry-run — no files written)")
-    else:
-        print(f"  Staged to: {staging_dir}")
-        # Count files written
-        staged_count = sum(1 for _ in staging_dir.rglob("*.json"))
-        print(f"  Total files in staging: {staged_count}")
-
-    print()
-    print("Next steps:")
-    print("  1. Review candidates in benchmark/staging/")
-    print("  2. Enrich persona fields (name, age, care details)")
-    print("  3. Expand single-turn cases to multi-turn scenarios")
-    print("  4. Add rubric/autofail_rubric for verifier scoring")
-    print("  5. Run: uv run pytest benchmark/tests -q")
-    print("  6. Move reviewed scenarios to benchmark/scenarios/")
+    selected = next(
+        (record for record in all_records if record.get("id") == args.selected_id),
+        None,
+    )
+    if not isinstance(selected, dict) or not selected.get("input"):
+        print("ERROR: selected eval record is absent or incomplete", file=sys.stderr)
+        sys.exit(1)
+    request = {
+        "schema_version": "gc-bench.candidate-intake.input/v1",
+        "source_plan_id": args.source_plan_id,
+        "selected_ids": [args.selected_id],
+    }
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(request, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"Wrote one Hound candidate request for {args.selected_id} to {args.output}"
+    )
 
 
 if __name__ == "__main__":

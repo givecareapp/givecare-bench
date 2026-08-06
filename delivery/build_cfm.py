@@ -21,11 +21,10 @@ CLI
 ---
     python -m delivery.build_cfm --scan <path> --out <path>
 
-    Gated on a fresh strict-QA stamp (VISION.md: no side doors) — the scan
-    must have gone through the fail-closed publish chain
-    (``invisiblebench.publish`` / ``scripts/publish.sh``) first, which writes
-    ``data/leaderboard/.qa-stamp`` recording the scan's content hash right
-    after strict QA passes. ``--unsafe-debug-bypass`` skips the gate for
+    Gated on a fresh strict-QA stamp (VISION.md: no side doors). The explicit
+    leaderboard generation and strict-QA lane writes
+    ``data/leaderboard/.qa-stamp`` for the exact scan. Hound reads that stamp;
+    it does not create it. ``--unsafe-debug-bypass`` skips the gate for
     deliberate debugging only.
 """
 
@@ -496,7 +495,7 @@ def build_cfm_section(
 # checks a leaderboard.json's bytes against a stamped hash; this one checks a
 # scan's bytes, because build_cfm reads per_run.jsonl directly rather than the
 # leaderboard artifact. Both gates read the SAME stamp file
-# (data/leaderboard/.qa-stamp) — invisiblebench.publish writes it once, right
+# (data/leaderboard/.qa-stamp) — the explicit strict-QA lane writes it once,
 # after strict QA passes, with both the leaderboard hash (for sync_web_bench)
 # and the scan path + hash (for build_cfm) recorded together.
 # ---------------------------------------------------------------------------
@@ -505,9 +504,9 @@ class QAStampError(RuntimeError):
     """The CFM inputs have no fresh strict-QA stamp — refuse to emit a public
     artifact-v2 payload.
 
-    VISION.md: no side doors. invisiblebench.publish (the fail-closed generate
-    -> strict QA -> sync chain) writes data/leaderboard/.qa-stamp immediately
-    after strict QA passes, recording both the QA'd leaderboard's bytes and
+    VISION.md: no side doors. The explicit generation and strict-QA lane writes
+    data/leaderboard/.qa-stamp immediately after strict QA passes. It records
+    both the QA'd leaderboard's bytes and
     the exact scan (path + content hash) that produced it. Calling
     `python -m delivery.build_cfm --scan ... --out ...` directly on a scan
     that was never through that chain — or a stamp that now points at a
@@ -523,9 +522,9 @@ def _sha256_bytes(data: bytes) -> str:
 def _verify_qa_stamp(scan_path: Path, stamp_path: Path) -> None:
     if not stamp_path.exists():
         raise QAStampError(
-            f"No QA stamp at {stamp_path}. Run the fail-closed publish chain "
-            "(scripts/publish.sh or `python -m invisiblebench.publish`) against "
-            "this scan first, or pass --unsafe-debug-bypass for a deliberate "
+            f"No QA stamp at {stamp_path}. Run the explicit leaderboard "
+            "generation and strict-QA lane against this scan first, or pass "
+            "--unsafe-debug-bypass for a deliberate "
             "debug write."
         )
 
@@ -538,7 +537,7 @@ def _verify_qa_stamp(scan_path: Path, stamp_path: Path) -> None:
     if not stamped_scan_hash:
         raise QAStampError(
             f"QA stamp at {stamp_path} has no scan_sha256 — it predates the "
-            "scan-identity gate (or was written by an old invisiblebench.publish). "
+            "scan-identity gate. "
             "Re-run the fail-closed publish chain to regenerate a compatible "
             "stamp, or pass --unsafe-debug-bypass for a deliberate debug write."
         )
@@ -589,7 +588,7 @@ def build_and_write_cfm(
     scan (VISION.md: no side doors) — the pure ``build_cfm_section()``
     computation above stays ungated (used directly by tests and any future
     read-only/--check tooling); only this write-to-disk path is gated, same
-    split as sync_web_bench.py's project_leaderboard() vs sync_leaderboard().
+    split as sync_web_bench.py's pure project_leaderboard() and the Hound write.
     """
     scan_path = Path(scan_path)
     out_path = Path(out_path)
@@ -622,7 +621,7 @@ def _cli() -> None:
         "--qa-stamp",
         default=str(DEFAULT_QA_STAMP),
         help=(
-            "Path to the strict-QA stamp written by invisiblebench.publish "
+            "Path to the strict-QA stamp written by the explicit publication lane "
             f"(default: {DEFAULT_QA_STAMP})"
         ),
     )

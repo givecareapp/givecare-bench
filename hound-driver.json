@@ -1,0 +1,29 @@
+{
+  "schema_version": "hound.driver.v1",
+  "id": "gc-bench",
+  "protocol": "hound.protocol.v1",
+  "owner": { "repo": "." },
+  "exec": ["python3", "scripts/hound_driver.py"],
+  "run_root": ".hound/runs",
+  "write_scopes": ["benchmark/scenarios", "data/leaderboard"],
+  "ignored_snapshot_excludes": [
+    ".hound",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".claude",
+    ".codex",
+    "internal",
+    "adapters",
+    "runs",
+    "site"
+  ],
+  "timeouts_seconds": {
+    "default": 60
+  },
+  "env_allowlist": [],
+  "capabilities": {
+    "corpus.apply": { "effect": "write", "gate": "human" },
+    "corpus.project": { "effect": "write", "gate": "none" }
+  }
+}

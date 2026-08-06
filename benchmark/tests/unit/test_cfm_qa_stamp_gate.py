@@ -1,6 +1,6 @@
 """QA-stamp gate: build_cfm.py must refuse to emit a public artifact-v2
 payload (comparative_failure_modes + model_profiles) unless the scan it
-reads carries a fresh strict-QA stamp recorded by invisiblebench.publish.
+reads carries a fresh strict-QA stamp recorded by the publication lane.
 
 VISION.md: no side doors. Before this gate, `python -m delivery.build_cfm
 --scan <path> --out <path>` could write anywhere with zero verification that
@@ -47,7 +47,7 @@ def _stamp_path(tmp_path: Path) -> Path:
 
 
 def _write_fresh_stamp(stamp_path: Path, scan_path: Path) -> None:
-    """A stamp shaped like the one invisiblebench.publish writes: leaderboard
+    """A stamp shaped like the one the strict-QA publication lane writes: leaderboard
     hash (irrelevant to build_cfm) plus scan path + content hash (what
     build_cfm actually checks)."""
     stamp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -189,8 +189,7 @@ def test_pure_build_cfm_section_never_gated(tmp_path: Path) -> None:
     """The read-only computation entry point (used directly by
     test_build_cfm.py and any future read-only/--check tooling) must never
     require a stamp — only the write-to-disk path (build_and_write_cfm) is
-    gated, same split as sync_web_bench.py's project_leaderboard() vs
-    sync_leaderboard()."""
+    gated, matching the pure projector versus Hound write split."""
     catalog = _write_catalog(tmp_path)
     scan = _write_scan(tmp_path)
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Leaderboard status view for InvisibleBench.
 
-Public leaderboard writes go through the fail-closed publish path
-(`python -m invisiblebench.publish` / `scripts/publish.sh`), not this module.
+Consumer projection writes go through Hound `corpus.project`, not this module.
+Canonical leaderboard generation and strict QA remain explicit owner steps.
 Only the read-only `status` health view remains.
 """
 from __future__ import annotations

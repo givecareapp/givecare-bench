@@ -186,11 +186,13 @@ Examples:
   uv run bench -m 7 --dry-run               Model 7 = DeepSeek V4 Pro
   uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
 
-  # Judge transcripts (JUDGE scan) and publish
+  # Judge transcripts, build the strict-QA leaderboard, then project it
   uv run python scripts/run_scan.py <run-dir> --profile publish --dry-run --enable-llm
   uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm --max-cost-usd <budget>
-  uv run python -m invisiblebench.publish <scan>/per_run.jsonl <web-target>
-                                      Fail-closed publish path
+  hound plan --driver hound-driver.json --operation corpus.project \
+    --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
+    --output /tmp/gc-bench-leaderboard-plan.json
+                                      Deterministic consumer projection
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
   # Utilities

@@ -65,28 +65,16 @@ REVIEW_SESSION_TITLE = (
 _EXACT_QUOTE_RE = re.compile(r'["“]([^"”]{4,})["”]')
 
 # --------------------------------------------------------------------------- #
-# Wiki-draft review queue — a separate sibling repo (gc-wiki) is the data
-# source. A drafter agent writes one JSON card per proposed ingest branch to
-# WIKI_REPO/.review-queue/<slug>.json; this app is read/decide-only over that
-# queue plus a handful of `git` subprocess calls scoped to WIKI_REPO.
-# --------------------------------------------------------------------------- #
-WIKI_REPO = Path(os.environ.get("WIKI_REPO", "/home/deploy/repos/givecare/gc-wiki"))
-WIKI_QUEUE_DIR = WIKI_REPO / ".review-queue"
-WIKI_QUEUE_DONE_DIR = WIKI_QUEUE_DIR / "done"
-WIKI_DECISIONS_PATH = WIKI_QUEUE_DIR / "decisions.jsonl"
-WIKI_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-
-# --------------------------------------------------------------------------- #
-# Approval-queue extensions — Hound plans + social package. Same posture as
-# the wiki queue: read/decide-only. Every effect is the gate's own native
+# Approval-queue extensions — Hound plans + social package. Hound plans are
+# read/decide-only. Every approval effect is the gate's own native
 # artifact (`hound approve` writes hound.approval.v1; the social hold is the
 # HOLD file social_autopost already honors), so enforcement stays in the
 # gates and deleting these routes returns the system exactly to before.
-# Every decision is appended to the workspace decisions ledger.
+# Notes and social decisions are appended to the workspace decisions ledger.
+# Hound approvals and declines exist only as native Hound artifacts.
 # --------------------------------------------------------------------------- #
 GIVECARE_ROOT = Path(os.environ.get("GIVECARE_ROOT", "/home/deploy/repos/givecare"))
-HOUND_REPOS = ("gc-intel", "gc-wiki", "gc-web", "gc-benefits")
-HOUND_BIN = os.environ.get("HOUND_BIN", str(Path.home() / ".local" / "bin" / "hound"))
+HOUND_BIN = "/home/deploy/.local/share/uv/tools/evidence-hound/bin/hound"
 SOCIAL_ASSETS = Path(
     os.environ.get("SOCIAL_ASSETS", "/home/deploy/agents/helm/log/digests/assets")
 )
@@ -1407,379 +1395,6 @@ def admin_export(token: str) -> Response:
 
 
 # --------------------------------------------------------------------------- #
-# Wiki-draft review routes — admin-only queue over gc-wiki's .review-queue/.
-# --------------------------------------------------------------------------- #
-def load_wiki_cards() -> list[dict[str, Any]]:
-    if not WIKI_QUEUE_DIR.is_dir():
-        return []
-    cards: list[dict[str, Any]] = []
-    for path in sorted(WIKI_QUEUE_DIR.glob("*.json")):
-        try:
-            card = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not isinstance(card, dict):
-            continue
-        card.setdefault("slug", path.stem)
-        cards.append(card)
-    cards.sort(key=lambda c: str(c.get("created", "")), reverse=True)
-    return cards
-
-
-def load_wiki_card(slug: str) -> dict[str, Any] | None:
-    path = WIKI_QUEUE_DIR / f"{slug}.json"
-    if not path.is_file():
-        return None
-    try:
-        card = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(card, dict):
-        return None
-    card.setdefault("slug", slug)
-    return card
-
-
-def _run_git(*args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", "-C", str(WIKI_REPO), *args],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-
-
-def _wiki_error_page(token: str, title: str, message: str, status: int) -> Response:
-    """Friendly 4xx/5xx page for git/queue failures — never a raw traceback."""
-    body = (
-        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), ('Error', None))}"
-        "</div>"
-        "<div class=card style='margin-top:16px;border-color:var(--fail)'>"
-        f"<h3>{escape(title)}</h3>"
-        f"<p style='white-space:pre-wrap'>{escape(message)}</p>"
-        f"<p class=row><a class=btn href='/wiki/{token}'>&larr; Back to queue</a></p>"
-        "</div>"
-    )
-    resp = _page(f"Wiki draft review — {title}", body, console=True)
-    resp.status_code = status
-    return resp
-
-
-def _move_wiki_card_to_done(slug: str) -> None:
-    WIKI_QUEUE_DONE_DIR.mkdir(parents=True, exist_ok=True)
-    (WIKI_QUEUE_DIR / f"{slug}.json").rename(WIKI_QUEUE_DONE_DIR / f"{slug}.json")
-
-
-def _wiki_activity(slug: str) -> list[dict[str, Any]]:
-    """History for one wiki card, normalized to the activity-panel shape."""
-    try:
-        lines = WIKI_DECISIONS_PATH.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
-    out: list[dict[str, Any]] = []
-    for line in lines:
-        try:
-            rec = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(rec, dict) and rec.get("slug") == slug:
-            out.append(
-                {
-                    "by": rec.get("by"),
-                    "verb": rec.get("decision"),
-                    "ts": rec.get("at"),
-                    "note": rec.get("note"),
-                }
-            )
-    return out
-
-
-def _append_wiki_decision(slug: str, decision: str, note: str, by: str) -> None:
-    WIKI_QUEUE_DIR.mkdir(parents=True, exist_ok=True)
-    record = {"slug": slug, "decision": decision, "note": note, "by": by, "at": _now()}
-    with WIKI_DECISIONS_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-
-@app.get("/wiki/<token>")
-def wiki_queue(token: str) -> Response:
-    require_admin(token)
-    cards = load_wiki_cards()
-
-    banner = ""
-    msg = request.args.get("msg", "")
-    if ":" in msg:
-        kind, _, slug = msg.partition(":")
-        label = {
-            "approve": "Approved and merged",
-            "drop": "Dropped",
-            "archive": "Archived stale card",
-        }.get(kind)
-        if label:
-            banner = (
-                "<div class=card style='margin-bottom:16px'>"
-                f"<p class=saved>{escape(label)}: {escape(slug)}</p></div>"
-            )
-
-    header = (
-        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', None))}"
-        f"<div class=count>{len(cards)} open</div></div>"
-    )
-
-    if not cards:
-        body = header + banner + (
-            "<div class=card style='margin-top:16px'><h3>No drafts waiting</h3>"
-            "<p>The queue is empty &mdash; nothing needs review right now.</p></div>"
-        )
-        return _page("Wiki draft review", body, console=True)
-
-    rows = "".join(
-        "<tr>"
-        f"<td><a href='/wiki/{escape(token)}/draft/{escape(str(c['slug']))}'>"
-        f"{escape(str(c.get('title') or c['slug']))}</a></td>"
-        f"<td>{escape(str(c.get('created', '')))}</td>"
-        f"<td>{escape(str(c.get('risk', '')))}</td>"
-        f"<td>{escape(str(c.get('provenance', '')))}</td>"
-        "</tr>"
-        for c in cards
-    )
-    body = header + banner + (
-        "<table><thead><tr><th>title</th><th>created</th><th>risk</th>"
-        "<th>provenance</th></tr></thead><tbody>"
-        f"{rows}</tbody></table>"
-    )
-    return _page("Wiki draft review", body, console=True)
-
-
-@app.get("/wiki/<token>/draft/<slug>")
-def wiki_draft(token: str, slug: str) -> Response:
-    require_admin(token)
-    if not WIKI_SLUG_RE.match(slug):
-        abort(404)
-    card = load_wiki_card(slug)
-    if card is None:
-        abort(404)
-
-    branch = card.get("branch", "")
-    branch_exists = False
-    if isinstance(branch, str) and branch.startswith("ingest/"):
-        try:
-            branch_exists = (
-                _run_git(
-                    "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"
-                ).returncode
-                == 0
-            )
-        except subprocess.TimeoutExpired:
-            pass
-
-    # Stale card: the branch is gone, so approve/drop have nothing to act on.
-    # Show what the repo says happened and offer archival, not a dead end.
-    if isinstance(branch, str) and branch.startswith("ingest/") and not branch_exists:
-        files = [str(p) for p in (card.get("files") or [])]
-        in_main = [p for p in files if (WIKI_REPO / p).is_file()]
-        if files and len(in_main) == len(files):
-            verdict = (
-                "All listed files exist in <code>main</code> &mdash; this "
-                "draft appears to have been <b>merged outside this queue</b> "
-                "and its branch pruned."
-            )
-        else:
-            verdict = (
-                "The branch was deleted and "
-                f"{len(files) - len(in_main)} of {len(files)} listed files are "
-                "not in <code>main</code> &mdash; this draft appears to have "
-                "been <b>abandoned</b>."
-            )
-        body = (
-            f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), (slug, None))}"
-            "</div>"
-            f"<h1 class=title style='font-size:1.7rem'>{escape(str(card.get('title') or slug))}</h1>"
-            "<div class=card><h3>Stale card</h3>"
-            f"<p>Branch <code>{escape(str(branch))}</code> no longer exists. {verdict}</p>"
-            f"<form method=post action='/wiki/{escape(token)}/draft/{escape(slug)}/decide'>"
-            "<input type=hidden name=decision value=archive>"
-            "<label>Note (optional)</label>"
-            "<textarea name=note placeholder='For the record'></textarea>"
-            "<div class=row><button class='btn primary' type=submit>Archive card</button></div>"
-            "</form></div>"
-            f"<p class=row><a class=btn href='/wiki/{escape(token)}'>&larr; Back to queue</a></p>"
-        )
-        return _page(f"Draft — {card.get('title') or slug}", body, console=True)
-
-    if branch_exists:
-        try:
-            proc = _run_git("diff", f"main...{branch}")
-        except subprocess.TimeoutExpired:
-            diff_html = "<p class=warn>Diff timed out.</p>"
-        else:
-            diff_html = (
-                f"<pre style='white-space:pre-wrap;overflow-x:auto;font-family:var(--mono);"
-                f"font-size:12.5px'>{escape(proc.stdout)}</pre>"
-                if proc.returncode == 0
-                else f"<p class=warn>Could not compute diff: {escape(proc.stderr or 'unknown git error')}</p>"
-            )
-    else:
-        diff_html = "<p class=warn>Card has no valid ingest/ branch — cannot diff.</p>"
-
-    sources = [s for s in (card.get("sources") or []) if isinstance(s, dict)]
-    sources_html = "".join(
-        f"<li><a href='{escape(str(s.get('url', '')))}'>"
-        f"{escape(str(s.get('id') or s.get('url', '')))}</a></li>"
-        for s in sources
-    ) or "<li class=count>None listed.</li>"
-
-    files_html = "".join(
-        f"<li>{escape(str(p))}</li>" for p in (card.get("files") or [])
-    ) or "<li class=count>None listed.</li>"
-
-    questions_html = "".join(
-        f"<div class='rule unclear'>{escape(str(q))}</div>"
-        for q in (card.get("questions") or [])
-    ) or "<p class=count>No open questions recorded.</p>"
-
-    post_merge_html = "".join(
-        f"<li>{escape(str(p))}</li>" for p in (card.get("post_merge") or [])
-    ) or "<li class=count>None.</li>"
-
-    header = (
-        f"<div class=topbar>{_crumbs(token, ('Wiki drafts', f'/wiki/{token}'), (slug, None))}"
-        "</div>"
-    )
-
-    body = header + (
-        f"<h1 class=title style='font-size:1.7rem'>{escape(str(card.get('title') or slug))}</h1>"
-        f"<p class=count>branch <code>{escape(str(branch))}</code> &middot; created "
-        f"{escape(str(card.get('created', '')))} &middot; risk "
-        f"{escape(str(card.get('risk', '')))}</p>"
-        "<div class=card><h3>Why</h3>"
-        f"<p>{escape(str(card.get('why', '')))}</p></div>"
-        "<div class=card><h3>Provenance</h3>"
-        f"<p>{escape(str(card.get('provenance', '')))}</p></div>"
-        f"<div class=card><h3>Judgment questions</h3>{questions_html}</div>"
-        f"<div class=card><h3>Sources</h3><ul>{sources_html}</ul></div>"
-        f"<div class=card><h3>Files changed</h3><ul>{files_html}</ul></div>"
-        "<div class=card><h3>Runtime exposure</h3>"
-        f"<p>{escape(str(card.get('runtime_exposure', '')))}</p></div>"
-        f"<div class=card><h3>Post-merge notes</h3><ul>{post_merge_html}</ul></div>"
-        f"{_activity_panel(_wiki_activity(slug), f'/wiki/{escape(token)}/draft/{escape(slug)}/decide')}"
-        "<div class=card><h3>Decision</h3>"
-        f"<form method=post action='/wiki/{escape(token)}/draft/{escape(slug)}/decide' style='margin-bottom:14px'>"
-        "<input type=hidden name=decision value=approve>"
-        "<label>Note (optional)</label>"
-        "<textarea name=note placeholder='Note for the record'></textarea>"
-        "<div class=row><button class='btn primary' type=submit>Approve &amp; merge</button></div>"
-        "</form>"
-        f"<form method=post action='/wiki/{escape(token)}/draft/{escape(slug)}/decide'>"
-        "<input type=hidden name=decision value=drop>"
-        "<label>Note (optional)</label>"
-        "<textarea name=note placeholder='Feedback for the drafter'></textarea>"
-        "<div class=row><button class=btn type=submit>Drop</button></div>"
-        "</form></div>"
-        f"<div class=card><h3>Diff (main...{escape(str(branch))})</h3>{diff_html}</div>"
-        f"<p class=row><a class=btn href='/wiki/{escape(token)}'>&larr; Back to queue</a></p>"
-    )
-    return _page(f"Draft — {card.get('title') or slug}", body, console=True)
-
-
-@app.post("/wiki/<token>/draft/<slug>/decide")
-def wiki_decide(token: str, slug: str) -> Response:
-    require_admin(token)
-    entry = resolve_token(token)
-    if not WIKI_SLUG_RE.match(slug):
-        abort(404)
-    card = load_wiki_card(slug)
-    if card is None:
-        abort(404)
-
-    branch = card.get("branch", "")
-    if not isinstance(branch, str) or not branch.startswith("ingest/"):
-        return _wiki_error_page(
-            token, "Invalid card", "Card has no valid ingest/ branch.", 409
-        )
-
-    decision = (request.form.get("decision") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    if decision not in ("approve", "drop", "archive", "note"):
-        abort(400)
-    if len(note) > 4000:
-        abort(400)
-
-    if decision == "note":
-        if not note:
-            abort(400)
-        _append_wiki_decision(slug, "note", note, entry["id"])
-        return redirect(f"/wiki/{token}/draft/{slug}?msg=note:{slug}")
-
-    try:
-        branch_ref = _run_git("show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
-    except subprocess.TimeoutExpired:
-        return _wiki_error_page(token, "Git timed out", "git show-ref timed out.", 500)
-
-    # Archive is bookkeeping for a stale card — legal only when the branch is
-    # really gone, so it can never be used to skip the merge/drop path.
-    if decision == "archive":
-        if branch_ref.returncode == 0:
-            return _wiki_error_page(
-                token, "Branch still exists",
-                f"Branch {branch} exists — approve or drop it instead.", 409,
-            )
-        _move_wiki_card_to_done(slug)
-        _append_wiki_decision(slug, "archive", note, entry["id"])
-        return redirect(f"/wiki/{token}?msg=archive:{slug}")
-
-    if branch_ref.returncode != 0:
-        return _wiki_error_page(
-            token, "Branch missing", f"Branch {branch} does not exist in gc-wiki.", 409
-        )
-
-    try:
-        if decision == "approve":
-            status = _run_git("status", "--porcelain")
-            head = _run_git("rev-parse", "--abbrev-ref", "HEAD")
-            if status.returncode != 0 or head.returncode != 0:
-                return _wiki_error_page(
-                    token,
-                    "Git error",
-                    (status.stderr or "") + (head.stderr or "") or "git status/rev-parse failed.",
-                    500,
-                )
-            if status.stdout.strip() or head.stdout.strip() != "main":
-                return _wiki_error_page(
-                    token,
-                    "gc-wiki working tree busy",
-                    "gc-wiki working tree busy — finish or stash local work first.",
-                    409,
-                )
-            merge = _run_git(
-                "merge", "--no-ff", branch, "-m", f"wiki-draft: {slug} (approved via review UI)"
-            )
-            if merge.returncode != 0:
-                _run_git("merge", "--abort")
-                return _wiki_error_page(
-                    token, "Merge failed", merge.stderr or merge.stdout or "unknown git error", 409
-                )
-            _run_git("branch", "-D", branch)
-            _move_wiki_card_to_done(slug)
-            _append_wiki_decision(slug, "approve", note, entry["id"])
-        else:
-            delb = _run_git("branch", "-D", branch)
-            if delb.returncode != 0:
-                return _wiki_error_page(
-                    token,
-                    "Branch delete failed",
-                    delb.stderr or delb.stdout or "unknown git error",
-                    409,
-                )
-            _move_wiki_card_to_done(slug)
-            _append_wiki_decision(slug, "drop", note, entry["id"])
-    except subprocess.TimeoutExpired:
-        return _wiki_error_page(token, "Git timed out", "A git operation timed out after 30s.", 500)
-
-    return redirect(f"/wiki/{token}?msg={decision}:{slug}")
-
-
-# --------------------------------------------------------------------------- #
 # Decisions ledger — one append per decision taken through this surface.
 # Shares the workspace state-file contract ({ts, key, status} minimum).
 # --------------------------------------------------------------------------- #
@@ -1852,6 +1467,47 @@ def _activity_panel(records: list[dict[str, Any]], action: str) -> str:
 # still re-verifies plan/scope hashes at execute time, so this surface can
 # never widen a gate. Decline archives the plan file to plans/declined/.
 # --------------------------------------------------------------------------- #
+class HoundDiscoveryError(RuntimeError):
+    pass
+
+
+def _discover_hound_repos() -> tuple[str, ...]:
+    protocol = GIVECARE_ROOT / "scripts" / "givecare_protocol.py"
+    if not protocol.is_file():
+        raise HoundDiscoveryError("The shared GiveCare protocol tool is unavailable.")
+    try:
+        result = subprocess.run(
+            ["python3", str(protocol), "--root", str(GIVECARE_ROOT), "capabilities"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise HoundDiscoveryError(f"Hound capability discovery failed: {error}") from error
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "unknown protocol error"
+        raise HoundDiscoveryError(f"Hound capability discovery failed: {detail}")
+    try:
+        capabilities = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise HoundDiscoveryError("Hound capability discovery returned invalid JSON.") from error
+    if not isinstance(capabilities, list):
+        raise HoundDiscoveryError("Hound capability discovery returned an invalid registry.")
+
+    repos: set[str] = set()
+    for capability in capabilities:
+        if not isinstance(capability, dict):
+            raise HoundDiscoveryError("Hound capability discovery returned an invalid entry.")
+        repository = capability.get("repository")
+        adapter = capability.get("adapter")
+        gate = capability.get("gate")
+        if not isinstance(repository, str) or not repository or not isinstance(adapter, dict) or not isinstance(gate, str):
+            raise HoundDiscoveryError("Hound capability discovery returned an incomplete entry.")
+        if adapter.get("kind") == "hound-operation" and gate == "human":
+            repos.add(repository)
+    return tuple(sorted(repos))
+
+
 def _hound_dirs(repo: str) -> tuple[Path, Path]:
     root = GIVECARE_ROOT / repo / ".hound"
     return root / "plans", root / "approvals"
@@ -1873,7 +1529,7 @@ def _approved_plan_ids(approvals_dir: Path) -> set[str]:
 
 def load_pending_plans() -> list[dict[str, Any]]:
     pending: list[dict[str, Any]] = []
-    for repo in HOUND_REPOS:
+    for repo in _discover_hound_repos():
         plans_dir, approvals_dir = _hound_dirs(repo)
         if not plans_dir.is_dir():
             continue
@@ -1917,7 +1573,7 @@ def load_plan(repo: str, stem: str) -> tuple[dict[str, Any] | None, Path]:
 
 
 def _check_plan_ref(repo: str, stem: str) -> None:
-    if repo not in HOUND_REPOS or not PLAN_STEM_RE.match(stem):
+    if repo not in _discover_hound_repos() or not PLAN_STEM_RE.match(stem):
         abort(404)
 
 
@@ -2079,18 +1735,13 @@ def _queue_error_page(
     return resp
 
 
-@app.get("/hound/<token>")
-def hound_queue(token: str) -> Response:
-    """Folded into the /q feed; old links keep working."""
-    require_admin(token)
-    msg = request.args.get("msg", "")
-    return redirect(f"/q/{token}" + (f"?msg={msg}" if msg else ""))
-
-
-@app.get("/hound/<token>/plan/<repo>/<stem>")
+@app.get("/q/<token>/plan/<repo>/<stem>")
 def hound_plan_view(token: str, repo: str, stem: str) -> Response:
     require_admin(token)
-    _check_plan_ref(repo, stem)
+    try:
+        _check_plan_ref(repo, stem)
+    except HoundDiscoveryError as error:
+        return _queue_error_page(token, f"/q/{token}", "Hound queue unavailable", str(error), 503)
     plan, _path = load_plan(repo, stem)
     if plan is None:
         abort(404)
@@ -2123,7 +1774,7 @@ def hound_plan_view(token: str, repo: str, stem: str) -> Response:
             "full plan on disk, not this rendering.</p>"
         )
 
-    action = f"/hound/{escape(token)}/plan/{escape(repo)}/{escape(stem)}/decide"
+    action = f"/q/{escape(token)}/plan/{escape(repo)}/{escape(stem)}/decide"
     body = (
         f"<div class=topbar>{_crumbs(token, ('Hound plans', None), (stem, None))}"
         f"<div class=count>{escape(repo)}</div></div>"
@@ -2183,13 +1834,16 @@ def hound_plan_view(token: str, repo: str, stem: str) -> Response:
     return _page(f"Plan — {stem}", body, console=True)
 
 
-@app.post("/hound/<token>/plan/<repo>/<stem>/decide")
+@app.post("/q/<token>/plan/<repo>/<stem>/decide")
 def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
     require_admin(token)
     entry = resolve_token(token)
-    _check_plan_ref(repo, stem)
+    try:
+        _check_plan_ref(repo, stem)
+    except HoundDiscoveryError as error:
+        return _queue_error_page(token, f"/q/{token}", "Hound queue unavailable", str(error), 503)
     plan, plan_path = load_plan(repo, stem)
-    back = f"/hound/{token}"
+    back = f"/q/{token}"
     if plan is None:
         abort(404)
 
@@ -2208,7 +1862,7 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
         if not note:
             abort(400)
         _append_decision("hound", key, "note", note, entry["id"], status="noted")
-        return redirect(f"/hound/{token}/plan/{repo}/{stem}?msg=note:{stem}")
+        return redirect(f"/q/{token}/plan/{repo}/{stem}?msg=note:{stem}")
 
     if decision == "approve":
         approvals_dir.mkdir(parents=True, exist_ok=True)
@@ -2242,12 +1896,10 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
             out_path.chmod(0o600)
         except OSError:
             pass
-        _append_decision("hound", key, "approve", note, entry["id"])
     else:
         declined_dir = plans_dir / "declined"
         declined_dir.mkdir(parents=True, exist_ok=True)
         plan_path.rename(declined_dir / plan_path.name)
-        _append_decision("hound", key, "decline", note, entry["id"])
 
     # Worklist flow: advance straight to the next pending plan, if any.
     nxt = next(
@@ -2260,7 +1912,7 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
     )
     if nxt:
         return redirect(
-            f"/hound/{token}/plan/{nxt['repo']}/{nxt['stem']}?msg={decision}:{stem}"
+            f"/q/{token}/plan/{nxt['repo']}/{nxt['stem']}?msg={decision}:{stem}"
         )
     return redirect(f"/q/{token}?msg={decision}:{stem}")
 
@@ -2268,8 +1920,7 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
 # --------------------------------------------------------------------------- #
 # Social package queue — today's campaign preview rendered from disk (never
 # from an agent's self-report), with the HOLD file as the decide lever.
-# social_autopost.py honors HOLD on every publish attempt; the bb-thread veto
-# channel is unchanged and remains available in parallel.
+# social_autopost.py honors the package HOLD on every publish attempt.
 # --------------------------------------------------------------------------- #
 def load_social_packages(limit: int = 2) -> list[dict[str, Any]]:
     if not SOCIAL_ASSETS.is_dir():
@@ -2527,19 +2178,21 @@ def social_decide(token: str, pkg: str) -> Response:
 
 
 # --------------------------------------------------------------------------- #
-# Admin home — one page linking every queue this surface serves.
+# Admin home — one page linking every active decision queue.
 # --------------------------------------------------------------------------- #
 @app.get("/q/<token>")
 def queue_home(token: str) -> Response:
     """The queue itself: one feed of everything waiting on a decision.
 
-    Order: today's social package first (time-boxed), then wiki drafts,
-    then Hound plans oldest-first (age = the only rank that matters).
+    Order: today's social package first (time-boxed), then Hound plans
+    oldest-first (age = the only rank that matters).
     """
     require_admin(token)
-    plans = sorted(load_pending_plans(), key=lambda p: p["mtime"])
+    try:
+        plans = sorted(load_pending_plans(), key=lambda p: p["mtime"])
+    except HoundDiscoveryError as error:
+        return _queue_error_page(token, f"/q/{token}", "Hound queue unavailable", str(error), 503)
     packages = load_social_packages(limit=1)
-    wiki_cards = load_wiki_cards()
     batch = load_batch()
     t = escape(token)
 
@@ -2581,22 +2234,10 @@ def queue_home(token: str) -> Response:
                 )
             )
 
-    for c in wiki_cards:
-        slug = str(c["slug"])
-        rows.append(
-            tr(
-                f"/wiki/{t}/draft/{escape(slug)}",
-                escape(str(c.get("title") or slug)),
-                "wiki draft",
-                f"risk {escape(str(c.get('risk', '?')))}",
-                escape(str(c.get("created", ""))[:10]),
-            )
-        )
-
     for p in plans:
         rows.append(
             tr(
-                f"/hound/{t}/plan/{escape(p['repo'])}/{escape(p['stem'])}",
+                f"/q/{t}/plan/{escape(p['repo'])}/{escape(p['stem'])}",
                 escape(p["stem"]),
                 escape(p["repo"]),
                 escape(p["operation"]),
@@ -2615,8 +2256,7 @@ def queue_home(token: str) -> Response:
         "<div class=topbar><nav class=crumbs><span class=here>Queue</span></nav>"
         "<div class=count>givecare review</div></div>"
         "<div class=ops-frame><div><h1>Approval queue</h1>"
-        f"<div class=sub>loaded {now} &middot; hound plans &middot; social window "
-        "&middot; wiki drafts</div></div>"
+        f"<div class=sub>loaded {now} &middot; hound plans &middot; social window</div></div>"
         f"<div><div class=hero-num>{n}</div>"
         f"<div class=hero-den>waiting &middot; oldest {oldest}</div></div></div>"
     )
@@ -2636,8 +2276,7 @@ def queue_home(token: str) -> Response:
     )
     footer = (
         "<p class=count style='margin-top:18px'>"
-        f"{gold} &middot; <a href='/wiki/{t}'>wiki queue</a>"
-        f" &middot; <a href='/social/{t}'>social</a></p>"
+        f"{gold} &middot; <a href='/social/{t}'>social</a></p>"
     )
     row_script = (
         "<script>document.querySelectorAll('tr[data-href]').forEach(r=>"

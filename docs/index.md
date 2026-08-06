@@ -79,8 +79,8 @@ uv run pytest benchmark/tests -q
     and `invisiblebench --list-runs --limit N --offset M`. `--out PATH` (on
     `runs`, `get`, and `leaderboard status`) writes the full payload to disk
     and emits a `{path, byte_count, record_count}` summary. `leaderboard
-    add/rebuild` is retired for `safety-care/v1`; publish from an explicit
-    scored scan JSONL and web target via the fail-closed generate → strict QA → sync chain. Archive
+    add/rebuild` is retired for `safety-care/v1`; use the deterministic Hound
+    `corpus.project` capability for the local owner projection. Archive
     writes refuse in non-interactive shells unless `--yes` is passed.
 
 ## Documentation
