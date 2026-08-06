@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PUBLICATION_SOURCE = REPO_ROOT / "data" / "publication-source" / "web-bench" / "scores"
+RELEASE_VERSION = re.compile(r"v[0-9]+(?:\.[0-9]+){2}")
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 CONTENT_NOTICE = (
@@ -139,13 +141,16 @@ def _project_row(
 def build_release(
     *,
     scan_path: Path,
-    output_dir: Path,
+    release_version: str,
     expected_scenario_ids: Iterable[str],
     expected_mode_ids: Iterable[str],
     benchmark_version: str,
     result_contract_version: str,
     claim_ready_check_count: int,
 ) -> Path:
+    if not isinstance(release_version, str) or RELEASE_VERSION.fullmatch(release_version) is None:
+        raise ValueError("release_version must be a semantic vX.Y.Z directory name")
+    output_dir = PUBLICATION_SOURCE / release_version
     scan_path = scan_path.resolve()
     expected_scenario_ids = set(expected_scenario_ids)
     expected_mode_ids = set(expected_mode_ids)
@@ -285,8 +290,10 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--release-version", required=True, help="Public release directory name, for example v4.0.0")
     args = parser.parse_args(argv)
+    if RELEASE_VERSION.fullmatch(args.release_version) is None:
+        parser.error("--release-version must be a semantic vX.Y.Z directory name")
 
     modes, _ = load_checks()
     claim_ready_count = sum(
@@ -297,7 +304,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         path = build_release(
             scan_path=args.input,
-            output_dir=args.output,
+            release_version=args.release_version,
             expected_scenario_ids=collect_public_scenario_ids(REPO_ROOT),
             expected_mode_ids=modes,
             benchmark_version=BENCHMARK_VERSION,

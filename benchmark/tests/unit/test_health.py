@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import io
 import json
+import tarfile
 from pathlib import Path
 
-from delivery.sync_web_bench import project_leaderboard
 from invisiblebench.cli import health as health_module
 
 
@@ -205,38 +206,22 @@ def _minimal_safety_care_payload() -> dict:
     }
 
 
-def test_local_web_projection_drift_is_reported_without_writing(tmp_path: Path) -> None:
-    leaderboard_dir = tmp_path / "data" / "leaderboard"
-    leaderboard_dir.mkdir(parents=True)
-    source = _minimal_safety_care_payload()
-    target = _minimal_safety_care_payload()
-    target["scan_metadata"]["generated_at"] = "2026-06-01T00:00:00+00:00"
-    target["models"][0]["model"] = "Stale Model"
-    target_bytes = json.dumps(target).encode()
-
-    (leaderboard_dir / "leaderboard.json").write_text(json.dumps(source), encoding="utf-8")
-    (leaderboard_dir / "leaderboard_web.json").write_bytes(target_bytes)
-
-    analysis = health_module.analyze_leaderboard(source)
-    health_module.append_local_web_projection_health(analysis, root=tmp_path)
-
-    assert any("local_web_projection_drift" in w for w in analysis["schema_warnings"])
-    assert (leaderboard_dir / "leaderboard_web.json").read_bytes() == target_bytes
+def test_local_web_release_missing_is_reported_without_writing(tmp_path: Path) -> None:
+    analysis = health_module.analyze_leaderboard(_minimal_safety_care_payload())
+    health_module.append_local_web_release_health(analysis, root=tmp_path)
+    assert any("local_web_release_missing" in warning for warning in analysis["schema_warnings"])
 
 
-def test_local_web_projection_in_sync_has_no_warning(tmp_path: Path) -> None:
-    leaderboard_dir = tmp_path / "data" / "leaderboard"
-    leaderboard_dir.mkdir(parents=True)
-    source = _minimal_safety_care_payload()
-    projected = project_leaderboard(source)
-
-    (leaderboard_dir / "leaderboard.json").write_text(json.dumps(source), encoding="utf-8")
-    (leaderboard_dir / "leaderboard_web.json").write_text(
-        json.dumps(projected, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-
-    analysis = health_module.analyze_leaderboard(source)
-    health_module.append_local_web_projection_health(analysis, root=tmp_path)
-
+def test_local_web_release_manifest_is_read_only_healthy(tmp_path: Path) -> None:
+    archive = tmp_path / "data" / "releases" / "web-bench-release.tar.gz"
+    archive.parent.mkdir(parents=True)
+    manifest = json.dumps({"schema_version": "gc-bench.web-benchmark-release/v1"}).encode()
+    with tarfile.open(archive, "w:gz") as release:
+        info = tarfile.TarInfo("release-manifest.json")
+        info.size = len(manifest)
+        release.addfile(info, io.BytesIO(manifest))
+    before = archive.read_bytes()
+    analysis = health_module.analyze_leaderboard(_minimal_safety_care_payload())
+    health_module.append_local_web_release_health(analysis, root=tmp_path)
     assert analysis["schema_warnings"] == []
+    assert archive.read_bytes() == before

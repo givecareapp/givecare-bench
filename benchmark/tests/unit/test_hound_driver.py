@@ -1,92 +1,27 @@
-"""Hound boundary tests for the two gc-bench owner writes."""
+"""Hound boundaries for Evals intake and the complete web release."""
 
 from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 import json
-import subprocess
-import sys
+import tarfile
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 DRIVER = ROOT / "scripts" / "hound_driver.py"
-MANIFEST = ROOT / "hound-driver.json"
-MODULE = ROOT / ".givecare" / "module.json"
 REVIEW_UI = ROOT / "scripts" / "review_ui" / "app.py"
 
 
-def _candidate_input(records: list[dict]) -> dict:
-    return {
-        "schema_version": "gc-bench.candidate-intake.input/v1",
-        "source_plan_id": "1" * 64,
-        "selected_ids": sorted(str(record["id"]) for record in records),
-    }
+def _sha(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
 
 
-def _verified_projection(records: list[dict]) -> tuple[dict, bytes]:
-    projection = b"".join(
-        (json.dumps(record, sort_keys=True) + "\n").encode() for record in records
-    )
-    digest = hashlib.sha256(projection).hexdigest()
-    return (
-        {
-            "schema_version": "givecare.artifact-ref/v1",
-            "owner": "evals.dataset",
-            "kind": "owner-projection",
-            "artifact_id": "data/all.jsonl",
-            "revision": f"sha256:{digest}",
-            "sha256": digest,
-            "access": "public",
-        },
-        projection,
-    )
-
-
-def _projection_input(tmp_path: Path, *, strict: bool = True) -> tuple[dict, bytes]:
-    source = {
-        "schema": "safety-care/v1",
-        "notes": {"no_composite": True},
-        "scan_metadata": {},
-        "models": [
-            {
-                "model": "model-1",
-                "safety": {},
-                "care": {
-                    "qualities": {
-                        "belonging": {"calibration_status": "not_claim_ready"}
-                    }
-                },
-            }
-        ],
-    }
-    leaderboard = tmp_path / "data" / "leaderboard" / "leaderboard.json"
-    leaderboard.parent.mkdir(parents=True)
-    leaderboard.write_text(json.dumps(source, indent=2, sort_keys=True) + "\n")
-    leaderboard_sha = hashlib.sha256(leaderboard.read_bytes()).hexdigest()
-    stamp = tmp_path / "data" / "leaderboard" / ".qa-stamp"
-    stamp.write_text(
-        json.dumps(
-            {"leaderboard_sha256": leaderboard_sha, "strict": strict},
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n"
-    )
-    projection = (json.dumps(source, indent=2, sort_keys=True) + "\n").encode()
-    return (
-        {
-            "schema_version": "gc-bench.leaderboard-projection.input/v1",
-            "leaderboard_path": "data/leaderboard/leaderboard.json",
-            "leaderboard_sha256": leaderboard_sha,
-            "qa_stamp_path": "data/leaderboard/.qa-stamp",
-            "qa_stamp_sha256": hashlib.sha256(stamp.read_bytes()).hexdigest(),
-        },
-        projection,
-    )
+def _json(value: object) -> bytes:
+    return (json.dumps(value, sort_keys=True) + "\n").encode()
 
 
 def _load_driver():
@@ -97,431 +32,373 @@ def _load_driver():
     return module
 
 
-def test_check_emits_one_protocol_response() -> None:
-    result = subprocess.run(
-        [sys.executable, str(DRIVER)],
-        cwd=ROOT,
-        input=json.dumps({"mode": "check"}),
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    lines = [line for line in result.stdout.splitlines() if line]
-    assert len(lines) == 1
-    response = json.loads(lines[0])
-    assert response["ok"] is True
-    assert response["data"] == {"protocol": "hound.protocol.v1"}
+def _source_file(root: Path, relative: str, content: bytes) -> tuple[str, str]:
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return relative, _sha(content)
 
 
-def test_manifest_gates_only_candidate_admission() -> None:
-    manifest = json.loads(MANIFEST.read_text())
-
-    assert manifest["capabilities"] == {
-        "corpus.apply": {"effect": "write", "gate": "human"},
-        "corpus.project": {"effect": "write", "gate": "none"},
-    }
-    assert "benchmark/scenarios" in manifest["write_scopes"]
-    assert "intake/staging" not in manifest["write_scopes"]
-    assert "data/leaderboard" in manifest["write_scopes"]
-    assert not set(manifest["write_scopes"]) & set(manifest["ignored_snapshot_excludes"])
-
-
-def test_module_graph_declares_evals_artifact_consumer_edge() -> None:
-    declaration = json.loads(MODULE.read_text())
-    capabilities = {
-        capability["name"]: capability
-        for module in declaration["modules"]
-        for capability in module["capabilities"]
-    }
-
-    assert capabilities["benchmark.scenarios.apply"]["accepts"] == [
-        "gc-bench.candidate-intake.input/v1"
-    ]
-    assert capabilities["benchmark.leaderboard.project"]["gate"] == "none"
-
-
-def test_review_ui_has_only_native_hound_plan_decisions() -> None:
-    source = REVIEW_UI.read_text(encoding="utf-8")
-
-    assert 'HOUND_BIN = "/home/deploy/.local/share/uv/tools/evidence-hound/bin/hound"' in source
-    assert "os.environ.get(\"HOUND_BIN\"" not in source
-    assert "HOUND_REPOS" not in source
-    assert '"givecare_protocol.py"' in source
-    assert '"capabilities"' in source
-    assert "adapter" in source
-    assert '@app.get("/hound/' not in source
-    assert '@app.post("/hound/' not in source
-    assert '_append_decision("hound", key, "approve"' not in source
-    assert '_append_decision("hound", key, "decline"' not in source
-    for legacy in (
-        "WIKI_REPO",
-        "WIKI_QUEUE_DIR",
-        "load_wiki_card",
-        "load_wiki_cards",
-        "@app.get(\"/wiki/",
-        "wiki queue",
-        "wiki drafts",
-        ".review-queue",
-    ):
-        assert legacy not in source
-
-
-def test_candidate_intake_plan_and_execute_are_exact(tmp_path: Path, monkeypatch) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    (tmp_path / "benchmark" / "scenarios").mkdir(parents=True)
-    records = [
-        {
-            "id": "eval-1",
-            "input": "I cannot keep doing this.",
-            "category": "crisis",
-            "split": "core-behaviors",
-            "expected_behaviors": ["Acknowledge distress"],
-        }
-    ]
-    calls: list[str] = []
-
-    def verified(source_plan_id: str):
-        calls.append(source_plan_id)
-        return _verified_projection(records)
-
-    monkeypatch.setattr(driver, "_verified_evals_projection", verified)
-    request = {
-        "mode": "plan",
-        "operation": "corpus.apply",
-        "input": _candidate_input(records),
-    }
-
-    plan = driver.handle(request)
-    assert plan["outcome"] == "planned"
-    assert plan["data"]["candidate_count"] == 1
-    assert len(plan["data"]["expected_effects"]) == 1
-    assert not list((tmp_path / "intake").rglob("*.json"))
-
-    execute = driver.handle(
-        {
-            **request,
-            "mode": "execute",
-            "driver_plan": plan["data"],
-        }
-    )
-    written = tmp_path / plan["data"]["paths"][0]
-    assert execute["outcome"] == "completed"
-    assert written.is_relative_to(tmp_path / "benchmark" / "scenarios")
-    assert json.loads(written.read_text())["scenario_id"] == "eval_eval_1"
-    assert json.loads(written.read_text())["metadata"]["source_projection"] == plan[
-        "data"
-    ]["source"]
-    assert calls == ["1" * 64, "1" * 64]
-
-
-def test_candidate_intake_rejects_multiple_selected_scenarios(monkeypatch) -> None:
-    driver = _load_driver()
-    records = [{"id": f"eval-{index:03d}", "input": "Help"} for index in range(2)]
-    monkeypatch.setattr(
-        driver, "_verified_evals_projection", lambda _plan_id: _verified_projection(records)
-    )
-    with pytest.raises(driver.DriverError, match="exactly one"):
-        driver._candidate_outputs(_candidate_input(records))
-
-
-def test_candidate_intake_rejects_raw_unbound_records() -> None:
-    driver = _load_driver()
-    with pytest.raises(driver.DriverError, match="source_plan_id"):
-        driver._candidate_outputs(
+def _release_input(tmp_path: Path) -> dict:
+    leaderboard = {
+        "schema": "safety-care/v1",
+        "notes": {"no_composite": True},
+        "scan_metadata": {
+            "benchmark_version": "4.0.0",
+            "total_models": 4,
+            "total_scenarios": 63,
+            "active_modes": 50,
+        },
+        "models": [
             {
-                "schema_version": "gc-bench.candidate-intake.input/v1",
-                "records": [{"id": "eval-1", "input": "Help"}],
+                "model": f"model-{index}",
+                "safety": {},
+                "care": {"qualities": {"belonging": {"calibration_status": "not_claim_ready"}}},
             }
-        )
-
-
-def test_candidate_intake_rejects_records_not_bound_to_projection(monkeypatch) -> None:
-    driver = _load_driver()
-    records = [{"id": "eval-1", "input": "Help"}]
-    monkeypatch.setattr(
-        driver, "_verified_evals_projection", lambda _plan_id: _verified_projection(records)
-    )
-    payload = _candidate_input(records)
-    payload["selected_ids"] = ["eval-2"]
-
-    with pytest.raises(driver.DriverError, match="absent from the bound projection"):
-        driver._candidate_outputs(payload)
-
-
-def test_candidate_intake_resolves_only_the_canonical_verified_run(
-    tmp_path: Path, monkeypatch
-) -> None:
-    driver = _load_driver()
-    bench = tmp_path / "gc-bench"
-    protocol = tmp_path / "scripts" / "givecare_protocol.py"
-    projection = tmp_path / "gc-evals" / "data" / "all.jsonl"
-    protocol.parent.mkdir(parents=True)
-    protocol.write_text("# shared verifier\n", encoding="utf-8")
-    source, expected_bytes = _verified_projection([{"id": "eval-1"}])
-    projection.parent.mkdir(parents=True)
-    projection.write_bytes(expected_bytes)
-    calls: list[list[str]] = []
-
-    def verify(arguments, **_kwargs):
-        calls.append(arguments)
-        return SimpleNamespace(returncode=0, stdout=json.dumps(source), stderr="")
-
-    monkeypatch.setattr(driver, "ROOT", bench)
-    monkeypatch.setattr(driver.subprocess, "run", verify)
-
-    resolved, content = driver._verified_evals_projection("2" * 64)
-
-    assert resolved == source
-    assert content == expected_bytes
-    assert str(tmp_path / "gc-evals" / ".hound" / "runs" / ("2" * 64)) in calls[0]
-    assert "--hound-bin" not in calls[0]
-
-
-def test_bound_file_requires_exact_digest(tmp_path: Path, monkeypatch) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    source = tmp_path / "results" / "scan.jsonl"
-    source.parent.mkdir()
-    source.write_text("{}\n")
-
-    with pytest.raises(driver.DriverError, match="does not match"):
-        driver._read_bound_file(
-            "results/scan.jsonl",
-            "0" * 64,
-            field="scan",
-        )
-
-
-def test_projection_uses_shared_artifact_reference() -> None:
-    driver = _load_driver()
-    digest = "a" * 64
-
-    assert driver._projection_ref(digest) == {
-        "schema_version": "givecare.artifact-ref/v1",
-        "owner": "bench.publish",
-        "kind": "owner-projection",
-        "artifact_id": "data/leaderboard/leaderboard_web.json",
-        "revision": f"sha256:{digest}",
-        "sha256": digest,
-        "access": "public",
-    }
-
-
-def test_projection_reference_is_exposed_as_hound_artifact(monkeypatch) -> None:
-    driver = _load_driver()
-    artifact = driver._projection_ref("b" * 64)
-    monkeypatch.setattr(
-        driver,
-        "_operation_outputs",
-        lambda _request: (
-            {},
-            {"projection": artifact},
-            "gc-bench.leaderboard-projection/v1",
-        ),
-    )
-
-    response = driver.handle({"mode": "plan", "operation": "corpus.project"})
-
-    assert response["artifacts"] == [artifact]
-    assert response["data"]["projection"] == artifact
-
-
-def test_corpus_project_reads_owner_truth_and_writes_only_projection(
-    tmp_path: Path, monkeypatch
-) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    payload, projection = _projection_input(tmp_path)
-    canonical = tmp_path / "data" / "leaderboard" / "leaderboard.json"
-    stamp = tmp_path / "data" / "leaderboard" / ".qa-stamp"
-    canonical_before = canonical.read_bytes()
-    stamp_before = stamp.read_bytes()
-
-    outputs, result = driver._leaderboard_outputs(payload)
-
-    target = tmp_path / "data" / "leaderboard" / "leaderboard_web.json"
-    assert outputs == {target: projection}
-    assert result["source"] == {
-        "path": "data/leaderboard/leaderboard.json",
-        "sha256": payload["leaderboard_sha256"],
-    }
-    assert result["qa_stamp"]["sha256"] == payload["qa_stamp_sha256"]
-    assert result["projection"] == driver._projection_ref(
-        hashlib.sha256(projection).hexdigest()
-    )
-    assert canonical.read_bytes() == canonical_before
-    assert stamp.read_bytes() == stamp_before
-
-
-def test_corpus_project_is_no_change_for_identical_current_projection(
-    tmp_path: Path, monkeypatch
-) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    payload, projection = _projection_input(tmp_path)
-    target = tmp_path / "data" / "leaderboard" / "leaderboard_web.json"
-    target.write_bytes(projection)
-
-    outputs, result = driver._leaderboard_outputs(payload)
-
-    assert outputs == {}
-    assert result["projection"]["sha256"] == hashlib.sha256(projection).hexdigest()
-
-
-def test_corpus_project_requires_strict_matching_qa_stamp(
-    tmp_path: Path, monkeypatch
-) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    payload, _projection = _projection_input(tmp_path, strict=False)
-
-    with pytest.raises(driver.DriverError, match="qa_stamp.strict must be true"):
-        driver._leaderboard_outputs(payload)
-
-    stamp = tmp_path / "data" / "leaderboard" / ".qa-stamp"
-    stamp.write_text(json.dumps({"leaderboard_sha256": "0" * 64, "strict": True}))
-    payload["qa_stamp_sha256"] = hashlib.sha256(stamp.read_bytes()).hexdigest()
-    with pytest.raises(driver.DriverError, match="must match the canonical leaderboard"):
-        driver._leaderboard_outputs(payload)
-
-
-def test_corpus_project_rejects_noncanonical_source_path(
-    tmp_path: Path, monkeypatch
-) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    payload, _projection = _projection_input(tmp_path)
-    payload["leaderboard_path"] = "data/leaderboard/other.json"
-
-    with pytest.raises(driver.DriverError, match="canonical leaderboard"):
-        driver._leaderboard_outputs(payload)
-
-
-def test_learning_lineage_is_optional_and_preserved_exactly() -> None:
-    driver = _load_driver()
-    lineage = {
-        "demand_sha256": "c" * 64,
-        "trace_refs": [{"loop_id": "loop-1", "intent_sha256": "d" * 64}],
-        "module_refs": [
-            {
-                "schema_version": "givecare.artifact-ref/v1",
-                "owner": "evals.dataset",
-                "kind": "module-declaration",
-                "artifact_id": "gc-evals/.givecare/module.json",
-                "revision": "git:" + "e" * 40,
-                "sha256": "f" * 64,
-                "access": "workspace",
-            }
+            for index in range(4)
         ],
     }
-
-    assert driver._learning_lineage(lineage) is lineage
-
-
-def test_learning_lineage_rejects_synthetic_trace_shape() -> None:
-    driver = _load_driver()
-    with pytest.raises(driver.DriverError, match="loop_id and intent_sha256"):
-        driver._learning_lineage(
-            {
-                "demand_sha256": "c" * 64,
-                "trace_refs": [{"loop_id": "loop-1", "synthetic": True}],
-                "module_refs": [],
-            }
+    leaderboard_path, leaderboard_sha = _source_file(
+        tmp_path, "data/leaderboard/leaderboard.json", _json(leaderboard)
+    )
+    stamp_path, stamp_sha = _source_file(
+        tmp_path,
+        "data/leaderboard/.qa-stamp",
+        _json({"strict": True, "leaderboard_sha256": leaderboard_sha}),
+    )
+    evidence_models = []
+    score_models = []
+    current_models = []
+    for index in range(4):
+        model_id = f"model/{index}"
+        filename = f"model-{index}.json"
+        evidence_content = _json({"model": model_id, "transcript": index})
+        score_content = _json({"model": model_id, "score": index})
+        evidence_file, evidence_sha = _source_file(
+            tmp_path, f"data/publication-source/web-bench/evidence/v4.0.0/{filename}", evidence_content
         )
+        score_file, score_sha = _source_file(
+            tmp_path, f"data/publication-source/web-bench/scores/v4.0.0/{filename}", score_content
+        )
+        evidence_models.append({"model_id": model_id, "file": Path(evidence_file).name, "sha256": evidence_sha, "bytes": len(evidence_content)})
+        score_models.append({"model_id": model_id, "file": Path(score_file).name, "sha256": score_sha, "bytes": len(score_content)})
+        current_models.append({"modelId": model_id, "bundleFile": filename, "corpusHash": "c" * 64, "transcripts": 63})
+    evidence = {
+        "schema": "invisiblebench-transcripts/v1",
+        "benchmark_version": "4.0.0",
+        "result_contract_version": "2.1.0",
+        "scenario_count": 63,
+        "scenario_hash": "c" * 64,
+        "model_count": 4,
+        "transcript_count": 252,
+        "claim_ready_check_count": 0,
+        "models": evidence_models,
+    }
+    scores = {
+        "schema": "invisiblebench-score-evidence/v1",
+        "benchmark_version": "4.0.0",
+        "result_contract_version": "2.1.0",
+        "scenario_count": 63,
+        "check_count": 50,
+        "model_count": 4,
+        "row_count": 252,
+        "mode_result_count": 12600,
+        "source_scan_sha256": "d" * 64,
+        "profile": "publish",
+        "judge_model": "judge/model",
+        "claim_ready_check_count": 0,
+        "models": score_models,
+        "source_merge": {
+            "schema": "invisiblebench-scan-merge/v1",
+            "benchmark_version": "4.0.0",
+            "result_contract_version": "2.1.0",
+            "profile": "publish",
+            "judge_model": "judge/model",
+            "model_count": 4,
+            "scenario_count": 63,
+            "row_count": 252,
+            "actual_cost_usd": 12.5,
+            "actual_billable_api_calls": 99,
+            "output_sha256": "d" * 64,
+        },
+    }
+    current = {
+        "benchmarkVersion": "4.0.0", "resultContractVersion": "2.1.0",
+        "releasePath": "/bench/evidence/v4.0.0", "scoreReleasePath": "/bench/scores/v4.0.0",
+        "transcriptNotice": "notice", "asOf": "2026-08-01", "scenarioCount": 63,
+        "categoryCounts": {}, "checkCount": 50, "claimReadyChecks": 0,
+        "scoringRelease": {"status": "current research release", "profile": "publish", "judgeModel": "judge/model", "judgeLabel": "Judge", "modelCount": 4, "scenarioCount": 63, "rowCount": 252, "modeResultCount": 12600, "actualCostUsd": 12.5, "actualBillableApiCalls": 99, "sourceScanSha256": "d" * 64, "strictQa": True},
+        "validation": {}, "contrastVariants": 0, "models": current_models,
+        "findings": [], "knownGaps": [],
+    }
+    evidence_path, evidence_sha = _source_file(tmp_path, "data/publication-source/web-bench/evidence/v4.0.0/manifest.json", _json(evidence))
+    scores_path, scores_sha = _source_file(tmp_path, "data/publication-source/web-bench/scores/v4.0.0/manifest.json", _json(scores))
+    current_path, current_sha = _source_file(tmp_path, "data/publication-source/web-bench/current-evidence.json", _json(current))
+    return {
+        "schema_version": "gc-bench.web-benchmark-release.input/v1",
+        "leaderboard_path": leaderboard_path, "leaderboard_sha256": leaderboard_sha,
+        "qa_stamp_path": stamp_path, "qa_stamp_sha256": stamp_sha,
+        "current_evidence_path": current_path, "current_evidence_sha256": current_sha,
+        "evidence_manifest_path": evidence_path, "evidence_manifest_sha256": evidence_sha,
+        "scores_manifest_path": scores_path, "scores_manifest_sha256": scores_sha,
+    }
 
 
-def test_execute_rejects_plan_drift(tmp_path: Path, monkeypatch) -> None:
+def test_manifest_limits_hound_writes_to_owner_outputs() -> None:
+    manifest = json.loads((ROOT / "hound-driver.json").read_text())
+    assert manifest["exec"] == ["python3", "-B", "scripts/hound_driver.py"]
+    assert manifest["write_scopes"] == ["benchmark/scenarios", "data/releases/web-bench-release.tar.gz"]
+
+
+def test_driver_check_emits_one_protocol_response() -> None:
+    import subprocess
+    import sys
+    result = subprocess.run([sys.executable, "-B", str(DRIVER)], cwd=ROOT, input='{"mode":"check"}', capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout)["data"] == {"protocol": "hound.protocol.v1"}
+
+
+def test_review_ui_stays_on_the_native_hound_approval_boundary() -> None:
+    source = REVIEW_UI.read_text(encoding="utf-8")
+    for required in ('"givecare_protocol.py"', '"capabilities"', "adapter"):
+        assert required in source
+    for retired in ("HOUND_REPOS", "WIKI_QUEUE_DIR", "wiki queue", "@app.get(\"/wiki/"):
+        assert retired not in source
+
+
+def test_module_declares_fixed_evals_sync_and_single_web_release() -> None:
+    declaration = json.loads((ROOT / ".givecare/module.json").read_text())
+    capabilities = {cap["name"]: cap for module in declaration["modules"] for cap in module["capabilities"]}
+    assert capabilities["benchmark.evals.projection.sync"]["adapter"]["kind"] == "owner-projection-sync"
+    assert capabilities["benchmark.scenarios.apply"]["accepts"] == ["gc-bench.candidate-intake.input/v2"]
+    assert capabilities["benchmark.web-release.project"]["accepts"] == ["gc-bench.web-benchmark-release.input/v1"]
+
+
+def test_candidate_intake_reads_local_materialization_and_preserves_run(monkeypatch, tmp_path: Path) -> None:
     driver = _load_driver()
     monkeypatch.setattr(driver, "ROOT", tmp_path)
     (tmp_path / "benchmark" / "scenarios").mkdir(parents=True)
-    records = [{"id": "eval-1", "input": "Help", "category": "validation"}]
-    monkeypatch.setattr(
-        driver, "_verified_evals_projection", lambda _plan_id: _verified_projection(records)
-    )
-    request = {
-        "mode": "execute",
-        "operation": "corpus.apply",
-        "input": _candidate_input(records),
-        "driver_plan": {"expected_effects": []},
-    }
-
-    with pytest.raises(driver.DriverError, match="approved deterministic plan"):
-        driver.handle(request)
+    source = {"schema_version": "givecare.artifact-ref/v1", "owner": "evals.dataset", "kind": "owner-projection", "artifact_id": "data/all.jsonl", "revision": "sha256:" + "a" * 64, "sha256": "a" * 64, "access": "public"}
+    record = {"id": "case-1", "input": "Help", "category": "crisis"}
+    monkeypatch.setattr(driver, "_materialized_evals_projection", lambda: ("b" * 64, source, _json(record)))
+    request = {"mode": "plan", "operation": "corpus.apply", "input": {"schema_version": "gc-bench.candidate-intake.input/v2", "selected_ids": ["case-1"]}}
+    plan = driver.handle(request)
+    assert plan["data"]["source_run_id"] == "b" * 64
+    executed = driver.handle({**request, "mode": "execute", "driver_plan": plan["data"]})
+    written = tmp_path / executed["data"]["paths"][0]
+    assert json.loads(written.read_text())["metadata"]["source_projection_run_id"] == "b" * 64
 
 
-def test_multi_file_owner_write_rolls_back_on_replace_failure(
-    tmp_path: Path, monkeypatch
+def test_candidate_intake_rejects_caller_supplied_source() -> None:
+    driver = _load_driver()
+    with pytest.raises(driver.DriverError, match="only schema_version and selected_ids"):
+        driver._candidate_outputs({"schema_version": "gc-bench.candidate-intake.input/v2", "source_plan_id": "a" * 64, "selected_ids": ["case-1"]})
+
+
+def test_web_release_is_one_deterministic_complete_archive(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    outputs, result = driver._web_release_outputs(payload)
+    target = tmp_path / "data/releases/web-bench-release.tar.gz"
+    archive = outputs[target]
+    assert result["release"] == driver._web_release_ref(_sha(archive))
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as release:
+        names = release.getnames()
+        assert names == ["current-evidence.json", "evidence/v4.0.0/manifest.json", "evidence/v4.0.0/model-0.json", "evidence/v4.0.0/model-1.json", "evidence/v4.0.0/model-2.json", "evidence/v4.0.0/model-3.json", "leaderboard.json", "release-manifest.json", "scores/v4.0.0/manifest.json", "scores/v4.0.0/model-0.json", "scores/v4.0.0/model-1.json", "scores/v4.0.0/model-2.json", "scores/v4.0.0/model-3.json"]
+        assert all(member.isfile() for member in release.getmembers())
+        release_manifest = json.loads(release.extractfile("release-manifest.json").read())
+    assert set(release_manifest) == {"schema_version", "release_version", "members"}
+    assert len(release_manifest["members"]) == 12
+    assert driver._web_release_outputs(payload)[0][target] == archive
+
+
+def test_web_release_rejects_cross_file_drift(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    current = tmp_path / payload["current_evidence_path"]
+    changed = json.loads(current.read_text())
+    changed["scenarioCount"] = 62
+    current.write_bytes(_json(changed))
+    payload["current_evidence_sha256"] = _sha(current.read_bytes())
+    with pytest.raises(driver.DriverError, match="does not match the release manifests"):
+        driver._web_release_outputs(payload)
+
+
+@pytest.mark.parametrize("cost", [None, True, float("nan")])
+def test_web_release_malformed_current_evidence_fails_closed(
+    monkeypatch, tmp_path: Path, cost: object
 ) -> None:
     driver = _load_driver()
     monkeypatch.setattr(driver, "ROOT", tmp_path)
-    first = tmp_path / "data" / "leaderboard" / "leaderboard.json"
-    second = tmp_path / "data" / "leaderboard" / "projection-two.json"
-    first.parent.mkdir(parents=True)
-    first.write_bytes(b"old leaderboard\n")
-    second.write_bytes(b"old release\n")
-    outputs = {first: b"new leaderboard\n", second: b"new release\n"}
-    effects = [driver._effect(path, outputs[path]) for path in sorted(outputs)]
-    real_replace = driver.os.replace
-    staged_replace_count = 0
-
-    def fail_second_staged_replace(source, target):
-        nonlocal staged_replace_count
-        if ".stage-" in Path(source).name:
-            staged_replace_count += 1
-            if staged_replace_count == 2:
-                raise OSError("injected replace failure")
-        return real_replace(source, target)
-
-    monkeypatch.setattr(driver.os, "replace", fail_second_staged_replace)
-
-    with pytest.raises(OSError, match="injected replace failure"):
-        driver._write_outputs(outputs, effects)
-
-    assert first.read_bytes() == b"old leaderboard\n"
-    assert second.read_bytes() == b"old release\n"
-    assert not list(first.parent.glob(".*.stage-*"))
-    assert not list(first.parent.glob(".*.backup-*"))
+    payload = _release_input(tmp_path)
+    current = tmp_path / payload["current_evidence_path"]
+    changed = json.loads(current.read_text())
+    changed["scoringRelease"]["actualCostUsd"] = cost
+    current.write_bytes(_json(changed))
+    payload["current_evidence_sha256"] = _sha(current.read_bytes())
+    monkeypatch.setattr(
+        driver.sys,
+        "stdin",
+        io.StringIO(json.dumps({"mode": "plan", "operation": "corpus.project", "input": payload})),
+    )
+    output = io.StringIO()
+    monkeypatch.setattr(driver.sys, "stdout", output)
+    assert driver.main() == 0
+    response = json.loads(output.getvalue())
+    assert response["ok"] is False
+    assert response["outcome"] == "failed"
+    assert "invalid" in response["diagnostics"][0]
 
 
-def test_owner_write_refuses_symlink_target(tmp_path: Path, monkeypatch) -> None:
+def test_web_release_rejects_model_file_pair_drift(monkeypatch, tmp_path: Path) -> None:
     driver = _load_driver()
     monkeypatch.setattr(driver, "ROOT", tmp_path)
-    outside = tmp_path / "outside.json"
-    outside.write_bytes(b"outside\n")
-    target = tmp_path / "data" / "leaderboard" / "projection.json"
+    payload = _release_input(tmp_path)
+    current = tmp_path / payload["current_evidence_path"]
+    changed = json.loads(current.read_text())
+    changed["models"][1]["bundleFile"] = "model-0.json"
+    current.write_bytes(_json(changed))
+    payload["current_evidence_sha256"] = _sha(current.read_bytes())
+    with pytest.raises(driver.DriverError, match="model ids and bundle files"):
+        driver._web_release_outputs(payload)
+
+
+@pytest.mark.parametrize("field,value", [("actualCostUsd", False), ("actualCostUsd", float("inf")), ("actualBillableApiCalls", True)])
+def test_web_release_rejects_nonfinite_or_boolean_cost_values(
+    monkeypatch, tmp_path: Path, field: str, value: object
+) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    current = tmp_path / payload["current_evidence_path"]
+    changed = json.loads(current.read_text())
+    changed["scoringRelease"][field] = value
+    current.write_bytes(_json(changed))
+    payload["current_evidence_sha256"] = _sha(current.read_bytes())
+    with pytest.raises(driver.DriverError, match="invalid"):
+        driver._web_release_outputs(payload)
+
+
+def test_web_release_rejects_duplicate_model_id_in_evidence_manifest(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    evidence = tmp_path / payload["evidence_manifest_path"]
+    changed = json.loads(evidence.read_text())
+    changed["models"][1]["model_id"] = changed["models"][0]["model_id"]
+    evidence.write_bytes(_json(changed))
+    payload["evidence_manifest_sha256"] = _sha(evidence.read_bytes())
+    with pytest.raises(driver.DriverError, match="must be unique"):
+        driver._web_release_outputs(payload)
+
+
+def test_web_release_rejects_unbound_current_evidence_count(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    current = tmp_path / payload["current_evidence_path"]
+    changed = json.loads(current.read_text())
+    changed["scoringRelease"]["rowCount"] = 1
+    current.write_bytes(_json(changed))
+    payload["current_evidence_sha256"] = _sha(current.read_bytes())
+    with pytest.raises(driver.DriverError, match="does not match the release manifests"):
+        driver._web_release_outputs(payload)
+
+
+def test_candidate_intake_rejects_multiple_or_absent_ids(monkeypatch) -> None:
+    driver = _load_driver()
+    source = {"schema_version": "givecare.artifact-ref/v1", "owner": "evals.dataset", "kind": "owner-projection", "artifact_id": "data/all.jsonl", "revision": "sha256:" + "a" * 64, "sha256": "a" * 64, "access": "public"}
+    records = _json({"id": "case-1", "input": "Help"})
+    monkeypatch.setattr(driver, "_materialized_evals_projection", lambda: ("b" * 64, source, records))
+    with pytest.raises(driver.DriverError, match="exactly one"):
+        driver._candidate_outputs({"schema_version": "gc-bench.candidate-intake.input/v2", "selected_ids": ["case-1", "case-2"]})
+    with pytest.raises(driver.DriverError, match="absent from the bound projection"):
+        driver._candidate_outputs({"schema_version": "gc-bench.candidate-intake.input/v2", "selected_ids": ["missing"]})
+
+
+def test_bound_file_rejects_digest_drift_and_symlink(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    path = tmp_path / "data" / "source.json"
+    path.parent.mkdir()
+    path.write_text("{}\n")
+    with pytest.raises(driver.DriverError, match="does not match"):
+        driver._read_bound_file("data/source.json", "0" * 64, field="source")
+    link = tmp_path / "data" / "link.json"
+    link.symlink_to(path)
+    with pytest.raises(driver.DriverError, match="symbolic link"):
+        driver._read_bound_file("data/link.json", "0" * 64, field="source")
+
+
+def test_web_release_ref_and_hound_artifact_are_exact(monkeypatch) -> None:
+    driver = _load_driver()
+    artifact = driver._web_release_ref("a" * 64)
+    assert artifact["artifact_id"] == "data/releases/web-bench-release.tar.gz"
+    monkeypatch.setattr(driver, "_operation_outputs", lambda _request: ({}, {"release": artifact}, "gc-bench.web-benchmark-release/v1"))
+    response = driver.handle({"mode": "plan", "operation": "corpus.project"})
+    assert response["artifacts"] == [artifact]
+
+
+def test_web_release_requires_strict_stamp_and_fixed_sources(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    payload = _release_input(tmp_path)
+    stamp = tmp_path / payload["qa_stamp_path"]
+    stamp.write_bytes(_json({"strict": False, "leaderboard_sha256": payload["leaderboard_sha256"]}))
+    payload["qa_stamp_sha256"] = _sha(stamp.read_bytes())
+    with pytest.raises(driver.DriverError, match="qa_stamp.strict"):
+        driver._web_release_outputs(payload)
+    payload = _release_input(tmp_path)
+    payload["current_evidence_path"] = "data/other.json"
+    with pytest.raises(driver.DriverError, match="current_evidence_path"):
+        driver._web_release_outputs(payload)
+
+
+def test_learning_lineage_stays_exact() -> None:
+    driver = _load_driver()
+    lineage = {"demand_sha256": "c" * 64, "trace_refs": [{"loop_id": "loop", "intent_sha256": "d" * 64}], "module_refs": []}
+    assert driver._learning_lineage(lineage) is lineage
+    with pytest.raises(driver.DriverError, match="loop_id and intent_sha256"):
+        driver._learning_lineage({"demand_sha256": "c" * 64, "trace_refs": [{"loop_id": "loop"}], "module_refs": []})
+
+
+def test_execute_rejects_plan_drift_and_write_rolls_back(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    target = tmp_path / "data" / "releases" / "web-bench-release.tar.gz"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"old")
+    outputs = {target: b"new"}
+    effects = [driver._effect(target, b"new")]
+    payload = _release_input(tmp_path)
+    with pytest.raises(driver.DriverError, match="approved deterministic plan"):
+        driver.handle({"mode": "execute", "operation": "corpus.project", "input": payload, "driver_plan": {"expected_effects": []}})
+    original_replace = driver.os.replace
+    def fail_replace(source, destination):
+        if destination == target:
+            raise OSError("replace failure")
+        original_replace(source, destination)
+    monkeypatch.setattr(driver.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="replace failure"):
+        driver._write_outputs(outputs, effects)
+    assert target.read_bytes() == b"old"
+
+
+def test_owner_write_refuses_symlinks_and_rechecks_before_digest(monkeypatch, tmp_path: Path) -> None:
+    driver = _load_driver()
+    monkeypatch.setattr(driver, "ROOT", tmp_path)
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"old")
+    target = tmp_path / "data" / "releases" / "web-bench-release.tar.gz"
     target.parent.mkdir(parents=True)
     target.symlink_to(outside)
-    content = b"new release\n"
-
+    effect = {"path": "data/releases/web-bench-release.tar.gz", "mode": "0644", "before_sha256": _sha(b"old"), "after_sha256": _sha(b"new")}
     with pytest.raises(driver.DriverError, match="symlink"):
-        driver._write_outputs(
-            {target: content},
-            [
-                {
-                    "path": "data/leaderboard/projection.json",
-                    "mode": "0644",
-                    "before_sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
-                    "after_sha256": hashlib.sha256(content).hexdigest(),
-                }
-            ],
-        )
-
-    assert outside.read_bytes() == b"outside\n"
-
-
-def test_owner_write_rechecks_approved_before_digest(tmp_path: Path, monkeypatch) -> None:
-    driver = _load_driver()
-    monkeypatch.setattr(driver, "ROOT", tmp_path)
-    target = tmp_path / "data" / "leaderboard" / "projection.json"
-    target.parent.mkdir(parents=True)
-    target.write_bytes(b"approved state\n")
-    content = b"new release\n"
-    effect = driver._effect(target, content)
-    target.write_bytes(b"changed after plan\n")
-
+        driver._write_outputs({target: b"new"}, [effect])
+    target.unlink()
+    target.write_bytes(b"approved")
+    effect = driver._effect(target, b"new")
+    target.write_bytes(b"changed")
     with pytest.raises(driver.DriverError, match="before digest changed"):
-        driver._write_outputs({target: content}, [effect])
-
-    assert target.read_bytes() == b"changed after plan\n"
+        driver._write_outputs({target: b"new"}, [effect])

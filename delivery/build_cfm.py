@@ -491,12 +491,12 @@ def build_cfm_section(
 # ---------------------------------------------------------------------------
 # QA-stamp gate (VISION.md: no side doors)
 #
-# Mirrors delivery/sync_web_bench.py's _verify_qa_stamp pattern. That gate
+# Mirrors the Hound web-release gate's strict-QA stamp pattern. That gate
 # checks a leaderboard.json's bytes against a stamped hash; this one checks a
 # scan's bytes, because build_cfm reads per_run.jsonl directly rather than the
 # leaderboard artifact. Both gates read the SAME stamp file
 # (data/leaderboard/.qa-stamp) — the explicit strict-QA lane writes it once,
-# after strict QA passes, with both the leaderboard hash (for sync_web_bench)
+# after strict QA passes, with both the leaderboard hash (for the web release)
 # and the scan path + hash (for build_cfm) recorded together.
 # ---------------------------------------------------------------------------
 
@@ -588,7 +588,7 @@ def build_and_write_cfm(
     scan (VISION.md: no side doors) — the pure ``build_cfm_section()``
     computation above stays ungated (used directly by tests and any future
     read-only/--check tooling); only this write-to-disk path is gated, same
-    split as sync_web_bench.py's pure project_leaderboard() and the Hound write.
+    split as the Hound web-release validation and the Hound write.
     """
     scan_path = Path(scan_path)
     out_path = Path(out_path)

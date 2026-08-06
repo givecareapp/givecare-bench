@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PUBLICATION_SOURCE = REPO_ROOT / "data" / "publication-source" / "web-bench" / "evidence"
+RELEASE_VERSION = re.compile(r"v[0-9]+(?:\.[0-9]+){2}")
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 PUBLIC_TURN_FIELDS = {
@@ -98,12 +100,15 @@ def _source_run(
 def build_release(
     *,
     sources: dict[str, list[Path]],
-    output_dir: Path,
+    release_version: str,
     expected_scenario_ids: Iterable[str],
     benchmark_version: str,
     result_contract_version: str,
     claim_ready_check_count: int = 0,
 ) -> Path:
+    if not isinstance(release_version, str) or RELEASE_VERSION.fullmatch(release_version) is None:
+        raise ValueError("release_version must be a semantic vX.Y.Z directory name")
+    output_dir = PUBLICATION_SOURCE / release_version
     expected_scenario_ids = set(expected_scenario_ids)
     if not sources:
         raise ValueError("at least one model source is required")
@@ -246,8 +251,10 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="MODEL_ID=RUN_DIR; repeat recovery runs for the same model",
     )
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--release-version", required=True, help="Public release directory name, for example v4.0.0")
     args = parser.parse_args(argv)
+    if RELEASE_VERSION.fullmatch(args.release_version) is None:
+        parser.error("--release-version must be a semantic vX.Y.Z directory name")
 
     modes, _ = load_checks()
     claim_ready_count = sum(
@@ -258,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         path = build_release(
             sources=_parse_sources(args.source),
-            output_dir=args.output,
+            release_version=args.release_version,
             expected_scenario_ids=collect_public_scenario_ids(REPO_ROOT),
             benchmark_version=BENCHMARK_VERSION,
             result_contract_version=RESULT_CONTRACT_VERSION,

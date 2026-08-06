@@ -124,6 +124,14 @@
         {
           "kind": "candidate-intake",
           "ref": "scripts/intake/"
+        },
+        {
+          "kind": "evals-owner-projection",
+          "ref": "data/imports/evals/all.jsonl"
+        },
+        {
+          "kind": "evals-owner-projection-provenance",
+          "ref": "data/imports/evals/provenance.json"
         }
       ],
       "verifiers": [
@@ -148,6 +156,21 @@
           ]
         },
         {
+          "name": "benchmark.evals.projection.sync",
+          "effect": "write",
+          "gate": "none",
+          "adapter": {
+            "kind": "owner-projection-sync",
+            "ref": "scripts/sync_evals_projection.py"
+          },
+          "accepts": [
+            "givecare.artifact-ref/v1"
+          ],
+          "emits": [
+            "gc-bench.evals-materialization/v1"
+          ]
+        },
+        {
           "name": "benchmark.scenarios.apply",
           "effect": "write",
           "gate": "human",
@@ -156,7 +179,7 @@
             "ref": "hound-driver.json#corpus.apply"
           },
           "accepts": [
-            "gc-bench.candidate-intake.input/v1"
+            "gc-bench.candidate-intake.input/v2"
           ],
           "emits": [
             "gc-bench.candidate-intake.result/v1",
@@ -181,8 +204,12 @@
           "ref": "scripts/hound_driver.py"
         },
         {
+          "kind": "web-benchmark-release-source",
+          "ref": "data/publication-source/web-bench/"
+        },
+        {
           "kind": "projection",
-          "ref": "data/leaderboard/leaderboard_web.json"
+          "ref": "data/releases/web-bench-release.tar.gz"
         },
         {
           "kind": "hound-driver",
@@ -208,22 +235,24 @@
           ]
         },
         {
-          "name": "benchmark.leaderboard.projection.read",
+          "name": "benchmark.web-release.read",
           "effect": "read",
           "gate": "none",
           "adapter": {
             "kind": "file",
-            "ref": "data/leaderboard/leaderboard_web.json"
+            "ref": "data/releases/web-bench-release.tar.gz"
           },
           "accepts": [
-            "gc-bench.leaderboard-projection/v1"
+            "gc-bench.web-benchmark-release/v1"
           ],
           "emits": [
-            "safety-care/v1"
+            "safety-care/v1",
+            "invisiblebench-transcripts/v1",
+            "invisiblebench-score-evidence/v1"
           ]
         },
         {
-          "name": "benchmark.leaderboard.project",
+          "name": "benchmark.web-release.project",
           "effect": "write",
           "gate": "none",
           "adapter": {
@@ -231,11 +260,13 @@
             "ref": "hound-driver.json#corpus.project"
           },
           "accepts": [
-            "gc-bench.leaderboard-projection.input/v1"
+            "gc-bench.web-benchmark-release.input/v1"
           ],
           "emits": [
             "safety-care/v1",
-            "gc-bench.leaderboard-projection/v1",
+            "gc-bench.web-benchmark-release/v1",
+            "invisiblebench-transcripts/v1",
+            "invisiblebench-score-evidence/v1",
             "givecare.artifact-ref/v1"
           ]
         }

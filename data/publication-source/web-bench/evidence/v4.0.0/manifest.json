@@ -1,0 +1,122 @@
+{
+  "schema": "invisiblebench-transcripts/v1",
+  "benchmark_version": "4.0.0",
+  "result_contract_version": "2.1.0",
+  "generated_at": "2026-07-10T16:05:29.008226+00:00",
+  "scenario_hash": "3c71250be9cc3e0ea569f3c22e2381c977a2a9fc45291d2974c42370b4840db4",
+  "model_count": 4,
+  "scenario_count": 63,
+  "transcript_count": 252,
+  "claim_posture": "descriptive_evidence_only",
+  "claim_ready_check_count": 0,
+  "synthetic_scenarios": true,
+  "content_notice": "Contains synthetic benchmark conversations and unverified model outputs, including intentionally unsafe or hallucinated content. It is research evidence, not medical, legal, crisis, or caregiving advice.",
+  "models": [
+    {
+      "model": "Claude Opus 4.8",
+      "model_id": "anthropic/claude-opus-4.8",
+      "file": "anthropic-claude-opus-4-8.json",
+      "sha256": "ecace581da8a0baa98701543b27da905a788bfceaec887ceb2fb79f8d8f2637c",
+      "bytes": 797581,
+      "transcript_count": 63,
+      "source_runs": [
+        {
+          "artifact_id": "run_20260709_135838",
+          "manifest_run_id": "0623c61d-77ba-4e3b-89c5-98f5fd005b60",
+          "benchmark_version": "3.1.0",
+          "git_sha": "bc606aa82c1d489a6ec0039369c7f4c54426192f",
+          "run_date": "2026-07-09T13:58:38.029898+00:00",
+          "model_actual_cost_usd": null,
+          "run_actual_cost_usd": null,
+          "run_actual_billable_api_calls": null,
+          "runtime_cost_ceiling_usd": null
+        }
+      ]
+    },
+    {
+      "model": "Gemma 4 26B A4B",
+      "model_id": "google/gemma-4-26b-a4b-it",
+      "file": "google-gemma-4-26b-a4b-it.json",
+      "sha256": "334a53d4b9fbe2f07bc6d49fb0d8426a4f2a8dd1bd8654b66b18efb869293b42",
+      "bytes": 963851,
+      "transcript_count": 63,
+      "source_runs": [
+        {
+          "artifact_id": "run_overnight_cheapest_20260710",
+          "manifest_run_id": "abeeb6d6-d0f0-43a6-86b9-9158fd700c39",
+          "benchmark_version": "4.0.0",
+          "git_sha": "bc606aa82c1d489a6ec0039369c7f4c54426192f",
+          "run_date": "2026-07-10T04:11:41.380672+00:00",
+          "model_actual_cost_usd": 0.13026855999999998,
+          "run_actual_cost_usd": 1.0064349814999998,
+          "run_actual_billable_api_calls": 743,
+          "runtime_cost_ceiling_usd": 1.0
+        }
+      ]
+    },
+    {
+      "model": "Gemma 4 31B",
+      "model_id": "google/gemma-4-31b-it",
+      "file": "google-gemma-4-31b-it.json",
+      "sha256": "93427afee23d4133ea14b61ddfa96a60e1fef67ad3c70437c2554d09468fb7a7",
+      "bytes": 915495,
+      "transcript_count": 63,
+      "source_runs": [
+        {
+          "artifact_id": "run_20260709_010622",
+          "manifest_run_id": "734cc1d6-0be6-4e02-a506-7f5cbbb8c5f7",
+          "benchmark_version": "3.1.0",
+          "git_sha": "8169f951961a2d162aed363565e1f3a13b2a3234",
+          "run_date": "2026-07-09T01:06:22.759445+00:00",
+          "model_actual_cost_usd": null,
+          "run_actual_cost_usd": null,
+          "run_actual_billable_api_calls": null,
+          "runtime_cost_ceiling_usd": null
+        },
+        {
+          "artifact_id": "run_20260709_012230",
+          "manifest_run_id": "75de60f3-69e6-4239-b882-9fd795d82376",
+          "benchmark_version": "3.1.0",
+          "git_sha": "8169f951961a2d162aed363565e1f3a13b2a3234",
+          "run_date": "2026-07-09T01:22:30.311682+00:00",
+          "model_actual_cost_usd": null,
+          "run_actual_cost_usd": null,
+          "run_actual_billable_api_calls": null,
+          "runtime_cost_ceiling_usd": null
+        }
+      ]
+    },
+    {
+      "model": "Qwen 3.6 35B",
+      "model_id": "qwen/qwen3.6-35b-a3b",
+      "file": "qwen-qwen3-6-35b-a3b.json",
+      "sha256": "e2e19c3bd805153959eaf69b5a7db29638bf418011a3142e6fcd7c9608e9b6cf",
+      "bytes": 1308500,
+      "transcript_count": 63,
+      "source_runs": [
+        {
+          "artifact_id": "run_overnight_cheapest_20260710",
+          "manifest_run_id": "abeeb6d6-d0f0-43a6-86b9-9158fd700c39",
+          "benchmark_version": "4.0.0",
+          "git_sha": "bc606aa82c1d489a6ec0039369c7f4c54426192f",
+          "run_date": "2026-07-10T04:11:41.380672+00:00",
+          "model_actual_cost_usd": 0.7599243065,
+          "run_actual_cost_usd": 1.0064349814999998,
+          "run_actual_billable_api_calls": 743,
+          "runtime_cost_ceiling_usd": 1.0
+        },
+        {
+          "artifact_id": "run_recovery_qwen_20260710",
+          "manifest_run_id": "4cfc98c6-1319-4445-81a5-2731087f7514",
+          "benchmark_version": "4.0.0",
+          "git_sha": "ae5795afefc57d3014fc2a256b774ffba58b795b",
+          "run_date": "2026-07-10T14:02:14.749958+00:00",
+          "model_actual_cost_usd": 0.18980362650000007,
+          "run_actual_cost_usd": 0.18980362650000007,
+          "run_actual_billable_api_calls": 83,
+          "runtime_cost_ceiling_usd": 1000000.0
+        }
+      ]
+    }
+  ]
+}

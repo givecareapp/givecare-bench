@@ -105,9 +105,9 @@ separate.
 
 ```bash
 uv run python scripts/intake/import_evals.py \
-  --source-plan-id <exact-plan-id> --selected-id <eval-record-id> \
+  --selected-id <eval-record-id> \
   --output /tmp/gc-bench-candidates.json
-hound plan --driver hound-driver.json --operation candidate.intake \
+hound plan --driver hound-driver.json --operation corpus.apply \
   --input /tmp/gc-bench-candidates.json --as-of YYYY-MM-DD \
   --output /tmp/gc-bench-candidate-plan.json
 uv run python scripts/intake/incident_registry.py intake/incidents.jsonl

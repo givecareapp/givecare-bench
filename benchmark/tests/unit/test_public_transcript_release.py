@@ -72,7 +72,9 @@ def _write_run(
     return run_dir
 
 
-def test_build_release_emits_complete_hashed_bundles_without_local_paths(tmp_path: Path) -> None:
+def test_build_release_emits_complete_hashed_bundles_without_local_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     model_a_main = _write_run(
         tmp_path,
         name="run_a_main",
@@ -94,14 +96,15 @@ def test_build_release_emits_complete_hashed_bundles_without_local_paths(tmp_pat
         model_name="Model B",
         scenario_ids=["s1", "s2"],
     )
-    output = tmp_path / "release"
+    output = tmp_path / "publication-source" / "v4.0.0"
+    monkeypatch.setattr("delivery.build_public_transcript_release.PUBLICATION_SOURCE", tmp_path / "publication-source")
 
     manifest_path = build_release(
         sources={
             "provider/model-a": [model_a_main, model_a_recovery],
             "provider/model-b": [model_b],
         },
-        output_dir=output,
+        release_version="v4.0.0",
         expected_scenario_ids=["s1", "s2"],
         benchmark_version="4.0.0",
         result_contract_version="2.1.0",
@@ -160,7 +163,9 @@ def test_build_release_emits_complete_hashed_bundles_without_local_paths(tmp_pat
     assert manifest["models"][0]["bytes"] == bundle_path.stat().st_size
 
 
-def test_build_release_rejects_incomplete_model_coverage(tmp_path: Path) -> None:
+def test_build_release_rejects_incomplete_model_coverage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     run_dir = _write_run(
         tmp_path,
         name="run_incomplete",
@@ -169,17 +174,20 @@ def test_build_release_rejects_incomplete_model_coverage(tmp_path: Path) -> None
         scenario_ids=["s1"],
     )
 
+    monkeypatch.setattr("delivery.build_public_transcript_release.PUBLICATION_SOURCE", tmp_path / "publication-source")
     with pytest.raises(ValueError, match="scenario coverage mismatch"):
         build_release(
             sources={"provider/model-a": [run_dir]},
-            output_dir=tmp_path / "release",
+            release_version="v4.0.0",
             expected_scenario_ids={"s1", "s2"},
             benchmark_version="4.0.0",
             result_contract_version="2.1.0",
         )
 
 
-def test_build_release_rejects_mixed_corpus_hashes(tmp_path: Path) -> None:
+def test_build_release_rejects_mixed_corpus_hashes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     run_a = _write_run(
         tmp_path,
         name="run_a",
@@ -197,11 +205,23 @@ def test_build_release_rejects_mixed_corpus_hashes(tmp_path: Path) -> None:
         scenario_hash="hash-b",
     )
 
+    monkeypatch.setattr("delivery.build_public_transcript_release.PUBLICATION_SOURCE", tmp_path / "publication-source")
     with pytest.raises(ValueError, match="mixed scenario hashes"):
         build_release(
             sources={"provider/model-a": [run_a], "provider/model-b": [run_b]},
-            output_dir=tmp_path / "release",
+            release_version="v4.0.0",
             expected_scenario_ids={"s1"},
+            benchmark_version="4.0.0",
+            result_contract_version="2.1.0",
+        )
+
+
+def test_build_release_rejects_traversal_release_version(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="semantic vX.Y.Z"):
+        build_release(
+            sources={},
+            release_version="../outside",
+            expected_scenario_ids=set(),
             benchmark_version="4.0.0",
             result_contract_version="2.1.0",
         )

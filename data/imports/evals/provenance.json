@@ -1,0 +1,13 @@
+{
+  "schema_version": "gc-bench.evals-materialization/v1",
+  "source": {
+    "access": "public",
+    "artifact_id": "data/all.jsonl",
+    "kind": "owner-projection",
+    "owner": "evals.dataset",
+    "revision": "sha256:2ebea8c2def0660c84a79f6f3e2a4ec6b806cda4e5b124cfe507f7be88aa07a3",
+    "schema_version": "givecare.artifact-ref/v1",
+    "sha256": "2ebea8c2def0660c84a79f6f3e2a4ec6b806cda4e5b124cfe507f7be88aa07a3"
+  },
+  "source_run_id": "8048082ffccdb107588d3c3f5ef97e0f3cc2de85da0939c71a2a0c01d0bd7a2b"
+}

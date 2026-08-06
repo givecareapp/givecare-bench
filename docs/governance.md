@@ -107,7 +107,7 @@ writes only the owner-local consumer projection.
 Strict QA also requires the artifact benchmark version, current check-template
 hash map, full check-definition snapshot, source scan bytes, and v2
 comparability lineage to agree exactly.
-The consumer copy comes from committed `data/leaderboard/leaderboard_web.json`,
+The consumer copy comes from committed `data/releases/web-bench-release.tar.gz`,
 never from a cross-repo owner write. Promoting a submitted row into the public artifact
 stays a maintainer action, but the QA gate — not maintainer discretion — decides
 what is publishable at all.

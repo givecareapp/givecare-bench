@@ -91,13 +91,16 @@ def _write_scan(root: Path, *, unclear: bool = False) -> Path:
     return scan
 
 
-def test_public_score_release_is_complete_auditable_and_allowlisted(tmp_path: Path) -> None:
+def test_public_score_release_is_complete_auditable_and_allowlisted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     scan = _write_scan(tmp_path / "scan")
-    output = tmp_path / "public"
+    output = tmp_path / "publication-source" / "v4.0.0"
+    monkeypatch.setattr("delivery.build_public_score_release.PUBLICATION_SOURCE", tmp_path / "publication-source")
 
     manifest_path = build_release(
         scan_path=scan,
-        output_dir=output,
+        release_version="v4.0.0",
         expected_scenario_ids={"s1", "s2"},
         expected_mode_ids={"check.one"},
         benchmark_version="4.0.0",
@@ -130,15 +133,31 @@ def test_public_score_release_is_complete_auditable_and_allowlisted(tmp_path: Pa
     assert hashlib.sha256(bundle_path.read_bytes()).hexdigest() == manifest["models"][0]["sha256"]
 
 
-def test_public_score_release_rejects_unresolved_rows(tmp_path: Path) -> None:
+def test_public_score_release_rejects_unresolved_rows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     scan = _write_scan(tmp_path / "scan", unclear=True)
+    monkeypatch.setattr("delivery.build_public_score_release.PUBLICATION_SOURCE", tmp_path / "publication-source")
 
     with pytest.raises(ValueError, match="unresolved verdict"):
         build_release(
             scan_path=scan,
-            output_dir=tmp_path / "public",
+            release_version="v4.0.0",
             expected_scenario_ids={"s1", "s2"},
             expected_mode_ids={"check.one"},
+            benchmark_version="4.0.0",
+            result_contract_version="3.2.0",
+            claim_ready_check_count=0,
+        )
+
+
+def test_public_score_release_rejects_traversal_release_version(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="semantic vX.Y.Z"):
+        build_release(
+            scan_path=tmp_path / "never-read.jsonl",
+            release_version="../outside",
+            expected_scenario_ids=set(),
+            expected_mode_ids=set(),
             benchmark_version="4.0.0",
             result_contract_version="3.2.0",
             claim_ready_check_count=0,

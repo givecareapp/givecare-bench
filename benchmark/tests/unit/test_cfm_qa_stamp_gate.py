@@ -6,7 +6,7 @@ VISION.md: no side doors. Before this gate, `python -m delivery.build_cfm
 --scan <path> --out <path>` could write anywhere with zero verification that
 <path> was ever scored or strict-QA'd, or that it's the same scan the
 currently-stamped leaderboard was generated from. Mirrors
-test_qa_stamp_gate.py's coverage of delivery/sync_web_bench.py, adapted for
+test_qa_stamp_gate.py's coverage of the Hound web-release gate, adapted for
 build_cfm's scan-identity check instead of a leaderboard-bytes check.
 """
 
@@ -78,7 +78,7 @@ def test_missing_stamp_refuses_write(tmp_path: Path) -> None:
 def test_stale_stamp_refuses_write(tmp_path: Path) -> None:
     """Scan content changed after the stamp was written (regenerated or
     hand-edited post-QA) — the recorded scan_sha256 goes stale, the same
-    failure mode as sync_web_bench's leaderboard-bytes staleness check."""
+    failure mode as the web release's leaderboard-bytes staleness check."""
     catalog = _write_catalog(tmp_path)
     scan = _write_scan(tmp_path, content='{"model": "original"}\n')
     stamp_path = _stamp_path(tmp_path)

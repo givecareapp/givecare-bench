@@ -2,9 +2,9 @@
 """Health check for InvisibleBench results and leaderboard."""
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
+import tarfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -147,51 +147,29 @@ def _append_current_contract_warnings(
             warnings.append(f"current_contract_{field}={value}")
 
 
-def append_local_web_projection_health(
+def append_local_web_release_health(
     analysis: dict[str, Any],
     *,
     root: Path | None = None,
 ) -> None:
-    """Append read-only health warnings for a generated web projection.
-
-    This intentionally does not write `leaderboard_web.json`; publish/sync is
-    guarded elsewhere. The health check only makes stale generated artifacts
-    visible.
-    """
+    """Append read-only health warnings for the one generated web archive."""
     root = root or get_project_root()
-    source = root / "data" / "leaderboard" / "leaderboard.json"
-    target = root / "data" / "leaderboard" / "leaderboard_web.json"
+    target = root / "data" / "releases" / "web-bench-release.tar.gz"
     warnings = analysis.setdefault("schema_warnings", [])
-
-    if not source.exists():
-        return
     if not target.exists():
-        warnings.append(f"local_web_projection_missing={target}")
+        warnings.append(f"local_web_release_missing={target}")
         return
-
     try:
-        sync_path = root / "delivery" / "sync_web_bench.py"
-        if not sync_path.exists():
-            sync_path = get_project_root() / "delivery" / "sync_web_bench.py"
-        spec = importlib.util.spec_from_file_location("invisiblebench_delivery_sync_web_bench", sync_path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"cannot load {sync_path}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
-        compute_sync_status = module.compute_sync_status
-        status = compute_sync_status(source, target)
-    except (OSError, ValueError, json.JSONDecodeError, ImportError, AttributeError) as exc:
-        warnings.append(f"local_web_projection_check_failed={type(exc).__name__}: {exc}")
+        with tarfile.open(target, "r:gz") as archive:
+            manifest = archive.extractfile("release-manifest.json")
+            if manifest is None:
+                raise ValueError("release manifest is absent")
+            value = json.load(manifest)
+        if not isinstance(value, dict) or value.get("schema_version") != "gc-bench.web-benchmark-release/v1":
+            raise ValueError("release manifest schema is invalid")
+    except (OSError, ValueError, json.JSONDecodeError, tarfile.TarError) as exc:
+        warnings.append(f"local_web_release_check_failed={type(exc).__name__}: {exc}")
         return
-
-    if not status.in_sync:
-        warnings.append(
-            "local_web_projection_drift="
-            f"target={status.target} "
-            f"source_generated_at={status.source_generated_at} "
-            f"target_generated_at={status.target_generated_at}"
-        )
 
 
 def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None:
@@ -334,7 +312,7 @@ def run_health(verbose: bool = False) -> int:
         print(f"Error running health check: {e}")
         return 1
 
-    append_local_web_projection_health(analysis)
+    append_local_web_release_health(analysis)
     print_health_report(analysis, verbose=verbose)
 
     # Return non-zero if there are issues

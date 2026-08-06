@@ -31,7 +31,7 @@ The code documentation phase makes the procedure inspectable:
 - `scripts/run_scan.py` and `delivery/combine_scans.py` produce complete scans.
   The explicit human/cost/strict-QA lane produces the canonical leaderboard
   and QA stamp. Hound `corpus.project` reads those exact owner bytes and uses
-  `delivery/sync_web_bench.py` to form the consumer projection.
+  the complete Hound-owned web release archive to form the consumer projection.
   `delivery/combine_scans.py`
   requires exact scenario-set parity, one publish profile, one judge, complete
   cost accounting, and no duplicate model/scenario rows. It accepts only scan
@@ -86,16 +86,15 @@ lineage from old artifacts.
   retry-parse-error counts. QA recomputes it from the scan; it is metadata, not
   a score.
 
-The web-bench payload is a lean projection of that artifact:
+The web-bench release is one deterministic archive of that artifact and its
+matched transcript, score, and current-evidence inputs:
 
-- Owner projection: `data/leaderboard/leaderboard_web.json`
-- Payload shape (`safety-care/v1`): `schema`, `notes`, `scan_metadata`, and
-  `models` — each model carrying `safety` (per-line violation rates + aggregate)
-  and `care` (per-quality distributions). `delivery/sync_web_bench.py` validates
-  the source and rejects non-public top-level keys. Hound writes the projection.
-- Local projection drift is read-only health state: after generation,
-  `bench health` reports whether `leaderboard_web.json` lags
-  `leaderboard.json`; it does not sync or write the projection.
+- Owner projection: `data/releases/web-bench-release.tar.gz`
+- The archive contains the lean `safety-care/v1` scorecard, exact public
+  transcript and score bundles, and `current-evidence.json`. Hound validates
+  the source and rejects cross-file drift before it writes the archive.
+- Local release health is read-only: `bench health` reports a missing or
+  malformed archive. It never syncs or writes one.
 - No `findings` block: thematic failure clusters, contrast sets, and
   field-relative model signatures are NOT in the lean payload. They are deferred
   to a re-authored Safety/Care artifact-v2.

@@ -8,18 +8,16 @@ write into ``benchmark/scenarios``.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-GIVECARE_ROOT = REPO_ROOT.parent
-GIVECARE_PROTOCOL = GIVECARE_ROOT / "scripts" / "givecare_protocol.py"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 # Eval categories → gc-bench ScenarioCategory
 CATEGORY_MAP: dict[str, str] = {
@@ -365,80 +363,15 @@ def find_near_duplicates(
     return near
 
 
-def _sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 def load_verified_projection(
-    *,
-    source_plan_id: str,
 ) -> tuple[dict[str, Any], bytes, list[dict[str, Any]]]:
-    """Use the shared verifier, then load only its exact owner projection."""
-    if re.fullmatch(r"[0-9a-f]{64}", source_plan_id) is None:
-        raise ValueError("--source-plan-id must be a lowercase SHA-256 Hound plan id")
-    owner_root = (GIVECARE_ROOT / "gc-evals").resolve()
-    project_run = owner_root / ".hound" / "runs" / source_plan_id
-    verification = subprocess.run(
-        [
-            sys.executable,
-            str(GIVECARE_PROTOCOL),
-            "--root",
-            str(GIVECARE_ROOT),
-            "projection-ref",
-            "--run-dir",
-            str(project_run),
-            "--owner-repo",
-            "gc-evals",
-            "--driver-id",
-            "gc-evals",
-            "--artifact-owner",
-            "evals.dataset",
-            "--artifact-id",
-            "data/all.jsonl",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if verification.returncode != 0:
-        detail = verification.stderr.strip() or verification.stdout.strip()
-        raise ValueError(f"gc-evals Hound projection verification failed: {detail}")
+    """Use one verified, fixed gc-bench materialization of the Evals projection."""
+    from scripts.sync_evals_projection import ProjectionSyncError, load_materialized_source
 
     try:
-        source = json.loads(verification.stdout)
-    except json.JSONDecodeError as error:
-        raise ValueError("shared projection verifier emitted invalid JSON") from error
-    expected_fields = {
-        "schema_version",
-        "owner",
-        "kind",
-        "artifact_id",
-        "revision",
-        "sha256",
-        "access",
-    }
-    if not isinstance(source, dict) or set(source) != expected_fields:
-        raise ValueError("shared verifier returned an invalid projection ArtifactRef")
-    digest = source.get("sha256")
-    if source != {
-        "schema_version": "givecare.artifact-ref/v1",
-        "owner": "evals.dataset",
-        "kind": "owner-projection",
-        "artifact_id": "data/all.jsonl",
-        "revision": f"sha256:{digest}",
-        "sha256": digest,
-        "access": "public",
-    }:
-        raise ValueError("verified projection ArtifactRef does not match the gc-evals contract")
-
-    projection = (owner_root / source["artifact_id"]).resolve()
-    try:
-        projection.relative_to(owner_root)
-        projection_bytes = projection.read_bytes()
-    except (OSError, ValueError) as error:
-        raise ValueError("gc-evals projection is unreadable") from error
-    if _sha256(projection_bytes) != digest:
-        raise ValueError("gc-evals projection bytes do not match the Hound ArtifactRef")
+        _source_run_id, source, projection_bytes = load_materialized_source()
+    except ProjectionSyncError as error:
+        raise ValueError(str(error)) from error
 
     records: list[dict[str, Any]] = []
     for line_number, line in enumerate(projection_bytes.splitlines(), start=1):
@@ -462,11 +395,6 @@ def main() -> None:
         description="Compile a verified gc-evals Hound projection for gc-bench intake.",
     )
     parser.add_argument(
-        "--source-plan-id",
-        required=True,
-        help="Exact verified gc-evals corpus.project Hound plan id",
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         required=True,
@@ -480,9 +408,7 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        _source, _projection_bytes, all_records = load_verified_projection(
-            source_plan_id=args.source_plan_id,
-        )
+        _source, _projection_bytes, all_records = load_verified_projection()
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         sys.exit(1)
@@ -495,8 +421,7 @@ def main() -> None:
         print("ERROR: selected eval record is absent or incomplete", file=sys.stderr)
         sys.exit(1)
     request = {
-        "schema_version": "gc-bench.candidate-intake.input/v1",
-        "source_plan_id": args.source_plan_id,
+        "schema_version": "gc-bench.candidate-intake.input/v2",
         "selected_ids": [args.selected_id],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
