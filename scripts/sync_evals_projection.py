@@ -22,10 +22,9 @@ WORKSPACE_ROOT = ROOT.parent
 PROTOCOL = WORKSPACE_ROOT / "scripts" / "givecare_protocol.py"
 OWNER_ROOT = WORKSPACE_ROOT / "gc-evals"
 SOURCE_ARTIFACT = "data/all.jsonl"
-TARGET = ROOT / "data" / "imports" / "evals" / "all.jsonl"
-PROVENANCE = ROOT / "data" / "imports" / "evals" / "provenance.json"
-MAX_MATERIALIZATION_BYTES = 2_000_000
-MAX_PROVENANCE_BYTES = 64 * 1024
+TARGET = ROOT / "data" / "imports" / "evals" / "materialization.json"
+MAX_SOURCE_BYTES = 2_000_000
+MAX_MATERIALIZATION_BYTES = 5_000_000
 SHA256 = re.compile(r"[0-9a-f]{64}")
 ARTIFACT_FIELDS = {
     "schema_version",
@@ -139,58 +138,60 @@ def verified_source(run_id: str) -> dict[str, str]:
 
 def load_materialized_source() -> tuple[str, dict[str, str], bytes]:
     """Read only gc-bench's fixed, previously verified Evals materialization."""
-    with _consumer_lock(shared=True):
-        _refuse_symlinks(TARGET, root=ROOT)
-        _refuse_symlinks(PROVENANCE, root=ROOT)
-        if PROVENANCE.stat().st_size > MAX_PROVENANCE_BYTES:
-            raise ProjectionSyncError("gc-evals materialization provenance exceeds the size limit")
-        try:
-            metadata = json.loads(PROVENANCE.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise ProjectionSyncError("gc-evals materialization provenance is unreadable") from error
-        if not isinstance(metadata, dict) or set(metadata) != {
-            "schema_version",
-            "source_run_id",
-            "source",
-        }:
-            raise ProjectionSyncError("gc-evals materialization provenance has invalid fields")
-        source_run_id = metadata["source_run_id"]
-        source = metadata["source"]
-        if (
-            metadata["schema_version"] != "gc-bench.evals-materialization/v1"
-            or not isinstance(source_run_id, str)
-            or SHA256.fullmatch(source_run_id) is None
-            or not isinstance(source, dict)
-        ):
-            raise ProjectionSyncError("gc-evals materialization provenance is invalid")
-        digest = source.get("sha256")
-        expected_source = {
-            "schema_version": "givecare.artifact-ref/v1",
-            "owner": "evals.dataset",
-            "kind": "owner-projection",
-            "artifact_id": SOURCE_ARTIFACT,
-            "revision": f"sha256:{digest}",
-            "sha256": digest,
-            "access": "public",
-        }
-        if (
-            set(source) != ARTIFACT_FIELDS
-            or not isinstance(digest, str)
-            or SHA256.fullmatch(digest) is None
-            or source != expected_source
-        ):
-            raise ProjectionSyncError("gc-evals materialization ArtifactRef is invalid")
-        if TARGET.is_symlink() or not TARGET.is_file():
-            raise ProjectionSyncError("gc-evals materialization is not a regular file")
-        if TARGET.stat().st_size > MAX_MATERIALIZATION_BYTES:
-            raise ProjectionSyncError("gc-evals materialization exceeds the size limit")
-        try:
-            content = TARGET.read_bytes()
-        except OSError as error:
-            raise ProjectionSyncError("gc-evals materialization is unreadable") from error
-        if not content or _sha256(content) != source["sha256"]:
-            raise ProjectionSyncError("gc-evals materialization does not match the verified ArtifactRef")
-        return source_run_id, {key: str(source[key]) for key in ARTIFACT_FIELDS}, content
+    _refuse_symlinks(TARGET, root=ROOT)
+    if TARGET.is_symlink() or not TARGET.is_file():
+        raise ProjectionSyncError("gc-evals materialization is not a regular file")
+    if TARGET.stat().st_size > MAX_MATERIALIZATION_BYTES:
+        raise ProjectionSyncError("gc-evals materialization exceeds the size limit")
+    try:
+        materialized = json.loads(TARGET.read_bytes())
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ProjectionSyncError("gc-evals materialization is unreadable") from error
+    if not isinstance(materialized, dict) or set(materialized) != {
+        "schema_version",
+        "source_run_id",
+        "source",
+        "projection_jsonl",
+    }:
+        raise ProjectionSyncError("gc-evals materialization has invalid fields")
+    source_run_id = materialized["source_run_id"]
+    source = materialized["source"]
+    projection_jsonl = materialized["projection_jsonl"]
+    if (
+        materialized["schema_version"] != "gc-bench.evals-materialization/v2"
+        or not isinstance(source_run_id, str)
+        or SHA256.fullmatch(source_run_id) is None
+        or not isinstance(source, dict)
+        or not isinstance(projection_jsonl, str)
+    ):
+        raise ProjectionSyncError("gc-evals materialization is invalid")
+    digest = source.get("sha256")
+    expected_source = {
+        "schema_version": "givecare.artifact-ref/v1",
+        "owner": "evals.dataset",
+        "kind": "owner-projection",
+        "artifact_id": SOURCE_ARTIFACT,
+        "revision": f"sha256:{digest}",
+        "sha256": digest,
+        "access": "public",
+    }
+    if (
+        set(source) != ARTIFACT_FIELDS
+        or not isinstance(digest, str)
+        or SHA256.fullmatch(digest) is None
+        or source != expected_source
+    ):
+        raise ProjectionSyncError("gc-evals materialization ArtifactRef is invalid")
+    content = projection_jsonl.encode("utf-8")
+    if (
+        not content
+        or len(content) > MAX_SOURCE_BYTES
+        or _sha256(content) != source["sha256"]
+    ):
+        raise ProjectionSyncError(
+            "gc-evals materialization does not match the verified ArtifactRef"
+        )
+    return source_run_id, {key: str(source[key]) for key in ARTIFACT_FIELDS}, content
 
 
 def _stage(path: Path, content: bytes) -> Path:
@@ -209,57 +210,43 @@ def _stage(path: Path, content: bytes) -> Path:
 
 
 @contextmanager
-def _consumer_lock(*, shared: bool) -> Iterator[None]:
+def _consumer_lock() -> Iterator[None]:
     descriptor = os.open(ROOT, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
-        fcntl.flock(descriptor, fcntl.LOCK_SH if shared else fcntl.LOCK_EX)
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
         yield
     finally:
         fcntl.flock(descriptor, fcntl.LOCK_UN)
         os.close(descriptor)
 
 
-def _replace_pair(content: bytes, metadata: bytes) -> None:
-    with _consumer_lock(shared=False):
+def _replace_materialization(content: bytes) -> None:
+    """Install one complete generation with one atomic rename."""
+    with _consumer_lock():
         TARGET.parent.mkdir(parents=True, exist_ok=True)
         _refuse_symlinks(TARGET, root=ROOT)
-        _refuse_symlinks(PROVENANCE, root=ROOT)
-        for path in (TARGET, PROVENANCE):
-            if path.exists() and not stat.S_ISREG(path.stat(follow_symlinks=False).st_mode):
-                raise ProjectionSyncError(f"materialization target is not a regular file: {path}")
-        before = {path: path.read_bytes() if path.exists() else None for path in (TARGET, PROVENANCE)}
-        staged = {TARGET: _stage(TARGET, content), PROVENANCE: _stage(PROVENANCE, metadata)}
-        backups: dict[Path, Path | None] = {}
-        replaced: list[Path] = []
+        if TARGET.exists() and not stat.S_ISREG(
+            TARGET.stat(follow_symlinks=False).st_mode
+        ):
+            raise ProjectionSyncError(
+                f"materialization target is not a regular file: {TARGET}"
+            )
+        before = TARGET.read_bytes() if TARGET.exists() else None
+        staged = _stage(TARGET, content)
         try:
-            for path, old in before.items():
-                backups[path] = _stage(path, old) if old is not None else None
-            for path, old in before.items():
-                now = path.read_bytes() if path.exists() else None
-                if now != old:
-                    raise ProjectionSyncError("gc-evals materialization changed during sync")
-            for path in (TARGET, PROVENANCE):
-                os.replace(staged[path], path)
-                replaced.append(path)
-            if TARGET.read_bytes() != content or PROVENANCE.read_bytes() != metadata:
-                raise ProjectionSyncError("gc-evals materialization replacement verification failed")
+            now = TARGET.read_bytes() if TARGET.exists() else None
+            if now != before:
+                raise ProjectionSyncError("gc-evals materialization changed during sync")
+            os.replace(staged, TARGET)
+            staged = None
             descriptor = os.open(TARGET.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
             try:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
-        except BaseException:
-            for path in reversed(replaced):
-                backup = backups[path]
-                if backup is None:
-                    path.unlink(missing_ok=True)
-                else:
-                    os.replace(backup, path)
-                    backups[path] = None
-            raise
         finally:
-            for path in [*staged.values(), *(item for item in backups.values() if item is not None)]:
-                path.unlink(missing_ok=True)
+            if staged is not None:
+                staged.unlink(missing_ok=True)
 
 
 def sync(run_dir: Path) -> dict[str, Any]:
@@ -269,21 +256,28 @@ def sync(run_dir: Path) -> dict[str, Any]:
     _refuse_symlinks(owner_file, root=OWNER_ROOT)
     if not owner_file.is_file():
         raise ProjectionSyncError("gc-evals owner projection is not a regular file")
-    if owner_file.stat().st_size > MAX_MATERIALIZATION_BYTES:
+    if owner_file.stat().st_size > MAX_SOURCE_BYTES:
         raise ProjectionSyncError("gc-evals owner projection exceeds the size limit")
     content = owner_file.read_bytes()
     if _sha256(content) != source["sha256"]:
         raise ProjectionSyncError("gc-evals owner projection changed after verification")
-    metadata = _json_bytes(
+    try:
+        projection_jsonl = content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ProjectionSyncError("gc-evals owner projection is not UTF-8") from error
+    materialization = _json_bytes(
         {
-            "schema_version": "gc-bench.evals-materialization/v1",
+            "schema_version": "gc-bench.evals-materialization/v2",
             "source_run_id": run_dir.name,
             "source": source,
+            "projection_jsonl": projection_jsonl,
         }
     )
-    _replace_pair(content, metadata)
+    if len(materialization) > MAX_MATERIALIZATION_BYTES:
+        raise ProjectionSyncError("gc-evals materialization exceeds the size limit")
+    _replace_materialization(materialization)
     return {
-        "schema_version": "gc-bench.evals-materialization-result/v1",
+        "schema_version": "gc-bench.evals-materialization-result/v2",
         "source_run_id": run_dir.name,
         "source": source,
         "target": TARGET.relative_to(ROOT).as_posix(),
@@ -291,7 +285,9 @@ def sync(run_dir: Path) -> dict[str, Any]:
 
 
 def _json_bytes(value: Any) -> bytes:
-    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+    return (
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode()
 
 
 def main(argv: list[str] | None = None) -> int:

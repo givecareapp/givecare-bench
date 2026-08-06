@@ -14,10 +14,10 @@ uv run python scripts/intake/import_evals.py \
   --selected-id <eval-record-id> --output /tmp/gc-bench-candidate.json
 ```
 
-The compiler and Hound driver read only:
-
-- `data/imports/evals/all.jsonl`
-- `data/imports/evals/provenance.json`
+The compiler and Hound driver read only
+`data/imports/evals/materialization.json`. This one atomically replaced file
+contains the exact source bytes and their verified Hound receipt. A process
+stop cannot expose a payload from one generation with a receipt from another.
 
 The receipt stores the verified source run ID and ArtifactRef. A candidate input
 contains only one selected ID. Hound adds that receipt to the promoted scenario

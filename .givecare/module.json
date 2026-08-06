@@ -127,11 +127,7 @@
         },
         {
           "kind": "evals-owner-projection",
-          "ref": "data/imports/evals/all.jsonl"
-        },
-        {
-          "kind": "evals-owner-projection-provenance",
-          "ref": "data/imports/evals/provenance.json"
+          "ref": "data/imports/evals/materialization.json"
         }
       ],
       "verifiers": [
@@ -167,7 +163,7 @@
             "givecare.artifact-ref/v1"
           ],
           "emits": [
-            "gc-bench.evals-materialization/v1"
+            "gc-bench.evals-materialization/v2"
           ]
         },
         {
