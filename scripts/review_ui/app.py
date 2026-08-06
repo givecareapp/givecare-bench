@@ -1640,7 +1640,7 @@ def _plan_overview(plan: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 _RECORD_SKIP = {
-    "schema_version", "capture_id", "content_sha256", "source_ids", "slug",
+    "schema_version", "content_sha256", "source_ids", "slug",
     "media_type", "id",
 }
 
