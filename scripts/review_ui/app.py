@@ -40,7 +40,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, abort, g, jsonify, redirect, request, send_from_directory
+from flask import Flask, Response, abort, g, jsonify, redirect, request
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -65,21 +65,13 @@ REVIEW_SESSION_TITLE = (
 _EXACT_QUOTE_RE = re.compile(r'["“]([^"”]{4,})["”]')
 
 # --------------------------------------------------------------------------- #
-# Approval-queue extensions — Hound plans + social package. Hound plans are
-# read/decide-only. Every approval effect is the gate's own native
-# artifact (`hound approve` writes hound.approval.v1; the social hold is the
-# HOLD file social_autopost already honors), so enforcement stays in the
-# gates and deleting these routes returns the system exactly to before.
-# Notes and social decisions are appended to the workspace decisions ledger.
-# Hound approvals and declines exist only as native Hound artifacts.
+# Approval-queue extension for native Hound plans. Plans are read/decide-only.
+# Every approval effect is the gate's own `hound.approval.v1` artifact, so
+# enforcement stays in Hound. Notes use the workspace decisions ledger.
+# Social approval belongs only to the persistent Plexus Chief-of-Staff thread.
 # --------------------------------------------------------------------------- #
 GIVECARE_ROOT = Path(os.environ.get("GIVECARE_ROOT", "/home/deploy/repos/givecare"))
 HOUND_BIN = "/home/deploy/.local/share/uv/tools/evidence-hound/bin/hound"
-SOCIAL_ASSETS = Path(
-    os.environ.get("SOCIAL_ASSETS", "/home/deploy/agents/helm/log/digests/assets")
-)
-SOCIAL_PKG_RE = re.compile(r"^givecare-authority-\d{4}-\d{2}-\d{2}$")
-SOCIAL_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.png$")
 DECISIONS_PATH = GIVECARE_ROOT / ".agents" / "decisions.jsonl"
 PLAN_STEM_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 PLAN_JSON_CAP = 40_000  # chars of pretty-printed plan JSON shown per card
@@ -1599,8 +1591,6 @@ def _banner(msg: str) -> str:
     label = {
         "approve": "Approved",
         "decline": "Declined and archived",
-        "hold": "HOLD placed",
-        "release": "HOLD released",
         "note": "Note posted",
     }.get(kind)
     if not label or not name:
@@ -1918,281 +1908,19 @@ def hound_plan_decide(token: str, repo: str, stem: str) -> Response:
 
 
 # --------------------------------------------------------------------------- #
-# Social package queue — today's campaign preview rendered from disk (never
-# from an agent's self-report), with the HOLD file as the decide lever.
-# social_autopost.py honors the package HOLD on every publish attempt.
-# --------------------------------------------------------------------------- #
-def load_social_packages(limit: int = 2) -> list[dict[str, Any]]:
-    if not SOCIAL_ASSETS.is_dir():
-        return []
-    dirs = sorted(
-        (d for d in SOCIAL_ASSETS.iterdir() if d.is_dir() and SOCIAL_PKG_RE.match(d.name)),
-        key=lambda d: d.name,
-        reverse=True,
-    )[:limit]
-    packages: list[dict[str, Any]] = []
-    for d in dirs:
-        pkg: dict[str, Any] = {"name": d.name, "dir": d, "campaign": None, "receipt": None}
-        for field, fname in (("campaign", "campaign.json"), ("receipt", "receipt.json")):
-            try:
-                data = json.loads((d / fname).read_text(encoding="utf-8"))
-                pkg[field] = data if isinstance(data, dict) else None
-            except (OSError, json.JSONDecodeError):
-                pass
-        hold = d / "HOLD"
-        pkg["hold"] = hold.exists()
-        pkg["hold_note"] = ""
-        if pkg["hold"]:
-            try:
-                pkg["hold_note"] = hold.read_text(encoding="utf-8").strip()[:500]
-            except OSError:
-                pass
-        packages.append(pkg)
-    return packages
-
-
-SOCIAL_LEDGER = GIVECARE_ROOT / ".agents" / "social-ledger.jsonl"
-SOCIAL_WINDOW_END = (9, 0)  # ET; 07:15 publish + retry tail, decisions moot after
-
-
-def social_posted(pkg_name: str) -> list[dict[str, Any]]:
-    """Publish-time truth: ledger lines posted for this package's campaign.
-
-    The receipt is package-time truth and can be overwritten by a later
-    re-package run (seen 2026-07-29: five channels posted at 07:16 ET, then a
-    19:48 ET re-render left PACKAGE_FAILED on disk). Only the ledger says
-    whether anything actually went out.
-    """
-    rows: list[dict[str, Any]] = []
-    try:
-        lines = SOCIAL_LEDGER.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return rows
-    for line in lines:
-        try:
-            rec = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if (
-            isinstance(rec, dict)
-            and rec.get("status") == "posted"
-            and str(rec.get("campaign_id", "")).startswith(pkg_name)
-        ):
-            rows.append(rec)
-    return rows
-
-
-def social_window_open(pkg_name: str) -> bool:
-    """True while a hold/release decision can still change the outcome."""
-    from zoneinfo import ZoneInfo
-
-    date_part = pkg_name.removeprefix("givecare-authority-")
-    now = datetime.now(ZoneInfo("America/New_York"))
-    if date_part != now.strftime("%Y-%m-%d"):
-        return False
-    return (now.hour, now.minute) < SOCIAL_WINDOW_END
-
-
-def _social_pkg_dir(name: str) -> Path:
-    if not SOCIAL_PKG_RE.match(name):
-        abort(404)
-    d = SOCIAL_ASSETS / name
-    if not d.is_dir():
-        abort(404)
-    return d
-
-
-@app.get("/social/<token>")
-def social_queue(token: str) -> Response:
-    require_admin(token)
-    packages = load_social_packages()
-    banner = _banner(request.args.get("msg", ""))
-
-    header = (
-        f"<div class=topbar>{_crumbs(token, ('Social', None))}"
-        "<div class=count>veto window</div></div>"
-    )
-    if not packages:
-        body = header + banner + (
-            "<div class=bignone>No campaign package on disk.</div>"
-        )
-        return _page("Social packages", body, console=True)
-
-    sections: list[str] = []
-    for pkg in packages:
-        campaign = pkg["campaign"] or {}
-        receipt = pkg["receipt"] or {}
-        status = str(receipt.get("status", "no receipt"))
-        ready = status == "PACKAGE_READY"
-        issues = "".join(
-            f"<li>{escape(str(e))}</li>"
-            for e in list(receipt.get("errors") or []) + list(receipt.get("warnings") or [])
-        )
-        issues_html = (
-            "<div class=panel><p class=sec>QA issues</p>"
-            f"<ul style='margin:0;padding-left:20px'>{issues}</ul></div>"
-            if issues
-            else ""
-        )
-
-        # The one sentence that matters: did/will this publish? Ledger first
-        # (publish-time truth), then the window, then the receipt.
-        posted = social_posted(pkg["name"])
-        window_open = social_window_open(pkg["name"])
-        if posted:
-            when = str(posted[-1].get("ts", ""))[11:16]
-            fate = (
-                f"<span class='pill ok'>PUBLISHED</span> {len(posted)} channel"
-                f"{'s' if len(posted) != 1 else ''} posted (last {escape(when)} UTC). "
-                "Nothing left to decide."
-            )
-        elif not window_open:
-            fate = (
-                "<span class='pill'>WINDOW CLOSED</span> The publish window has "
-                "passed; nothing posted and no attempt remains."
-            )
-        elif pkg["hold"]:
-            fate = (
-                "<span class='pill hold'>HELD</span> Will <b>not</b> publish "
-                "until the HOLD is released."
-            )
-        elif ready:
-            fate = (
-                "<span class='pill ok'>READY</span> Publishes to all five "
-                "channels at <b>07:15 ET</b> unless held or vetoed."
-            )
-        else:
-            fate = (
-                f"<span class='pill bad'>{escape(status)}</span> Failed QA "
-                "&mdash; autopost will <b>not</b> publish this package."
-            )
-
-        hold_note = ""
-        if pkg["hold"] and pkg["hold_note"]:
-            hold_note = f"<p class=warn>HOLD reason: {escape(pkg['hold_note'])}</p>"
-
-        action = f"/social/{escape(token)}/pkg/{escape(pkg['name'])}/decide"
-        if posted or not window_open:
-            form = "<p class=count>Decision closed for this package.</p>"
-        elif pkg["hold"]:
-            form = (
-                f"<form method=post action='{action}'>"
-                "<input type=hidden name=decision value=release>"
-                "<label>Note (optional)</label>"
-                "<textarea name=note placeholder='Why this can publish'></textarea>"
-                "<div class=row><button class='btn primary' type=submit>"
-                "Release HOLD</button></div></form>"
-            )
-        else:
-            form = (
-                f"<form method=post action='{action}'>"
-                "<input type=hidden name=decision value=hold>"
-                "<label>Reason (kept in the HOLD file)</label>"
-                "<textarea name=note placeholder='Why this must not publish'></textarea>"
-                "<div class=row><button class='btn primary' type=submit>"
-                "Place HOLD</button></div></form>"
-            )
-
-        channels = campaign.get("channels") or {}
-        channel_cards = []
-        for cname, ch in channels.items():
-            if not isinstance(ch, dict):
-                continue
-            media = str(ch.get("media", ""))
-            img = (
-                f"<img src='/social/{escape(token)}/asset/{escape(pkg['name'])}/{escape(media)}' "
-                "alt='' loading=lazy style='max-width:100%;border:1px solid var(--line);"
-                "border-radius:8px;margin-bottom:10px'>"
-                if media and SOCIAL_FILE_RE.match(media)
-                else ""
-            )
-            channel_cards.append(
-                f"<div class=card><h3>{escape(cname)}</h3>{img}"
-                f"<p style='white-space:pre-wrap;font-size:13.5px;line-height:1.55;"
-                f"margin:0 0 8px'>{escape(str(ch.get('text', '')))}</p>"
-                f"<p class=count style='margin:0'>{escape(str(ch.get('link', '')))}"
-                f" &middot; {escape(str(ch.get('dimensions', '')))}</p></div>"
-            )
-
-        sections.append(
-            "<div class=ops-frame><div>"
-            f"<h1>{escape(pkg['name'].removeprefix('givecare-authority-'))} campaign</h1>"
-            f"<div class=sub>{escape(pkg['name'])}</div></div>"
-            f"<div style='max-width:340px;font-size:14px'>{fate}</div></div>"
-            f"{hold_note}"
-            f"<div class='panel accent'><p class=sec>Publish control</p>{form}"
-            "<p class=count style='margin-top:10px'>The HOLD file blocks every "
-            "autopost attempt until released; the bb-thread veto works in "
-            "parallel.</p></div>"
-            f"{_activity_panel(_activity(f'social:{pkg['name']}'), f'/social/{escape(token)}/pkg/{escape(pkg['name'])}/decide')}"
-            f"{issues_html}"
-            f"<p class=sec style='margin:18px 0 0'>Channel previews</p>"
-            f"<div class=chgrid>{''.join(channel_cards)}</div>"
-        )
-
-    body = header + banner + "".join(sections)
-    return _page("Social packages", body, console=True)
-
-
-@app.get("/social/<token>/asset/<pkg>/<name>")
-def social_asset(token: str, pkg: str, name: str) -> Response:
-    require_admin(token)
-    d = _social_pkg_dir(pkg)
-    if not SOCIAL_FILE_RE.match(name):
-        abort(404)
-    return send_from_directory(d, name)
-
-
-@app.post("/social/<token>/pkg/<pkg>/decide")
-def social_decide(token: str, pkg: str) -> Response:
-    require_admin(token)
-    entry = resolve_token(token)
-    d = _social_pkg_dir(pkg)
-
-    decision = (request.form.get("decision") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    if decision not in ("hold", "release", "note"):
-        abort(400)
-    if len(note) > 4000:
-        abort(400)
-
-    if decision == "note":
-        if not note:
-            abort(400)
-        _append_decision("social", pkg, "note", note, entry["id"], status="noted")
-        return redirect(f"/social/{token}?msg=note:{pkg}")
-
-    hold = d / "HOLD"
-    if decision == "hold":
-        hold.write_text(
-            json.dumps({"ts": _now(), "by": entry["id"], "note": note}) + "\n",
-            encoding="utf-8",
-        )
-    else:
-        try:
-            hold.unlink()
-        except FileNotFoundError:
-            pass
-    _append_decision("social", pkg, decision, note, entry["id"])
-    return redirect(f"/social/{token}?msg={decision}:{pkg}")
-
-
-# --------------------------------------------------------------------------- #
 # Admin home — one page linking every active decision queue.
 # --------------------------------------------------------------------------- #
 @app.get("/q/<token>")
 def queue_home(token: str) -> Response:
-    """The queue itself: one feed of everything waiting on a decision.
+    """The queue itself: native Hound plans ordered oldest first.
 
-    Order: today's social package first (time-boxed), then Hound plans
-    oldest-first (age = the only rank that matters).
+    Social approval belongs only to the persistent Plexus Chief-of-Staff thread.
     """
     require_admin(token)
     try:
         plans = sorted(load_pending_plans(), key=lambda p: p["mtime"])
     except HoundDiscoveryError as error:
         return _queue_error_page(token, f"/q/{token}", "Hound queue unavailable", str(error), 503)
-    packages = load_social_packages(limit=1)
     batch = load_batch()
     t = escape(token)
 
@@ -2206,33 +1934,6 @@ def queue_home(token: str) -> Response:
         )
 
     rows: list[str] = []
-
-    # The social package is a decision only while the outcome is still open:
-    # today's package, publish window not passed, nothing posted yet, QA-ready.
-    # Published / expired / failed packages are history, not "needs you" —
-    # they leave the feed by absence, never by a manual clear.
-    if packages:
-        pkg = packages[0]
-        status = str((pkg["receipt"] or {}).get("status", "no receipt"))
-        actionable = (
-            social_window_open(pkg["name"])
-            and not social_posted(pkg["name"])
-            and (status == "PACKAGE_READY" or pkg["hold"])
-        )
-        if actionable:
-            if pkg["hold"]:
-                stat = "<span class=heldc>HELD</span> &mdash; will not publish"
-            else:
-                stat = "<span class=ok>READY</span> &mdash; publishes 07:15 ET unless held"
-            rows.append(
-                tr(
-                    f"/social/{t}",
-                    "Today&rsquo;s social package",
-                    "social",
-                    stat,
-                    escape(pkg["name"].removeprefix("givecare-authority-")),
-                )
-            )
 
     for p in plans:
         rows.append(
@@ -2256,7 +1957,7 @@ def queue_home(token: str) -> Response:
         "<div class=topbar><nav class=crumbs><span class=here>Queue</span></nav>"
         "<div class=count>givecare review</div></div>"
         "<div class=ops-frame><div><h1>Approval queue</h1>"
-        f"<div class=sub>loaded {now} &middot; hound plans &middot; social window</div></div>"
+        f"<div class=sub>loaded {now} &middot; native hound plans</div></div>"
         f"<div><div class=hero-num>{n}</div>"
         f"<div class=hero-den>waiting &middot; oldest {oldest}</div></div></div>"
     )
@@ -2274,10 +1975,7 @@ def queue_home(token: str) -> Response:
         if batch
         else "no gold-card batch exported"
     )
-    footer = (
-        "<p class=count style='margin-top:18px'>"
-        f"{gold} &middot; <a href='/social/{t}'>social</a></p>"
-    )
+    footer = f"<p class=count style='margin-top:18px'>{gold}</p>"
     row_script = (
         "<script>document.querySelectorAll('tr[data-href]').forEach(r=>"
         "r.addEventListener('click',e=>{if(!e.target.closest('a'))"
