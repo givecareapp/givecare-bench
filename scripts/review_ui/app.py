@@ -1537,6 +1537,36 @@ def _superseded_plan_ids(plans_dir: Path) -> set[str]:
     return ids
 
 
+def _plan_status(repo: str, path: Path) -> str:
+    """Hound's own judgment of a plan (e.g. pending / stale / executed).
+
+    The queue must agree with Hound: an Approve button for a plan Hound will
+    refuse to execute is a false affordance. An empty return means Hound could
+    not judge the plan; callers hide such plans rather than guess.
+    """
+    base = GIVECARE_ROOT / repo
+    driver = base / "research" / "hound-driver.json"
+    if not driver.is_file():
+        driver = base / "hound-driver.json"
+    try:
+        proc = subprocess.run(
+            [HOUND_BIN, "status", "--driver", str(driver), "--plan", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    if proc.returncode != 0:
+        return ""
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return ""
+    status = data.get("status") if isinstance(data, dict) else None
+    return status if isinstance(status, str) else ""
+
+
 def load_pending_plans() -> list[dict[str, Any]]:
     pending: list[dict[str, Any]] = []
     for repo in _discover_hound_repos():
@@ -1555,6 +1585,16 @@ def load_pending_plans() -> list[dict[str, Any]]:
             if str(plan.get("plan_id", "")) in approved:
                 continue
             if str(plan.get("plan_id", "")) in superseded:
+                continue
+            status = _plan_status(repo, path)
+            if not status:
+                print(
+                    f"review-ui: hound status unavailable for {repo}/{path.stem}; "
+                    "hidden from queue",
+                    file=sys.stderr,
+                )
+                continue
+            if status in ("stale", "executed"):
                 continue
             pending.append(
                 {
