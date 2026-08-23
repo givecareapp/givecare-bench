@@ -1519,6 +1519,24 @@ def _approved_plan_ids(approvals_dir: Path) -> set[str]:
     return ids
 
 
+def _superseded_plan_ids(plans_dir: Path) -> set[str]:
+    """Plan IDs that some saved plan explicitly supersedes (same rule as the
+    gc/hound-approval-queue lane): a superseded predecessor is not pending."""
+    ids: set[str] = set()
+    if not plans_dir.is_dir():
+        return ids
+    for path in plans_dir.glob("*.json"):
+        try:
+            plan = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(plan, dict):
+            plan_id = plan.get("supersedes_plan_id")
+            if isinstance(plan_id, str) and plan_id:
+                ids.add(plan_id)
+    return ids
+
+
 def load_pending_plans() -> list[dict[str, Any]]:
     pending: list[dict[str, Any]] = []
     for repo in _discover_hound_repos():
@@ -1526,6 +1544,7 @@ def load_pending_plans() -> list[dict[str, Any]]:
         if not plans_dir.is_dir():
             continue
         approved = _approved_plan_ids(approvals_dir)
+        superseded = _superseded_plan_ids(plans_dir)
         for path in sorted(plans_dir.glob("*.json")):
             try:
                 plan = json.loads(path.read_text(encoding="utf-8"))
@@ -1534,6 +1553,8 @@ def load_pending_plans() -> list[dict[str, Any]]:
             if not isinstance(plan, dict) or plan.get("gate") != "human":
                 continue
             if str(plan.get("plan_id", "")) in approved:
+                continue
+            if str(plan.get("plan_id", "")) in superseded:
                 continue
             pending.append(
                 {
