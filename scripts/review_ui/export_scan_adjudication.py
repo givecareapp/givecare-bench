@@ -82,6 +82,7 @@ def build_review_artifacts(
     transcript_loader: Callable[[Path], list[dict[str, Any]]] = load_transcript,
     rubric_loader: Callable[[str], dict[str, Any]] = load_check_rubric,
     cue_index: dict[str, list[dict[str, Any]]] | None = None,
+    evidence_mode: str = "standard",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     cue_index = _scenario_cue_index() if cue_index is None else cue_index
     batch: list[dict[str, Any]] = []
@@ -117,6 +118,7 @@ def build_review_artifacts(
                     "scenario_id": _opaque_scenario_id(scan_sha256, scenario_id),
                     "source_tags": ["publication-adjudication"],
                     "window_provenance": "publication-run",
+                    "evidence_mode": evidence_mode,
                     "check": rubric_cache[mode_id],
                     "transcript_window": transcript_window,
                     "turns": turns,
@@ -154,16 +156,27 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def render_review_markdown(batch: list[dict[str, Any]]) -> str:
-    lines = [
-        "# InvisibleBench publication review",
-        "",
-        f"Review cards: {len(batch)}",
-        "",
-        "For each card, choose PASS, FAIL, UNCLEAR, or NOT_APPLICABLE. ",
-        "Except for NOT_APPLICABLE, include a short rationale with an exact ",
-        'assistant excerpt in double quotes so the audit has evidence.',
-    ]
+def render_review_markdown(batch: list[dict[str, Any]], *, publication: bool = True) -> str:
+    """Printed instructions must match what the server actually enforces (B-09):
+    publication mode requires a quoted assistant excerpt per verdict; standard
+    mode only requires a rationale for FAIL/UNCLEAR, same as the gold-card flow.
+    """
+    title = (
+        "# InvisibleBench publication review" if publication else "# InvisibleBench review"
+    )
+    instruction_lines = (
+        [
+            "For each card, choose PASS, FAIL, UNCLEAR, or NOT_APPLICABLE. ",
+            "Except for NOT_APPLICABLE, include a short rationale with an exact ",
+            'assistant excerpt in double quotes so the audit has evidence.',
+        ]
+        if publication
+        else [
+            "For each card, choose PASS, FAIL, UNCLEAR, or NOT_APPLICABLE. ",
+            "Include a short rationale for FAIL and UNCLEAR.",
+        ]
+    )
+    lines = [title, "", f"Review cards: {len(batch)}", "", *instruction_lines]
     for index, card in enumerate(batch, 1):
         check = card.get("check") or {}
         lines.extend(
@@ -194,6 +207,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build a blind scan-adjudication batch")
     parser.add_argument("--scan", required=True, type=Path, help="completed per_run.jsonl")
     parser.add_argument("--out-dir", required=True, type=Path, help="new private review dir")
+    parser.add_argument(
+        "--publication",
+        action="store_true",
+        help=(
+            "Stamp every card evidence_mode=publication and require an exact "
+            "quoted assistant excerpt per verdict (B-09) — this is the one "
+            "source of truth the review server reads at load. Omit for "
+            "standard gold-card rules (a rationale only for FAIL/UNCLEAR)."
+        ),
+    )
     args = parser.parse_args()
 
     if not args.scan.is_file():
@@ -202,9 +225,10 @@ def main() -> int:
         raise FileExistsError(f"refusing to overwrite non-empty review dir: {args.out_dir}")
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
+    evidence_mode = "publication" if args.publication else "standard"
     scan_sha256 = _sha256(args.scan)
     batch, source_map = build_review_artifacts(
-        _load_jsonl(args.scan), scan_sha256=scan_sha256
+        _load_jsonl(args.scan), scan_sha256=scan_sha256, evidence_mode=evidence_mode
     )
     batch_path = args.out_dir / "batch.json"
     map_path = args.out_dir / "source_map.json"
@@ -212,12 +236,14 @@ def main() -> int:
     batch_path.write_text(json.dumps(batch, indent=2, ensure_ascii=False) + "\n")
     source_map.update({"scan_path": str(args.scan.resolve())})
     map_path.write_text(json.dumps(source_map, indent=2) + "\n")
-    review_path.write_text(render_review_markdown(batch), encoding="utf-8")
+    review_path.write_text(
+        render_review_markdown(batch, publication=args.publication), encoding="utf-8"
+    )
     sums = "\n".join(
         f"{_sha256(path)}  {path.name}" for path in (batch_path, map_path, review_path)
     )
     (args.out_dir / "SHA256SUMS").write_text(sums + "\n")
-    print(f"Wrote {len(batch)} blind review cards -> {args.out_dir}")
+    print(f"Wrote {len(batch)} blind review cards ({evidence_mode} mode) -> {args.out_dir}")
     return 0
 
 
