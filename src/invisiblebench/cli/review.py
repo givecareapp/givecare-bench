@@ -116,10 +116,14 @@ def run_review_build(
     review_dir: Path | None,
     scan: Path | None,
     yes: bool,
+    publication: bool = False,
 ) -> int:
     root = _repo_root()
     if scan is not None and review_dir is None:
         print("review build --scan requires --out-dir", file=sys.stderr)
+        return 2
+    if publication and scan is None:
+        print("review build --publication requires --scan", file=sys.stderr)
         return 2
     directory = (review_dir or _default_review_dir()).expanduser()
     if scan is None:
@@ -145,6 +149,8 @@ def run_review_build(
             "--out-dir",
             str(directory),
         ]
+        if publication:
+            command.append("--publication")
     result = subprocess.run(command, cwd=root, check=False)
     return result.returncode
 

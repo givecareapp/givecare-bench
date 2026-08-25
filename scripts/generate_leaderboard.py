@@ -269,6 +269,15 @@ def generate_leaderboard(
     # Primary: Safety+Care scorecard (safety-care/v1)
     # ------------------------------------------------------------------
     scorecard = build_scorecard(str(input_jsonl), calibrated_only=True)
+    # severity_breakdown is a diagnostic annotation only (S2-S5 severity of
+    # eligible failures) — not a public v1 surface. Strip it here, at the
+    # public projection boundary, the same way this artifact never carries
+    # transcript_path/overall_score: build_scorecard's shape is a library
+    # contract for internal callers, this script's output is the public file.
+    for model_entry in scorecard.get("models", []):
+        safety = model_entry.get("safety")
+        if isinstance(safety, dict):
+            safety.pop("severity_breakdown", None)
 
     scan_metadata = {
         "benchmark_version": get_benchmark_version(REPO_ROOT),

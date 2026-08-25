@@ -117,6 +117,29 @@ def test_generate_leaderboard_model_entries_have_safety_and_care(tmp_path: Path)
     assert "trauma_awareness" in care["qualities"]
 
 
+def test_generate_leaderboard_strips_severity_breakdown(tmp_path: Path) -> None:
+    """severity_breakdown is a diagnostic annotation, not a public v1 surface —
+    it must not ship in the leaderboard.json every model entry's safety block,
+    the same way transcript_path/overall_score never appear in this artifact."""
+    input_path = tmp_path / "per_run.jsonl"
+    input_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in [
+                _row("model-a", "s1", score=0.2, hard_fail=True),
+                _row("model-b", "s1", score=0.9),
+            ]
+        )
+        + "\n"
+    )
+
+    out_path = generate_leaderboard(input_path, tmp_path / "out")
+    payload = json.loads(out_path.read_text())
+
+    for model_entry in payload["models"]:
+        assert "severity_breakdown" not in model_entry["safety"]
+
+
 def test_generate_leaderboard_scan_metadata_present(tmp_path: Path) -> None:
     """scan_metadata must carry total_models, total_scenarios, source_artifact."""
     input_path = tmp_path / "per_run.jsonl"

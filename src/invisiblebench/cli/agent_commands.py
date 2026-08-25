@@ -18,7 +18,7 @@ def _runs_dir() -> Path:
     return get_project_root() / "results"
 
 
-def _run_doctor() -> int:
+def _run_doctor(json_output: bool = False) -> int:
     """Validate env vars + runs dir for the bench CLI."""
     runs_dir = _runs_dir()
 
@@ -55,7 +55,26 @@ def _run_doctor() -> int:
             hint="chmod +w on the runs directory",
         ),
     ]
-    return doctor_runner(checks, exit_on_fail=False)
+
+    if not json_output:
+        return doctor_runner(checks, exit_on_fail=False)
+
+    results: list[dict[str, Any]] = []
+    failures = 0
+    for c in checks:
+        try:
+            ok = bool(c.check())
+        except Exception as exc:  # noqa: BLE001 — mirrors doctor_runner's own catch-all
+            ok = False
+            hint = f"{c.hint or ''} ({exc})".strip()
+        else:
+            hint = c.hint if not ok else None
+        if not ok:
+            failures += 1
+        results.append({"name": c.name, "passed": ok, "hint": hint})
+
+    emit_json(command="doctor", data={"checks": results, "failures": failures})
+    return 1 if failures else 0
 
 
 def _emit_or_write_json(

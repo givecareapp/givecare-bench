@@ -19,6 +19,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from invisiblebench._agent_cli import confirm_or_abort
 from invisiblebench.api.client import (
     DEFAULT_JUDGE_MODEL,
     CostBudgetExceededError,
@@ -529,11 +530,13 @@ def run_benchmark(
         print("ERROR: OPENROUTER_API_KEY not set")
         return 1
 
-    if not auto_confirm:
-        response = input("Proceed? (y/n): ")
-        if response.lower() != "y":
-            print("Cancelled")
-            return 0
+    confirm_or_abort(
+        "proceed with live transcript generation",
+        yes=auto_confirm,
+        cost_estimate=(
+            f"${total_cost:.2f} conservative plan, ceiling ${max_cost_usd:.2f}"
+        ),
+    )
 
     try:
         from invisiblebench.api.client import ModelAPIClient

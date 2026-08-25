@@ -9,6 +9,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from invisiblebench._agent_cli import emit_json
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.io import leaderboard_rows
 
@@ -295,11 +296,25 @@ def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None
     out("")
 
 
-def run_health(verbose: bool = False) -> int:
+def run_health(verbose: bool = False, json_output: bool = False) -> int:
     """Run health check and print report."""
     try:
         data = load_leaderboard()
     except FileNotFoundError:
+        if json_output:
+            emit_json(
+                command="health",
+                data={
+                    "generated": False,
+                    "models_total": 0,
+                    "clean_models": [],
+                    "models_with_errors": [],
+                    "models_incomplete": [],
+                    "suspect_scenarios": {},
+                    "schema_warnings": [],
+                },
+            )
+            return 0
         print(
             "No leaderboard generated yet. Run the current benchmark and use "
             "the strict publish path to create one."
@@ -309,16 +324,35 @@ def run_health(verbose: bool = False) -> int:
     try:
         analysis = analyze_leaderboard(data)
     except ValueError as e:
-        print(f"Error running health check: {e}")
+        if json_output:
+            emit_json(status="error", command="health", error=str(e))
+        else:
+            print(f"Error running health check: {e}")
         return 1
 
     append_local_web_release_health(analysis)
-    print_health_report(analysis, verbose=verbose)
+
+    has_issues = bool(analysis["models_with_errors"] or analysis["models_incomplete"])
+
+    if json_output:
+        emit_json(
+            command="health",
+            data={
+                "generated": True,
+                "schema": analysis.get("schema"),
+                "models_total": len(analysis["models"]),
+                "clean_models": [m["name"] for m in analysis["clean_models"]],
+                "models_with_errors": analysis["models_with_errors"],
+                "models_incomplete": analysis["models_incomplete"],
+                "suspect_scenarios": analysis["suspect_scenarios"],
+                "schema_warnings": analysis["schema_warnings"],
+            },
+        )
+    else:
+        print_health_report(analysis, verbose=verbose)
 
     # Return non-zero if there are issues
-    if analysis["models_with_errors"] or analysis["models_incomplete"]:
-        return 1
-    return 0
+    return 1 if has_issues else 0
 
 
 def main(argv: list[str] | None = None) -> int:

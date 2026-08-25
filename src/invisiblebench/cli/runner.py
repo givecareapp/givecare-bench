@@ -218,7 +218,10 @@ Examples:
     subparsers = parser.add_subparsers(dest="command")
 
     # Doctor subcommand
-    subparsers.add_parser("doctor", help="Validate env vars and runs dir")
+    subparsers.add_parser(
+        "doctor",
+        help="Validate env vars and runs dir (creates runs dir if missing)",
+    )
 
     # Get subcommand (read single run by id)
     get_parser = subparsers.add_parser("get", help="Read a single run's metadata by id")
@@ -248,6 +251,11 @@ Examples:
     review_build = review_subparsers.add_parser("build", help="Build a blind review batch")
     review_build.add_argument("--out-dir", type=Path, default=None, dest="review_dir")
     review_build.add_argument("--scan", type=Path, default=None)
+    review_build.add_argument(
+        "--publication",
+        action="store_true",
+        help="Stamp the scan escalation batch evidence_mode=publication (requires --scan)",
+    )
     review_build.add_argument("--yes", action="store_true")
     review_serve = review_subparsers.add_parser("serve", help="Run the existing review app")
     review_serve.add_argument("--dir", type=Path, default=None, dest="review_dir")
@@ -265,6 +273,12 @@ Examples:
     )
     archive_parser.add_argument(
         "--dry-run", action="store_true", help="Show what would be archived"
+    )
+    archive_parser.add_argument(
+        "--yes",
+        action="store_true",
+        dest="archive_yes",
+        help="Auto-confirm (also accepted before the subcommand, as a top-level flag)",
     )
 
     # Runs subcommand (list runs)
@@ -362,11 +376,6 @@ Examples:
         help="Run up to N scenarios concurrently per model for the llm/raw harness (default: 1)",
     )
     parser.add_argument(
-        "--transcripts-only",
-        action="store_true",
-        help="Generate target model transcripts only; judge later with scripts/run_scan.py (default)",
-    )
-    parser.add_argument(
         "--models",
         "-m",
         type=str,
@@ -387,7 +396,7 @@ Examples:
     json_output = bool(getattr(args, "json_output", None))
 
     if args.command == "doctor":
-        return _run_doctor()
+        return _run_doctor(json_output=json_output)
 
     if args.command == "get":
         return _run_get(
@@ -404,7 +413,7 @@ Examples:
     if args.command == "health":
         from invisiblebench.cli.health import run_health
 
-        return run_health(verbose=args.verbose)
+        return run_health(verbose=args.verbose, json_output=json_output)
 
     if args.command == "review":
         from invisiblebench.cli.review import (
@@ -425,6 +434,7 @@ Examples:
                 review_dir=args.review_dir,
                 scan=args.scan,
                 yes=args.yes,
+                publication=args.publication,
             )
         return run_review_serve(
             review_dir=args.review_dir,
@@ -445,14 +455,21 @@ Examples:
                 file=sys.stderr,
             )
             return 2
+        if args.before is not None and args.keep is not None:
+            print(
+                f"{args.command}: pass one of --before YYYYMMDD or --keep N, not both",
+                file=sys.stderr,
+            )
+            return 2
+        archive_yes = bool(getattr(args, "yes", False)) or bool(
+            getattr(args, "archive_yes", False)
+        )
         if not args.dry_run:
-            if args.before and args.keep is not None:
-                prompt = f"archive runs older than {args.before}, keeping {args.keep} most recent"
-            elif args.before:
+            if args.before:
                 prompt = f"archive runs older than {args.before}"
             else:
                 prompt = f"archive runs keeping {args.keep} most recent"
-            confirm_or_abort(prompt, yes=bool(getattr(args, "yes", False)))
+            confirm_or_abort(prompt, yes=archive_yes)
         return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
 
     if args.command == "runs":
@@ -464,8 +481,9 @@ Examples:
         )
 
     if args.command == "leaderboard":
-        if json_output:
-            return _run_leaderboard_status_json(out_path=getattr(args, "out", None))
+        out_path = getattr(args, "out", None)
+        if json_output or out_path:
+            return _run_leaderboard_status_json(out_path=out_path)
         from invisiblebench.cli.leaderboard import run_leaderboard
 
         return run_leaderboard(action=args.action, verbose=args.verbose)

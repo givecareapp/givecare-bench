@@ -239,13 +239,92 @@ def test_benchmark_dry_run_does_not_create_run_artifacts(tmp_path: Path) -> None
     assert not output_dir.exists()
 
 
-def test_benchmark_cancel_does_not_create_run_artifacts(
+def test_benchmark_noninteractive_without_yes_refuses_cleanly(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+    force_noninteractive,
+) -> None:
+    """B-24: a non-interactive run without --yes refuses via confirm_or_abort
+    (clean "[refused] ... pass --yes" message, exit 2) instead of crashing on
+    a bare input() EOFError."""
+    output_dir = tmp_path / "noninteractive_should_not_exist"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_command_mod.run_benchmark(
+            models=[
+                {
+                    "id": "test/model",
+                    "name": "Test Model",
+                    "cost_per_m_input": 1.0,
+                    "cost_per_m_output": 1.0,
+                }
+            ],
+            output_dir=output_dir,
+            dry_run=False,
+            auto_confirm=False,
+            max_cost_usd=1.0,
+            scenario_filter=["context_regulatory_data_privacy_001"],
+        )
+
+    assert exc_info.value.code == 2
+    err = capsys.readouterr().err
+    assert "--yes" in err
+    assert not output_dir.exists()
+
+
+def test_benchmark_decline_exits_130(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    output_dir = tmp_path / "cancelled_should_not_exist"
+    """B-24: declining the confirm_or_abort prompt now exits 130 (matching
+    archive's own prompt), not the old bare-input() "Cancelled" exit 0."""
+    from invisiblebench import _agent_cli
+
+    output_dir = tmp_path / "declined_should_not_exist"
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(_agent_cli, "is_tty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda _prompt: "n")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_command_mod.run_benchmark(
+            models=[
+                {
+                    "id": "test/model",
+                    "name": "Test Model",
+                    "cost_per_m_input": 1.0,
+                    "cost_per_m_output": 1.0,
+                }
+            ],
+            output_dir=output_dir,
+            dry_run=False,
+            auto_confirm=False,
+            max_cost_usd=1.0,
+            scenario_filter=["context_regulatory_data_privacy_001"],
+        )
+
+    assert exc_info.value.code == 130
+    assert not output_dir.exists()
+
+
+def test_benchmark_yes_flag_skips_prompt_entirely(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    """--yes bypasses confirm_or_abort's prompt entirely, even in a
+    non-interactive shell; input() must never be called."""
+    from invisiblebench import _agent_cli
+
+    output_dir = tmp_path / "yes_flag_should_not_prompt"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(_agent_cli, "is_tty", lambda: False)
+
+    def _fail_if_called(_prompt):
+        raise AssertionError("must not prompt when --yes is set")
+
+    monkeypatch.setattr("builtins.input", _fail_if_called)
 
     rc = run_command_mod.run_benchmark(
         models=[
@@ -258,12 +337,16 @@ def test_benchmark_cancel_does_not_create_run_artifacts(
         ],
         output_dir=output_dir,
         dry_run=False,
-        auto_confirm=False,
+        auto_confirm=True,
         max_cost_usd=1.0,
         scenario_filter=["context_regulatory_data_privacy_001"],
     )
 
-    assert rc == 0
+    # Prompt is skipped; the run then fails at API-client init because
+    # conftest.py sets INVISIBLEBENCH_DISABLE_LLM=1 for all tests. That is
+    # the expected next failure, not a crash from the confirmation gate.
+    assert rc == 1
+    assert "Failed to initialize API client" in capsys.readouterr().out
     assert not output_dir.exists()
 
 
@@ -398,3 +481,231 @@ def test_archive_without_before_or_keep_exits_2(capsys):
     assert rc == 2
     err = capsys.readouterr().err
     assert "--before" in err or "--keep" in err
+
+
+def test_archive_before_and_keep_together_refuses(capsys):
+    """B-33: the combined rule is refused, not silently narrowed to --keep."""
+    rc = runner_mod.main(
+        ["archive", "--before", "20200101", "--keep", "5", "--dry-run"]
+    )
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "pass one of" in err
+
+
+def test_archive_yes_after_subcommand_works(monkeypatch, tmp_path):
+    """B-33: --yes is now also accepted after the subcommand, not only as a
+    top-level flag."""
+    from invisiblebench.cli import archive as archive_mod
+
+    monkeypatch.setattr(archive_mod, "get_project_root", lambda: tmp_path)
+    (tmp_path / "results").mkdir()
+
+    rc = runner_mod.main(["archive", "--keep", "5", "--yes"])
+    assert rc == 0
+
+
+def test_archive_yes_top_level_still_works(monkeypatch, tmp_path):
+    """The pre-existing top-level --yes placement keeps working."""
+    from invisiblebench.cli import archive as archive_mod
+
+    monkeypatch.setattr(archive_mod, "get_project_root", lambda: tmp_path)
+    (tmp_path / "results").mkdir()
+
+    rc = runner_mod.main(["--yes", "archive", "--keep", "5"])
+    assert rc == 0
+
+
+def test_archive_without_yes_refuses_in_noninteractive_shell(
+    monkeypatch, tmp_path, force_noninteractive
+):
+    from invisiblebench.cli import archive as archive_mod
+
+    monkeypatch.setattr(archive_mod, "get_project_root", lambda: tmp_path)
+    (tmp_path / "results").mkdir()
+
+    with pytest.raises(SystemExit) as exc_info:
+        runner_mod.main(["archive", "--keep", "5"])
+
+    assert exc_info.value.code == 2
+
+
+# -------------------- --transcripts-only removed --------------------
+
+
+def test_transcripts_only_flag_is_removed(capsys) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        runner_mod.main(["-m", "1", "--transcripts-only", "--dry-run"])
+
+    assert exc_info.value.code == 2
+    assert "transcripts-only" in capsys.readouterr().err
+
+
+# -------------------- doctor/health --json envelopes --------------------
+
+
+def test_doctor_json_emits_standard_envelope(monkeypatch, tmp_path, capsys) -> None:
+    from invisiblebench.cli import agent_commands
+
+    runs_dir = tmp_path / "results"
+    runs_dir.mkdir()
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: runs_dir)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    rc = runner_mod.main(["--json", "doctor"])
+
+    assert rc == 0
+    stdout = capsys.readouterr().out.strip().splitlines()
+    assert len(stdout) == 1
+    envelope = json.loads(stdout[0])
+    assert envelope["status"] == "ok"
+    assert envelope["command"] == "doctor"
+    assert envelope["data"]["failures"] == 0
+    assert len(envelope["data"]["checks"]) == 3
+
+
+def test_doctor_json_reports_failures(monkeypatch, tmp_path, capsys) -> None:
+    from invisiblebench.cli import agent_commands
+
+    runs_dir = tmp_path / "results"
+    runs_dir.mkdir()
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: runs_dir)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    rc = runner_mod.main(["--json", "doctor"])
+
+    assert rc == 1
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["data"]["failures"] == 1
+    failed = [c for c in envelope["data"]["checks"] if not c["passed"]]
+    assert len(failed) == 1
+    assert "API key" in failed[0]["name"]
+
+
+def test_doctor_help_notes_probe_write(capsys) -> None:
+    """B-33: doctor's read-only framing is qualified in its own help text."""
+    with pytest.raises(SystemExit) as exc_info:
+        runner_mod.main(["--help"])
+
+    assert exc_info.value.code == 0
+    out = " ".join(capsys.readouterr().out.split())
+    assert "creates runs dir if missing" in out
+
+
+def test_health_json_emits_standard_envelope(monkeypatch, tmp_path, capsys) -> None:
+    from invisiblebench.cli import health as health_mod
+
+    lb_dir = tmp_path / "data" / "leaderboard"
+    lb_dir.mkdir(parents=True)
+    (lb_dir / "leaderboard.json").write_text(
+        json.dumps(
+            {
+                "schema": "safety-care/v1",
+                "models": [
+                    {
+                        "model": "test-model",
+                        "safety": {"lines": {}},
+                        "care": {"qualities": {}},
+                    }
+                ],
+            }
+        )
+    )
+    monkeypatch.setattr(health_mod, "get_project_root", lambda: tmp_path)
+
+    rc = runner_mod.main(["--json", "health"])
+
+    assert rc == 1  # missing safety lines / care qualities -> incomplete
+    stdout = capsys.readouterr().out.strip().splitlines()
+    assert len(stdout) == 1
+    envelope = json.loads(stdout[0])
+    assert envelope["status"] == "ok"
+    assert envelope["command"] == "health"
+    assert envelope["data"]["generated"] is True
+    assert envelope["data"]["models_total"] == 1
+    assert len(envelope["data"]["models_incomplete"]) == 1
+
+
+def test_health_json_no_leaderboard_yet(monkeypatch, tmp_path, capsys) -> None:
+    from invisiblebench.cli import health as health_mod
+
+    monkeypatch.setattr(health_mod, "get_project_root", lambda: tmp_path)
+
+    rc = runner_mod.main(["--json", "health"])
+
+    assert rc == 0
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["command"] == "health"
+    assert envelope["data"]["generated"] is False
+
+
+# -------------------- leaderboard status --out without --json --------------------
+
+
+def test_leaderboard_status_out_without_json_writes_file(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    """B-33: --out alone (no --json) now switches into write mode, matching
+    get/runs semantics."""
+    from invisiblebench.cli import leaderboard as lb_mod
+
+    (tmp_path / "leaderboard.json").write_text(
+        json.dumps({"schema": "safety-care/v1", "models": []})
+    )
+    monkeypatch.setattr(lb_mod, "_leaderboard_output", lambda: tmp_path)
+
+    out_path = tmp_path / "out.json"
+    rc = runner_mod.main(["leaderboard", "status", "--out", str(out_path)])
+
+    assert rc == 0
+    assert out_path.exists()
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["command"] == "leaderboard"
+    assert envelope["data"]["path"] == str(out_path.resolve())
+
+
+# -------------------- review build --publication forwarding --------------------
+
+
+def test_review_build_scan_forwards_publication_flag(monkeypatch, tmp_path) -> None:
+    """T4 leftover: review build --scan --publication forwards --publication
+    to export_scan_adjudication.py."""
+    from invisiblebench.cli import review as review_mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        from types import SimpleNamespace
+
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(review_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(review_mod, "_repo_root", lambda: tmp_path)
+
+    scan_file = tmp_path / "per_run.jsonl"
+    scan_file.write_text("")
+    out_dir = tmp_path / "batch"
+
+    rc = runner_mod.main(
+        [
+            "review",
+            "build",
+            "--scan",
+            str(scan_file),
+            "--out-dir",
+            str(out_dir),
+            "--publication",
+        ]
+    )
+
+    assert rc == 0
+    assert "--publication" in calls[0]
+
+
+def test_review_build_publication_without_scan_refuses(capsys) -> None:
+    rc = runner_mod.main(["review", "build", "--publication"])
+    assert rc == 2
+    assert "--scan" in capsys.readouterr().err
