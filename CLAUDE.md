@@ -129,3 +129,7 @@ private proof gate. Public docs deploy separately with
 Contributor entry points: `docs/quickstart.md`, `docs/architecture.md`,
 `docs/scoring-rubric.md`, `docs/verifier-validation.md`, and `DESIGN.md` for the
 target internal decomposition.
+
+## Atlas contract
+
+Owner intent for this stream: `~/wiki/atlas/givecare-bench.md` — read it before non-trivial work; it governs when this file and it disagree on intent (this file still owns execution).
