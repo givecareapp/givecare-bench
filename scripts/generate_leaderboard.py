@@ -321,6 +321,12 @@ def generate_leaderboard(
 
     payload = {
         **scorecard,  # models, schema, notes
+        # Explicit publication-integrity label — see docs/publishing-audit.md.
+        # "verified" claims its evidence artifact (scan_metadata.source_artifact,
+        # hashed as scan_metadata.source_merge.output_sha256) still exists;
+        # scripts/qa_leaderboard.py enforces that unconditionally. Only a
+        # deliberate, separately-reviewed edit may set "historical-unverified".
+        "provenance_status": "verified",
         "scan_metadata": scan_metadata,
     }
 

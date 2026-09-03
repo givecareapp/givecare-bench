@@ -25,14 +25,25 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_LEADERBOARD = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
 
 
-def _resolve_scan_path(args: Any) -> Path | None:
-    if getattr(args, "scan", None):
-        return Path(args.scan)
+def _load_leaderboard_payload(args: Any) -> dict[str, Any] | None:
+    """Load the leaderboard JSON `explain` would resolve a scan path from."""
     lb_path = Path(getattr(args, "leaderboard", None) or DEFAULT_LEADERBOARD)
     if not lb_path.exists():
         return None
     with open(lb_path, encoding="utf-8") as f:
-        payload = json.load(f)
+        return json.load(f)
+
+
+def _resolve_scan_path(
+    args: Any, leaderboard_payload: dict[str, Any] | None = None
+) -> Path | None:
+    if getattr(args, "scan", None):
+        return Path(args.scan)
+    payload = leaderboard_payload
+    if payload is None:
+        payload = _load_leaderboard_payload(args)
+    if payload is None:
+        return None
     metadata = payload.get("scan_metadata") or payload.get("metadata") or {}
     artifact = metadata.get("source_artifact")
     if not artifact:
@@ -88,9 +99,16 @@ def explain_command(args: Any) -> int:
     """Explain why a (model, scenario) cell scored the way it did."""
     json_output = bool(getattr(args, "json_output", None))
 
-    scan_path = _resolve_scan_path(args)
+    leaderboard_payload = None
+    if not getattr(args, "scan", None):
+        leaderboard_payload = _load_leaderboard_payload(args)
+    scan_path = _resolve_scan_path(args, leaderboard_payload)
     if scan_path is None or not scan_path.exists():
-        msg = f"scan artifact not found (looked for {scan_path})"
+        provenance_status = (leaderboard_payload or {}).get("provenance_status")
+        if provenance_status == "historical-unverified":
+            msg = "leaderboard is historical-unverified: source scans were not preserved"
+        else:
+            msg = f"scan artifact not found (looked for {scan_path})"
         if json_output:
             print(json.dumps({"status": "error", "command": "explain", "error": msg}))
         else:

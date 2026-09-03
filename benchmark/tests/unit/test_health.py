@@ -147,6 +147,30 @@ def test_analyze_safety_care_leaderboard_reports_current_contract_gaps() -> None
     assert "current_contract_missing_check_instances=77" in analysis["schema_warnings"]
 
 
+def test_analyze_safety_care_leaderboard_reports_historical_unverified_in_words() -> None:
+    """A retired, historical-unverified leaderboard must say so in words, not
+    surface only as coincidental artifact-validation noise."""
+    payload = _minimal_safety_care_payload()
+    payload["provenance_status"] = "historical-unverified"
+    payload["provenance_note"] = "source scans not preserved; July 2026 research snapshot"
+
+    analysis = health_module.analyze_leaderboard(payload)
+
+    assert (
+        "leaderboard is historical-unverified: "
+        "source scans not preserved; July 2026 research snapshot"
+    ) in analysis["schema_warnings"]
+
+
+def test_analyze_safety_care_leaderboard_verified_has_no_provenance_warning() -> None:
+    payload = _minimal_safety_care_payload()
+    payload["provenance_status"] = "verified"
+
+    analysis = health_module.analyze_leaderboard(payload)
+
+    assert not any("historical-unverified" in w for w in analysis["schema_warnings"])
+
+
 def _minimal_safety_care_payload() -> dict:
     return {
         "schema": "safety-care/v1",

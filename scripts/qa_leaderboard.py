@@ -63,6 +63,16 @@ from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION  # noqa: E402
 # Statuses allowed to carry a published hard-fail claim. Binary claim model:
 # only `claim_ready` publishes; everything else is disclosed development evidence.
 CALIBRATED_STATUSES = {CLAIM_READY_STATUS}
+# provenance_status is the top-level publication-integrity label. "verified"
+# (or absent, its default) means the leaderboard's evidence artifact must
+# still exist and match its recorded hash. "historical-unverified" is the
+# only other allowed value — a leaderboard whose source scans were not
+# preserved, retired to a research snapshot; it can only pass QA with the
+# explicit --allow-historical flag, so the label itself can never be used to
+# sneak an unverified scorecard through the default gate.
+HISTORICAL_UNVERIFIED_STATUS = "historical-unverified"
+VERIFIED_STATUS = "verified"
+ALLOWED_PROVENANCE_STATUSES = {VERIFIED_STATUS, HISTORICAL_UNVERIFIED_STATUS}
 # Resolved = the verdict classes mode_engine counts toward coverage. Eligible
 # NOT_APPLICABLE means the verifier found no current cue/obligation for this
 # check; it is resolved coverage, while UNCLEAR remains unresolved.
@@ -104,6 +114,58 @@ def calibration_errors(
                 uncalibrated[mode_id] += 1
     if uncalibrated:
         errors.append(f"hard_fail_from_uncalibrated_check={dict(uncalibrated)}")
+    return errors
+
+
+def provenance_status_errors(
+    leaderboard: dict[str, Any],
+    scan_path: Path,
+    *,
+    allow_historical: bool,
+) -> list[str]:
+    """Publication-integrity gate for the top-level ``provenance_status`` label.
+
+    - ``historical-unverified`` requires a ``provenance_note`` and only passes
+      with ``--allow-historical``; it never satisfies the evidence check below.
+    - ``verified`` (the default when the field is absent) requires the scan
+      artifact QA was given to still exist and hash-match the leaderboard's
+      own recorded ``scan_metadata.source_merge.output_sha256`` — the check
+      that would have caught the v4 leaderboard shipping with its source scan
+      already deleted.
+    """
+    status = leaderboard.get("provenance_status")
+    if status is not None and status not in ALLOWED_PROVENANCE_STATUSES:
+        return [f"provenance_status={status!r} not in {sorted(ALLOWED_PROVENANCE_STATUSES)}"]
+
+    if status == HISTORICAL_UNVERIFIED_STATUS:
+        errors: list[str] = []
+        note = leaderboard.get("provenance_note")
+        if not isinstance(note, str) or not note.strip():
+            errors.append("historical-unverified leaderboard missing provenance_note")
+        if not allow_historical:
+            errors.append(
+                "historical-unverified leaderboard requires --allow-historical to pass QA"
+            )
+        return errors
+
+    errors = []
+    scan_metadata = leaderboard.get("scan_metadata") or {}
+    source_merge = scan_metadata.get("source_merge") or {}
+    expected_sha = source_merge.get("output_sha256")
+    if not scan_path.is_file():
+        errors.append(f"provenance evidence missing: {scan_path}")
+        return errors
+    if not isinstance(expected_sha, str) or not expected_sha:
+        errors.append(
+            "provenance_status=verified requires scan_metadata.source_merge.output_sha256"
+        )
+        return errors
+    actual_sha = hashlib.sha256(scan_path.read_bytes()).hexdigest()
+    if actual_sha != expected_sha:
+        errors.append(
+            f"provenance evidence sha256 mismatch: {scan_path} "
+            f"actual={actual_sha} expected={expected_sha}"
+        )
     return errors
 
 
@@ -474,16 +536,23 @@ def validate_leaderboard(
     expected_scenarios: int | None = None,
     strict: bool = False,
     checks_dir: Path | None = None,
+    allow_historical: bool = False,
 ) -> list[str]:
     """Return QA errors. Empty list means the artifact passes.
 
-    Validates TWO things:
+    Validates THREE things:
     1. Scan JSONL quality (coverage, UNCLEAR, evidence, calibration) — unchanged.
     2. Leaderboard artifact shape — now safety-care/v1 (no composite/rank/overall_score).
+    3. Publication-integrity provenance_status (verified evidence, or an
+       explicitly flagged historical-unverified snapshot).
     """
     errors: list[str] = []
     rows = _load_jsonl(scan_path)
     leaderboard = _load_json(leaderboard_path)
+
+    errors.extend(
+        provenance_status_errors(leaderboard, scan_path, allow_historical=allow_historical)
+    )
 
     if expected_rows is not None and len(rows) != expected_rows:
         errors.append(f"rows={len(rows)} expected={expected_rows}")
@@ -723,6 +792,14 @@ def main() -> int:
     parser.add_argument("--expected-scenarios", type=int, default=None)
     parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
     parser.add_argument(
+        "--allow-historical",
+        action="store_true",
+        help=(
+            "Allow a provenance_status=historical-unverified leaderboard to pass QA. "
+            "Without this flag such a leaderboard always fails closed."
+        ),
+    )
+    parser.add_argument(
         "--stamp",
         action="store_true",
         help="Write the fixed owner QA stamp after strict QA passes",
@@ -742,6 +819,7 @@ def main() -> int:
         expected_models=args.expected_models,
         expected_scenarios=args.expected_scenarios,
         strict=args.strict,
+        allow_historical=args.allow_historical,
     )
     if errors:
         print("Leaderboard QA failed:")

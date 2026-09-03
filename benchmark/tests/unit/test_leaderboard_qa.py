@@ -648,3 +648,136 @@ def test_strict_qa_rejects_llm_result_without_prompt_hash(
     errors = validate_leaderboard(scan, leaderboard, strict=True)
 
     assert any("llm_results_missing_prompt_hash" in error for error in errors)
+
+
+# --- provenance_status: publication-integrity label (docs/publishing-audit.md) ---
+
+
+def test_provenance_status_verified_passes_with_matching_evidence(tmp_path: Path) -> None:
+    """Default (absent) provenance_status behaves as 'verified': the scan file
+    QA was pointed at must exist and match scan_metadata.source_merge.output_sha256."""
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "safety_care_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = qa_leaderboard.provenance_status_errors(payload, scan, allow_historical=False)
+
+    assert errors == []
+
+
+def test_provenance_status_verified_fails_on_missing_artifact(tmp_path: Path) -> None:
+    """The exact failure mode this gate exists for: an artifact labeled verified
+    (or unlabeled) whose evidence file no longer exists on disk."""
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    missing_scan = tmp_path / "deleted_per_run.jsonl"
+
+    errors = qa_leaderboard.provenance_status_errors(
+        payload, missing_scan, allow_historical=False
+    )
+
+    assert any("provenance evidence missing" in error for error in errors)
+
+
+def test_provenance_status_verified_fails_on_sha_mismatch(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["scan_metadata"]["source_merge"]["output_sha256"] = "0" * 64
+
+    errors = qa_leaderboard.provenance_status_errors(payload, scan, allow_historical=False)
+
+    assert any("provenance evidence sha256 mismatch" in error for error in errors)
+
+
+def test_provenance_status_historical_unverified_fails_without_flag(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "historical-unverified"
+    payload["provenance_note"] = "source scans not preserved"
+
+    errors = qa_leaderboard.provenance_status_errors(payload, scan, allow_historical=False)
+
+    assert any("requires --allow-historical" in error for error in errors)
+
+
+def test_provenance_status_historical_unverified_passes_with_flag(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "historical-unverified"
+    payload["provenance_note"] = "source scans not preserved"
+    # A historical-unverified artifact bypasses the evidence-file check even
+    # though its recorded evidence is deliberately missing.
+    missing_scan = tmp_path / "deleted_per_run.jsonl"
+
+    errors = qa_leaderboard.provenance_status_errors(
+        payload, missing_scan, allow_historical=True
+    )
+
+    assert errors == []
+
+
+def test_provenance_status_historical_unverified_requires_note(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "historical-unverified"
+
+    errors = qa_leaderboard.provenance_status_errors(payload, scan, allow_historical=True)
+
+    assert any("missing provenance_note" in error for error in errors)
+
+
+def test_provenance_status_rejects_unknown_value(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "trust-me"
+
+    errors = qa_leaderboard.provenance_status_errors(payload, scan, allow_historical=True)
+
+    assert any("not in" in error for error in errors)
+
+
+def test_validate_leaderboard_blocks_historical_without_allow_flag(tmp_path: Path) -> None:
+    """End-to-end: the full gate rejects a historical-unverified leaderboard by
+    default, so the label alone can never sneak an unverified scorecard through."""
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "safety_care_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "historical-unverified"
+    payload["provenance_note"] = "source scans not preserved"
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(
+        scan, leaderboard, expected_rows=1, expected_models=1, expected_scenarios=1
+    )
+
+    assert any("requires --allow-historical" in error for error in errors)
+
+
+def test_validate_leaderboard_allows_historical_with_flag(tmp_path: Path) -> None:
+    scan = tmp_path / "per_run.jsonl"
+    leaderboard = tmp_path / "safety_care_leaderboard.json"
+    _write_jsonl(scan, [_scan_row("model-a", "s1")])
+    payload = _leaderboard(scan)
+    payload["provenance_status"] = "historical-unverified"
+    payload["provenance_note"] = "source scans not preserved"
+    leaderboard.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors = validate_leaderboard(
+        scan,
+        leaderboard,
+        expected_rows=1,
+        expected_models=1,
+        expected_scenarios=1,
+        allow_historical=True,
+    )
+
+    assert errors == []

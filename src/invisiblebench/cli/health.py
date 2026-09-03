@@ -86,6 +86,13 @@ def _analyze_safety_care_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
         else:
             results["clean_models"].append(model_info)
 
+    provenance_status = data.get("provenance_status")
+    if provenance_status == "historical-unverified":
+        note = data.get("provenance_note") or "source scans were not preserved"
+        results["schema_warnings"].append(
+            f"leaderboard is historical-unverified: {note}"
+        )
+
     artifact_validation = scan_meta.get("artifact_validation")
     if isinstance(artifact_validation, dict):
         _append_artifact_validation_warnings(results["schema_warnings"], artifact_validation)

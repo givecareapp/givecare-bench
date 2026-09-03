@@ -71,6 +71,10 @@ def test_generate_leaderboard_emits_safety_care_schema(tmp_path: Path) -> None:
     assert payload["schema"] == "safety-care/v1"
     assert payload["notes"]["no_composite"] is True
 
+    # Publication-integrity label: a freshly generated leaderboard is always
+    # explicitly "verified" — never left to default by omission.
+    assert payload["provenance_status"] == "verified"
+
     # No composite at top level
     assert "overall_score" not in payload
     assert "rank" not in payload

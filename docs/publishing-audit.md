@@ -151,3 +151,52 @@ Avoid claims like "best caregiver model." Prefer claims like:
 
 This keeps the benchmark aligned with its purpose: a caregiver AI-centered audit
 of strengths, weaknesses, and deployment-relevant failure mechanics.
+
+## Provenance status (2026-09-03)
+
+The v4 leaderboard's merged scan artifact (`results/publication_v4_release/per_run.jsonl`)
+no longer exists — `results/` is gitignored, so the raw merge was never durable.
+The owner decision was to retire v4 rather than repair or rerun it: it now
+carries a top-level `provenance_status: "historical-unverified"` and
+`provenance_note` explaining that its source scans were not preserved and its
+evidence drill-down is unavailable. `scripts/qa_leaderboard.py` fails closed on
+this: a `verified` (or unlabeled) leaderboard must have a scan artifact that
+still exists and hash-matches `scan_metadata.source_merge.output_sha256`;
+`historical-unverified` only passes with an explicit `--allow-historical`
+flag, and requires `provenance_note`. `scripts/generate_leaderboard.py` now
+stamps every freshly generated leaderboard `provenance_status: "verified"`
+explicitly. `bench explain` and `bench health` report the status in words
+instead of a bare "not found" when evidence is missing.
+
+### Open: durable evidence for the next publication
+
+The merged `per_run.jsonl` this whole gate depends on is still not shipped
+anywhere durable — only its *redacted, allowlisted projection*
+(`data/publication-source/web-bench/{evidence,scores}/vX/*.json`, built by
+`delivery/build_public_score_release.py`) is tracked and archived into
+`data/releases/web-bench-release.tar.gz` via Hound `corpus.project`. The full
+merge itself still lives only under gitignored `results/`, which is exactly
+how v4's evidence disappeared, and the same gap can recur on the next
+publication.
+
+This is not a plain config/path change to fix in place:
+
+- The raw merge can carry verifier prompt text, scenario text, and rationale
+  detail beyond what `build_public_score_release.py` currently allowlists.
+  AGENTS.md's guardrail — private traces, scenario text, verifier prompts, and
+  expected answers do not cross into public releases — means the full merge
+  cannot simply be added to the public archive (`data/releases/`) without a
+  new redaction pass to decide what of it is safe to expose.
+- A *private*, tracked durability copy (e.g. a `intake/`-style gitignored path
+  synced only through the existing `agents-apps-backup` nightly lane, or a new
+  `dist/` artifact scoped to `write_scopes` in `hound-driver.json`) would
+  avoid the public-exposure question, but still needs an owner call on
+  retention, size, and whether Hound should bind it into `corpus.project` at
+  all versus leaving it host-local.
+
+Recommended next step: the owner decides which of the two durability shapes
+above (public evidence-complete drill-down bundle vs. private-only durable
+snapshot) the next publication should use, then implements it as a scoped
+follow-up — extending `build_public_score_release.py`'s allowlist for the
+public case, or adding one path to `hound-driver.json` `write_scopes` and the
+`agents-apps-backup` lane for the private case. Neither is implemented here.

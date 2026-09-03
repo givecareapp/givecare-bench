@@ -1,4 +1,6 @@
 {
+  "provenance_status": "historical-unverified",
+  "provenance_note": "Source scans for this run were not preserved; scores are a July 2026 research snapshot and evidence drill-down is unavailable.",
   "models": [
     {
       "model": "Claude Opus 4.8",

@@ -98,6 +98,42 @@ def test_explain_resolves_scan_from_safety_care_leaderboard_metadata(
     assert item["scan_artifact"] == str(scan)
 
 
+def test_explain_reports_historical_unverified_instead_of_bare_not_found(
+    tmp_path: Path, capsys
+) -> None:
+    """A leaderboard whose source scans were retired to a historical snapshot
+    (docs/publishing-audit.md) must say so in words, not print a bare
+    'scan artifact not found' as if the path were merely misconfigured."""
+    leaderboard = tmp_path / "leaderboard.json"
+    leaderboard.write_text(
+        json.dumps(
+            {
+                "schema": "safety-care/v1",
+                "models": [],
+                "provenance_status": "historical-unverified",
+                "provenance_note": "source scans not preserved",
+                "scan_metadata": {"source_artifact": "results/publication_v4_release/per_run.jsonl"},
+            }
+        )
+    )
+    args = SimpleNamespace(
+        scan=None,
+        leaderboard=str(leaderboard),
+        model="model-a",
+        scenario="scenario-1",
+        check=None,
+        failures=False,
+        json_output=True,
+    )
+
+    assert explain_command(args) == 1
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["error"] == (
+        "leaderboard is historical-unverified: source scans were not preserved"
+    )
+
+
 def test_explain_text_labels_raw_internal_score_surface(tmp_path: Path, capsys) -> None:
     scan = tmp_path / "per_run.jsonl"
     _write_scan(scan)
