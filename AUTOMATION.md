@@ -81,6 +81,15 @@ Absent on the first run — treat that as no prior harvest, not as an error.
    `historical-unverified`, classify the required leaderboard read as
    `HARVEST_FAILED`.
 
+   A `verified` label does not override missing proof. Resolve
+   `data.scan_metadata.source_artifact` and every
+   `source_merge.sources[].artifact_id` against the repository. If a declared
+   source artifact is absent, do not call `bench get` or `bench explain`.
+   Do not write any harvest output. Report
+   `NOTHING_TO_HARVEST: bench:v4-provenance needs the owner to re-scan or retire the unverifiable release`
+   and stop. This known content decision is not a runtime failure. Docket task
+   `bench:v4-provenance` owns the choice.
+
    For a verified leaderboard, if `data.scan_metadata.generated_at` is not
    newer than the state file's `last_leaderboard_generated_at`, or the
    leaderboard/release artifacts are absent, nothing has published since the
