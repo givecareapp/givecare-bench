@@ -67,17 +67,27 @@ Absent on the first run — treat that as no prior harvest, not as an error.
 
 2. Read `delivery/harvest/state.json` if present, for `last_harvest_at`. Run
    `uv run bench --json leaderboard status` and read
-   `data.scan_metadata.generated_at` as the current published leaderboard's
-   timestamp, and `data.scan_metadata.source_artifact` plus
+   `data.provenance_status`, `data.scan_metadata.generated_at` as the current
+   published leaderboard's status and timestamp, and
+   `data.scan_metadata.source_artifact` plus
    `data.scan_metadata.source_merge.sources[].artifact_id` as its run handles.
 
-3. **Decline condition.** If `data.scan_metadata.generated_at` is not newer
-   than the state file's `last_leaderboard_generated_at`, or the
+3. **Decline condition.** If `data.provenance_status` is
+   `historical-unverified`, no verified result exists to harvest. Do not call
+   `bench get` or `bench explain`. Do not write a digest, outreach draft, or
+   state file. Report
+   `NOTHING_TO_HARVEST: current leaderboard is historical-unverified` and
+   stop. If the status is anything other than `verified` or
+   `historical-unverified`, classify the required leaderboard read as
+   `HARVEST_FAILED`.
+
+   For a verified leaderboard, if `data.scan_metadata.generated_at` is not
+   newer than the state file's `last_leaderboard_generated_at`, or the
    leaderboard/release artifacts are absent, nothing has published since the
    last harvest. Do no further work; report
    `NOTHING_TO_HARVEST since <last_harvest_at>` and stop. No state file means
-   no harvest has ever happened: whatever is published now is unharvested,
-   however old, and the first run takes it.
+   no verified harvest has ever happened: the current verified publication is
+   unharvested, however old, and the first run takes it.
 
 4. **Harvest — findings digest for sms.** Compile a failure-taxonomy-pressure
    digest from the current leaderboard and `bench get`/`bench explain`
@@ -154,7 +164,7 @@ the state file — could not be trusted.
 
 Then end with the rack-wide token that status maps to, alone on the final
 line: `HARVESTED` is `DONE`; `NOTHING_TO_HARVEST` is `DECLINED`, naming the
-last harvest date on the line above; `HARVEST_FAILED` is `BROKEN`, with
+exact decline reason on the line above; `HARVEST_FAILED` is `BROKEN`, with
 `FAILED_CHECK: <exact failed check>: <bounded error>` immediately before the
 token. Never invent a classification token outside this mapping for either
 line.
