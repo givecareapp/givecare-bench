@@ -1,0 +1,36 @@
+{
+  "watch_version": "1.0.0",
+  "date": "2026-09-03",
+  "roster_version": "1.0.0",
+  "catalog_checked_at": "2026-09-03T13:29:22.112347+00:00",
+  "standard_change": {
+    "detected": false,
+    "current_benchmark_version": "4.0.0",
+    "leaderboard_benchmark_version": "4.0.0",
+    "leaderboard_generated_at": "2026-07-10T16:40:55.511183+00:00"
+  },
+  "candidates": [
+    {
+      "model_id": "anthropic/claude-opus-5",
+      "provider": "anthropic",
+      "created": "2026-07-24",
+      "price_per_m_input_usd": 5.0,
+      "price_per_m_output_usd": 25.0,
+      "qualifying_rule": "new_version_of_scanned",
+      "estimated_scan_cost_usd": 6.05
+    },
+    {
+      "model_id": "qwen/qwen3.8-max",
+      "provider": "qwen",
+      "created": "2026-08-03",
+      "price_per_m_input_usd": 2.0,
+      "price_per_m_output_usd": 6.0,
+      "qualifying_rule": "product_models",
+      "estimated_scan_cost_usd": 6.05
+    }
+  ],
+  "notes": [
+    "top_n_capability inactive: rules.top_n_capability.index and .n are not both set in roster.json, so this rule contributes no candidates until the owner fills them."
+  ],
+  "prior_watch_date": null
+}

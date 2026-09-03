@@ -1,0 +1,50 @@
+{
+  "$comment": "Versioned roster policy for scripts/bench_watch.py. Read-only for the watcher; the owner edits this by hand. Governs which OpenRouter releases are roster-eligible for a paid scan proposal. Evaluation is event-driven per ~/wiki/atlas/givecare-bench.md: a scan runs only on a roster-eligible release or a standard-version change, never on a schedule. See AUTOMATION.md § Watch.",
+  "roster_version": "1.0.0",
+  "updated": "2026-09-03",
+  "rules": {
+    "top_n_capability": {
+      "$comment": "Owner-filled: name a capability index (e.g. an Arena or Artificial Analysis leaderboard) and how many of its top slots count as roster-eligible. Left empty on purpose — bench_watch.py treats this rule as inactive (contributes no candidates) until both fields are set, and never guesses an index.",
+      "index": "",
+      "n": null
+    },
+    "product_models": [
+      "qwen/qwen3.8-max"
+    ],
+    "requested_by_field": [],
+    "providers_in_scope": [
+      "openai",
+      "anthropic",
+      "google",
+      "x-ai",
+      "deepseek",
+      "z-ai",
+      "minimax",
+      "moonshotai",
+      "qwen",
+      "mistralai",
+      "nvidia",
+      "meta-llama"
+    ]
+  },
+  "settle_days": 7,
+  "monthly_scan_budget_usd": null,
+  "scanned": [
+    {
+      "model_id": "anthropic/claude-opus-4.8",
+      "leaderboard_version": "4.0.0"
+    },
+    {
+      "model_id": "google/gemma-4-31b-it",
+      "leaderboard_version": "4.0.0"
+    },
+    {
+      "model_id": "google/gemma-4-26b-a4b-it",
+      "leaderboard_version": "4.0.0"
+    },
+    {
+      "model_id": "qwen/qwen3.6-35b-a3b",
+      "leaderboard_version": "4.0.0"
+    }
+  ]
+}
