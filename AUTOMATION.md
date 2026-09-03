@@ -86,9 +86,8 @@ Absent on the first run — treat that as no prior harvest, not as an error.
    `source_merge.sources[].artifact_id` against the repository. If a declared
    source artifact is absent, do not call `bench get` or `bench explain`.
    Do not write any harvest output. Report
-   `NOTHING_TO_HARVEST: bench:v4-provenance needs the owner to re-scan or retire the unverifiable release`
-   and stop. This known content decision is not a runtime failure. Docket task
-   `bench:v4-provenance` owns the choice.
+   `NOTHING_TO_HARVEST: verified leaderboard lacks its declared source artifact`
+   and stop. This source-integrity refusal is not a runtime failure.
 
    For a verified leaderboard, if `data.scan_metadata.generated_at` is not
    newer than the state file's `last_leaderboard_generated_at`, or the
