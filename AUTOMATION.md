@@ -18,7 +18,7 @@ harvest, decline; do not manufacture material.
 
 ## Schedule
 
-The dispatch lane `bench-harvest` runs this contract monthly, first Monday
+The dispatch lane `givecare-bench-harvest` runs this contract monthly, first Monday
 09:00 America/New_York. Dispatch owns the schedule; this contract owns the
 lane's read, harvest, and draft steps.
 
@@ -96,7 +96,7 @@ Absent on the first run — treat that as no prior harvest, not as an error.
      § Claim Posture. Never composite Safety and Care into one score or rank.
    - Write to `delivery/harvest/<YYYY-MM>.md`.
 
-5. **Harvest — verified-safety-evidence note for evidence-cycle.** Check
+5. **Harvest — verified-safety-evidence note for `givecare-evidence-review`.** Check
    whether `/home/deploy/repos/givecare/.agents/evidence-cycle.md` exists and
    defines an intake (a documented drop location or schema for incoming
    evidence). If it does, write one short pointer record there per its
@@ -147,7 +147,7 @@ Binding, restated from `VISION.md`, `AGENTS.md`, and `docs/governance.md`:
 
 Classify with exactly one domain status, reported in the body: `HARVESTED`
 when the harvest digest and outreach drafts were both written (with the
-evidence-cycle pointer or its documented skip resolved per step 5) and state
+`givecare-evidence-review` pointer or its documented skip resolved per step 5) and state
 was updated; `NOTHING_TO_HARVEST` when step 3's decline condition applied;
 `HARVEST_FAILED` when a required read — the `bench` CLI, the leaderboard, or
 the state file — could not be trusted.
@@ -248,7 +248,7 @@ is idempotent per day, not accumulating.
 
 ### Owner loop
 
-1. `bench-watch` (or a manual run) writes a dated proposal. It never emits a
+1. `givecare-bench-detect-releases` (or a manual run) writes a dated proposal. It never emits a
    Docket task itself.
 2. The owner reads the proposal and decides whether to spend. Approval is
    the owner's own action, outside this script — e.g. via Docket, same as
