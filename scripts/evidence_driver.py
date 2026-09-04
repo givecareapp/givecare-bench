@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Private Hound protocol adapter for gc-bench owner writes."""
+"""Private Helm Evidence protocol adapter for gc-bench owner writes."""
 
 from __future__ import annotations
 

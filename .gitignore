@@ -60,6 +60,8 @@ adapters/givecare-orchestrator/dist/
 # Run artifacts (user-generated, not committed)
 results/
 runs/
+.evidence/
+.hound/
 
 # Autoresearch campaign artifacts
 internal/autoresearch/results/*.json

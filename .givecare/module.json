@@ -132,7 +132,7 @@
       ],
       "verifiers": [
         "uv run pytest benchmark/tests -q",
-        "hound driver check --driver hound-driver.json"
+        "helm evidence driver check --driver evidence-driver.json"
       ],
       "capabilities": [
         {
@@ -171,8 +171,8 @@
           "effect": "write",
           "gate": "human",
           "adapter": {
-            "kind": "hound-operation",
-            "ref": "hound-driver.json#corpus.apply"
+            "kind": "evidence-operation",
+            "ref": "evidence-driver.json#corpus.apply"
           },
           "accepts": [
             "gc-bench.candidate-intake.input/v2"
@@ -197,7 +197,7 @@
         },
         {
           "kind": "publication-gate",
-          "ref": "scripts/hound_driver.py"
+          "ref": "scripts/evidence_driver.py"
         },
         {
           "kind": "web-benchmark-release-source",
@@ -208,13 +208,13 @@
           "ref": "data/releases/web-bench-release.tar.gz"
         },
         {
-          "kind": "hound-driver",
-          "ref": "hound-driver.json"
+          "kind": "evidence-driver",
+          "ref": "evidence-driver.json"
         }
       ],
       "verifiers": [
         "uv run pytest benchmark/tests -q",
-        "hound driver check --driver hound-driver.json"
+        "helm evidence driver check --driver evidence-driver.json"
       ],
       "capabilities": [
         {
@@ -252,8 +252,8 @@
           "effect": "write",
           "gate": "none",
           "adapter": {
-            "kind": "hound-operation",
-            "ref": "hound-driver.json#corpus.project"
+            "kind": "evidence-operation",
+            "ref": "evidence-driver.json#corpus.project"
           },
           "accepts": [
             "gc-bench.web-benchmark-release.input/v1"

@@ -1588,9 +1588,9 @@ def _plan_status(repo: str, path: Path) -> str:
     not judge the plan; callers hide such plans rather than guess.
     """
     base = GIVECARE_ROOT / repo
-    driver = base / "research" / "hound-driver.json"
+    driver = base / "research" / "evidence-driver.json"
     if not driver.is_file():
-        driver = base / "hound-driver.json"
+        driver = base / "evidence-driver.json"
     try:
         proc = subprocess.run(
             [HOUND_BIN, "status", "--driver", str(driver), "--plan", str(path)],

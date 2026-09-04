@@ -3,10 +3,11 @@
   "id": "gc-bench",
   "protocol": "hound.protocol.v1",
   "owner": { "repo": "." },
-  "exec": ["python3", "-B", "scripts/hound_driver.py"],
-  "run_root": ".hound/runs",
+  "exec": ["python3", "-B", "scripts/evidence_driver.py"],
+  "run_root": ".evidence/runs",
   "write_scopes": ["benchmark/scenarios", "data/releases/web-bench-release.tar.gz"],
   "ignored_snapshot_excludes": [
+    ".evidence",
     ".hound",
     ".pytest_cache",
     ".ruff_cache",

@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-DRIVER = ROOT / "scripts" / "hound_driver.py"
+DRIVER = ROOT / "scripts" / "evidence_driver.py"
 REVIEW_UI = ROOT / "scripts" / "review_ui" / "app.py"
 
 
@@ -145,8 +145,8 @@ def _release_input(tmp_path: Path) -> dict:
 
 
 def test_manifest_limits_hound_writes_to_owner_outputs() -> None:
-    manifest = json.loads((ROOT / "hound-driver.json").read_text())
-    assert manifest["exec"] == ["python3", "-B", "scripts/hound_driver.py"]
+    manifest = json.loads((ROOT / "evidence-driver.json").read_text())
+    assert manifest["exec"] == ["python3", "-B", "scripts/evidence_driver.py"]
     assert manifest["write_scopes"] == ["benchmark/scenarios", "data/releases/web-bench-release.tar.gz"]
 
 
