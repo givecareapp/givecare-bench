@@ -8,7 +8,6 @@
   "write_scopes": ["benchmark/scenarios", "data/releases/web-bench-release.tar.gz"],
   "ignored_snapshot_excludes": [
     ".evidence",
-    ".hound",
     ".pytest_cache",
     ".ruff_cache",
     ".venv",

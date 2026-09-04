@@ -61,7 +61,6 @@ adapters/givecare-orchestrator/dist/
 results/
 runs/
 .evidence/
-.hound/
 
 # Autoresearch campaign artifacts
 internal/autoresearch/results/*.json
