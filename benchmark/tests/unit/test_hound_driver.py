@@ -1,7 +1,8 @@
-"""Hound boundaries for Evals intake and the complete web release."""
+"""Helm Evidence boundaries for Evals intake and the complete web release."""
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import io
@@ -157,12 +158,41 @@ def test_driver_check_emits_one_protocol_response() -> None:
     assert json.loads(result.stdout)["data"] == {"protocol": "hound.protocol.v1"}
 
 
-def test_review_ui_stays_on_the_native_hound_approval_boundary() -> None:
+def test_review_ui_removes_ecosystem_queue_and_keeps_calibration_routes() -> None:
     source = REVIEW_UI.read_text(encoding="utf-8")
-    for required in ('"givecare_protocol.py"', '"capabilities"', "adapter"):
-        assert required in source
-    for retired in ("HOUND_REPOS", "WIKI_QUEUE_DIR", "wiki queue", "@app.get(\"/wiki/"):
+    for retired in (
+        '"/q/<token>"',
+        "Hound",
+        "DECISIONS_PATH",
+        "subprocess",
+        "GIVECARE_ROOT",
+    ):
         assert retired not in source
+
+    tree = ast.parse(source)
+    routes = {
+        (decorator.func.attr, decorator.args[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        for decorator in node.decorator_list
+        if isinstance(decorator, ast.Call)
+        and isinstance(decorator.func, ast.Attribute)
+        and decorator.func.attr in {"get", "post"}
+        and decorator.args
+        and isinstance(decorator.args[0], ast.Constant)
+    }
+    assert routes == {
+        ("get", "/health"),
+        ("get", "/"),
+        ("get", "/r/<token>"),
+        ("get", "/r/<token>/card/<int:pos>"),
+        ("post", "/r/<token>/save"),
+        ("get", "/admin/<token>/progress"),
+        ("get", "/admin/<token>/progress.json"),
+        ("get", "/admin/<token>/export"),
+    }
+    for required in ("reviewer_order", "is_complete", "admin_export"):
+        assert required in source
 
 
 def test_module_declares_fixed_evals_sync_and_single_web_release() -> None:

@@ -1,6 +1,8 @@
-# Hound Owner Lane
+# Helm Evidence Owner Lane
 
-Hound owns two bounded writes in `gc-bench`.
+Helm Evidence owns two bounded writes in `gc-bench`. It owns the plan,
+approval, execution, and proof. Bench owns the driver and its declared output
+paths.
 
 ## Evals intake
 
@@ -9,19 +11,20 @@ cross-repository read. It writes fixed local bytes and a provenance receipt.
 
 ```bash
 python3 scripts/sync_evals_projection.py \
-  --run-dir ../gc-evals/.hound/runs/<exact-plan-id>
+  --run-dir ../gc-evals/.evidence/runs/<exact-plan-id>
 uv run python scripts/intake/import_evals.py \
   --selected-id <eval-record-id> --output /tmp/gc-bench-candidate.json
 ```
 
-The compiler and Hound driver read only
-`data/imports/evals/materialization.json`. This one atomically replaced file
-contains the exact source bytes and their verified Hound receipt. A process
+The compiler and Helm Evidence driver read only
+`data/imports/evals/materialization.json`. This atomically replaced file
+contains the exact source bytes and their verified Evidence receipt. A process
 stop cannot expose a payload from one generation with a receipt from another.
 
 The receipt stores the verified source run ID and ArtifactRef. A candidate input
-contains only one selected ID. Hound adds that receipt to the promoted scenario
-metadata. It never reads `gc-evals` during candidate planning or execution.
+contains only one selected ID. Helm Evidence adds that receipt to the promoted
+scenario metadata. It never reads `gc-evals` during candidate planning or
+execution.
 
 ## Public web release
 
@@ -41,8 +44,8 @@ uv run python delivery/build_public_score_release.py \
 - `evidence/v4.0.0/manifest.json` and its four model files
 - `scores/v4.0.0/manifest.json` and its four model files
 
-Create a Hound project input that binds the canonical leaderboard, strict QA
-stamp, `current-evidence.json`, and both source manifests by SHA-256.
+Create a Helm Evidence project input that binds the canonical leaderboard,
+strict QA stamp, `current-evidence.json`, and both source manifests by SHA-256.
 
 ```json
 {
@@ -72,6 +75,11 @@ artifact_id: data/releases/web-bench-release.tar.gz
 
 The archive has exactly 13 regular files: `release-manifest.json` plus
 `leaderboard.json`, `current-evidence.json`, five evidence files, and five
-score files. The release manifest schema is `gc-bench.web-benchmark-release/v1`.
-Consumers verify and atomically materialize this one archive. There is no
-direct `gc-bench` write into a consumer repository.
+score files. The release manifest schema is
+`gc-bench.web-benchmark-release/v1`. Consumers verify and atomically
+materialize this one archive. There is no direct `gc-bench` write into a
+consumer repository.
+
+Operator decisions happen in Helm at `https://helm.scty.org`. Helm renders the
+shared `GET /feed` and submits the declared Move to `POST /moves`. The Bench
+review UI provides blind calibration and publication review only.

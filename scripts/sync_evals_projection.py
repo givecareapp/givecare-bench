@@ -68,20 +68,20 @@ def _run_dir(value: str) -> Path:
         resolved = run_dir.resolve(strict=True)
     except OSError as error:
         raise ProjectionSyncError("--run-dir is not a readable directory") from error
-    expected_parent = (OWNER_ROOT / ".hound" / "runs").resolve()
+    expected_parent = (OWNER_ROOT / ".evidence" / "runs").resolve()
     if (
         not resolved.is_dir()
         or resolved.parent != expected_parent
         or SHA256.fullmatch(resolved.name) is None
     ):
         raise ProjectionSyncError(
-            "--run-dir must be exactly gc-evals/.hound/runs/<64-hex-plan-id>"
+            "--run-dir must be exactly gc-evals/.evidence/runs/<64-hex-plan-id>"
         )
     return resolved
 
 
 def verified_source(run_id: str) -> dict[str, str]:
-    """Return the exact Hound-proven gc-evals ArtifactRef for one run id."""
+    """Return the exact Helm Evidence-proven gc-evals ArtifactRef for one run id."""
     if SHA256.fullmatch(run_id) is None:
         raise ProjectionSyncError("source run id must be a lowercase SHA-256 plan id")
     result = subprocess.run(
@@ -92,7 +92,7 @@ def verified_source(run_id: str) -> dict[str, str]:
             str(WORKSPACE_ROOT),
             "projection-ref",
             "--run-dir",
-            str(OWNER_ROOT / ".hound" / "runs" / run_id),
+            str(OWNER_ROOT / ".evidence" / "runs" / run_id),
             "--owner-repo",
             "gc-evals",
             "--driver-id",

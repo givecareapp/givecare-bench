@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -40,7 +41,7 @@ def _materialization(content: bytes, run_id: str = "b" * 64) -> bytes:
 def test_sync_materializes_one_verified_fixed_projection(monkeypatch, tmp_path: Path) -> None:
     owner = tmp_path / "gc-evals"
     run_id = "a" * 64
-    (owner / ".hound" / "runs" / run_id).mkdir(parents=True)
+    (owner / ".evidence" / "runs" / run_id).mkdir(parents=True)
     content = b'{"id":"case-1","input":"Help"}\n'
     owner_file = owner / "data" / "all.jsonl"
     owner_file.parent.mkdir(parents=True)
@@ -52,7 +53,7 @@ def test_sync_materializes_one_verified_fixed_projection(monkeypatch, tmp_path: 
     monkeypatch.setattr(sync, "TARGET", target)
     monkeypatch.setattr(sync, "verified_source", lambda _run_id: _source(content))
 
-    result = sync.sync(owner / ".hound" / "runs" / run_id)
+    result = sync.sync(owner / ".evidence" / "runs" / run_id)
 
     materialized = json.loads(target.read_bytes())
     assert materialized["projection_jsonl"].encode() == content
@@ -61,10 +62,25 @@ def test_sync_materializes_one_verified_fixed_projection(monkeypatch, tmp_path: 
     assert result["source_run_id"] == run_id
 
 
+def test_source_verification_uses_evals_declared_run_root(monkeypatch) -> None:
+    run_id = "a" * 64
+    manifest = json.loads((sync.OWNER_ROOT / "evidence-driver.json").read_text())
+    expected_run = sync.OWNER_ROOT / manifest["run_root"] / run_id
+    source = _source(b'{"id":"case-1"}\n')
+
+    def verify(args, **kwargs):
+        assert args[args.index("--run-dir") + 1] == str(expected_run)
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(source))
+
+    monkeypatch.setattr(sync.subprocess, "run", verify)
+
+    assert sync.verified_source(run_id) == source
+
+
 def test_sync_rejects_owner_projection_symlinks(monkeypatch, tmp_path: Path) -> None:
     owner = tmp_path / "gc-evals"
     run_id = "a" * 64
-    (owner / ".hound" / "runs" / run_id).mkdir(parents=True)
+    (owner / ".evidence" / "runs" / run_id).mkdir(parents=True)
     outside = tmp_path / "outside.jsonl"
     outside.write_text('{"id":"case-1"}\n')
     owner_file = owner / "data" / "all.jsonl"
@@ -78,13 +94,13 @@ def test_sync_rejects_owner_projection_symlinks(monkeypatch, tmp_path: Path) -> 
     monkeypatch.setattr(sync, "verified_source", lambda _run_id: _source(outside.read_bytes()))
 
     with pytest.raises(sync.ProjectionSyncError, match="symbolic link"):
-        sync.sync(owner / ".hound" / "runs" / run_id)
+        sync.sync(owner / ".evidence" / "runs" / run_id)
 
 
 def test_sync_rejects_oversized_owner_projection_before_reading(monkeypatch, tmp_path: Path) -> None:
     owner = tmp_path / "gc-evals"
     run_id = "a" * 64
-    (owner / ".hound" / "runs" / run_id).mkdir(parents=True)
+    (owner / ".evidence" / "runs" / run_id).mkdir(parents=True)
     owner_file = owner / "data" / "all.jsonl"
     owner_file.parent.mkdir()
     with owner_file.open("wb") as stream:
@@ -97,7 +113,7 @@ def test_sync_rejects_oversized_owner_projection_before_reading(monkeypatch, tmp
     monkeypatch.setattr(sync, "verified_source", lambda _run_id: _source(b""))
 
     with pytest.raises(sync.ProjectionSyncError, match="exceeds the size limit"):
-        sync.sync(owner / ".hound" / "runs" / run_id)
+        sync.sync(owner / ".evidence" / "runs" / run_id)
 
 
 def test_local_load_rejects_materialization_symlink(monkeypatch, tmp_path: Path) -> None:

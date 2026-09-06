@@ -100,6 +100,23 @@ def _save(client: Any, card_id: str, verdict: str, rationale: str = "") -> dict[
     return resp.get_json()
 
 
+def test_admin_progress_renders_counts_and_export_link(client: Any) -> None:
+    _save(client, "crisis.synthetic__pass", "PASS")
+
+    response = client.get("/admin/admintok/progress")
+
+    assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert "Gold cards" in page
+    assert "1 / 3" in page
+    assert "href='/admin/admintok/export'" in page
+
+
+@pytest.mark.parametrize("token", ["revtok", "unknown"])
+def test_admin_progress_rejects_non_admin_tokens(client: Any, token: str) -> None:
+    assert client.get(f"/admin/{token}/progress").status_code == 404
+
+
 def test_incomplete_fail_excluded_pass_and_rationaled_fail_included(client: Any) -> None:
     _save(client, "crisis.synthetic__pass", "PASS")
     _save(client, "crisis.synthetic__fail_blank", "FAIL", rationale="")

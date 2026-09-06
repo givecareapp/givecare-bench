@@ -60,14 +60,14 @@ uv run python scripts/qa_leaderboard.py \
   --scan <scan>/per_run.jsonl \
   --leaderboard data/leaderboard/leaderboard.json \
   --manual-adjudications <scan>/manual_adjudications.json --strict --stamp
-hound plan --driver hound-driver.json --operation corpus.project \
+helm evidence plan --driver evidence-driver.json --operation corpus.project \
   --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
   --output /tmp/gc-bench-leaderboard-plan.json
 ```
 
 The explicit commands above own the canonical leaderboard and fixed QA stamp.
-Hound binds those exact digests and writes only the local consumer
-projection. See `docs/hound-lane.md`. Consumers pull the verified projection.
+Helm Evidence binds those exact digests and writes only the local consumer
+projection. See `docs/evidence-lane.md`. Consumers pull the verified projection.
 
 `delivery/combine_scans.py` accepts only provenance-complete scan plan v2
 artifacts with one comparability fingerprint. Use
@@ -75,14 +75,12 @@ artifacts with one comparability fingerprint. Use
 escalations use the blind review export/apply pair above. Use
 `scripts/rescore_diff.py` to prove refactors preserve verdicts.
 
-## Review UI / ecosystem approval queue
+## Review UI
 
-`scripts/review_ui/app.py` is a self-contained Flask app with two jobs: the
-blind gold-card reviewer flow (this repo's calibration evidence) and the
-**ecosystem approval queue** (Hound plans and the social veto window)
-at https://review.givecareapp.com. Contract, mechanisms, and truth rules:
-`../.agents/approval-queue.md` (workspace level) — read it before touching
-queue behavior.
+`scripts/review_ui/app.py` is a self-contained Flask app for blind gold-card
+and publication review at https://review.givecareapp.com. It records reviewer
+labels and exposes aggregate admin progress and export routes. It does not own
+cross-repository tasks, Evidence approvals, or social decisions.
 
 - Runs as the `review-ui` systemd user unit on :3090
   (`systemctl --user restart review-ui`); Traefik route
@@ -91,10 +89,10 @@ queue behavior.
   `token=<urlsafe> role=admin|reviewer id=<name>`; re-read per request.
 - Expressions per gc-web `DESIGN.md`: reviewer pages editorial (external
   humans), admin pages console (`.dashboard` scope) — do not mix.
-- Hound decisions land in native approval artifacts plus
-  `../.agents/decisions.jsonl`.
-- The queue discovers human-gated Hound repositories from the workspace
-  protocol registry. If discovery fails, the Hound queue is unavailable.
+
+Helm at https://helm.scty.org owns operator decisions. It renders the shared
+`GET /feed` and submits declared Moves to `POST /moves`. gc-bench does not
+proxy or duplicate that control surface.
 
 Review links to the separately owned Workpad service at `/workpad/demo`.
 Workpad source, scoped invitations, Markdown revisions, and provenance live
@@ -107,14 +105,14 @@ separate.
 uv run python scripts/intake/import_evals.py \
   --selected-id <eval-record-id> \
   --output /tmp/gc-bench-candidates.json
-hound plan --driver hound-driver.json --operation corpus.apply \
+helm evidence plan --driver evidence-driver.json --operation corpus.apply \
   --input /tmp/gc-bench-candidates.json --as-of YYYY-MM-DD \
   --output /tmp/gc-bench-candidate-plan.json
 uv run python scripts/intake/incident_registry.py intake/incidents.jsonl
 ```
 
 The registry and request data stay under gitignored `intake/`; tracked code
-contains only validators and request tooling. Hound requires human approval of
+contains only validators and request tooling. Helm Evidence requires human approval of
 the exact plan before it writes canonical `benchmark/scenarios` truth. The
 approved plan binds the Evals ArtifactRef, selected ID, scenario bytes, and
 target paths. Review the resulting Git diff before commit. No staging or
@@ -132,4 +130,4 @@ target internal decomposition.
 
 ## Atlas contract
 
-Owner intent for this stream: `~/wiki/atlas/givecare-bench.md` — read it before non-trivial work; it governs when this file and it disagree on intent (this file still owns execution).
+Owner intent for this stream: `~/wiki/aims/givecare-bench.md` — read it before non-trivial work; it governs when this file and it disagree on intent (this file still owns execution).
