@@ -1,28 +1,27 @@
 # GiveCare Bench — Harvest & Field Contract
 
-> Governed by `~/wiki/atlas/givecare-bench.md` (intent). This file owns
+> Governed by `~/wiki/aims/givecare-bench.md` (intent). This file owns
 > procedure only; intent found here migrates up.
 
 ## Objective
 
-Monthly, after new results have published, harvest what the benchmark learned
+After new results have published, harvest what the benchmark learned
 for GiveCare's own use, and identify which field targets should engage with
-the benchmark this month. Per the atlas Lanes line: *the standard must reach
+the benchmark. Per the Bench Aim: *the standard must reach
 the field, not only the leaderboard.*
 
 Evaluation itself — Define, test, verify, calibrate, compare — is event-driven
-on a model release, per the atlas capability frame's Direction and Flow. It is
+on a model release, per the Bench Aim. It is
 never this lane. **Never run an evaluation, a scan, or any paid work to
 produce something to harvest.** If nothing has published since the last
 harvest, decline; do not manufacture material.
 
-## Schedule
+## Workload
 
-The dispatch lane `givecare-bench-harvest` runs this contract monthly, first Monday
-09:00 America/New_York. Dispatch owns the schedule; this contract owns the
-lane's read, harvest, and draft steps.
+The Helm workload `givecare-bench-harvest` runs this contract.
+Helm Workloads owns cadence. This contract owns the read, harvest, and draft steps.
 
-Consent is `asks`: this lane proposes, the owner decides via Docket. It never
+This workload proposes. The owner decides through Helm Tasks. It never
 sends, posts, publishes, deploys, or writes to another repository or system.
 
 ## Scope
@@ -126,7 +125,7 @@ Absent on the first run — treat that as no prior harvest, not as an error.
    report body.
 
 6. **Reach the field.** From the current publish, list target audiences named
-   in the atlas node's Audience field — model builders whose model is newly
+   in the Aim's Audience field — model builders whose model is newly
    covered this cycle, labs, and policy bodies among "researchers, model
    builders, evaluators, practitioners, policymakers, journalists." For each
    candidate, look up existing relationship state read-only with
@@ -151,7 +150,7 @@ Binding, restated from `VISION.md`, `AGENTS.md`, and `docs/governance.md`:
 - Never state a score without a run-handle citation.
 - Safety and Care are never composited into one score or rank; never publish
   a claim like "model X is better than model Y."
-- Publication (scan → strict QA → deterministic Hound projection → reviewed
+- Publication (scan → strict QA → deterministic Helm Evidence projection → reviewed
   Git commit → consumer sync) is out of scope for this lane. This lane only
   reads what that path has already published; it never runs any step of it.
 - Drafts only. Never send, post, publish, merge, or deploy.
@@ -179,7 +178,7 @@ line.
 
 ## Watch
 
-Owner rule set (2026-09-03, `~/wiki/atlas/givecare-bench.md`): evaluation is
+Owner rule set (2026-09-03, `~/wiki/aims/givecare-bench.md`): evaluation is
 event-driven. A scan runs only when a roster-eligible model or model version
 is released, or when the standard itself changes (a scenario/check version
 bump makes every scanned model due again). Listening for releases is
@@ -267,18 +266,18 @@ is idempotent per day, not accumulating.
 ### Owner loop
 
 1. `givecare-bench-detect-releases` (or a manual run) writes a dated proposal. It never emits a
-   Docket task itself.
+   Helm Task itself.
 2. The owner reads the proposal and decides whether to spend. Approval is
-   the owner's own action, outside this script — e.g. via Docket, same as
+   the owner's own action, outside this script, through Helm Tasks, as with
    any other paid-scan decision documented in `docs/governance.md`.
 3. Approved candidates run the normal scan → strict QA → deterministic
-   Hound projection → reviewed Git commit → consumer sync path documented
+   Helm Evidence projection → reviewed Git commit → consumer sync path documented
    above in this file and in `docs/publishing-audit.md`. `bench_watch.py`
    plays no part past writing the proposal.
 4. Once a candidate is published, add it to `roster.json`'s `scanned` list
    by hand with the new leaderboard version, so future watches stop
    proposing it.
-5. QA and the Hound projection are unchanged by this lane; the `bench`
+5. QA and the Helm Evidence projection are unchanged by this lane; the `bench`
    skill's `bench --json health` / `leaderboard status` remain the
    read-only way to confirm what is currently published.
 
@@ -292,8 +291,8 @@ above), `BROKEN` (with `FAILED_CHECK: <check>: <error>` on the line above)
 when the catalog is unreachable or a required local file is missing or
 malformed.
 
-## Atlas contract
+## Wiki Aim contract
 
-Owner intent for this stream: `~/wiki/atlas/givecare-bench.md` — read it
+Owner intent for this stream: `~/wiki/aims/givecare-bench.md` — read it
 before non-trivial work; it governs when this file and it disagree on intent
 (this file still owns execution).
