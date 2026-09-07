@@ -82,8 +82,8 @@ and publication review at https://review.givecareapp.com. It records reviewer
 labels and exposes aggregate admin progress and export routes. It does not own
 cross-repository tasks, Evidence approvals, or social decisions.
 
-- Runs as the `review-ui` systemd user unit on :3090
-  (`systemctl --user restart review-ui`); Traefik route
+- Runs as the `givecare-reviews.service` systemd user unit on :3090
+  (`systemctl --user restart givecare-reviews.service`); Traefik route
   `~/traefik/dynamic/review.yml`.
 - Tokens: `internal/review/tokens.txt` (gitignored, 600) —
   `token=<urlsafe> role=admin|reviewer id=<name>`; re-read per request.
@@ -128,6 +128,6 @@ Contributor entry points: `docs/quickstart.md`, `docs/architecture.md`,
 `docs/scoring-rubric.md`, `docs/verifier-validation.md`, and `DESIGN.md` for the
 target internal decomposition.
 
-## Atlas contract
+## Wiki Aim contract
 
 Owner intent for this stream: `~/wiki/aims/givecare-bench.md` — read it before non-trivial work; it governs when this file and it disagree on intent (this file still owns execution).

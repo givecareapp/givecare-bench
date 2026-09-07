@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only OpenRouter release watcher for the gc-bench roster policy.
 
-Owner rule (2026-09-03, ~/wiki/atlas/givecare-bench.md): evaluation is
+Owner rule (2026-09-03, ~/wiki/aims/givecare-bench.md): evaluation is
 event-driven. A scan runs only when a roster-eligible model or model version
 is released, or when the benchmark standard itself changes (a scenario/check
 version bump makes every model due for re-scan). Listening for releases is
@@ -9,8 +9,8 @@ periodic; scanning is not. Scans are paid and human-gated: this script
 proposes, the owner approves elsewhere. The output stays a jagged profile,
 never a rank.
 
-This script never spends money, never runs a scan, and never calls
-docket-emit. It only reads the public OpenRouter catalog (no API key) plus
+This script never spends money, runs a scan, or emits a Task.
+It only reads the public OpenRouter catalog (no API key) plus
 local repo config, and writes a dated proposal under delivery/watch/.
 
 Usage:
