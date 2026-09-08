@@ -1,26 +1,16 @@
 #!/usr/bin/env python3
-"""Behavior-freeze gate: re-judge a frozen scan and diff verdicts.
+"""Replay saved judge responses through the current engine without API calls.
 
-Re-evaluates every transcript referenced by a frozen per_run.jsonl using the
-deterministic (smoke-profile) engine and compares against the stored results:
-
-- deterministic checks (regex / scenario_rule scorers): verdict + eligibility
-  must match exactly;
-- LLM-judged checks: eligibility (routing + scope decisions) must match;
-  verdicts are not reproducible without --enable-llm and are skipped.
-
-Exit 0 when the diff is empty, 1 on any divergence, 2 on usage errors.
-This is the definition-of-done check for refactor commits (see DESIGN.md).
-
-Usage:
-    uv run python scripts/rescore_diff.py --frozen results/run_<id>/scan/per_run.jsonl
-    uv run python scripts/rescore_diff.py --frozen <scan>/per_run.jsonl --limit 50
+This checks request drift, decision parsing, evidence validation, and aggregation.
+It does not measure model accuracy or repeat the model's inference.
+A frozen scan must use the current contract and retain every raw judge response.
 """
 
 from __future__ import annotations
 
 import argparse
-import logging
+import hashlib
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -29,135 +19,71 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.mode_engine import ModeEngine  # noqa: E402
-from invisiblebench.judge import (  # noqa: E402
-    apply_scan_profile,
-    enrich_scenario_with_inferred_tags,
-    load_scan_profile,
-    load_scenario,
-    load_transcript,
-)
 from invisiblebench.utils.io import load_jsonl  # noqa: E402
-
-DETERMINISTIC_SCORERS = {"regex", "scenario_rule", "corpus", "lexicon"}
-
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger("rescore_diff")
+from invisiblebench.utils.prompt_hash import prompt_template_hash  # noqa: E402
+from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION  # noqa: E402
 
 
-def build_engine() -> ModeEngine:
-    profile = load_scan_profile("smoke")
-    engine = ModeEngine(llm_api_client=None)
-    engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)
-    return engine
+class ReplayClient:
+    def __init__(self, row: dict[str, Any]):
+        self.results = {result["prompt_hash"]: result for result in row["mode_results"]}
+
+    def call_model(self, **kwargs: Any) -> dict[str, Any]:
+        key = prompt_template_hash(kwargs["messages"][0]["content"])
+        saved = self.results[key]
+        input_hash = hashlib.sha256(
+            json.dumps(kwargs["messages"], ensure_ascii=False, sort_keys=True).encode()
+        ).hexdigest()
+        if input_hash != saved["extra"]["input_sha256"]:
+            raise ValueError("judge input changed")
+        judge = saved["judge"]
+        for field in ("model", "temperature", "max_tokens"):
+            if kwargs[field] != judge[field]:
+                raise ValueError(f"judge {field} changed")
+        return {"response": saved["extra"]["raw_response"],
+                "raw": {"model": judge["resolved_model"], "provider": judge["provider"]}}
 
 
-def compare_row(
-    stored: dict[str, Any],
-    rescored: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    diffs: list[dict[str, Any]] = []
-    new_by_mode = {m["mode_id"]: m for m in rescored}
+def compare_row(stored: dict[str, Any], rescored: list[dict[str, Any]]) -> list[str]:
+    old = {result["mode_id"]: result for result in stored["mode_results"]}
+    new = {result["mode_id"]: result for result in rescored}
+    return [check for check in sorted(old.keys() | new.keys()) if old.get(check) != new.get(check)]
 
-    for old in stored["mode_results"]:
-        mode_id = old["mode_id"]
-        old_scorer = old.get("scorer_type", "")
-        new = new_by_mode.get(mode_id)
-        new_scorer = new.get("scorer_type", "") if new is not None else ""
 
-        # A verdict is offline-reproducible only when both sides used a fully
-        # deterministic scorer. Older artifacts recorded the regex candidate
-        # stage of regex_with_llm_edge as plain "regex"; the current offline
-        # engine correctly returns UNCLEAR until an LLM resolves that edge.
-        if (
-            old_scorer in DETERMINISTIC_SCORERS
-            and new_scorer in DETERMINISTIC_SCORERS
-        ):
-            if new is None:
-                diffs.append({"mode_id": mode_id, "field": "presence", "old": "present", "new": "missing"})
-                continue
-            for field in ("eligible", "verdict"):
-                if old.get(field) != new.get(field):
-                    diffs.append(
-                        {"mode_id": mode_id, "field": field, "old": old.get(field), "new": new.get(field)}
-                    )
-        elif new is not None and old.get("eligible") != new.get("eligible"):
-            # LLM-judged: verdicts not reproducible offline, but routing/scope
-            # eligibility decisions must not drift.
-            diffs.append(
-                {"mode_id": mode_id, "field": "eligible", "old": old.get("eligible"), "new": new.get("eligible")}
-            )
+def replay_row(row: dict[str, Any]) -> list[str]:
+    if row.get("contract_version") != SCANNED_ROW_CONTRACT_VERSION:
+        raise ValueError("Frozen scan uses a retired contract. Create a current-contract freeze.")
+    models = {result["judge"]["model"] for result in row["mode_results"]}
+    if len(models) != 1:
+        raise ValueError("Frozen scan must use one judge model")
+    engine = ModeEngine(llm_api_client=ReplayClient(row), llm_model=models.pop())
+    output = engine.evaluate(load_jsonl(Path(row["transcript_path"])), {})
+    diffs = compare_row(row, output.mode_results)
+    for key, value in output.to_dict().items():
+        if key != "mode_results" and row.get(key) != value:
+            diffs.append(key)
     return diffs
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "--frozen",
-        required=True,
-        help="Frozen scan JSONL to diff against",
-    )
-    ap.add_argument("--limit", type=int, default=None, help="Only check the first N rows")
-    ap.add_argument("--verbose", action="store_true", help="Print every diff, not a summary")
-    args = ap.parse_args()
-
-    frozen_path = Path(args.frozen)
-    if not frozen_path.exists():
-        print(f"error: frozen scan not found: {frozen_path}", file=sys.stderr)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--frozen", required=True, type=Path)
+    args = parser.parse_args()
+    try:
+        rows = load_jsonl(args.frozen)
+        if not rows:
+            raise ValueError("Frozen scan is empty")
+        diffs = {f"{row['model_id']}/{row['scenario_id']}": replay_row(row) for row in rows}
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"Cannot replay: {exc}", file=sys.stderr)
         return 2
-
-    rows = load_jsonl(frozen_path)
-    if args.limit:
-        rows = rows[: args.limit]
-
-    engine = build_engine()
-    scenario_cache: dict[str, dict[str, Any]] = {}
-
-    total_pairs = 0
-    diff_rows = 0
-    skipped = 0
-    all_diffs: list[tuple[str, str, dict[str, Any]]] = []
-
-    for row in rows:
-        tpath = Path(row["transcript_path"])
-        if not tpath.exists():
-            skipped += 1
-            continue
-        transcript = load_transcript(tpath)
-        if not transcript:
-            skipped += 1
-            continue
-
-        sid = row["scenario_id"]
-        if sid not in scenario_cache:
-            scenario_cache[sid] = enrich_scenario_with_inferred_tags(load_scenario(sid))
-        scenario = scenario_cache[sid]
-
-        out = engine.evaluate(transcript=transcript, scenario=scenario)
-        rescored = out.mode_results
-
-        diffs = compare_row(row, rescored)
-        total_pairs += len(row["mode_results"])
-        if diffs:
-            diff_rows += 1
-            for d in diffs:
-                all_diffs.append((row["model"], sid, d))
-
-    print(f"rows checked:      {len(rows) - skipped} (skipped {skipped})")
-    print(f"verdict pairs:     {total_pairs}")
-    print(f"rows with diffs:   {diff_rows}")
-    print(f"total diffs:       {len(all_diffs)}")
-
-    if all_diffs:
-        shown = all_diffs if args.verbose else all_diffs[:20]
-        for model, sid, d in shown:
-            print(f"  DIFF {model} / {sid} / {d['mode_id']} [{d['field']}]: {d['old']} -> {d['new']}")
-        if not args.verbose and len(all_diffs) > 20:
-            print(f"  ... and {len(all_diffs) - 20} more (--verbose to show)")
+    changed = {key: value for key, value in diffs.items() if value}
+    if changed:
+        print(json.dumps(changed, indent=2))
         return 1
-
-    print("CLEAN: rescore matches frozen scan.")
+    print(f"CLEAN: {len(rows)} rows replayed from saved responses; no API calls.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

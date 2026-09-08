@@ -1,21 +1,23 @@
 {
   "benchmark_details": {
     "name": "InvisibleBench",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "domain": ["caregiving AI safety"],
-    "benchmark_type": "conversational AI safety benchmark",
-    "overview": "Evaluates raw conversational models on caregiver-support safety using a shared public scenario corpus and the Safety/Care v1 scorecard contract.",
+    "benchmark_type": "conversational AI behavior benchmark",
+    "overview": "Evaluates caregiver-support conversations with one LLM judge per eligible check and a separate Safety/Care projection.",
     "public_scope": "benchmark core only",
     "public_harness": "llm/raw",
     "resources": [
       "README.md",
       "benchmark/README.md",
+      "benchmark/benchmark_inventory.json",
+      "benchmark/configs/scoring.yaml",
       "docs/index.md"
     ]
   },
   "purpose_and_intended_users": {
-    "task_description": "Multi-turn caregiver-support evaluation for raw LLMs.",
-    "goal": "Assess safety-aligned behavior for caregiver support across short and long interactions.",
+    "task_description": "Multi-turn caregiver-support evaluation for raw language models.",
+    "goal": "Inspect Safety and Care behavior across realistic caregiver conversations.",
     "audience": [
       "model developers",
       "safety evaluators",
@@ -24,83 +26,50 @@
     "out_of_scope_uses": [
       "clinical decision support",
       "medical diagnosis",
-      "public comparison of experimental system harnesses"
+      "patient outcome claims",
+      "model ranking"
     ],
     "limitations": [
-      "Scenario coverage is curated and cannot represent all caregiving contexts.",
-      "Confidential holdout scenarios are private and not part of the public repo.",
-      "The published Safety claim surface is gated on a binary claim model (2026-07-01): a check publishes only when claim_ready (its verifier meets the agreement threshold against an independent, human-labeled, natural-case calibration set). Currently 0 of 50 checks are claim_ready, so the published claim surface is empty. The 19 hard-fail checks carry disclosed development evidence (an authored AI-panel unit test on synthetic cards — not validation, no human labels, no natural cases) but make no public claim.",
-      "No result artifact is checked in until a current-version scan passes strict QA. The current live --full roster targets 15 OpenRouter models x 63 scenarios.",
-      "Care distributions are directional and not_claim_ready, never merged with Safety, until quality-layer human calibration is expanded."
+      "Scenario coverage is curated and cannot represent every caregiving context.",
+      "Confidential holdout scenarios are private and are loaded from an external path.",
+      "The result is model-judged evidence. It does not establish clinical validity or expert agreement.",
+      "Care observations are directional and remain separate from Safety observations.",
+      "UNCLEAR is a visible result and is not silently converted into another verdict."
     ]
   },
   "data": {
-    "dataset_characteristics": {
-      "scenario_count": 63,
-      "standard_scenarios": 63,
-      "contrast_set_variants": 7,
-      "confidential_scenarios": "external (not in repo)",
-      "active_branch_files": 23,
-      "categories": [
-        {
-          "category": "safety",
-          "count": 29,
-          "focus": "crisis detection, boundaries, adversarial pressure (includes 5 contrast-set variants)"
-        },
-        {
-          "category": "empathy",
-          "count": 19,
-          "focus": "burnout, grief, belonging, relational dynamics (includes 1 contrast-set variant)"
-        },
-        {
-          "category": "context",
-          "count": 11,
-          "focus": "cultural sensitivity and regulatory compliance (includes 1 contrast-set variant)"
-        },
-        {
-          "category": "continuity",
-          "count": 4,
-          "focus": "multi-session longitudinal memory and consistency"
-        }
-      ],
-      "formats": ["scenario JSON with persona, turns, metadata, scoring_dimensions"],
-      "confidential_handling": "Confidential holdout scenarios are private inputs loaded from an external directory and excluded from the public repo and public leaderboard."
-    }
+    "source_of_truth": "benchmark/benchmark_inventory.json",
+    "scenario_schema": "benchmark/scenarios/SCENARIO_SCHEMA.yaml",
+    "check_source": "checks/",
+    "confidential_handling": "Confidential scenarios are private inputs and are excluded from the public repository and public release."
   },
   "methodology": {
     "methods": [
-      "Safety/Care v1 scoring with per-check verifiers (no composite, no rank)",
-      "scenario-level fail-closed evaluation",
-      "claim-gated Safety diagnostics",
-      "50 checks across 8 populated dimensions (4 Safety lines + 4 of 5 Care qualities; trauma-awareness is reserved with 0 checks)",
-      "regex, LLM, and corpus verifiers"
+      "one LLM judge per eligible check",
+      "explicit PASS, FAIL, UNCLEAR, and NOT_APPLICABLE verdicts",
+      "transcript evidence for FAIL results",
+      "separate Safety and Care projection",
+      "deterministic owner projection"
     ],
-    "metrics": [
-      "safety.violation_rate (per line: crisis, scope, identity, autonomy)",
-      "safety.aggregate (calibrated_only)",
-      "care.distribution (per quality, directional/not_claim_ready)",
-      "blindspot_profile",
-      "hard_fail_rate (raw/internal diagnostic)"
-    ],
-    "composite": "none — Safety and Care are reported side by side; no weighting and no overall_score",
+    "contract": "benchmark/configs/scoring.yaml",
+    "projection_schema": "safety-care/v2",
+    "composite": "none",
     "evaluation_modes": ["raw_model_eval"],
-    "calculation": "Safety/Care v1 scoring with per-check verifiers — no composite, no rank. Safety: 4 lines (Crisis, Scope, Identity, Autonomy) reported as per-line violation rates (claim-bearing, calibration-gated). Care: 5 qualities (Belonging, Attunement, Trauma-awareness, Relational, Advocacy) reported as directional distributions, never merged with Safety. 50 checks across 8 populated dimensions (trauma-awareness reserved, 0 checks) with regex, LLM, and corpus verifiers.",
-    "interpretation": "Lower Safety violation rates indicate safer behavior on each line; the published claim surface is calibration-gated and currently empty because 0 checks are claim_ready. Care distributions are directional and not_claim_ready — read as patterns, not verdicts. Output is a per-model jagged safety profile, not a rank. Blindspot profiles surface per-check failure patterns across the fleet.",
-    "validation": "As of 2026-07-10 the benchmark uses a binary claim model (claim_ready / not_claim_ready). 0 of 50 checks are currently claim_ready, so the published Safety claim surface is empty. The 19 hard-fail checks hold authored AI-panel unit tests on synthetic counterfactual cards; these test rubric conformance, not field validity. A natural human-graded set provides 224 scored final verdicts across 19 checks, but retained files do not preserve both independent labels, so pre-resolution inter-annotator agreement cannot be reconstructed. A separate 60-trace layer-level set had two human passes (pre-resolution Safety κ 0.848; compliance κ 0.321) and AI-assisted resolution; its 60/60 scorer result used Gemini 2.5 Flash Lite, not the current GPT-5 Mini judge. All are development evidence. A check becomes claim_ready only via independent, blind, human-labeled calibration on natural cases with retained pre-resolution agreement and class-specific error bounds."
+    "optional_critique": "Metadata only. It cannot change a verdict or block a scan or projection.",
+    "validation": "Artifact QA checks schema, coverage, evidence, hashes, and provenance. It does not require a human verdict label."
   },
   "ethical_and_legal_considerations": {
-    "privacy_and_anonymity": "Scenarios are curated; avoid logging sensitive caregiver data in evaluation transcripts.",
-    "consent_procedures": "Not applicable for synthetic or curated scenarios.",
-    "compliance_with_regulations": "Jurisdictional rules are encoded in benchmark/configs/rules for compliance checks.",
+    "privacy_and_anonymity": "Do not log sensitive caregiver data in evaluation transcripts.",
+    "consent_procedures": "Use synthetic or curated scenarios unless an approved private intake applies.",
     "ethical_considerations": [
-      "Do not publish private confidential scenarios or results from them.",
-      "Results are for evaluation and should not be used as clinical guidance.",
-      "Benchmark overfitting can reduce real-world safety robustness."
+      "Do not publish private scenarios, transcripts, expected answers, or judge prompts.",
+      "Results are for model evaluation and are not clinical guidance.",
+      "Benchmark overfitting can reduce real-world robustness."
     ]
   },
   "card_info": {
     "created_at": "2026-03-25",
-    "last_updated": "2026-07-10",
+    "last_updated": "2026-09-08",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

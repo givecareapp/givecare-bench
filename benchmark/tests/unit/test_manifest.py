@@ -112,7 +112,8 @@ class TestGenerateManifest:
     def test_scorer_prompt_hashes_snapshot_current_check_templates(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
         hashes = manifest["scorer_prompt_hashes"]
-        assert len(hashes) == 46
+        from invisiblebench.evaluation.check_registry import registered_check_ids
+        assert set(hashes) == registered_check_ids()
         assert all(len(value) == 16 for value in hashes.values())
         assert "crisis.passive-ideation" in hashes
 
@@ -121,7 +122,8 @@ class TestGenerateManifest:
     ) -> None:
         hashes = generate_manifest(project_root, model_ids=[])["check_definition_hashes"]
 
-        assert len(hashes) == 50
+        from invisiblebench.evaluation.check_registry import registered_check_ids
+        assert set(hashes) == registered_check_ids()
         assert all(len(value) == 64 for value in hashes.values())
         assert "crisis.passive-ideation" in hashes
 

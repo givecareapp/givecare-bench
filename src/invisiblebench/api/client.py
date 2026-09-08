@@ -301,8 +301,7 @@ class ModelAPIClient:
             )
 
         self.base_url = base_url
-        self._api_key = api_key  # Stored for instructor/structured extraction
-        self.headers = {"Authorization": f"Bearer {api_key}", **extra_headers}
+        self.headers = {"Authorization": f"Bearer {api_key}", "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0", **extra_headers}
 
         self.session = requests.Session()
         self.session.headers.update(self.headers)
@@ -463,36 +462,6 @@ class ModelAPIClient:
 
         raise RuntimeError(f"Failed to call model {model}")
 
-    def call_structured(
-        self,
-        model: str,
-        messages: list[ChatMessage],
-        response_model: type,
-        temperature: float = 0.0,
-        max_tokens: int = 2000,
-        max_retries: int = 2,
-    ) -> Any:
-        """Call a model and return a validated Pydantic instance via instructor."""
-        import instructor
-        from openai import OpenAI
-
-        client = instructor.from_openai(
-            OpenAI(
-                base_url=self.base_url,
-                api_key=self._api_key,
-            ),
-            mode=instructor.Mode.JSON,
-        )
-
-        return client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_model=response_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            max_retries=max_retries,
-        )
-
     async def call_model_async(
         self,
         model: str,
@@ -575,10 +544,8 @@ class ModelAPIClient:
 # judge.py's MODEL_PRICING cost-estimation table — have one place to read
 # them from instead of copying the literals.
 #
-# Drift detection: if this judge id ever changes, run_audit.py's
-# _audit_judge_health (~line 308) flags any scan artifact whose rows carry
-# more than one distinct `judge_model` value — that's the tripwire for a
-# judge swap that happened mid-run instead of a clean cutover.
+# Scan artifacts record this judge id and prompt hash. The scan contract keeps
+# that metadata available for deterministic artifact checks and replay.
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
 DEFAULT_JUDGE_MODEL = JUDGE_MODEL_OPENAI_ID if _USING_OPENAI_DIRECT else JUDGE_MODEL_OPENROUTER_ID

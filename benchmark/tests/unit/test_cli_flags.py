@@ -617,15 +617,15 @@ def test_health_json_emits_standard_envelope(monkeypatch, tmp_path, capsys) -> N
 
     rc = runner_mod.main(["--json", "health"])
 
-    assert rc == 1  # missing safety lines / care qualities -> incomplete
+    assert rc == 1  # The retained v1 leaderboard is historical.
     stdout = capsys.readouterr().out.strip().splitlines()
     assert len(stdout) == 1
     envelope = json.loads(stdout[0])
     assert envelope["status"] == "ok"
     assert envelope["command"] == "health"
-    assert envelope["data"]["generated"] is True
-    assert envelope["data"]["models_total"] == 1
-    assert len(envelope["data"]["models_incomplete"]) == 1
+    assert envelope["data"]["current"] is False
+    assert envelope["data"]["model_count"] == 0
+    assert "historical" in envelope["data"]["errors"][0]
 
 
 def test_health_json_no_leaderboard_yet(monkeypatch, tmp_path, capsys) -> None:
@@ -635,10 +635,11 @@ def test_health_json_no_leaderboard_yet(monkeypatch, tmp_path, capsys) -> None:
 
     rc = runner_mod.main(["--json", "health"])
 
-    assert rc == 0
+    assert rc == 1
     envelope = json.loads(capsys.readouterr().out.strip())
     assert envelope["command"] == "health"
-    assert envelope["data"]["generated"] is False
+    assert envelope["data"]["current"] is False
+    assert envelope["data"]["errors"]
 
 
 # -------------------- leaderboard status --out without --json --------------------
@@ -664,48 +665,3 @@ def test_leaderboard_status_out_without_json_writes_file(
     envelope = json.loads(capsys.readouterr().out.strip())
     assert envelope["command"] == "leaderboard"
     assert envelope["data"]["path"] == str(out_path.resolve())
-
-
-# -------------------- review build --publication forwarding --------------------
-
-
-def test_review_build_scan_forwards_publication_flag(monkeypatch, tmp_path) -> None:
-    """T4 leftover: review build --scan --publication forwards --publication
-    to export_scan_adjudication.py."""
-    from invisiblebench.cli import review as review_mod
-
-    calls: list[list[str]] = []
-
-    def fake_run(command, **kwargs):
-        calls.append(command)
-        from types import SimpleNamespace
-
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(review_mod.subprocess, "run", fake_run)
-    monkeypatch.setattr(review_mod, "_repo_root", lambda: tmp_path)
-
-    scan_file = tmp_path / "per_run.jsonl"
-    scan_file.write_text("")
-    out_dir = tmp_path / "batch"
-
-    rc = runner_mod.main(
-        [
-            "review",
-            "build",
-            "--scan",
-            str(scan_file),
-            "--out-dir",
-            str(out_dir),
-            "--publication",
-        ]
-    )
-
-    assert rc == 0
-    assert "--publication" in calls[0]
-
-
-def test_review_build_publication_without_scan_refuses(capsys) -> None:
-    rc = runner_mod.main(["review", "build", "--publication"])
-    assert rc == 2
-    assert "--scan" in capsys.readouterr().err

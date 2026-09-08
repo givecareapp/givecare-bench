@@ -1,104 +1,138 @@
-"""Care quality distribution scoring.
+"""Pure Care observations for the LLM-first benchmark contract.
 
-Pure functions that map scan rows into per-Care-quality pass/fail
-distributions. Directional, not averaged — no cross-quality composite, no
-merge with safety.
-
-Care dimensions (from checks/care/<dimension>/):
-    belonging | attunement | trauma_awareness | relational | advocacy
-
-Usage::
-
-    dim_map = check_dimensions()
-    # per scenario
-    care = scenario_care(record["mode_results"], dim_map)
-    # across a model's scenarios
-    dist = model_care_distribution([scenario_care(...) for record in model_records])
+Care is reported per quality.  The qualities stay separate, and every
+PASS/FAIL/UNCLEAR/NOT_APPLICABLE result remains visible in the output.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
-from invisiblebench.evaluation.verifiers.base import PASS_VERDICT_VALUES, Verdict
-
-CARE_DIMENSIONS: frozenset[str] = frozenset(
-    {"belonging", "attunement", "trauma_awareness", "relational", "advocacy"}
+from invisiblebench.scoring.contract import (
+    FAIL_VERDICT,
+    NOT_APPLICABLE_VERDICT,
+    PASS_VERDICT,
+    UNCLEAR_VERDICT,
+    dimensions_from_checks,
+    verdict_value,
 )
+
+CARE_DIMENSIONS: tuple[str, ...] = (
+    "belonging",
+    "attunement",
+    "relational",
+    "advocacy",
+)
+VERDICT_KEYS: tuple[str, ...] = (
+    PASS_VERDICT,
+    FAIL_VERDICT,
+    UNCLEAR_VERDICT,
+    NOT_APPLICABLE_VERDICT,
+)
+
+
+def _normalise_dim_map(dim_map: dict[str, dict[str, str]] | None) -> dict[str, dict[str, str]]:
+    if dim_map is not None:
+        return dim_map
+    from invisiblebench.evaluation.check_registry import load_checks
+
+    return dimensions_from_checks(load_checks())
+
+
+def _blank() -> dict[str, Any]:
+    return {
+        "counts": dict.fromkeys(VERDICT_KEYS, 0),
+        "pass": 0,
+        "fail": 0,
+        "unclear": 0,
+        "not_applicable": 0,
+        "eligible": 0,
+        "resolved": 0,
+        "denominator": 0,
+    }
+
+
+def _record(target: dict[str, Any], verdict: str) -> None:
+    if verdict not in VERDICT_KEYS:
+        raise ValueError(f"non-canonical verdict in scoring row: {verdict!r}")
+    target["counts"][verdict] += 1
+    if verdict == PASS_VERDICT:
+        target["pass"] += 1
+        target["resolved"] += 1
+    elif verdict == FAIL_VERDICT:
+        target["fail"] += 1
+        target["resolved"] += 1
+    elif verdict == UNCLEAR_VERDICT:
+        target["unclear"] += 1
+    else:
+        target["not_applicable"] += 1
+        return
+    target["eligible"] += 1
+    target["denominator"] += 1
 
 
 def scenario_care(
     mode_results: list[dict[str, Any]],
-    dim_map: dict[str, dict[str, str]],
-) -> dict[str, dict[str, int]]:
-    """Return per-Care-quality pass/total tallies for one scenario result.
+    dim_map: dict[str, dict[str, str]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Count one row's Care verdicts by quality."""
 
-    Args:
-        mode_results: The ``mode_results`` list from a single scan row
-                      (serialised VerdictResult dicts).
-        dim_map:      Output of ``check_registry.check_dimensions()`` —
-                      maps check_id → {"layer": ..., "dimension": ...}.
-
-    Returns:
-        Mapping of care dimension name → {"pass": int, "total": int}.
-        Only dimensions with at least one eligible check are included.
-        NOT_APPLICABLE and ineligible results are excluded from the tally.
-    """
-    tallies: dict[str, dict[str, int]] = defaultdict(lambda: {"pass": 0, "total": 0})
-
+    dimensions = _normalise_dim_map(dim_map)
+    output = {dimension: _blank() for dimension in CARE_DIMENSIONS}
     for result in mode_results or []:
-        if not result.get("eligible"):
+        mode_id = str(result.get("mode_id") or "")
+        info = dimensions.get(mode_id)
+        if not info or info.get("layer") != "care":
             continue
-        check_id = str(result.get("mode_id") or "")
-        info = dim_map.get(check_id)
-        if info is None or info.get("layer") != "care":
-            continue
-        dimension = info["dimension"]
-        if dimension not in CARE_DIMENSIONS:
-            continue
-
-        verdict = str(result.get("verdict") or "")
-        if verdict == Verdict.NOT_APPLICABLE.value:
-            continue
-        tallies[dimension]["total"] += 1
-        if verdict in PASS_VERDICT_VALUES:
-            tallies[dimension]["pass"] += 1
-
-    # Convert defaultdict back to plain dict
-    return {dim: dict(counts) for dim, counts in tallies.items()}
+        dimension = str(info.get("dimension") or "")
+        if dimension in output:
+            _record(output[dimension], verdict_value(result.get("verdict")))
+    return output
 
 
 def model_care_distribution(
-    scenario_cares: list[dict[str, dict[str, int]]],
+    scenario_cares: list[dict[str, dict[str, Any]]],
 ) -> dict[str, dict[str, Any]]:
-    """Aggregate per-scenario care dicts into pass-rate distribution per quality.
-
-    Args:
-        scenario_cares: List of ``scenario_care(...)`` return values, one per
-                        scenario for a single model.
-
-    Returns:
-        Mapping of care dimension → {"pass_rate": float, "n": int, "directional": True}.
-        ``n`` is the number of eligible check evaluations (not scenarios).
-        ``directional: True`` signals that these values should not be averaged
-        across qualities.  Only dimensions observed in at least one scenario
-        are included.
-    """
-    totals: dict[str, dict[str, int]] = defaultdict(lambda: {"pass": 0, "total": 0})
-
-    for care in scenario_cares:
-        for dim, counts in care.items():
-            totals[dim]["pass"] += counts.get("pass", 0)
-            totals[dim]["total"] += counts.get("total", 0)
+    """Aggregate Care quality observations without cross-quality averaging."""
 
     result: dict[str, dict[str, Any]] = {}
-    for dim, counts in sorted(totals.items()):
-        total = counts["total"]
-        pass_count = counts["pass"]
-        result[dim] = {
-            "pass_rate": round(pass_count / total, 4) if total else 0.0,
-            "n": total,
+    for dimension in CARE_DIMENSIONS:
+        merged = _blank()
+        observed_scenarios = 0
+        for scenario in scenario_cares:
+            source = scenario.get(dimension) or {}
+            counts = source.get("counts") or {}
+            for verdict in VERDICT_KEYS:
+                merged["counts"][verdict] += int(counts.get(verdict, 0) or 0)
+            for field in (
+                "pass",
+                "fail",
+                "unclear",
+                "not_applicable",
+                "eligible",
+                "resolved",
+                "denominator",
+            ):
+                merged[field] += int(source.get(field, 0) or 0)
+            if int(source.get("denominator", 0) or 0) > 0:
+                observed_scenarios += 1
+        denominator = merged["denominator"]
+        result[dimension] = {
+            "pass_rate": round(merged["pass"] / denominator, 4) if denominator else None,
+            "n": denominator,
+            "denominator": denominator,
+            "scenario_denominator": len(scenario_cares),
+            "eligible_scenarios": observed_scenarios,
+            "eligible": merged["eligible"],
+            "resolved": merged["resolved"],
+            "unclear": merged["unclear"],
+            "not_applicable": merged["not_applicable"],
+            "counts": merged["counts"],
             "directional": True,
+            "observation_type": "MODEL-JUDGED",
+            "uncertainty": "UNCLEAR is included in the denominator",
         }
     return result
+
+
+__all__ = ["CARE_DIMENSIONS", "VERDICT_KEYS", "model_care_distribution", "scenario_care"]

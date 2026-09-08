@@ -48,7 +48,7 @@ _CURRENT_LEADERBOARD_ROW_KEY = "models"
 def leaderboard_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Return the per-model rows from a leaderboard artifact.
 
-    Reads the current safety-care/v1 ``models`` key. Retired ranked
+    Reads the current safety-care/v2 ``models`` key. Retired ranked
     leaderboard shapes are rejected by active tooling.
     Raises ``ValueError`` with a clear message if neither key holds a list —
     never a bare ``KeyError`` on a malformed or unexpected file.

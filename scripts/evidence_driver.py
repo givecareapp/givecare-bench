@@ -7,7 +7,6 @@ import gzip
 import hashlib
 import io
 import json
-import math
 import os
 import sys
 import tarfile
@@ -25,27 +24,11 @@ RESPONSE_SCHEMA = "hound.driver.response.v1"
 SHA256_LEN = 64
 MAX_CANDIDATES = 1
 MAX_PROJECTION_BYTES = 2_000_000
-WEB_RELEASE_VERSION = "v4.0.0"
-WEB_RELEASE_ROOT = Path("data/publication-source/web-bench")
+from invisiblebench.version import BENCHMARK_VERSION  # noqa: E402
+
+WEB_RELEASE_VERSION = f"v{BENCHMARK_VERSION}"
 WEB_RELEASE_ARTIFACT = Path("data/releases/web-bench-release.tar.gz")
-MAX_RELEASE_MANIFEST_BYTES = 1 * 1024 * 1024
-MAX_RELEASE_MEMBER_BYTES = 64 * 1024 * 1024
-MAX_RELEASE_EXPANDED_BYTES = 256 * 1024 * 1024
-MAX_RELEASE_ARCHIVE_BYTES = 64 * 1024 * 1024
 PUBLIC_LEADERBOARD_KEYS = frozenset({"schema", "notes", "scan_metadata", "models"})
-FORBIDDEN_PUBLIC_KEYS = frozenset(
-    {
-        "_deprecated_v3",
-        "overall_leaderboard",
-        "overall_score",
-        "rank",
-        "composite",
-        "hard_fail",
-        "hard_fail_reasons",
-        "primary_bucket",
-        "legacy_bucket",
-    }
-)
 ARTIFACT_FIELDS = {
     "schema_version",
     "owner",
@@ -420,335 +403,6 @@ def _learning_lineage(value: Any) -> dict[str, Any]:
     return value
 
 
-def _release_manifest_members(
-    *,
-    directory: Path,
-    manifest: Path,
-    expected_schema: str,
-    label: str,
-) -> tuple[dict[str, bytes], dict[str, Any]]:
-    if manifest.stat().st_size > MAX_RELEASE_MANIFEST_BYTES:
-        raise DriverError(f"{label} manifest exceeds the size limit")
-    try:
-        value = json.loads(manifest.read_bytes())
-    except json.JSONDecodeError as error:
-        raise DriverError(f"{label} manifest must contain valid JSON") from error
-    if (
-        not isinstance(value, dict)
-        or value.get("schema") != expected_schema
-        or not isinstance(value.get("models"), list)
-        or len(value["models"]) != 4
-    ):
-        raise DriverError(f"{label} manifest must name exactly four public model bundles")
-    members = {f"{label}/manifest.json": manifest.read_bytes()}
-    seen: set[str] = set()
-    for item in value["models"]:
-        if not isinstance(item, dict):
-            raise DriverError(f"{label} manifest model entry is invalid")
-        filename = item.get("file")
-        digest = item.get("sha256")
-        if (
-            not isinstance(filename, str)
-            or Path(filename).name != filename
-            or not filename.endswith(".json")
-            or filename in seen
-        ):
-            raise DriverError(f"{label} manifest model filename is invalid")
-        seen.add(filename)
-        _require_sha256(digest, field=f"{label} manifest model sha256")
-        path = directory / filename
-        if path.is_symlink() or not path.is_file():
-            raise DriverError(f"{label} bundle is not a regular file: {filename}")
-        if path.stat().st_size > MAX_RELEASE_MEMBER_BYTES:
-            raise DriverError(f"{label} bundle exceeds the size limit: {filename}")
-        content = path.read_bytes()
-        if _sha256(content) != digest:
-            raise DriverError(f"{label} bundle digest does not match its manifest: {filename}")
-        if item.get("bytes") != len(content):
-            raise DriverError(f"{label} bundle byte count does not match its manifest: {filename}")
-        members[f"{label}/{filename}"] = content
-    return members, value
-
-
-def _nonnegative_int(value: Any) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
-
-
-def _nonnegative_number(value: Any) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-        and value >= 0
-    )
-
-
-def _model_pairs(
-    models: Any,
-    *,
-    id_key: str,
-    file_key: str,
-    label: str,
-) -> set[tuple[str, str]]:
-    if not isinstance(models, list) or len(models) != 4:
-        raise DriverError(f"{label} must name exactly four model bundles")
-    pairs: set[tuple[str, str]] = set()
-    model_ids: set[str] = set()
-    filenames: set[str] = set()
-    for item in models:
-        if not isinstance(item, dict):
-            raise DriverError(f"{label} model entry is invalid")
-        model_id = item.get(id_key)
-        filename = item.get(file_key)
-        if not isinstance(model_id, str) or not model_id or not isinstance(filename, str) or not filename:
-            raise DriverError(f"{label} model id and bundle file are required")
-        pairs.add((model_id, filename))
-        model_ids.add(model_id)
-        filenames.add(filename)
-    if len(pairs) != 4 or len(model_ids) != 4 or len(filenames) != 4:
-        raise DriverError(f"{label} model ids and bundle files must be unique")
-    return pairs
-
-
-def _public_leaderboard_bytes(source: dict[str, Any]) -> bytes:
-    if source.get("schema") != "safety-care/v1":
-        raise DriverError("canonical leaderboard schema is invalid")
-    if set(source) != PUBLIC_LEADERBOARD_KEYS:
-        raise DriverError("canonical leaderboard has non-public fields")
-    stack = [source]
-    while stack:
-        value = stack.pop()
-        if isinstance(value, dict):
-            if FORBIDDEN_PUBLIC_KEYS.intersection(value):
-                raise DriverError("canonical leaderboard has forbidden public fields")
-            stack.extend(value.values())
-        elif isinstance(value, list):
-            stack.extend(value)
-    models = source.get("models")
-    if not isinstance(models, list) or len(models) != 4:
-        raise DriverError("canonical leaderboard must name exactly four models")
-    for model in models:
-        if not isinstance(model, dict) or not isinstance(model.get("model"), str) or not model["model"]:
-            raise DriverError("canonical leaderboard model is invalid")
-        if "safety" not in model or "care" not in model:
-            raise DriverError("canonical leaderboard model lacks public score data")
-    return _json_bytes(source)
-
-
-def _validate_web_release(
-    *,
-    current: dict[str, Any],
-    evidence: dict[str, Any],
-    scores: dict[str, Any],
-    leaderboard: dict[str, Any],
-) -> None:
-    """Reject a public bundle whose own evidence disagrees across files."""
-    score_release = current.get("scoringRelease")
-    model_rows = current.get("models")
-    if not isinstance(score_release, dict) or not isinstance(model_rows, list) or len(model_rows) != 4:
-        raise DriverError("current_evidence has invalid scoringRelease or models")
-    required_current = {
-        "benchmarkVersion": str,
-        "resultContractVersion": str,
-        "releasePath": str,
-        "scoreReleasePath": str,
-        "scenarioCount": int,
-        "checkCount": int,
-    }
-    required_score_release = {
-        "status": str,
-        "profile": str,
-        "judgeModel": str,
-        "judgeLabel": str,
-        "modelCount": int,
-        "scenarioCount": int,
-        "rowCount": int,
-        "modeResultCount": int,
-        "actualCostUsd": (int, float),
-        "actualBillableApiCalls": int,
-        "sourceScanSha256": str,
-        "strictQa": bool,
-    }
-    if set(score_release) != set(required_score_release):
-        raise DriverError("current_evidence scoringRelease has invalid fields")
-    if any(
-        not isinstance(current.get(key), value_type)
-        or (value_type is int and isinstance(current.get(key), bool))
-        for key, value_type in required_current.items()
-    ) or any(
-        not isinstance(score_release.get(key), value_type)
-        or (value_type is int and isinstance(score_release.get(key), bool))
-        for key, value_type in required_score_release.items()
-    ):
-        raise DriverError("current_evidence has invalid typed release fields")
-    if (
-        not _nonnegative_int(current["scenarioCount"])
-        or not _nonnegative_int(current["checkCount"])
-        or not _nonnegative_int(score_release["modelCount"])
-        or not _nonnegative_int(score_release["scenarioCount"])
-        or not _nonnegative_int(score_release["rowCount"])
-        or not _nonnegative_int(score_release["modeResultCount"])
-        or not _nonnegative_int(score_release["actualBillableApiCalls"])
-        or not _nonnegative_number(score_release["actualCostUsd"])
-    ):
-        raise DriverError("current_evidence has invalid numeric release fields")
-    if not _nonnegative_int(current.get("claimReadyChecks")):
-        raise DriverError("current_evidence has an invalid claim-ready check count")
-    if score_release["modelCount"] != 4:
-        raise DriverError("current_evidence scoringRelease.modelCount must be four")
-    if (
-        not score_release["status"]
-        or not score_release["judgeModel"]
-        or not score_release["judgeLabel"]
-        or score_release["strictQa"] is not True
-    ):
-        raise DriverError("current_evidence scoringRelease has invalid public values")
-    _require_sha256(score_release["sourceScanSha256"], field="current_evidence source scan sha256")
-    if (
-        current.get("benchmarkVersion") != WEB_RELEASE_VERSION.removeprefix("v")
-        or current.get("benchmarkVersion") != evidence.get("benchmark_version")
-        or current.get("benchmarkVersion") != scores.get("benchmark_version")
-        or current.get("releasePath") != f"/bench/evidence/{WEB_RELEASE_VERSION}"
-        or current.get("scoreReleasePath") != f"/bench/scores/{WEB_RELEASE_VERSION}"
-        or current.get("resultContractVersion") != evidence.get("result_contract_version")
-        or current.get("resultContractVersion") != scores.get("result_contract_version")
-        or current.get("scenarioCount") != evidence.get("scenario_count")
-        or current.get("scenarioCount") != scores.get("scenario_count")
-        or current.get("checkCount") != scores.get("check_count")
-        or score_release["scenarioCount"] != current["scenarioCount"]
-        or score_release["scenarioCount"] != scores.get("scenario_count")
-        or score_release["rowCount"] != scores.get("row_count")
-        or score_release["modeResultCount"] != scores.get("mode_result_count")
-    ):
-        raise DriverError("current_evidence does not match the release manifests")
-    if evidence.get("model_count") != 4 or scores.get("model_count") != 4:
-        raise DriverError("release manifests must name exactly four models")
-    if (
-        not _nonnegative_int(evidence.get("claim_ready_check_count"))
-        or not _nonnegative_int(scores.get("claim_ready_check_count"))
-        or evidence["claim_ready_check_count"] != current["claimReadyChecks"]
-        or scores["claim_ready_check_count"] != current["claimReadyChecks"]
-    ):
-        raise DriverError("release claim-ready check counts do not match current evidence")
-    if not _nonnegative_int(evidence.get("transcript_count")):
-        raise DriverError("transcript evidence has an invalid transcript count")
-    if not all(_nonnegative_int(scores.get(key)) for key in ("row_count", "mode_result_count")):
-        raise DriverError("score evidence has invalid count fields")
-    expected_evidence = _model_pairs(
-        evidence.get("models"),
-        id_key="model_id",
-        file_key="file",
-        label="transcript evidence",
-    )
-    expected_scores = _model_pairs(
-        scores.get("models"),
-        id_key="model_id",
-        file_key="file",
-        label="score evidence",
-    )
-    actual = _model_pairs(
-        model_rows,
-        id_key="modelId",
-        file_key="bundleFile",
-        label="current_evidence",
-    )
-    if (
-        score_release["modelCount"] != len(actual)
-        or actual != expected_evidence
-        or actual != expected_scores
-    ):
-        raise DriverError("current_evidence model ids and bundle files do not match the release")
-    if any(item.get("corpusHash") != evidence.get("scenario_hash") for item in model_rows if isinstance(item, dict)):
-        raise DriverError("current_evidence corpus hashes do not match transcript evidence")
-    _require_sha256(evidence.get("scenario_hash"), field="transcript evidence scenario hash")
-    transcript_counts: list[int] = []
-    for item in model_rows:
-        if not isinstance(item, dict) or not _nonnegative_int(item.get("transcripts")):
-            raise DriverError("current_evidence model transcript counts are invalid")
-        transcript_counts.append(item["transcripts"])
-    if sum(transcript_counts) != evidence["transcript_count"]:
-        raise DriverError("current_evidence transcript counts do not match transcript evidence")
-    source_merge = scores.get("source_merge")
-    required_source_merge = {
-        "schema": str,
-        "benchmark_version": str,
-        "result_contract_version": str,
-        "profile": str,
-        "judge_model": str,
-        "model_count": int,
-        "scenario_count": int,
-        "row_count": int,
-        "actual_cost_usd": (int, float),
-        "actual_billable_api_calls": int,
-        "output_sha256": str,
-    }
-    if not isinstance(source_merge, dict) or any(
-        not isinstance(source_merge.get(key), value_type)
-        or (value_type is int and isinstance(source_merge.get(key), bool))
-        for key, value_type in required_source_merge.items()
-    ):
-        raise DriverError("score evidence has invalid source_merge fields")
-    if source_merge["schema"] != "invisiblebench-scan-merge/v1":
-        raise DriverError("score evidence source_merge has an invalid schema")
-    if (
-        not _nonnegative_number(source_merge["actual_cost_usd"])
-        or not _nonnegative_int(source_merge["actual_billable_api_calls"])
-        or not _nonnegative_int(source_merge["model_count"])
-        or not _nonnegative_int(source_merge["scenario_count"])
-        or not _nonnegative_int(source_merge["row_count"])
-    ):
-        raise DriverError("score evidence has invalid numeric source_merge fields")
-    _require_sha256(source_merge["output_sha256"], field="score evidence source merge sha256")
-    if scores.get("source_scan_sha256") != source_merge["output_sha256"]:
-        raise DriverError("score evidence source scan does not match its source merge")
-    if any(
-        scores.get(score_key) != source_merge.get(merge_key)
-        for score_key, merge_key in (
-            ("benchmark_version", "benchmark_version"),
-            ("result_contract_version", "result_contract_version"),
-            ("scenario_count", "scenario_count"),
-            ("model_count", "model_count"),
-            ("row_count", "row_count"),
-            ("profile", "profile"),
-            ("judge_model", "judge_model"),
-        )
-    ):
-        raise DriverError("score evidence does not match its source merge")
-    if (
-        scores.get("profile") != score_release["profile"]
-        or scores.get("judge_model") != score_release["judgeModel"]
-    ):
-        raise DriverError("score evidence does not match current scoring release")
-    if any(
-        score_release.get(current_key) != source_merge.get(source_key)
-        for current_key, source_key in (
-            ("profile", "profile"),
-            ("judgeModel", "judge_model"),
-            ("actualBillableApiCalls", "actual_billable_api_calls"),
-            ("sourceScanSha256", "output_sha256"),
-        )
-    ):
-        raise DriverError("current_evidence scoringRelease does not match score evidence")
-    if not math.isclose(
-        float(score_release["actualCostUsd"]),
-        float(source_merge["actual_cost_usd"]),
-        rel_tol=0.0,
-        abs_tol=1e-9,
-    ):
-        raise DriverError("current_evidence score cost does not match score evidence")
-    metadata = leaderboard.get("scan_metadata") if isinstance(leaderboard, dict) else None
-    if not isinstance(metadata, dict) or any(
-        metadata.get(key) != expected
-        for key, expected in (
-            ("benchmark_version", current["benchmarkVersion"]),
-            ("total_models", score_release["modelCount"]),
-            ("total_scenarios", current["scenarioCount"]),
-            ("active_modes", current["checkCount"]),
-        )
-    ):
-        raise DriverError("leaderboard does not match the public evidence release")
-
-
 def _deterministic_archive(members: dict[str, bytes]) -> bytes:
     raw = io.BytesIO()
     with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0, filename="") as compressed:
@@ -766,182 +420,46 @@ def _deterministic_archive(members: dict[str, bytes]) -> bytes:
     return raw.getvalue()
 
 
-def _web_release_outputs(
-    payload: Any,
-) -> tuple[dict[Path, bytes], dict[str, Any]]:
-    if not isinstance(payload, dict):
-        raise DriverError("corpus.project input must be an object")
-    allowed = {
-        "schema_version",
-        "leaderboard_path",
-        "leaderboard_sha256",
-        "qa_stamp_path",
-        "qa_stamp_sha256",
-        "current_evidence_path",
-        "current_evidence_sha256",
-        "evidence_manifest_path",
-        "evidence_manifest_sha256",
-        "scores_manifest_path",
-        "scores_manifest_sha256",
-        "learning_lineage",
-    }
-    required = allowed - {"learning_lineage"}
-    fields = frozenset(payload)
-    if fields not in {frozenset(required), frozenset(allowed)}:
+def _web_release_outputs(payload: Any) -> tuple[dict[Path, bytes], dict[str, Any]]:
+    """Publish the checked aggregate projection. Keep private decisions in the owner."""
+    from scripts.qa_leaderboard import validate_leaderboard
+
+    required = {"schema_version", "scan_path", "scan_sha256", "leaderboard_path", "leaderboard_sha256"}
+    if not isinstance(payload, dict) or set(payload) not in (required, required | {"learning_lineage"}):
         raise DriverError("corpus.project input has invalid fields")
-    if payload["schema_version"] != "gc-bench.web-benchmark-release.input/v1":
+    if payload["schema_version"] != "gc-bench.web-benchmark-release.input/v2":
         raise DriverError("corpus.project input has an invalid schema_version")
-    if payload["leaderboard_path"] != "data/leaderboard/leaderboard.json":
-        raise DriverError("leaderboard_path must name the canonical leaderboard")
-    if payload["qa_stamp_path"] != "data/leaderboard/.qa-stamp":
-        raise DriverError("qa_stamp_path must name the canonical strict-QA stamp")
-
-    leaderboard = _read_bound_file(
-        payload["leaderboard_path"],
-        payload["leaderboard_sha256"],
-        field="leaderboard",
-        maximum_bytes=MAX_PROJECTION_BYTES,
-    )
-    qa_stamp = _read_bound_file(
-        payload["qa_stamp_path"],
-        payload["qa_stamp_sha256"],
-        field="qa_stamp",
-        maximum_bytes=MAX_RELEASE_MANIFEST_BYTES,
-    )
-    try:
-        stamp = json.loads(qa_stamp.read_bytes())
-    except json.JSONDecodeError as error:
-        raise DriverError("qa_stamp must contain valid JSON") from error
-    if not isinstance(stamp, dict) or stamp.get("strict") is not True:
-        raise DriverError("qa_stamp.strict must be true")
-    if stamp.get("leaderboard_sha256") != payload["leaderboard_sha256"]:
-        raise DriverError("qa_stamp.leaderboard_sha256 must match the canonical leaderboard")
-
-    try:
-        source = json.loads(leaderboard.read_bytes())
-    except json.JSONDecodeError as error:
-        raise DriverError("canonical leaderboard must contain valid JSON") from error
-    if not isinstance(source, dict):
-        raise DriverError("canonical leaderboard must be an object")
-    projection_bytes = _public_leaderboard_bytes(source)
-
-    current_evidence = _read_bound_file(
-        payload["current_evidence_path"],
-        payload["current_evidence_sha256"],
-        field="current_evidence",
-        maximum_bytes=MAX_RELEASE_MANIFEST_BYTES,
-    )
-    evidence_manifest = _read_bound_file(
-        payload["evidence_manifest_path"],
-        payload["evidence_manifest_sha256"],
-        field="evidence_manifest",
-        maximum_bytes=MAX_RELEASE_MANIFEST_BYTES,
-    )
-    scores_manifest = _read_bound_file(
-        payload["scores_manifest_path"],
-        payload["scores_manifest_sha256"],
-        field="scores_manifest",
-        maximum_bytes=MAX_RELEASE_MANIFEST_BYTES,
-    )
-    expected_paths = {
-        "current_evidence": WEB_RELEASE_ROOT / "current-evidence.json",
-        "evidence_manifest": WEB_RELEASE_ROOT / "evidence" / WEB_RELEASE_VERSION / "manifest.json",
-        "scores_manifest": WEB_RELEASE_ROOT / "scores" / WEB_RELEASE_VERSION / "manifest.json",
-    }
-    actual_paths = {
-        "current_evidence": current_evidence,
-        "evidence_manifest": evidence_manifest,
-        "scores_manifest": scores_manifest,
-    }
-    for label, expected_path in expected_paths.items():
-        if actual_paths[label] != ROOT / expected_path:
-            raise DriverError(f"{label}_path must name the fixed public release source")
-    try:
-        current_evidence_value = json.loads(current_evidence.read_bytes())
-    except json.JSONDecodeError as error:
-        raise DriverError("current_evidence must contain valid JSON") from error
-    if not isinstance(current_evidence_value, dict) or set(current_evidence_value) != {
-        "benchmarkVersion",
-        "resultContractVersion",
-        "releasePath",
-        "scoreReleasePath",
-        "transcriptNotice",
-        "asOf",
-        "scenarioCount",
-        "categoryCounts",
-        "checkCount",
-        "claimReadyChecks",
-        "scoringRelease",
-        "validation",
-        "contrastVariants",
-        "models",
-        "findings",
-        "knownGaps",
-    }:
-        raise DriverError("current_evidence has an invalid public contract")
-    evidence_members, evidence_value = _release_manifest_members(
-        directory=evidence_manifest.parent,
-        manifest=evidence_manifest,
-        expected_schema="invisiblebench-transcripts/v1",
-        label=f"evidence/{WEB_RELEASE_VERSION}",
-    )
-    score_members, score_value = _release_manifest_members(
-        directory=scores_manifest.parent,
-        manifest=scores_manifest,
-        expected_schema="invisiblebench-score-evidence/v1",
-        label=f"scores/{WEB_RELEASE_VERSION}",
-    )
-    _validate_web_release(
-        current=current_evidence_value,
-        evidence=evidence_value,
-        scores=score_value,
-        leaderboard=source,
-    )
-    members = {
-        "leaderboard.json": projection_bytes,
-        "current-evidence.json": current_evidence.read_bytes(),
-        **evidence_members,
-        **score_members,
-    }
-    if sum(len(content) for content in members.values()) > MAX_RELEASE_EXPANDED_BYTES:
-        raise DriverError("public release exceeds the expanded size limit")
-    release_manifest = _json_bytes(
-        {
-            "schema_version": "gc-bench.web-benchmark-release/v1",
-            "release_version": WEB_RELEASE_VERSION,
-            "members": [
-                {"path": path, "sha256": _sha256(content), "bytes": len(content)}
-                for path, content in sorted(members.items())
-            ],
-        }
-    )
+    scan = _read_bound_file(payload["scan_path"], payload["scan_sha256"], field="scan")
+    candidate = _read_bound_file(payload["leaderboard_path"], payload["leaderboard_sha256"],
+                                 field="leaderboard", maximum_bytes=MAX_PROJECTION_BYTES)
+    errors = validate_leaderboard(scan, candidate, strict=True)
+    if errors:
+        raise DriverError("Publication QA failed: " + "; ".join(errors))
+    source = json.loads(candidate.read_bytes())
+    if source.get("schema") != "safety-care/v2" or set(source) != PUBLIC_LEADERBOARD_KEYS:
+        raise DriverError("Invalid public leaderboard contract")
+    projection_bytes = _json_bytes(source)
+    members = {"leaderboard.json": projection_bytes}
+    release_manifest = _json_bytes({
+        "schema_version": "gc-bench.web-benchmark-release/v2",
+        "release_version": WEB_RELEASE_VERSION,
+        "members": [{"path": name, "sha256": _sha256(content), "bytes": len(content)}
+                    for name, content in sorted(members.items())],
+    })
     archive_bytes = _deterministic_archive({"release-manifest.json": release_manifest, **members})
-    if len(archive_bytes) > MAX_RELEASE_ARCHIVE_BYTES:
-        raise DriverError("public release exceeds the archive size limit")
     projection_ref = _web_release_ref(_sha256(archive_bytes))
-    result = {
-        "schema_version": "gc-bench.web-benchmark-release/v1",
-        "leaderboard": {
-            "path": payload["leaderboard_path"],
-            "sha256": payload["leaderboard_sha256"],
-        },
-        "qa_stamp": {
-            "path": payload["qa_stamp_path"],
-            "sha256": payload["qa_stamp_sha256"],
-        },
-        "release": projection_ref,
-        "strict_qa": True,
-        "member_count": len(members),
-    }
+    result = {"schema_version": "gc-bench.web-benchmark-release/v2",
+              "source_scan_sha256": payload["scan_sha256"], "release": projection_ref,
+              "strict_qa": True, "member_count": len(members)}
     if "learning_lineage" in payload:
-        learning_lineage = _learning_lineage(payload["learning_lineage"])
-        result["learning_lineage"] = learning_lineage
-    target = ROOT / WEB_RELEASE_ARTIFACT
-    outputs = (
-        {}
-        if target.is_file() and target.read_bytes() == archive_bytes
-        else {target: archive_bytes}
-    )
+        result["learning_lineage"] = _learning_lineage(payload["learning_lineage"])
+    outputs = {}
+    for target, content in {
+        ROOT / "data/leaderboard/leaderboard.json": projection_bytes,
+        ROOT / WEB_RELEASE_ARTIFACT: archive_bytes,
+    }.items():
+        if not target.is_file() or target.read_bytes() != content:
+            outputs[target] = content
     return outputs, result
 
 
@@ -952,7 +470,7 @@ def _operation_outputs(request: dict[str, Any]) -> tuple[dict[Path, bytes], dict
         return outputs, result, "gc-bench.candidate-intake.result/v1"
     if operation == "corpus.project":
         outputs, result = _web_release_outputs(request.get("input"))
-        return outputs, result, "gc-bench.web-benchmark-release/v1"
+        return outputs, result, "gc-bench.web-benchmark-release/v2"
     raise DriverError(f"unsupported operation: {operation!r}")
 
 

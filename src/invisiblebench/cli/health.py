@@ -1,378 +1,78 @@
-#!/usr/bin/env python3
-"""Health check for InvisibleBench results and leaderboard."""
+"""Read-only status for the current aggregate projection."""
+
 from __future__ import annotations
 
+import hashlib
 import json
-import sys
 import tarfile
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from invisiblebench._agent_cli import emit_json
+from invisiblebench.scoring.projection import SCHEMA_VERSION
 from invisiblebench.utils.benchmark_inventory import get_project_root
-from invisiblebench.utils.io import leaderboard_rows
-
-try:
-    from rich.console import Console
-    from rich.table import Table
-
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
-    Console = None
+from invisiblebench.version import BENCHMARK_VERSION
 
 
 def load_leaderboard() -> dict[str, Any]:
-    """Load the current leaderboard."""
-    root = get_project_root()
-    lb_path = root / "data" / "leaderboard" / "leaderboard.json"
-    if lb_path.exists():
-        with open(lb_path) as f:
-            return json.load(f)
-    raise FileNotFoundError(f"Leaderboard not found: {lb_path}")
+    return json.loads((get_project_root() / "data/leaderboard/leaderboard.json").read_text())
 
 
 def analyze_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
-    """Analyze leaderboard for issues."""
-    if data.get("schema") != "safety-care/v1":
-        if "overall_leaderboard" in data:
-            raise ValueError(
-                "health only accepts safety-care/v1 leaderboards; "
-                "retired overall_leaderboard artifacts require explicit archive tooling"
-            )
-        raise ValueError(
-            f"health only accepts safety-care/v1 leaderboards; got schema={data.get('schema')!r}"
-        )
-    return _analyze_safety_care_leaderboard(data)
+    metadata = data.get("scan_metadata") or {}
+    if data.get("schema") != SCHEMA_VERSION or metadata.get("benchmark_version") != BENCHMARK_VERSION:
+        return {"current": False, "schema": data.get("schema"), "model_count": 0,
+                "errors": ["The retained leaderboard is historical. No current benchmark result is published."]}
+    models = data.get("models")
+    errors = []
+    if not isinstance(models, list) or not models:
+        errors.append("The current leaderboard has no model observations.")
+    if data.get("provenance_status") == "historical-unverified":
+        errors.append("The leaderboard does not have verified source records.")
+    return {"current": True, "schema": SCHEMA_VERSION,
+            "model_count": len(models) if isinstance(models, list) else 0, "errors": errors}
 
 
-def _analyze_safety_care_leaderboard(data: dict[str, Any]) -> dict[str, Any]:
-    """Analyze the current lean safety-care/v1 leaderboard shape."""
-    expected_safety = {"crisis", "scope", "identity", "autonomy"}
-    expected_care = {"belonging", "attunement", "relational", "advocacy", "trauma_awareness"}
-    scan_meta = data.get("scan_metadata") or {}
-    results = {
-        "schema": "safety-care/v1",
-        "models": [],
-        "scenario_issues": defaultdict(list),
-        "clean_models": [],
-        "models_with_errors": [],
-        "models_incomplete": [],
-        "suspect_scenarios": {},
-        "schema_warnings": [],
-    }
-
-    for model_data in leaderboard_rows(data):
-        model_name = str(model_data.get("model") or "<unknown>")
-        safety_lines = set(((model_data.get("safety") or {}).get("lines") or {}).keys())
-        care_qualities = set(((model_data.get("care") or {}).get("qualities") or {}).keys())
-        missing_safety = sorted(expected_safety - safety_lines)
-        missing_care = sorted(expected_care - care_qualities)
-        missing = len(missing_safety) + len(missing_care)
-        model_info = {
-            "name": model_name,
-            "score": None,
-            "scenarios_run": scan_meta.get("total_scenarios", 0),
-            "errors": 0,
-            "error_scenarios": [],
-            "missing": missing,
-            "missing_safety_lines": missing_safety,
-            "missing_care_qualities": missing_care,
-        }
-        results["models"].append(model_info)
-        if missing:
-            results["models_incomplete"].append(model_info)
-        else:
-            results["clean_models"].append(model_info)
-
-    provenance_status = data.get("provenance_status")
-    if provenance_status == "historical-unverified":
-        note = data.get("provenance_note") or "source scans were not preserved"
-        results["schema_warnings"].append(
-            f"leaderboard is historical-unverified: {note}"
-        )
-
-    artifact_validation = scan_meta.get("artifact_validation")
-    if isinstance(artifact_validation, dict):
-        _append_artifact_validation_warnings(results["schema_warnings"], artifact_validation)
-    current_contract_validation = scan_meta.get("current_contract_validation")
-    if isinstance(current_contract_validation, dict):
-        _append_current_contract_warnings(
-            results["schema_warnings"], current_contract_validation
-        )
-
-    return results
-
-
-def _append_artifact_validation_warnings(
-    warnings: list[str], artifact_validation: dict[str, Any]
-) -> None:
-    """Expose non-publishable scan residue already stamped in the artifact."""
-    warning_fields = (
-        ("unclear_mode_verdicts", "strict_qa_blocker_unclear_mode_verdicts"),
-        ("gate_unclear_mode_verdicts", "gate_unclear_mode_verdicts"),
-        ("fail_without_evidence", "fail_without_evidence"),
-        ("prompt_missing", "prompt_missing"),
-        ("no_verifier_available", "no_verifier_available"),
-        ("fatal_verifier_errors", "fatal_verifier_errors"),
-    )
-    for field, label in warning_fields:
-        value = int(artifact_validation.get(field) or 0)
-        if value:
-            warnings.append(f"{label}={value}")
-
-    parse_rows = int(artifact_validation.get("scorer_parse_error_results") or 0)
-    parse_errors = int(artifact_validation.get("scorer_parse_errors") or 0)
-    if parse_rows or parse_errors:
-        warnings.append(f"scorer_parse_errors={parse_errors} across {parse_rows} rows")
-
-    truncated_rows = int(artifact_validation.get("scorer_raw_outputs_truncated_results") or 0)
-    truncated_samples = int(
-        artifact_validation.get("scorer_raw_outputs_truncated_samples") or 0
-    )
-    if truncated_rows or truncated_samples:
-        warnings.append(
-            "scorer_raw_outputs_truncated="
-            f"{truncated_samples} samples across {truncated_rows} rows"
-        )
-
-
-def _append_current_contract_warnings(
-    warnings: list[str], current_contract_validation: dict[str, Any]
-) -> None:
-    """Expose current scenario/check contract gaps stamped by generation."""
-    for field in (
-        "missing_scenarios",
-        "extra_scenarios",
-        "rows_with_missing_checks",
-        "missing_check_instances",
-        "rows_with_extra_checks",
-        "extra_check_instances",
-    ):
-        value = int(current_contract_validation.get(field) or 0)
-        if value:
-            warnings.append(f"current_contract_{field}={value}")
-
-
-def append_local_web_release_health(
-    analysis: dict[str, Any],
-    *,
-    root: Path | None = None,
-) -> None:
-    """Append read-only health warnings for the one generated web archive."""
+def append_local_web_release_health(analysis: dict[str, Any], *, root: Path | None = None) -> None:
     root = root or get_project_root()
-    target = root / "data" / "releases" / "web-bench-release.tar.gz"
-    warnings = analysis.setdefault("schema_warnings", [])
-    if not target.exists():
-        warnings.append(f"local_web_release_missing={target}")
-        return
+    target = root / "data/releases/web-bench-release.tar.gz"
     try:
         with tarfile.open(target, "r:gz") as archive:
-            manifest = archive.extractfile("release-manifest.json")
-            if manifest is None:
-                raise ValueError("release manifest is absent")
-            value = json.load(manifest)
-        if not isinstance(value, dict) or value.get("schema_version") != "gc-bench.web-benchmark-release/v1":
-            raise ValueError("release manifest schema is invalid")
-    except (OSError, ValueError, json.JSONDecodeError, tarfile.TarError) as exc:
-        warnings.append(f"local_web_release_check_failed={type(exc).__name__}: {exc}")
-        return
-
-
-def print_health_report(analysis: dict[str, Any], verbose: bool = False) -> None:
-    """Print health report."""
-    console = Console() if RICH_AVAILABLE else None
-
-    def out(msg: str, style: str | None = None):
-        if console and style:
-            console.print(msg, style=style)
-        elif console:
-            console.print(msg)
-        else:
-            # Strip rich markup for plain output
-            import re
-
-            plain = re.sub(r"\[/?[^\]]+\]", "", msg)
-            print(plain)
-
-    out("\n[bold]═══ InvisibleBench Health Report ═══[/bold]\n", "bold")
-
-    # Summary stats
-    total_models = len(analysis["models"])
-    clean = len(analysis["clean_models"])
-    with_errors = len(analysis["models_with_errors"])
-    incomplete = len(analysis["models_incomplete"])
-
-    out(
-        f"Models: {total_models} total, [green]{clean} clean[/green], [yellow]{with_errors} with errors[/yellow], [red]{incomplete} incomplete[/red]\n"
-    )
-    if analysis.get("schema") == "safety-care/v1":
-        out("Contract: safety-care/v1 lean leaderboard (no composite/rank)\n", "dim")
-
-    # Models with errors
-    if analysis["models_with_errors"]:
-        out("[bold yellow]⚠ Models with errors:[/bold yellow]", "bold yellow")
-        for m in analysis["models_with_errors"]:
-            out(f"  • {m['name']}: {m['errors']} errors")
-            if verbose:
-                for scenario in m["error_scenarios"]:
-                    out(f"    - {scenario}", "dim")
-        out("")
-
-    # Incomplete models
-    if analysis["models_incomplete"]:
-        out("[bold red]✗ Incomplete models:[/bold red]", "bold red")
-        for m in analysis["models_incomplete"]:
-            if analysis.get("schema") == "safety-care/v1":
-                parts = []
-                if m.get("missing_safety_lines"):
-                    parts.append(f"safety={','.join(m['missing_safety_lines'])}")
-                if m.get("missing_care_qualities"):
-                    parts.append(f"care={','.join(m['missing_care_qualities'])}")
-                out(f"  • {m['name']}: missing {'; '.join(parts)}")
-            else:
-                out(f"  • {m['name']}: missing {m['missing']} scenario(s)")
-        out("")
-
-    # Suspect scenarios (failing on 3+ models)
-    if analysis["suspect_scenarios"]:
-        out(
-            "[bold magenta]🔍 Suspect scenarios (failing on 3+ models):[/bold magenta]",
-            "bold magenta",
-        )
-        for scenario, models in sorted(
-            analysis["suspect_scenarios"].items(), key=lambda x: -len(x[1])
-        ):
-            out(f"  • {scenario}: {len(models)} models")
-            if verbose:
-                out(f"    [{', '.join(models)}]", "dim")
-        out("")
-
-    # Schema field warnings
-    schema_warnings = analysis.get("schema_warnings", [])
-    if schema_warnings:
-        out("[bold yellow]⚠ Schema warnings:[/bold yellow]", "bold yellow")
-        for w in schema_warnings:
-            out(f"  • {w}")
-        out("")
-
-    # Clean models
-    if analysis["clean_models"]:
-        out("[bold green]✓ Clean models:[/bold green]", "bold green")
-        for m in analysis["clean_models"]:
-            if m.get("score") is None:
-                out(f"  • {m['name']}")
-            else:
-                out(f"  • {m['name']} ({m['score']:.3f})")
-        out("")
-
-    # Leaderboard
-    if RICH_AVAILABLE and console:
-        table = Table(title="Current Leaderboard")
-        table.add_column("#", style="dim")
-        table.add_column("Model")
-        if analysis.get("schema") == "safety-care/v1":
-            table.add_column("Scenarios", justify="right")
-        else:
-            table.add_column("Score", justify="right")
-        table.add_column("Status")
-
-        if analysis.get("schema") == "safety-care/v1":
-            ordered_models = sorted(analysis["models"], key=lambda x: x["name"])
-        else:
-            ordered_models = sorted(analysis["models"], key=lambda x: -x["score"])
-
-        for i, m in enumerate(ordered_models, 1):
-            if m["errors"] > 0:
-                status = f"[yellow]⚠ {m['errors']} errors[/yellow]"
-            elif m["missing"] > 0:
-                status = f"[red]✗ {m['missing']} missing[/red]"
-            else:
-                status = "[green]✓[/green]"
-
-            metric = (
-                str(m.get("scenarios_run", 0))
-                if analysis.get("schema") == "safety-care/v1"
-                else f"{m['score']:.3f}"
-            )
-            table.add_row(str(i), m["name"], metric, status)
-
-        console.print(table)
-
-    out("")
+            manifest_file = archive.extractfile("release-manifest.json")
+            if manifest_file is None:
+                raise ValueError("Release manifest is missing")
+            manifest = json.load(manifest_file)
+            if manifest.get("schema_version") != "gc-bench.web-benchmark-release/v2":
+                raise ValueError("Release archive uses a retired contract")
+            if manifest.get("release_version") != f"v{BENCHMARK_VERSION}":
+                raise ValueError("Release archive uses another benchmark version")
+            members = manifest.get("members")
+            if not isinstance(members, list) or len(members) != 1 or members[0].get("path") != "leaderboard.json":
+                raise ValueError("Release member list is invalid")
+            if set(archive.getnames()) != {"release-manifest.json", "leaderboard.json"}:
+                raise ValueError("Release contains unexpected members")
+            data = archive.extractfile("leaderboard.json").read()
+            if hashlib.sha256(data).hexdigest() != members[0].get("sha256"):
+                raise ValueError("Release member hash differs")
+            if data != (root / "data/leaderboard/leaderboard.json").read_bytes():
+                raise ValueError("Release differs from the committed projection")
+    except (OSError, ValueError, KeyError, AttributeError, tarfile.TarError) as exc:
+        analysis["errors"].append(str(exc))
 
 
 def run_health(verbose: bool = False, json_output: bool = False) -> int:
-    """Run health check and print report."""
+    del verbose
     try:
-        data = load_leaderboard()
-    except FileNotFoundError:
-        if json_output:
-            emit_json(
-                command="health",
-                data={
-                    "generated": False,
-                    "models_total": 0,
-                    "clean_models": [],
-                    "models_with_errors": [],
-                    "models_incomplete": [],
-                    "suspect_scenarios": {},
-                    "schema_warnings": [],
-                },
-            )
-            return 0
-        print(
-            "No leaderboard generated yet. Run the current benchmark and use "
-            "the strict publish path to create one."
-        )
-        return 0
-
-    try:
-        analysis = analyze_leaderboard(data)
-    except ValueError as e:
-        if json_output:
-            emit_json(status="error", command="health", error=str(e))
-        else:
-            print(f"Error running health check: {e}")
-        return 1
-
-    append_local_web_release_health(analysis)
-
-    has_issues = bool(analysis["models_with_errors"] or analysis["models_incomplete"])
-
+        analysis = analyze_leaderboard(load_leaderboard())
+    except (OSError, ValueError) as exc:
+        analysis = {"current": False, "model_count": 0, "errors": [str(exc)]}
+    if analysis["current"]:
+        append_local_web_release_health(analysis)
     if json_output:
-        emit_json(
-            command="health",
-            data={
-                "generated": True,
-                "schema": analysis.get("schema"),
-                "models_total": len(analysis["models"]),
-                "clean_models": [m["name"] for m in analysis["clean_models"]],
-                "models_with_errors": analysis["models_with_errors"],
-                "models_incomplete": analysis["models_incomplete"],
-                "suspect_scenarios": analysis["suspect_scenarios"],
-                "schema_warnings": analysis["schema_warnings"],
-            },
-        )
+        emit_json(command="health", data=analysis)
     else:
-        print_health_report(analysis, verbose=verbose)
-
-    # Return non-zero if there are issues
-    return 1 if has_issues else 0
-
-
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point for standalone usage."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Check InvisibleBench health")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
-    args = parser.parse_args(argv)
-    return run_health(verbose=args.verbose)
-
-
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(main())
+        print(f"Current benchmark projection: {analysis['current']}")
+        print(f"Models: {analysis['model_count']}")
+        for error in analysis["errors"]:
+            print(error)
+    return 1 if analysis["errors"] else 0

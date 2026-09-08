@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-"""QA gate for safety-care/v1 leaderboard artifacts.
-
-Checks the scan JSONL and generated leaderboard agree on source and meet
-publication hygiene requirements. This script is intentionally local-only; it
-never calls a model or external service.
-"""
+"""Mechanical QA for the current scan ledger and Safety/Care projection."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import os
+import math
 import sys
-import tempfile
 from collections import Counter, defaultdict
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,506 +16,565 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from invisiblebench.evaluation.check_registry import (  # noqa: E402
-    check_definition_hashes,
     check_prompt_hashes,
     load_checks,
 )
-
-# scoring.yaml is the single owner of threshold values; QA reads it through
-# scoring_contract so a bump never silently diverges from the gate.
-from invisiblebench.evaluation.scoring_contract import coverage_floor  # noqa: E402
-from invisiblebench.evaluation.verifiers.base import (  # noqa: E402
-    FAILURE_VERDICT_VALUES,
-    PASS_VERDICT_VALUES,
-    Verdict,
+from invisiblebench.evaluation.verifiers.base import Decision, evidence_errors  # noqa: E402
+from invisiblebench.evaluation.verifiers.llm_verifier import (  # noqa: E402
+    CONTEXT_POLICY,
+    JUDGE_MAX_TOKENS,
+    JUDGE_TEMPERATURE,
+    _format_transcript_for_prompt,
+    prompt_for_check,
 )
-from invisiblebench.scoring.contract import (  # noqa: E402
-    CLAIM_READY_STATUS,
-    is_claim_capable_check,
-)
-from invisiblebench.scoring.contract import is_gate_result as _is_gate_result  # noqa: E402
-from invisiblebench.utils.artifact_validation import (  # noqa: E402
-    artifact_issue_policy,
-    observed_prompt_hashes,
-    scan_artifact_validation_diagnostics,
-    scan_artifact_validation_summary,
-    scan_check_coverage,
-    scan_current_contract_validation_diagnostics,
-    scan_current_contract_validation_summary,
-)
+from invisiblebench.judge import attach_scan_provenance, build_scan_plan  # noqa: E402
+from invisiblebench.scoring.contract import CANONICAL_VERDICTS, NOT_APPLICABLE_VERDICT  # noqa: E402
+from invisiblebench.scoring.projection import SCHEMA_VERSION, build_scorecard  # noqa: E402
 from invisiblebench.utils.benchmark_inventory import (  # noqa: E402
     collect_public_scenario_ids,
     get_benchmark_version,
+    get_code_version,
+    load_inventory,
 )
-from invisiblebench.utils.io import artifact_reference  # noqa: E402
-from invisiblebench.utils.io import load_json as _load_json  # noqa: E402
-from invisiblebench.utils.io import load_jsonl as _load_jsonl  # noqa: E402
-from invisiblebench.utils.manifest import scenario_corpus_hash  # noqa: E402
-from invisiblebench.version import SCANNED_ROW_CONTRACT_VERSION  # noqa: E402
+from invisiblebench.utils.io import artifact_reference, load_json, load_jsonl  # noqa: E402
+from invisiblebench.version import ENGINE_VERSION, SCANNED_ROW_CONTRACT_VERSION  # noqa: E402
 
-# Statuses allowed to carry a published hard-fail claim. Binary claim model:
-# only `claim_ready` publishes; everything else is disclosed development evidence.
-CALIBRATED_STATUSES = {CLAIM_READY_STATUS}
-# provenance_status is the top-level publication-integrity label. "verified"
-# (or absent, its default) means the leaderboard's evidence artifact must
-# still exist and match its recorded hash. "historical-unverified" is the
-# only other allowed value — a leaderboard whose source scans were not
-# preserved, retired to a research snapshot; it can only pass QA with the
-# explicit --allow-historical flag, so the label itself can never be used to
-# sneak an unverified scorecard through the default gate.
-HISTORICAL_UNVERIFIED_STATUS = "historical-unverified"
-VERIFIED_STATUS = "verified"
-ALLOWED_PROVENANCE_STATUSES = {VERIFIED_STATUS, HISTORICAL_UNVERIFIED_STATUS}
-# Resolved = the verdict classes mode_engine counts toward coverage. Eligible
-# NOT_APPLICABLE means the verifier found no current cue/obligation for this
-# check; it is resolved coverage, while UNCLEAR remains unresolved.
-RESOLVED_VERDICTS = PASS_VERDICT_VALUES | FAILURE_VERDICT_VALUES | {Verdict.NOT_APPLICABLE.value}
+_ROW_FIELDS = {
+    "model",
+    "model_id",
+    "scenario_id",
+    "category",
+    "transcript_path",
+    "contract_version",
+    "mode_results",
+    "engine_version",
+    "eligible_count",
+    "resolved_count",
+    "unclear_count",
+    "coverage_rate",
+}
+_MODE_FIELDS = {
+    "mode_id",
+    "eligible",
+    "verdict",
+    "severity",
+    "layer",
+    "dimension",
+    "scorer_type",
+    "scorer_version",
+    "prompt_hash",
+    "evidence",
+    "rationale",
+    "rationale_code",
+    "judge",
+    "extra",
+}
+_JUDGE_FIELDS = {
+    "model",
+    "resolved_model",
+    "provider",
+    "temperature",
+    "max_tokens",
+    "context_policy",
+}
+_EXTRA_FIELDS = {"raw_response", "input_sha256", "validation_error"}
+_OBSOLETE_KEYS = {
+    "overall_score",
+    "hard_fail",
+    "hard_fail_reasons",
+    "dimension_scores",
+    "blindspot_profile",
+    "claim_surface",
+    "public_score_model",
+    "result_surface",
+    "score_model",
+    "confidence",
+    "adjudication_required",
+    "calibration",
+    "calibration_status",
+    "claim_ready",
+    "composite",
+    "rank",
+    "no_composite",
+    "manual_adjudications",
+    "previous_verdict",
+    "previous_rationale_code",
+}
+_TECHNICAL_CODES = {"judge_api_error", "invalid_judge_output"}
+_PUBLIC_FIELDS = {"schema", "notes", "scan_metadata", "models"}
+_SCAN_METADATA_FIELDS = {
+    "benchmark_version",
+    "code_version",
+    "generated_at",
+    "source_artifact",
+    "source_sha256",
+    "public_scope",
+    "public_harness",
+    "total_models",
+    "total_scenarios",
+    "active_checks",
+    "check_prompt_hashes",
+    "observed_prompt_hashes",
+    "observed_judges",
+    "row_count",
+    "model_ids",
+    "projection_sha256",
+    "observation_type",
+}
 
 
-def calibration_errors(
-    rows: list[dict[str, Any]],
-    modes: dict[str, dict[str, Any]],
-) -> list[str]:
-    """Calibration gate: uncalibrated checks cannot carry hard-fail claims.
+def _json_sha(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+    ).hexdigest()
 
-    Two boundaries, both unconditional:
-    - every claim-carrying check (hard_fail or S5/S4_GATE severity) must
-      declare a `calibration:` block with an evidence status;
-    - every published hard_fail_reason must come from a check whose declared
-      status is `claim_ready`.
-    """
-    errors: list[str] = []
-    claim_checks = {
-        check_id
-        for check_id, mode in modes.items()
-        if is_claim_capable_check(mode)
-    }
-    missing = sorted(
-        check_id
-        for check_id in claim_checks
-        if not (modes[check_id].get("calibration") or {}).get("status")
+
+def _walk_obsolete(value: Any, path: str = "") -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_path = f"{path}.{key}" if path else str(key)
+            if key in _OBSOLETE_KEYS:
+                found.append(key_path)
+            found.extend(_walk_obsolete(item, key_path))
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            found.extend(_walk_obsolete(item, f"{path}[{index}]"))
+    return found
+
+
+def _checks(checks_dir: Path | None) -> dict[str, dict[str, Any]]:
+    return dict(load_checks(checks_dir))
+
+
+def _transcript_path(raw: Any, scan_path: Path) -> Path | None:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    path = Path(raw)
+    candidates = (
+        [path]
+        if path.is_absolute()
+        else [
+            scan_path.parent / path,
+            REPO_ROOT / path,
+            scan_path.parent.parent / path,
+        ]
     )
-    if missing:
-        errors.append(f"claim_check_missing_calibration={missing}")
-
-    uncalibrated: Counter[str] = Counter()
-    for row in rows:
-        for reason in row.get("hard_fail_reasons") or []:
-            mode_id = str(reason.get("mode_id"))
-            calibration = (modes.get(mode_id) or {}).get("calibration") or {}
-            if calibration.get("status") not in CALIBRATED_STATUSES:
-                uncalibrated[mode_id] += 1
-    if uncalibrated:
-        errors.append(f"hard_fail_from_uncalibrated_check={dict(uncalibrated)}")
-    return errors
+    for candidate in candidates:
+        if candidate.is_file() and not candidate.is_symlink():
+            return candidate
+    return None
 
 
-def provenance_status_errors(
-    leaderboard: dict[str, Any],
-    scan_path: Path,
-    *,
-    allow_historical: bool,
-) -> list[str]:
-    """Publication-integrity gate for the top-level ``provenance_status`` label.
-
-    - ``historical-unverified`` requires a ``provenance_note`` and only passes
-      with ``--allow-historical``; it never satisfies the evidence check below.
-    - ``verified`` (the default when the field is absent) requires the scan
-      artifact QA was given to still exist and hash-match the leaderboard's
-      own recorded ``scan_metadata.source_merge.output_sha256`` — the check
-      that would have caught the v4 leaderboard shipping with its source scan
-      already deleted.
-    """
-    status = leaderboard.get("provenance_status")
-    if status is not None and status not in ALLOWED_PROVENANCE_STATUSES:
-        return [f"provenance_status={status!r} not in {sorted(ALLOWED_PROVENANCE_STATUSES)}"]
-
-    if status == HISTORICAL_UNVERIFIED_STATUS:
-        errors: list[str] = []
-        note = leaderboard.get("provenance_note")
-        if not isinstance(note, str) or not note.strip():
-            errors.append("historical-unverified leaderboard missing provenance_note")
-        if not allow_historical:
-            errors.append(
-                "historical-unverified leaderboard requires --allow-historical to pass QA"
-            )
-        return errors
-
-    errors = []
-    scan_metadata = leaderboard.get("scan_metadata") or {}
-    source_merge = scan_metadata.get("source_merge") or {}
-    expected_sha = source_merge.get("output_sha256")
-    if not scan_path.is_file():
-        errors.append(f"provenance evidence missing: {scan_path}")
-        return errors
-    if not isinstance(expected_sha, str) or not expected_sha:
-        errors.append(
-            "provenance_status=verified requires scan_metadata.source_merge.output_sha256"
-        )
-        return errors
-    actual_sha = hashlib.sha256(scan_path.read_bytes()).hexdigest()
-    if actual_sha != expected_sha:
-        errors.append(
-            f"provenance evidence sha256 mismatch: {scan_path} "
-            f"actual={actual_sha} expected={expected_sha}"
-        )
-    return errors
+def _expected_input_hash(transcript: list[dict[str, Any]], mode: dict[str, Any]) -> str:
+    messages = [
+        {"role": "system", "content": prompt_for_check(mode)},
+        {"role": "user", "content": _format_transcript_for_prompt(transcript)},
+    ]
+    # Keep the calculation beside LLMVerifier's exact request contract.
+    return hashlib.sha256(
+        json.dumps(messages, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
 
 
-def _manual_key(record: dict[str, Any]) -> tuple[str, str, str]:
-    return (
-        str(record.get("model_id")),
-        str(record.get("scenario_id")),
-        str(record.get("mode_id")),
-    )
-
-
-def _manual_scan_records(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
+def _observed_prompt_hashes(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    observed: dict[str, set[str]] = {}
     for row in rows:
         for result in row.get("mode_results") or []:
-            if result.get("scorer_type") != "manual_adjudication":
-                continue
-            records.append(
-                {
-                    "model": row.get("model"),
-                    "model_id": row.get("model_id"),
-                    "scenario_id": row.get("scenario_id"),
-                    "mode_id": result.get("mode_id"),
-                    "final_eligible": result.get("eligible"),
-                    "final_verdict": result.get("verdict"),
-                    "rationale_code": result.get("rationale_code"),
-                    "confidence": result.get("confidence"),
-                    "evidence": result.get("evidence") or [],
-                    "previous_verdict": (result.get("extra") or {}).get("previous_verdict"),
-                    "previous_rationale_code": (result.get("extra") or {}).get("previous_rationale_code"),
-                    "source_transcript": row.get("transcript_path"),
-                }
-            )
-    return records
+            mode_id = str(result.get("mode_id") or "")
+            prompt_hash = result.get("prompt_hash")
+            if mode_id and isinstance(prompt_hash, str) and prompt_hash:
+                observed.setdefault(mode_id, set()).add(prompt_hash)
+    return {mode_id: sorted(values) for mode_id, values in sorted(observed.items())}
 
 
-def _validate_safety_care_artifact(
+def _observed_judges(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    observed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        for result in row.get("mode_results") or []:
+            judge = result.get("judge")
+            if isinstance(judge, dict):
+                key = json.dumps(judge, sort_keys=True, separators=(",", ":"))
+                observed[key] = dict(judge)
+    return [observed[key] for key in sorted(observed)]
+
+
+def _scan_plan_errors(
     leaderboard: dict[str, Any],
-    effective_models: int,
-    effective_scenarios: int | None,
+    rows: list[dict[str, Any]],
     scan_path: Path,
-) -> list[str]:
-    """Validate the safety-care/v1 artifact shape. Returns a list of error strings."""
-    errors: list[str] = []
-
-    # Schema version
-    schema = leaderboard.get("schema")
-    if schema != "safety-care/v1":
-        errors.append(f"schema={schema!r} expected='safety-care/v1'")
-
-    # No composite at top level
-    for forbidden in (
-        "overall_score",
-        "composite",
-        "rank",
-        "overall_leaderboard",
-        "_deprecated_v3",
-    ):
-        if forbidden in leaderboard:
-            errors.append(f"forbidden_top_level_key={forbidden!r}")
-
-    # notes.no_composite must be True
-    notes = leaderboard.get("notes") or {}
-    if not notes.get("no_composite"):
-        errors.append("notes.no_composite missing or False")
-
-    # scan_metadata: source_artifact must match scan_path
-    scan_meta = leaderboard.get("scan_metadata") or {}
-    expected_source_artifact = artifact_reference(scan_path, REPO_ROOT)
-    if scan_meta.get("source_artifact") != expected_source_artifact:
-        errors.append(
-            "leaderboard_source_mismatch="
-            f"{scan_meta.get('source_artifact')!r} expected={expected_source_artifact!r}"
-        )
-    if scan_meta.get("total_models") != effective_models:
-        errors.append(
-            f"leaderboard_total_models={scan_meta.get('total_models')} "
-            f"expected={effective_models}"
-        )
-    if effective_scenarios is not None and scan_meta.get("total_scenarios") != effective_scenarios:
-        errors.append(
-            f"leaderboard_total_scenarios={scan_meta.get('total_scenarios')} "
-            f"expected={effective_scenarios}"
-        )
-    if not isinstance(scan_meta.get("artifact_validation"), dict):
-        errors.append("scan_metadata.artifact_validation missing or not an object")
-    if not isinstance(scan_meta.get("artifact_diagnostics"), dict):
-        errors.append("scan_metadata.artifact_diagnostics missing or not an object")
-    if not isinstance(scan_meta.get("check_coverage"), dict):
-        errors.append("scan_metadata.check_coverage missing or not an object")
-    # Presence is required unconditionally: without this the current-contract
-    # strict gate (missing scenarios / check instances) is only run when the
-    # block happens to be present, so an artifact that omits it silently
-    # bypasses strict QA. Parallel to artifact_validation/artifact_diagnostics.
-    if not isinstance(scan_meta.get("current_contract_validation"), dict):
-        errors.append("scan_metadata.current_contract_validation missing or not an object")
-    if scan_meta.get("artifact_issue_policy") != artifact_issue_policy():
-        errors.append("scan_metadata.artifact_issue_policy missing or mismatch")
-
-    # Per-model entries: safety lines + care qualities + no composite
-    models = leaderboard.get("models")
-    if not isinstance(models, list):
-        errors.append("leaderboard_missing_models_list")
-        return errors
-
-    _SAFETY_LINES = ("crisis", "scope", "identity", "autonomy")
-    _CARE_QUALITIES = ("belonging", "attunement", "relational", "advocacy", "trauma_awareness")
-
-    for entry in models:
-        name = entry.get("model", "<unnamed>")
-
-        # No composite keys in model entry
-        for forbidden in ("overall_score", "composite", "rank"):
-            if forbidden in entry:
-                errors.append(f"forbidden_model_key={forbidden!r} model={name!r}")
-
-        # Safety lines
-        safety = entry.get("safety") or {}
-        lines = safety.get("lines") or {}
-        for dim in _SAFETY_LINES:
-            if dim not in lines:
-                errors.append(f"missing_safety_line={dim!r} model={name!r}")
-            else:
-                line_entry = lines[dim]
-                if "rate" not in line_entry:
-                    errors.append(f"safety_line_missing_rate dim={dim!r} model={name!r}")
-                if "n" not in line_entry:
-                    errors.append(f"safety_line_missing_n dim={dim!r} model={name!r}")
-                if "ci95" not in line_entry:
-                    errors.append(f"safety_line_missing_ci95 dim={dim!r} model={name!r}")
-
-        # Care qualities
-        care = entry.get("care") or {}
-        qualities = care.get("qualities") or {}
-        for quality in _CARE_QUALITIES:
-            if quality not in qualities:
-                errors.append(f"missing_care_quality={quality!r} model={name!r}")
-            else:
-                q_entry = qualities[quality]
-                # trauma_awareness is a stub — only n and status required
-                if quality == "trauma_awareness":
-                    if q_entry.get("n") != 0:
-                        errors.append(
-                            f"trauma_awareness_stub_n_nonzero n={q_entry.get('n')} model={name!r}"
-                        )
-                else:
-                    if "calibration_status" not in q_entry:
-                        errors.append(
-                            f"care_quality_missing_calibration_status "
-                            f"quality={quality!r} model={name!r}"
-                        )
-
-    return errors
-
-
-def _validate_artifact_validation_metadata(
-    leaderboard: dict[str, Any],
-    rows: list[dict[str, Any]],
-) -> list[str]:
-    errors: list[str] = []
-    artifact_validation = (leaderboard.get("scan_metadata") or {}).get("artifact_validation")
-    if not isinstance(artifact_validation, dict):
-        return errors
-
-    expected = scan_artifact_validation_summary(rows)
-    for field, expected_value in expected.items():
-        actual = artifact_validation.get(field)
-        if actual != expected_value:
-            errors.append(f"artifact_validation.{field}={actual} expected={expected_value}")
-    return errors
-
-
-def _validate_artifact_diagnostics_metadata(
-    leaderboard: dict[str, Any],
-    rows: list[dict[str, Any]],
-) -> list[str]:
-    errors: list[str] = []
-    diagnostics = (leaderboard.get("scan_metadata") or {}).get("artifact_diagnostics")
-    if not isinstance(diagnostics, dict):
-        return errors
-
-    expected = scan_artifact_validation_diagnostics(rows)
-    for field, expected_value in expected.items():
-        actual = diagnostics.get(field)
-        if actual != expected_value:
-            errors.append(f"artifact_diagnostics.{field} mismatch")
-    return errors
-
-
-def _validate_check_coverage_metadata(
-    leaderboard: dict[str, Any],
-    rows: list[dict[str, Any]],
-) -> list[str]:
-    coverage = (leaderboard.get("scan_metadata") or {}).get("check_coverage")
-    if not isinstance(coverage, dict):
-        return []
-    if coverage != scan_check_coverage(rows):
-        return ["scan_metadata.check_coverage mismatch"]
-    return []
-
-
-def _active_mode_ids(checks_dir: Path | None = None) -> list[str]:
-    modes, routing = load_checks(checks_dir)
-    return sorted(
-        mode_id
-        for mode_id, mode in modes.items()
-        if mode.get("status", "active") == "active" and routing.get(mode_id)
-    )
-
-
-def _validate_current_contract_metadata(
-    leaderboard: dict[str, Any],
-    rows: list[dict[str, Any]],
     *,
+    strict: bool,
     checks_dir: Path | None,
 ) -> list[str]:
+    """Bind the public plan to the exact retained sources and current rules."""
     errors: list[str] = []
-    scan_meta = leaderboard.get("scan_metadata") or {}
-    validation = scan_meta.get("current_contract_validation")
-    diagnostics = scan_meta.get("current_contract_diagnostics")
-
-    if validation is None and diagnostics is None:
-        return errors
-    if not isinstance(validation, dict):
-        errors.append("scan_metadata.current_contract_validation missing or not an object")
-        return errors
-    if not isinstance(diagnostics, dict):
-        errors.append("scan_metadata.current_contract_diagnostics missing or not an object")
-        return errors
-
-    expected_scenario_ids = collect_public_scenario_ids(REPO_ROOT)
-    expected_check_ids = _active_mode_ids(checks_dir)
-    expected_validation = scan_current_contract_validation_summary(
-        rows,
-        expected_scenario_ids=expected_scenario_ids,
-        expected_check_ids=expected_check_ids,
-    )
-    for field, expected_value in expected_validation.items():
-        actual = validation.get(field)
-        if actual != expected_value:
-            errors.append(f"current_contract_validation.{field}={actual} expected={expected_value}")
-
-    expected_diagnostics = scan_current_contract_validation_diagnostics(
-        rows,
-        expected_scenario_ids=expected_scenario_ids,
-        expected_check_ids=expected_check_ids,
-    )
-    for field, expected_value in expected_diagnostics.items():
-        actual = diagnostics.get(field)
-        if actual != expected_value:
-            errors.append(f"current_contract_diagnostics.{field} mismatch")
-    return errors
-
-
-def _strict_current_contract_errors(validation: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    for field in (
-        "missing_scenarios",
-        "extra_scenarios",
-        "rows_with_missing_checks",
-        "missing_check_instances",
-        "rows_with_extra_checks",
-        "extra_check_instances",
-    ):
-        value = validation.get(field)
-        if value:
-            errors.append(f"current_contract_{field}={value}")
-    return errors
-
-
-def _strict_provenance_errors(
-    leaderboard: dict[str, Any],
-    rows: list[dict[str, Any]],
-    *,
-    scan_path: Path,
-    checks_dir: Path | None,
-) -> list[str]:
     metadata = leaderboard.get("scan_metadata") or {}
-    errors: list[str] = []
-    expected_version = get_benchmark_version(REPO_ROOT)
-    actual_version = metadata.get("benchmark_version")
-    if actual_version != expected_version:
-        errors.append(
-            f"benchmark_version={actual_version!r} expected={expected_version!r}"
-        )
-
-    source_merge = metadata.get("source_merge")
-    if not isinstance(source_merge, dict):
-        errors.append("source_merge missing or not an object")
-    else:
-        expected_merge = {
-            "schema": "invisiblebench-scan-merge/v2",
-            "benchmark_version": expected_version,
-            "result_contract_version": SCANNED_ROW_CONTRACT_VERSION,
-            "provenance_complete": True,
-            "profile": "publish",
-            "row_count": len(rows),
-            "output_file": scan_path.name,
-            "output_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
-            "scenario_corpus_sha256": scenario_corpus_hash(REPO_ROOT),
-            "scoring_config_sha256": hashlib.sha256(
-                (REPO_ROOT / "benchmark" / "configs" / "scoring.yaml").read_bytes()
-            ).hexdigest(),
-        }
-        for field, expected in expected_merge.items():
-            if source_merge.get(field) != expected:
-                errors.append(f"source_merge.{field} mismatch")
-        fingerprint = source_merge.get("comparability_fingerprint")
-        if not isinstance(fingerprint, str) or len(fingerprint) != 64:
-            errors.append("source_merge.comparability_fingerprint missing or invalid")
-        expected_definitions = check_definition_hashes(checks_dir)
-        if source_merge.get("check_definition_hashes") != expected_definitions:
-            errors.append("source_merge.check_definition_hashes missing or mismatch")
-        sources = source_merge.get("sources")
-        if not isinstance(sources, list) or not sources:
-            errors.append("source_merge.sources missing or empty")
-        elif any(
-            not isinstance(source, dict)
-            or not isinstance(source.get("scan_plan_sha256"), str)
-            or len(source["scan_plan_sha256"]) != 64
-            for source in sources
-        ):
-            errors.append("source_merge.sources scan plan hashes missing or invalid")
-    if {row.get("contract_version") for row in rows} != {
-        SCANNED_ROW_CONTRACT_VERSION
+    plan_path = scan_path.parent / "scan_plan.json"
+    if not plan_path.is_file():
+        return ["scan_plan.json v3 is required in strict mode"] if strict else []
+    try:
+        plan = load_json(plan_path)
+    except (OSError, ValueError) as exc:
+        return [f"scan_plan.json invalid: {exc}"]
+    if not isinstance(plan, dict):
+        return ["scan_plan.json must be an object"]
+    if metadata.get("scan_plan_sha256") != _json_sha(plan):
+        errors.append("scan_metadata.scan_plan_sha256 mismatch")
+    if metadata.get("scan_plan") != plan:
+        errors.append("scan_metadata.scan_plan mismatch")
+    judge_model = plan.get("judge_model")
+    if not isinstance(judge_model, str) or not judge_model.strip():
+        return errors + ["scan_plan.judge_model missing"]
+    selection = plan.get("selection")
+    if not isinstance(selection, dict) or set(selection) != {
+        "filter", "limit_per_source_run", "source_run_count"
     }:
-        errors.append("scan row contract mismatch")
+        return errors + ["scan_plan.selection fields mismatch"]
+    if (
+        selection["filter"] is not None and not isinstance(selection["filter"], str)
+        or selection["limit_per_source_run"] is not None
+        and type(selection["limit_per_source_run"]) is not int
+        or type(selection["source_run_count"]) is not int
+    ):
+        return errors + ["scan_plan.selection values invalid"]
 
-    expected_hashes = check_prompt_hashes(checks_dir)
-    if metadata.get("check_prompt_hashes") != expected_hashes:
-        errors.append("check_prompt_hashes missing or mismatch")
+    source_pairs: list[dict[str, Any]] = []
+    source_dirs: set[Path] = set()
+    for row_index, row in enumerate(rows):
+        source = _transcript_path(row.get("transcript_path"), scan_path)
+        if source is None:
+            continue
+        if source.parent.name != "transcripts":
+            errors.append(f"row[{row_index}].transcript_path parent must be transcripts")
+            continue
+        source_dirs.add(source.parent.parent.resolve())
+        source_pairs.append({
+            "transcript_path": source.resolve(),
+            **{key: row.get(key) for key in ("model", "model_id", "scenario_id", "category")},
+        })
+        for result in row.get("mode_results") or []:
+            if result.get("judge", {}).get("model") != judge_model:
+                errors.append(f"row[{row_index}].judge.model differs from scan_plan")
 
-    observed = observed_prompt_hashes(rows)
-    if metadata.get("observed_prompt_hashes") != observed:
-        errors.append("observed_prompt_hashes missing or mismatch")
-    missing = [
-        (
-            row.get("model_id") or row.get("model"),
-            row.get("scenario_id"),
-            result.get("mode_id"),
+    if selection["source_run_count"] != len(source_dirs):
+        errors.append("scan_plan.selection.source_run_count mismatch")
+    summary_entries: dict[tuple[Path, str, str], dict[str, Any]] = {}
+    for run_dir in sorted(source_dirs, key=str):
+        try:
+            summary = load_json(run_dir / "transcript_run.json")
+            if not isinstance(summary, dict) or not isinstance(summary.get("transcripts"), list):
+                raise ValueError("transcript_run.json must contain a transcript list")
+        except (OSError, ValueError) as exc:
+            errors.append(f"source run summary invalid: {exc}")
+            continue
+        for item in summary["transcripts"]:
+            if isinstance(item, dict):
+                key = (run_dir, str(item.get("model_id") or ""), str(item.get("scenario_id") or ""))
+                if key in summary_entries:
+                    errors.append("transcript_run.json has a duplicate model/scenario")
+                summary_entries[key] = item
+    for pair in source_pairs:
+        run_dir = Path(pair["transcript_path"]).parent.parent.resolve()
+        key = (run_dir, str(pair["model_id"]), str(pair["scenario_id"]))
+        summary = summary_entries.get(key)
+        if summary is None:
+            errors.append(f"scan row {key[1:]} is absent from transcript_run.json")
+        elif any(summary.get(field) != pair[field] for field in ("model", "category")):
+            errors.append(f"scan row {key[1:]} model/category differs from transcript_run.json")
+
+    if not source_pairs:
+        return errors + ["scan requires retained transcript sources"]
+    try:
+        rebuilt = attach_scan_provenance(
+            build_scan_plan(source_pairs, _checks(checks_dir), judge_model=judge_model),
+            run_dirs=sorted(source_dirs, key=str),
+            transcript_pairs=source_pairs,
+            selection=selection,
         )
-        for row in rows
-        for result in row.get("mode_results") or []
-        if result.get("eligible")
-        and result.get("scorer_type") == "llm_verifier"
-        and result.get("mode_id") in expected_hashes
-        and not result.get("prompt_hash")
-    ]
-    if missing:
-        errors.append(f"llm_results_missing_prompt_hash={missing[:10]}")
-    mismatches = {
-        mode_id: hashes
-        for mode_id, hashes in observed.items()
-        if mode_id in expected_hashes and hashes != [expected_hashes[mode_id]]
+    except (OSError, ValueError, KeyError) as exc:
+        return errors + [f"scan_plan provenance cannot be rebuilt: {exc}"]
+    if rebuilt != plan:
+        errors.append("scan_plan does not equal provenance rebuilt from retained sources")
+    if strict and rebuilt.get("provenance_complete") is not True:
+        errors.append("strict scan requires complete source provenance")
+    if strict and set(rebuilt["scenario_ids"]) != set(collect_public_scenario_ids(REPO_ROOT)):
+        errors.append("scan_plan.scenario_ids do not cover the current public scenario roster")
+    return errors
+
+
+def _validate_rows(
+    rows: list[dict[str, Any]],
+    scan_path: Path,
+    *,
+    checks_dir: Path | None,
+) -> list[str]:
+    modes = _checks(checks_dir)
+    expected_ids = set(modes)
+    prompt_hashes = check_prompt_hashes(checks_dir)
+    errors: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    scenarios_by_model: defaultdict[str, set[str]] = defaultdict(set)
+    for row_index, row in enumerate(rows):
+        prefix = f"row[{row_index}]"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} is not an object")
+            continue
+        obsolete = sorted(_OBSOLETE_KEYS.intersection(row))
+        if obsolete:
+            errors.append(f"{prefix} contains retired fields={obsolete}")
+        unknown = sorted(set(row) - _ROW_FIELDS)
+        missing = sorted(_ROW_FIELDS - set(row))
+        if unknown:
+            errors.append(f"{prefix} unknown fields={unknown}")
+        if missing:
+            errors.append(f"{prefix} missing fields={missing}")
+        model_id = str(row.get("model_id") or "")
+        scenario_id = str(row.get("scenario_id") or "")
+        for field in ("model", "model_id", "scenario_id", "category", "transcript_path"):
+            if not isinstance(row.get(field), str) or not row[field].strip():
+                errors.append(f"{prefix}.{field} must be a non-empty string")
+        pair = (model_id, scenario_id)
+        if pair in seen:
+            errors.append(f"duplicate model/scenario={pair}")
+        seen.add(pair)
+        scenarios_by_model[model_id].add(scenario_id)
+        if row.get("contract_version") != SCANNED_ROW_CONTRACT_VERSION:
+            errors.append(f"{prefix}.contract_version mismatch")
+        if row.get("engine_version") != ENGINE_VERSION:
+            errors.append(f"{prefix}.engine_version mismatch")
+        path = _transcript_path(row.get("transcript_path"), scan_path)
+        if path is None:
+            errors.append(f"{prefix}.transcript_path is missing or not a retained file")
+            transcript: list[dict[str, Any]] = []
+        else:
+            try:
+                transcript = load_jsonl(path)
+            except (OSError, ValueError) as exc:
+                errors.append(f"{prefix}.transcript_path invalid: {exc}")
+                transcript = []
+        results = row.get("mode_results")
+        if not isinstance(results, list):
+            errors.append(f"{prefix}.mode_results must be a list")
+            results = []
+        result_ids = [
+            str(result.get("mode_id") or "") for result in results if isinstance(result, dict)
+        ]
+        if len(result_ids) != len(set(result_ids)):
+            errors.append(f"{prefix} duplicate mode results")
+        if set(result_ids) != expected_ids:
+            errors.append(
+                f"{prefix} mode roster mismatch missing={sorted(expected_ids - set(result_ids))[:10]} extra={sorted(set(result_ids) - expected_ids)[:10]}"
+            )
+        counts = Counter()
+        for result_index, result in enumerate(results):
+            item_prefix = f"{prefix}.mode[{result_index}]"
+            if not isinstance(result, dict):
+                errors.append(f"{item_prefix} is not an object")
+                continue
+            unknown_mode = sorted(set(result) - _MODE_FIELDS)
+            missing_mode = sorted(_MODE_FIELDS - set(result))
+            if unknown_mode:
+                errors.append(f"{item_prefix} unknown fields={unknown_mode}")
+            if missing_mode:
+                errors.append(f"{item_prefix} missing fields={missing_mode}")
+            mode_id = str(result.get("mode_id") or "")
+            mode = modes.get(mode_id)
+            if mode is None:
+                continue
+            verdict = str(result.get("verdict") or "")
+            counts[verdict] += 1
+            if verdict not in CANONICAL_VERDICTS:
+                errors.append(f"{item_prefix}.verdict is not canonical")
+            if not isinstance(result.get("eligible"), bool) or result["eligible"] != (verdict != NOT_APPLICABLE_VERDICT):
+                errors.append(f"{item_prefix}.eligible does not match verdict")
+            for field in ("severity", "layer", "dimension"):
+                if result.get(field) != mode.get(field):
+                    errors.append(f"{item_prefix}.{field} mismatch")
+            if result.get("scorer_type") != "llm_verifier":
+                errors.append(f"{item_prefix}.scorer_type mismatch")
+            if result.get("scorer_version") != ENGINE_VERSION:
+                errors.append(f"{item_prefix}.scorer_version mismatch")
+            if result.get("prompt_hash") != prompt_hashes.get(mode_id):
+                errors.append(f"{item_prefix}.prompt_hash mismatch")
+            if not isinstance(result.get("rationale"), str) or not result["rationale"].strip():
+                errors.append(f"{item_prefix}.rationale missing")
+            rationale_code = result.get("rationale_code")
+            if rationale_code in _TECHNICAL_CODES:
+                errors.append(f"{item_prefix} technical judge error={rationale_code}")
+            elif rationale_code is not None:
+                errors.append(f"{item_prefix}.rationale_code is not part of the current contract")
+            evidence = result.get("evidence")
+            if not isinstance(evidence, list):
+                errors.append(f"{item_prefix}.evidence must be a list")
+            else:
+                errors.extend(
+                    f"{item_prefix}.{message}"
+                    for message in evidence_errors(evidence, transcript, verdict=verdict)
+                )
+            judge = result.get("judge")
+            if not isinstance(judge, dict) or set(judge) != _JUDGE_FIELDS:
+                errors.append(f"{item_prefix}.judge fields mismatch")
+            elif (
+                not isinstance(judge.get("model"), str)
+                or not judge["model"].strip()
+                or any(
+                    value is not None
+                    and (not isinstance(value, str) or not value.strip())
+                    for value in (judge.get("resolved_model"), judge.get("provider"))
+                )
+                or not isinstance(judge.get("context_policy"), str)
+                or judge["context_policy"] != CONTEXT_POLICY
+                or isinstance(judge.get("temperature"), bool)
+                or not isinstance(judge.get("temperature"), (int, float))
+                or not math.isfinite(float(judge["temperature"]))
+                or float(judge["temperature"]) != JUDGE_TEMPERATURE
+                or isinstance(judge.get("max_tokens"), bool)
+                or not isinstance(judge.get("max_tokens"), int)
+                or judge["max_tokens"] != JUDGE_MAX_TOKENS
+            ):
+                errors.append(f"{item_prefix}.judge values invalid")
+            extra = result.get("extra")
+            if not isinstance(extra, dict) or not _EXTRA_FIELDS.issuperset(extra):
+                errors.append(f"{item_prefix}.extra fields mismatch")
+            if isinstance(extra, dict):
+                input_hash = extra.get("input_sha256")
+                if not isinstance(input_hash, str) or len(input_hash) != 64:
+                    errors.append(f"{item_prefix}.extra.input_sha256 invalid")
+                else:
+                    expected_input = _expected_input_hash(transcript, mode)
+                    if input_hash != expected_input:
+                        errors.append(f"{item_prefix}.extra.input_sha256 is not a source hash")
+                if rationale_code not in _TECHNICAL_CODES and not isinstance(
+                    extra.get("raw_response"), str
+                ):
+                    errors.append(f"{item_prefix}.extra.raw_response missing")
+                elif rationale_code not in _TECHNICAL_CODES:
+                    try:
+                        decision = Decision.model_validate_json(extra["raw_response"])
+                    except (TypeError, ValueError):
+                        errors.append(f"{item_prefix}.extra.raw_response is not the recorded decision")
+                    else:
+                        if decision.verdict.value != verdict:
+                            errors.append(f"{item_prefix}.raw_response verdict mismatch")
+                        if decision.rationale != result.get("rationale"):
+                            errors.append(f"{item_prefix}.raw_response rationale mismatch")
+                        if [span.model_dump() for span in decision.evidence] != evidence:
+                            errors.append(f"{item_prefix}.raw_response evidence mismatch")
+        expected_eligible = sum(counts[key] for key in ("PASS", "FAIL", "UNCLEAR"))
+        expected_resolved = counts["PASS"] + counts["FAIL"]
+        expected_unclear = counts["UNCLEAR"]
+        for field in ("eligible_count", "resolved_count", "unclear_count"):
+            if isinstance(row.get(field), bool) or not isinstance(row.get(field), int):
+                errors.append(f"{prefix}.{field} must be an integer")
+        if row.get("eligible_count") != expected_eligible:
+            errors.append(f"{prefix}.eligible_count mismatch")
+        if row.get("resolved_count") != expected_resolved:
+            errors.append(f"{prefix}.resolved_count mismatch")
+        if row.get("unclear_count") != expected_unclear:
+            errors.append(f"{prefix}.unclear_count mismatch")
+        expected_rate = expected_resolved / expected_eligible if expected_eligible else 0.0
+        try:
+            coverage = float(row.get("coverage_rate"))
+            if not math.isfinite(coverage) or abs(coverage - expected_rate) > 1e-9:
+                errors.append(f"{prefix}.coverage_rate mismatch")
+        except (TypeError, ValueError):
+            errors.append(f"{prefix}.coverage_rate invalid")
+    scenario_sets = {frozenset(values) for values in scenarios_by_model.values()}
+    if len(scenario_sets) > 1:
+        errors.append("model scenario rosters differ")
+    return errors
+
+
+def _validate_projection(
+    leaderboard: dict[str, Any],
+    rows: list[dict[str, Any]],
+    scan_path: Path,
+    *,
+    expected_models: int | None,
+    expected_scenarios: int | None,
+    strict: bool,
+    checks_dir: Path | None,
+) -> list[str]:
+    errors: list[str] = []
+    missing_public = sorted(_PUBLIC_FIELDS - set(leaderboard))
+    unknown_public = sorted(set(leaderboard) - _PUBLIC_FIELDS)
+    if missing_public:
+        errors.append(f"leaderboard missing fields={missing_public}")
+    if unknown_public:
+        errors.append(f"leaderboard unknown fields={unknown_public}")
+    if leaderboard.get("schema") != SCHEMA_VERSION:
+        errors.append(f"schema={leaderboard.get('schema')!r} expected={SCHEMA_VERSION!r}")
+    try:
+        expected = build_scorecard(scan_path)
+    except (OSError, ValueError) as exc:
+        return [f"cannot rebuild projection: {exc}"]
+    if leaderboard.get("models") != expected.get("models"):
+        errors.append("leaderboard.models does not equal recomputed projection")
+    notes = leaderboard.get("notes")
+    if notes != expected.get("notes"):
+        errors.append("leaderboard.notes does not equal recomputed projection")
+    metadata = leaderboard.get("scan_metadata")
+    if not isinstance(metadata, dict):
+        return errors + ["scan_metadata missing or not an object"]
+    plan_keys = {"scan_plan", "scan_plan_sha256"}
+    metadata_fields = _SCAN_METADATA_FIELDS | plan_keys if plan_keys.intersection(metadata) else _SCAN_METADATA_FIELDS
+    missing_metadata = sorted(metadata_fields - set(metadata))
+    unknown_metadata = sorted(set(metadata) - metadata_fields)
+    if missing_metadata:
+        errors.append(f"scan_metadata missing fields={missing_metadata}")
+    if unknown_metadata:
+        errors.append(f"scan_metadata unknown fields={unknown_metadata}")
+    expected_models_count = len(
+        {str(row.get("model_id") or row.get("model") or "") for row in rows}
+    )
+    scenarios_by_model: defaultdict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        scenarios_by_model[str(row.get("model_id") or row.get("model") or "")].add(
+            str(row.get("scenario_id") or "")
+        )
+    roster_sizes = {len(values) for values in scenarios_by_model.values()}
+    expected_scenarios_count = next(iter(roster_sizes), 0) if len(roster_sizes) == 1 else 0
+    checks = {
+        "benchmark_version": get_benchmark_version(REPO_ROOT),
+        "code_version": get_code_version(REPO_ROOT),
+        "source_artifact": artifact_reference(scan_path, REPO_ROOT),
+        "source_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
+        "total_models": expected_models_count,
+        "total_scenarios": expected_scenarios_count
+        if strict or expected_scenarios is None
+        else expected_scenarios,
+        "row_count": len(rows),
+        "observation_type": "MODEL-JUDGED",
+        "projection_sha256": _json_sha(expected["models"]),
+        "active_checks": sorted(_checks(checks_dir)),
+        "check_prompt_hashes": check_prompt_hashes(checks_dir),
+        "observed_prompt_hashes": _observed_prompt_hashes(rows),
+        "observed_judges": _observed_judges(rows),
+        "model_ids": sorted({str(row.get("model_id") or "") for row in rows}),
+        "public_scope": load_inventory(REPO_ROOT).get("public_scope"),
+        "public_harness": load_inventory(REPO_ROOT).get("public_harness"),
     }
-    if mismatches:
-        errors.append(f"observed_prompt_hash_mismatch={mismatches}")
+    if expected_models is not None:
+        checks["total_models"] = expected_models
+    for key, value in checks.items():
+        if metadata.get(key) != value:
+            errors.append(f"scan_metadata.{key} mismatch")
+    observed_judges = metadata.get("observed_judges")
+    if not isinstance(observed_judges, list) or any(
+        not isinstance(judge, dict) or set(judge) != _JUDGE_FIELDS
+        for judge in observed_judges
+    ):
+        errors.append("scan_metadata.observed_judges fields mismatch")
+    if not isinstance(metadata.get("generated_at"), str) or not metadata["generated_at"].strip():
+        errors.append("scan_metadata.generated_at invalid")
+    for key in ("source_sha256", "projection_sha256"):
+        value = metadata.get(key)
+        if not isinstance(value, str) or len(value) != 64:
+            errors.append(f"scan_metadata.{key} invalid")
+    if "scan_plan" in metadata and "scan_plan_sha256" in metadata:
+        if metadata.get("scan_plan_sha256") != _json_sha(metadata.get("scan_plan")):
+            errors.append("scan_metadata.scan_plan_sha256 mismatch")
     return errors
 
 
@@ -530,308 +582,77 @@ def validate_leaderboard(
     scan_path: Path,
     leaderboard_path: Path,
     *,
-    manual_adjudications_path: Path | None = None,
     expected_rows: int | None = None,
     expected_models: int | None = None,
     expected_scenarios: int | None = None,
     strict: bool = False,
     checks_dir: Path | None = None,
-    allow_historical: bool = False,
 ) -> list[str]:
-    """Return QA errors. Empty list means the artifact passes.
+    """Return mechanical QA errors.  An empty list means pass."""
 
-    Validates THREE things:
-    1. Scan JSONL quality (coverage, UNCLEAR, evidence, calibration) — unchanged.
-    2. Leaderboard artifact shape — now safety-care/v1 (no composite/rank/overall_score).
-    3. Publication-integrity provenance_status (verified evidence, or an
-       explicitly flagged historical-unverified snapshot).
-    """
     errors: list[str] = []
-    rows = _load_jsonl(scan_path)
-    leaderboard = _load_json(leaderboard_path)
-
-    errors.extend(
-        provenance_status_errors(leaderboard, scan_path, allow_historical=allow_historical)
-    )
-
+    try:
+        rows = load_jsonl(scan_path)
+        leaderboard = load_json(leaderboard_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return [f"cannot load artifact: {exc}"]
+    if not rows or any(not isinstance(row, dict) for row in rows):
+        return ["scan must contain decision row objects"]
+    if not isinstance(leaderboard, dict):
+        return ["leaderboard must be an object"]
+    errors.extend(_walk_obsolete(leaderboard))
     if expected_rows is not None and len(rows) != expected_rows:
         errors.append(f"rows={len(rows)} expected={expected_rows}")
-
-    by_model: dict[str, set[str]] = defaultdict(set)
-    seen_pairs: set[tuple[str, str]] = set()
-    duplicate_pairs: list[tuple[str, str]] = []
-    for row in rows:
-        model = str(row.get("model") or "")
-        scenario_id = str(row.get("scenario_id") or "")
-        by_model[model].add(scenario_id)
-        pair = (model, scenario_id)
-        if pair in seen_pairs:
-            duplicate_pairs.append(pair)
-        seen_pairs.add(pair)
-
-    effective_models = expected_models if expected_models is not None else len(by_model)
-    if len(by_model) != effective_models:
-        errors.append(f"models={len(by_model)} expected={effective_models}")
-
-    if expected_scenarios is None:
-        observed_counts = {model: len(scenarios) for model, scenarios in by_model.items()}
-        unique_counts = set(observed_counts.values())
-        if len(unique_counts) == 1:
-            effective_scenarios = unique_counts.pop()
-        else:
-            effective_scenarios = None
-            errors.append(f"scenario_count_mismatch={observed_counts}")
-    else:
-        effective_scenarios = expected_scenarios
-
-    bad_model_counts = {
-        model: len(scenarios)
-        for model, scenarios in by_model.items()
-        if effective_scenarios is not None and len(scenarios) != effective_scenarios
-    }
-    if bad_model_counts:
-        errors.append(f"scenario_count_mismatch={bad_model_counts}")
-
-    if duplicate_pairs:
-        errors.append(f"duplicate_model_scenario_pairs={duplicate_pairs[:10]}")
-
-    # Validate safety-care/v1 artifact shape
+    errors.extend(_validate_rows(rows, scan_path, checks_dir=checks_dir))
+    if errors:
+        return sorted(set(errors))
     errors.extend(
-        _validate_safety_care_artifact(leaderboard, effective_models, effective_scenarios, scan_path)
-    )
-    errors.extend(_validate_artifact_validation_metadata(leaderboard, rows))
-    errors.extend(_validate_artifact_diagnostics_metadata(leaderboard, rows))
-    errors.extend(_validate_check_coverage_metadata(leaderboard, rows))
-    errors.extend(_validate_current_contract_metadata(leaderboard, rows, checks_dir=checks_dir))
-    current_contract_validation = (leaderboard.get("scan_metadata") or {}).get(
-        "current_contract_validation"
-    )
-    if strict and isinstance(current_contract_validation, dict):
-        errors.extend(_strict_current_contract_errors(current_contract_validation))
-    if strict:
-        errors.extend(
-            _strict_provenance_errors(
-                leaderboard,
-                rows,
-                scan_path=scan_path,
-                checks_dir=checks_dir,
-            )
+        _validate_projection(
+            leaderboard,
+            rows,
+            scan_path,
+            expected_models=expected_models,
+            expected_scenarios=expected_scenarios,
+            strict=strict,
+            checks_dir=checks_dir,
         )
-
-    prompt_missing = 0
-    no_verifier = 0
-    fatal_errors = 0
-    fail_without_evidence = 0
-    gate_unclear: Counter[str] = Counter()
-    all_unclear: Counter[str] = Counter()
-    manual_without_evidence = 0
-    floor = coverage_floor()
-    coverage_below_floor: dict[tuple[str, str], float] = {}
-    coverage_rate_stale = 0
-
-    for row in rows:
-        row_eligible = 0
-        row_resolved = 0
-
-        for result in row.get("mode_results") or []:
-            mode_id = str(result.get("mode_id"))
-            rationale = str(result.get("rationale_code") or "")
-            eligible = bool(result.get("eligible"))
-            verdict = result.get("verdict")
-            evidence = result.get("evidence") or []
-
-            if eligible:
-                row_eligible += 1
-                if verdict in RESOLVED_VERDICTS:
-                    row_resolved += 1
-            if eligible and rationale in {"prompt_missing", "missing_verifier_prompt"}:
-                prompt_missing += 1
-            if rationale == "no_verifier_available" or rationale.startswith("prompt_file_missing:"):
-                no_verifier += 1
-            if rationale.startswith("verifier_exception"):
-                fatal_errors += 1
-            if eligible and verdict == Verdict.FAIL.value and not evidence:
-                fail_without_evidence += 1
-            if eligible and verdict == Verdict.UNCLEAR.value:
-                all_unclear[mode_id] += 1
-                if _is_gate_result(result):
-                    gate_unclear[mode_id] += 1
-            if (
-                result.get("scorer_type") == "manual_adjudication"
-                and not evidence
-                and verdict != Verdict.NOT_APPLICABLE.value
-            ):
-                manual_without_evidence += 1
-
-        # Coverage floor: recomputed from mode_results so a merge that changed
-        # verdicts without restamping coverage_rate cannot slip an
-        # under-covered row past the gate. A missing stamp is tolerated (the
-        # recompute is authoritative); a present-but-wrong stamp means the
-        # artifact disagrees with itself.
-        row_coverage = row_resolved / row_eligible if row_eligible else 0.0
-        stamped = row.get("coverage_rate")
-        if stamped is not None and abs(float(stamped) - row_coverage) > 1e-9:
-            coverage_rate_stale += 1
-        if row_coverage < floor:
-            key = (str(row.get("model")), str(row.get("scenario_id")))
-            coverage_below_floor[key] = round(row_coverage, 4)
-
-    if prompt_missing:
-        errors.append(f"prompt_missing={prompt_missing}")
-    if no_verifier:
-        errors.append(f"no_verifier_available={no_verifier}")
-    if fatal_errors:
-        errors.append(f"fatal_verifier_errors={fatal_errors}")
-    if fail_without_evidence:
-        errors.append(f"fail_without_evidence={fail_without_evidence}")
-    if gate_unclear:
-        errors.append(f"gate_unclear={dict(gate_unclear)}")
-    if strict and all_unclear:
-        errors.append(f"all_unclear={dict(all_unclear)}")
-    if manual_without_evidence:
-        errors.append(f"manual_without_evidence={manual_without_evidence}")
-    if coverage_rate_stale:
-        errors.append(f"coverage_rate_stale={coverage_rate_stale}")
-    if coverage_below_floor:
-        sample = dict(sorted(coverage_below_floor.items())[:10])
-        errors.append(
-            f"coverage_below_floor(floor={floor})="
-            f"count={len(coverage_below_floor)} sample={sample}"
-        )
-
-    modes, _routing = load_checks(checks_dir)
-    errors.extend(calibration_errors(rows, modes))
-
-    manual_scan = _manual_scan_records(rows)
-    if manual_adjudications_path is not None:
-        if not manual_adjudications_path.exists():
-            errors.append(f"manual_adjudications_file_missing={manual_adjudications_path}")
-            return errors
-        manual_payload = _load_json(manual_adjudications_path)
-        manual_file = manual_payload.get("manual_adjudications") or []
-        if not isinstance(manual_file, list):
-            errors.append("manual_adjudications_not_list")
-            manual_file = []
-        scan_by_key = {_manual_key(record): record for record in manual_scan}
-        file_by_key = {_manual_key(record): record for record in manual_file if isinstance(record, dict)}
-        missing = sorted(set(scan_by_key) - set(file_by_key))
-        extra = sorted(set(file_by_key) - set(scan_by_key))
-        if missing:
-            errors.append(f"manual_adjudications_missing={missing[:10]}")
-        if extra:
-            errors.append(f"manual_adjudications_extra={extra[:10]}")
-        for key, scan_record in scan_by_key.items():
-            file_record = file_by_key.get(key)
-            if not file_record:
-                continue
-            for field in ("final_verdict", "rationale_code", "previous_verdict"):
-                if file_record.get(field) != scan_record.get(field):
-                    errors.append(
-                        f"manual_adjudication_mismatch key={key} field={field} "
-                        f"scan={scan_record.get(field)!r} file={file_record.get(field)!r}"
-                    )
-            if (
-                not file_record.get("evidence")
-                and file_record.get("final_verdict") != Verdict.NOT_APPLICABLE.value
-            ):
-                errors.append(f"manual_adjudication_without_evidence key={key}")
-    elif manual_scan and strict:
-        errors.append(f"manual_adjudications_file_required count={len(manual_scan)}")
-
-    return errors
-
-
-def write_qa_stamp(
-    scan_path: Path,
-    leaderboard_path: Path,
-    *,
-    repo_root: Path = REPO_ROOT,
-) -> Path:
-    """Atomically record strict QA for exact scan and leaderboard bytes."""
-    for path, label in ((scan_path, "scan"), (leaderboard_path, "leaderboard")):
-        if path.is_symlink() or not path.is_file():
-            raise ValueError(f"{label} must be a regular file")
-    stamp_path = repo_root / "data" / "leaderboard" / ".qa-stamp"
-    stamp_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "leaderboard_sha256": hashlib.sha256(leaderboard_path.read_bytes()).hexdigest(),
-        "scan_path": str(scan_path),
-        "scan_sha256": hashlib.sha256(scan_path.read_bytes()).hexdigest(),
-        "strict": True,
-        "qa_passed_at": datetime.now(UTC).isoformat(),
-    }
-    content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=".qa-stamp-", dir=stamp_path.parent
     )
-    temporary = Path(temporary_name)
-    try:
-        os.fchmod(descriptor, 0o644)
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, stamp_path)
-        directory = os.open(stamp_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
-    finally:
-        temporary.unlink(missing_ok=True)
-    return stamp_path
+    if errors:
+        return sorted(set(errors))
+    errors.extend(
+        _scan_plan_errors(
+            leaderboard,
+            rows,
+            scan_path,
+            strict=strict,
+            checks_dir=checks_dir,
+        )
+    )
+    return sorted(set(errors))
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="QA scan + safety-care/v1 leaderboard artifact")
-    parser.add_argument("--scan", required=True, type=Path, help="per_run.jsonl scan artifact")
-    parser.add_argument("--leaderboard", required=True, type=Path, help="Generated leaderboard.json (safety-care/v1)")
-    parser.add_argument("--manual-adjudications", type=Path, default=None)
-    parser.add_argument("--expected-rows", type=int, default=None)
-    parser.add_argument("--expected-models", type=int, default=None)
-    parser.add_argument("--expected-scenarios", type=int, default=None)
-    parser.add_argument("--strict", action="store_true", help="Require zero UNCLEARs and manual audit file")
-    parser.add_argument(
-        "--allow-historical",
-        action="store_true",
-        help=(
-            "Allow a provenance_status=historical-unverified leaderboard to pass QA. "
-            "Without this flag such a leaderboard always fails closed."
-        ),
-    )
-    parser.add_argument(
-        "--stamp",
-        action="store_true",
-        help="Write the fixed owner QA stamp after strict QA passes",
-    )
+    parser = argparse.ArgumentParser(description="QA safety-care/v2 scan and leaderboard")
+    parser.add_argument("--scan", required=True, type=Path)
+    parser.add_argument("--leaderboard", required=True, type=Path)
+    parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--expected-rows", type=int)
+    parser.add_argument("--expected-models", type=int)
+    parser.add_argument("--expected-scenarios", type=int)
     args = parser.parse_args()
-    if args.stamp and not args.strict:
-        parser.error("--stamp requires --strict")
-    canonical_leaderboard = REPO_ROOT / "data" / "leaderboard" / "leaderboard.json"
-    if args.stamp and args.leaderboard.resolve() != canonical_leaderboard.resolve():
-        parser.error("--stamp requires the canonical data/leaderboard/leaderboard.json")
-
     errors = validate_leaderboard(
         args.scan,
         args.leaderboard,
-        manual_adjudications_path=args.manual_adjudications,
+        strict=args.strict,
         expected_rows=args.expected_rows,
         expected_models=args.expected_models,
         expected_scenarios=args.expected_scenarios,
-        strict=args.strict,
-        allow_historical=args.allow_historical,
     )
     if errors:
-        print("Leaderboard QA failed:")
         for error in errors:
-            print(f"- {error}")
+            print(f"ERROR: {error}", file=sys.stderr)
         return 1
-
-    if args.stamp:
-        stamp_path = write_qa_stamp(args.scan, args.leaderboard)
-        print(f"Leaderboard QA passed; wrote {stamp_path.relative_to(REPO_ROOT)}")
-    else:
-        print("Leaderboard QA passed")
+    print("QA passed")
     return 0
 
 

@@ -1,27 +1,13 @@
 #!/usr/bin/env python3
-"""Run the Safety/Care ModeEngine over existing transcripts.
-
-LLM-dependent modes return UNCLEAR/NOT_APPLICABLE unless --enable-llm wires an
-api_client. Regex/lexicon/corpus verifiers produce actionable signal on the
-existing transcript corpus without model calls.
-
-Output per run:
-  - `results/safety_care_scan/<timestamp>/per_run.jsonl` — one line per (model, scenario)
-  - `results/safety_care_scan/<timestamp>/blindspot_rates.json` — corpus-level rates
-  - `results/safety_care_scan/<timestamp>/summary.md` — human-readable summary
-
-Usage:
-  uv run python scripts/run_scan.py <run_dir>
-  uv run python scripts/run_scan.py results/run_20260330_130332
-  uv run python scripts/run_scan.py results/run_20260330_130332 results/partial_runs/run_20260330_033649_up_to_deepseek
-  uv run python scripts/run_scan.py --all
-"""
+"""Plan or run the full-conversation LLM judge over saved transcripts."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
+import math
 import os
 import sys
 import time
@@ -32,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 DEFAULT_SCAN_OUTPUT_ROOT = REPO_ROOT / "results" / "safety_care_scan"
-CHECKPOINT_SCHEMA = "invisiblebench-scan-checkpoint/v1"
+CHECKPOINT_SCHEMA = "invisiblebench-scan-checkpoint/v2"
 CHECKPOINT_FILENAME = "scan_state.json"
 PARTIAL_FILENAME = "per_run.partial.jsonl"
 
@@ -55,12 +41,8 @@ logging.basicConfig(
 logger = logging.getLogger("safety_care_scan")
 
 from invisiblebench.judge import (  # noqa: E402
-    apply_scan_profile,
     attach_scan_provenance,
     build_scan_plan,
-    enrich_scenario_with_inferred_tags,
-    load_scan_profile,
-    load_scenario,
     scan_run,
     transcripts_for_run,
     write_outputs,
@@ -93,18 +75,7 @@ def _create_output_dir(root: Path) -> Path:
 
 def _engine_output_from_record(record: dict[str, Any]) -> ModeEngineOutput:
     return ModeEngineOutput(
-        overall_score=float(record["overall_score"]),
-        hard_fail=bool(record["hard_fail"]),
-        hard_fail_reasons=list(record.get("hard_fail_reasons") or []),
-        dimension_scores=dict(record.get("dimension_scores") or {}),
-        blindspot_profile=dict(record.get("blindspot_profile") or {}),
-        mode_results=list(record.get("mode_results") or []),
-        claim_surface=dict(record.get("claim_surface") or {}),
-        engine_version=str(record.get("engine_version") or ""),
-        eligible_count=int(record.get("eligible_count") or 0),
-        resolved_count=int(record.get("resolved_count") or 0),
-        unclear_count=int(record.get("unclear_count") or 0),
-        coverage_rate=float(record.get("coverage_rate") or 0.0),
+        mode_results=record["mode_results"], engine_version=record["engine_version"],
     )
 
 
@@ -147,310 +118,85 @@ def _combined_cost_snapshot(
     }
 
 
-def _scan_signature(args: argparse.Namespace, run_dirs: list[Path]) -> dict[str, Any]:
-    return {
-        "run_dirs": [str(path) for path in run_dirs],
-        "profile": args.profile,
-        "enable_llm": bool(args.enable_llm),
-        "llm_model": args.llm_model,
-        "limit": args.limit,
-        "filter": args.filter,
-        "parallel": bool(args.parallel),
-        "transcript_workers": max(args.transcript_workers, 1),
-        "max_workers": args.max_workers,
-    }
-
-
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "run_dirs",
-        nargs="*",
-        help="Path(s) to results/run_<timestamp>/ directory or other transcript roots",
-    )
-    ap.add_argument(
-        "--all",
-        action="store_true",
-        help="Scan all run_* directories under results/",
-    )
-    ap.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Limit transcripts scanned (for smoke testing)",
-    )
-    ap.add_argument(
-        "--filter",
-        default=None,
-        help="Only scan transcripts whose filename contains this substring",
-    )
-    ap.add_argument(
-        "--output-root",
-        default=str(DEFAULT_SCAN_OUTPUT_ROOT),
-        help="Where to write scan outputs",
-    )
-    ap.add_argument(
-        "--resume",
-        type=Path,
-        default=None,
-        help=(
-            "Resume an incomplete scan directory. Repeat the original run dirs and scan "
-            "options; completed model/scenario rows are read from its durable checkpoint."
-        ),
-    )
-    ap.add_argument(
-        "--profile",
-        default="publish",
-        help="Scan profile: smoke, dev, full, or publish (default: publish).",
-    )
-    ap.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Write and print the scan plan without evaluating transcripts.",
-    )
-    ap.add_argument(
-        "--enable-llm",
-        action="store_true",
-        help="Wire ModelAPIClient so LLM-primary modes run (costs tokens).",
-    )
-    ap.add_argument(
-        "--max-cost-usd",
-        type=float,
-        default=None,
-        help=(
-            "Required ceiling for a live --enable-llm scan. The conservative "
-            "scan budget must fit within this amount before any verifier calls run."
-        ),
-    )
-    ap.add_argument(
-        "--llm-model",
-        default=DEFAULT_JUDGE_MODEL,
-        help=f"Judge model for LLM verifiers (default: {DEFAULT_JUDGE_MODEL}).",
-    )
-    ap.add_argument(
-        "--parallel",
-        action="store_true",
-        help="Run verifier checks concurrently within each transcript (faster, same results).",
-    )
-    ap.add_argument(
-        "--transcript-workers",
-        type=int,
-        default=1,
-        help="Run multiple transcripts concurrently (default: 1).",
-    )
-    ap.add_argument(
-        "--max-workers",
-        type=int,
-        default=8,
-        help="Max concurrent verifier threads when --parallel is set (default: 8).",
-    )
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("run_dirs", nargs="+", type=Path)
+    ap.add_argument("--limit", type=int)
+    ap.add_argument("--filter")
+    ap.add_argument("--output-root", type=Path, default=DEFAULT_SCAN_OUTPUT_ROOT)
+    ap.add_argument("--resume", type=Path)
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--plan", type=Path, help="Required for a live scan: scan_plan.json from a dry run.")
+    ap.add_argument("--max-cost-usd", type=float)
+    ap.add_argument("--llm-model", default=DEFAULT_JUDGE_MODEL)
     args = ap.parse_args()
-
+    if args.limit is not None and args.limit < 1:
+        ap.error("--limit must be positive")
+    run_dirs = [path.resolve() for path in args.run_dirs]
+    engine = ModeEngine(llm_model=args.llm_model)
+    plan_pairs = []
     try:
-        profile = load_scan_profile(args.profile)
-    except ValueError as e:
-        logger.error("%s", e)
-        return 2
-
-    api_client = None
-    if args.enable_llm:
-        try:
-            api_client = ModelAPIClient()
-            logger.info("LLM verifier enabled with model=%s", args.llm_model)
-        except (ImportError, ValueError) as e:
-            logger.error("Failed to initialize ModelAPIClient: %s", e)
-            if not args.dry_run:
-                # Fail closed: an explicitly requested --enable-llm scan must not
-                # silently degrade to a deterministic-only scan where eligible
-                # LLM checks vanish as NOT_APPLICABLE. Dry-run still plans.
-                logger.error("Aborting: --enable-llm scan cannot run without an API client.")
-                return 2
-            logger.error("Dry-run continues; live scan would abort here.")
-
-    engine = ModeEngine(llm_api_client=api_client, llm_model=args.llm_model)
-    engine.modes, engine.routing = apply_scan_profile(engine.modes, engine.routing, profile)
-    logger.info("Scan profile: %s (%s)", profile["name"], profile["description"])
-    logger.info("Loaded %d checks from checks/", len(engine.modes))
-    logger.info("Loaded %d routing entries", len(engine.routing))
-
-    run_dirs: list[Path] = []
-    if args.all:
-        run_dirs = sorted(
-            (REPO_ROOT / "results").glob("run_*"),
-            key=lambda p: p.name,
-            reverse=True,
+        for run_dir in run_dirs:
+            pairs = transcripts_for_run(run_dir)
+            if args.filter:
+                pairs = [p for p in pairs if args.filter.lower() in p["transcript_path"].name.lower()]
+            if args.limit is not None:
+                pairs = pairs[:args.limit]
+            plan_pairs.extend(pairs)
+        keys = [(p["model_id"], p["scenario_id"]) for p in plan_pairs]
+        if not keys or len(keys) != len(set(keys)):
+            raise ValueError("No transcripts selected, or duplicate model/scenario pairs")
+        scan_plan_dict = attach_scan_provenance(
+            build_scan_plan(plan_pairs, engine.modes, judge_model=args.llm_model),
+            run_dirs=run_dirs, transcript_pairs=plan_pairs,
+            selection={"filter": args.filter, "limit_per_source_run": args.limit,
+                       "source_run_count": len(run_dirs)},
         )
-    elif args.run_dirs:
-        resolved: list[Path] = []
-        for run_dir_arg in args.run_dirs:
-            p = Path(run_dir_arg).resolve()
-            # Tolerate being handed the transcripts/ subdir: if the basename is
-            # "transcripts" and the parent contains a run artifact, use the
-            # parent as the run dir.
-            if p.name == "transcripts" and (
-                (p.parent / "run_manifest.json").exists()
-                or (p.parent / "transcript_run.json").exists()
-                or (p.parent / "all_results.json").exists()
-            ):
-                logger.info(
-                    "Path looks like a transcripts/ subdir — using parent run dir: %s",
-                    p.parent,
-                )
-                p = p.parent
-            resolved.append(p)
-        run_dirs = resolved
-    else:
-        # Default: most recent run
-        candidates = sorted(
-            (REPO_ROOT / "results").glob("run_*"),
-            key=lambda p: p.name,
-            reverse=True,
-        )
-        run_dirs = candidates[:1]
-
-    if not run_dirs:
-        logger.error("No run_* directories found")
+    except (OSError, ValueError, KeyError) as exc:
+        logger.error("Cannot plan scan: %s", exc)
         return 2
-
-    plan_scenarios: list[dict[str, Any]] = []
-    plan_pairs: list[dict[str, Any]] = []
-    for run_dir in run_dirs:
-        pairs = transcripts_for_run(run_dir)
-        if args.filter:
-            pairs = [
-                p
-                for p in pairs
-                if args.filter.lower() in p["transcript_path"].name.lower()
-            ]
-        if args.limit:
-            pairs = pairs[: args.limit]
-        plan_pairs.extend(pairs)
-        for pair in pairs:
-            scenario = load_scenario(pair["scenario_id"])
-            plan_scenarios.append(enrich_scenario_with_inferred_tags(scenario))
-
-    plan_llm_enabled = bool(
-        args.enable_llm if args.dry_run else args.enable_llm and api_client is not None
-    )
-    scan_plan_dict = build_scan_plan(
-        plan_scenarios,
-        engine.modes,
-        engine.routing,
-        profile,
-        judge_model=args.llm_model,
-        llm_enabled=plan_llm_enabled,
-    )
-    scan_plan_dict = attach_scan_provenance(
-        scan_plan_dict,
-        run_dirs=run_dirs,
-        transcript_pairs=plan_pairs,
-        selection={
-            "filter": args.filter,
-            "limit_per_source_run": args.limit,
-            "source_run_count": len(run_dirs),
-        },
-    )
-    scan_plan_dict["api_client_available"] = api_client is not None
 
     if args.dry_run:
-        output_dir = Path(args.output_root) / f"plan_{time.strftime('%Y%m%d_%H%M%S')}"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        with open(output_dir / "scan_plan.json", "w", encoding="utf-8") as f:
-            json.dump(scan_plan_dict, f, indent=2)
-        with open(output_dir / "cost_report.json", "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "profile": scan_plan_dict["profile"],
-                    "llm_enabled": scan_plan_dict["llm_enabled"],
-                    "judge_model": scan_plan_dict["judge_model"],
-                    "planned_llm_calls": scan_plan_dict["planned_llm_calls"],
-                    "base_llm_calls": scan_plan_dict["base_llm_calls"],
-                    "conditional_llm_calls": scan_plan_dict["conditional_llm_calls"],
-                    "budget_llm_calls": scan_plan_dict["budget_llm_calls"],
-                    "estimated_base_cost_usd": scan_plan_dict[
-                        "estimated_base_cost_usd"
-                    ],
-                    "estimated_budget_cost_usd": scan_plan_dict[
-                        "estimated_budget_cost_usd"
-                    ],
-                    "estimated_cost_usd": scan_plan_dict["estimated_cost_usd"],
-                    "maximum_reasonable_cost_ceiling_usd": scan_plan_dict[
-                        "maximum_reasonable_cost_ceiling_usd"
-                    ],
-                    "pricing_known": scan_plan_dict["pricing_known"],
-                    "cost_assumptions": scan_plan_dict["cost_assumptions"],
-                },
-                f,
-                indent=2,
-            )
-        estimated_base = (
-            "unknown"
-            if scan_plan_dict["estimated_base_cost_usd"] is None
-            else f"${scan_plan_dict['estimated_base_cost_usd']:.4f}"
-        )
-        estimated_budget = (
-            "unknown"
-            if scan_plan_dict["estimated_budget_cost_usd"] is None
-            else f"${scan_plan_dict['estimated_budget_cost_usd']:.4f}"
-        )
-        print(f"Scan dry run: {output_dir}")
-        print(f"Profile: {scan_plan_dict['profile']}")
-        print(f"Transcripts: {scan_plan_dict['transcript_count']}")
-        print(f"Eligible checks: {scan_plan_dict['eligible_checks']}")
-        print(f"Base verifier LLM calls: {scan_plan_dict['base_llm_calls']}")
-        print(
-            "Conditional regex-edge LLM calls: "
-            f"{scan_plan_dict['conditional_llm_calls']}"
-        )
-        print(f"Budgeted verifier LLM calls: {scan_plan_dict['budget_llm_calls']}")
-        print(f"Estimated base verifier cost: {estimated_base}")
-        print(f"Conservative verifier budget: {estimated_budget}")
-        if scan_plan_dict["maximum_reasonable_cost_ceiling_usd"] is not None:
-            print(
-                "Maximum accepted runtime ceiling: "
-                f"${scan_plan_dict['maximum_reasonable_cost_ceiling_usd']:.4f}"
-            )
+        output_dir = _create_output_dir(args.output_root)
+        _atomic_write_json(output_dir / "scan_plan.json", scan_plan_dict)
+        print(f"Scan plan: {output_dir / 'scan_plan.json'}")
+        print(f"Transcripts: {len(plan_pairs)}")
+        print(f"Judge calls: {scan_plan_dict['planned_llm_calls']}")
+        print(f"Estimated cost envelope: {scan_plan_dict['estimated_cost_usd']} USD")
+        print(f"Current publication provenance: {scan_plan_dict['provenance_complete']}")
         return 0
 
-    if args.enable_llm:
-        budget = scan_plan_dict["estimated_budget_cost_usd"]
-        if args.max_cost_usd is None:
-            logger.error(
-                "Refusing live LLM scan without --max-cost-usd. "
-                "Run --dry-run first, then approve an explicit ceiling."
-            )
-            return 2
-        if args.max_cost_usd < 0:
-            logger.error("--max-cost-usd must be non-negative")
-            return 2
-        if budget is None:
-            logger.error("Refusing live LLM scan because verifier pricing is unknown")
-            return 2
-        if budget > args.max_cost_usd:
-            logger.error(
-                "Refusing live LLM scan: conservative budget $%.4f exceeds "
-                "--max-cost-usd $%.4f",
-                budget,
-                args.max_cost_usd,
-            )
-            return 2
-        maximum_ceiling = maximum_reasonable_cost_ceiling(budget)
-        if args.max_cost_usd > maximum_ceiling:
-            logger.error(
-                "Refusing live LLM scan: --max-cost-usd $%.4f is not a meaningful "
-                "guardrail for the $%.4f conservative plan; use at most $%.4f",
-                args.max_cost_usd,
-                budget,
-                maximum_ceiling,
-            )
-            return 2
-        logger.info(
-            "Cost gate passed: conservative budget $%.4f <= ceiling $%.4f",
-            budget,
-            args.max_cost_usd,
-        )
-
-    signature = _scan_signature(args, run_dirs)
+    if args.plan is None:
+        logger.error("Run --dry-run first; pass its scan_plan.json with --plan.")
+        return 2
+    try:
+        saved_plan = json.loads(args.plan.read_text())
+    except (OSError, ValueError) as exc:
+        logger.error("Cannot read dry-run plan: %s", exc)
+        return 2
+    if saved_plan != json.loads(json.dumps(scan_plan_dict)):
+        logger.error("Dry-run plan differs from current inputs. Run --dry-run again.")
+        return 2
+    budget = scan_plan_dict["estimated_cost_usd"]
+    if args.max_cost_usd is None or not math.isfinite(args.max_cost_usd) or args.max_cost_usd <= 0:
+        logger.error("A live scan requires a finite, positive --max-cost-usd.")
+        return 2
+    if budget is None or budget > args.max_cost_usd:
+        logger.error("Unknown pricing or estimated cost exceeds --max-cost-usd.")
+        return 2
+    if args.max_cost_usd > maximum_reasonable_cost_ceiling(budget):
+        logger.error("The cost ceiling exceeds the plan's accepted maximum: %s",
+                     maximum_reasonable_cost_ceiling(budget))
+        return 2
+    try:
+        engine = ModeEngine(llm_api_client=ModelAPIClient(), llm_model=args.llm_model)
+    except (ImportError, ValueError) as exc:
+        logger.error("Cannot initialize judge: %s", exc)
+        return 2
+    signature = {
+        "run_dirs": [str(path) for path in run_dirs],
+        "plan_sha256": hashlib.sha256(json.dumps(scan_plan_dict, sort_keys=True).encode()).hexdigest(),
+    }
     if args.resume is not None:
         output_dir = args.resume.resolve()
         state_path = output_dir / CHECKPOINT_FILENAME
@@ -533,9 +279,6 @@ def main() -> int:
                 engine,
                 limit=args.limit,
                 filename_filter=args.filter,
-                parallel=getattr(args, "parallel", False),
-                max_workers=getattr(args, "max_workers", 8),
-                transcript_workers=max(args.transcript_workers, 1),
                 skip_keys=completed_keys,
                 progress_callback=checkpoint,
             )
@@ -563,10 +306,10 @@ def main() -> int:
         _atomic_write_json(output_dir / CHECKPOINT_FILENAME, state)
         raise
 
-    if not all_outputs:
+    if len(all_outputs) != len(plan_pairs):
         state.update(status="failed", completed_rows=0)
         _atomic_write_json(output_dir / CHECKPOINT_FILENAME, state)
-        logger.error("No transcripts scanned")
+        logger.error("Scan does not contain every planned transcript")
         return 3
 
     paired_outputs = sorted(
@@ -591,7 +334,7 @@ def main() -> int:
     checkpoint_path.unlink(missing_ok=True)
 
     print(f"\nScan complete: {output_dir}")
-    print(f"See {output_dir}/summary.md for top-line blindspot rates.")
+    print(f"See {output_dir}/summary.md for decision counts.")
     return 0
 
 

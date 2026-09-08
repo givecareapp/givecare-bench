@@ -1,29 +1,26 @@
 # GiveCare Bench
 
-Operational map for InvisibleBench. Read `VISION.md` for measurement intent and
-`AGENTS.md` for publication and safety rules.
+Operational map for InvisibleBench. Read `VISION.md` for intent and
+`AGENTS.md` for guardrails.
 
 ## Map
 
 | Path | Purpose |
 | --- | --- |
-| `checks/` | Check definitions, routing, prompts, calibration status |
-| `benchmark/` | Public scenarios, inventory, configs, tests |
-| `src/invisiblebench/cli/` | Run and inspect commands |
-| `src/invisiblebench/evaluation/` | Registry, verifiers, aggregation, calibration |
+| `checks/` | Check definitions, criteria, evidence, and severity |
+| `benchmark/` | Public scenarios, inventory, contract, and tests |
+| `src/invisiblebench/cli/` | Transcript, scan, inspect, and run commands |
+| `src/invisiblebench/evaluation/` | Registry, mode engine, and LLM verifier |
 | `src/invisiblebench/judge.py` | Scan planning and execution |
-| `scripts/` | Scan, QA, publish, lint, and intake shims |
-| `delivery/` | Public projections and web sync |
+| `scripts/` | Scan, QA, inventory, intake, and Evidence drivers |
+| `delivery/` | Current owner-projection helpers and watch output |
 | `intake/` | Gitignored private candidate data |
-| `internal/` | Local calibration and research material |
-| `data/leaderboard/leaderboard.json` | Canonical public scorecard |
+| `results/` | Gitignored raw transcripts and scan artifacts |
+| `data/leaderboard/leaderboard.json` | Committed owner projection |
 
-`docs/ontology.md` owns the public `safety-care/v1` model.
-`docs/verifier-validation.md` owns current calibration evidence. Runtime versions
-and inventory live in code/config, not this file.
-
-Current contract snapshot (guarded against `benchmark/benchmark_inventory.json`):
-checks: 50 across the registered taxonomy; public scenarios: `63`.
+The public output model is `safety-care/v2` in `docs/methodology.md` and
+`benchmark/configs/scoring.yaml`. Runtime versions and inventory live in code
+and machine-readable configuration.
 
 ## Core commands
 
@@ -34,70 +31,44 @@ uv run bench --full -y --max-cost-usd <budget>
 uv run bench runs --limit 25
 uv run bench get <run-id>
 uv run bench explain <model> <scenario> --failures
-uv run bench review status
-uv run bench review serve
 ```
 
-Plan LLM scans before spending. Scan runs checkpoint rows and may resume only
-when the original signature still matches.
-
-## Scan and publication
+Plan every paid scan first:
 
 ```bash
-uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm <run>
-uv run python scripts/run_scan.py --profile publish --enable-llm \
-  --max-cost-usd "$SCAN_MAX_COST_USD" <run>
-uv run bench review build --scan <scan>/per_run.jsonl \
-  --out-dir internal/review/<batch>
-uv run bench review status --dir internal/review/<batch>
-uv run bench review serve --dir internal/review/<batch> --publication
-uv run python scripts/review_ui/apply_scan_adjudications.py \
-  --scan <scan>/per_run.jsonl --source-map internal/review/<batch>/source_map.json \
-  --annotations internal/review/<batch>/review_annotations.jsonl
-uv run python scripts/generate_leaderboard.py \
-  --input <scan>/per_run.jsonl --output data/leaderboard
-uv run python scripts/qa_leaderboard.py \
-  --scan <scan>/per_run.jsonl \
-  --leaderboard data/leaderboard/leaderboard.json \
-  --manual-adjudications <scan>/manual_adjudications.json --strict --stamp
+uv run python scripts/run_scan.py <run> \
+  --dry-run --llm-model <judge>
+uv run python scripts/run_scan.py <run> \
+  --plan <scan>/scan_plan.json \
+  --max-cost-usd <budget> --llm-model <judge>
+```
+
+The live command requires the dry-run plan, matching source, matching judge,
+and explicit cost ceiling. Checkpoints resume only when their source and judge
+signature still match.
+
+## Scan and projection
+
+The active path has one LLM judge per active check. Each scan writes one mode
+result per active check and uses explicit `NOT_APPLICABLE` rows for suppressed
+checks. Results use `PASS`, `FAIL`, `UNCLEAR`, or `NOT_APPLICABLE`. Optional
+critique is metadata only.
+
+The Evidence driver keeps two operations:
+
+```bash
+helm evidence plan --driver evidence-driver.json --operation corpus.apply \
+  --input /tmp/gc-bench-candidates.json --as-of YYYY-MM-DD \
+  --output /tmp/gc-bench-candidate-plan.json
 helm evidence plan --driver evidence-driver.json --operation corpus.project \
   --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
   --output /tmp/gc-bench-leaderboard-plan.json
 ```
 
-The explicit commands above own the canonical leaderboard and fixed QA stamp.
-Helm Evidence binds those exact digests and writes only the local consumer
-projection. See `docs/evidence-lane.md`. Consumers pull the verified projection.
-
-`delivery/combine_scans.py` accepts only provenance-complete scan plan v2
-artifacts with one comparability fingerprint. Use
-`scripts/resolve_unclear_scan.py` for bounded machine resolution; publication
-escalations use the blind review export/apply pair above. Use
-`scripts/rescore_diff.py` to prove refactors preserve verdicts.
-
-## Review UI
-
-`scripts/review_ui/app.py` is a self-contained Flask app for blind gold-card
-and publication review at https://review.givecareapp.com. It records reviewer
-labels and exposes aggregate admin progress and export routes. It does not own
-cross-repository tasks, Evidence approvals, or social decisions.
-
-- Runs as the `givecare-reviews.service` systemd user unit on :3090
-  (`systemctl --user restart givecare-reviews.service`); Traefik route
-  `~/traefik/dynamic/review.yml`.
-- Tokens: `internal/review/tokens.txt` (gitignored, 600) —
-  `token=<urlsafe> role=admin|reviewer id=<name>`; re-read per request.
-- Expressions per gc-web `DESIGN.md`: reviewer pages editorial (external
-  humans), admin pages console (`.dashboard` scope) — do not mix.
-
-Helm at https://helm.scty.org owns operator decisions. It renders the shared
-`GET /feed` and submits declared Moves to `POST /moves`. gc-bench does not
-proxy or duplicate that control surface.
-
-Review links to the separately owned Workpad service at `/workpad/demo`.
-Workpad source, scoped invitations, Markdown revisions, and provenance live
-outside gc-bench at `/home/deploy/repos/workpad`; Flask/admin authority remains
-separate.
+`corpus.apply` is a human content-promotion gate. It does not approve model
+verdicts. `corpus.project` is deterministic and writes the committed owner
+projection from hash-bound inputs. Private conversations, judge decisions,
+scenario text, expected answers, and prompts stay in protected paths.
 
 ## Candidate intake
 
@@ -111,23 +82,16 @@ helm evidence plan --driver evidence-driver.json --operation corpus.apply \
 uv run python scripts/intake/incident_registry.py intake/incidents.jsonl
 ```
 
-The registry and request data stay under gitignored `intake/`; tracked code
-contains only validators and request tooling. Helm Evidence requires human approval of
-the exact plan before it writes canonical `benchmark/scenarios` truth. The
-approved plan binds the Evals ArtifactRef, selected ID, scenario bytes, and
-target paths. Review the resulting Git diff before commit. No staging or
-out-of-band promotion path exists.
+Candidate data stays under gitignored `intake/`. Review the resulting Git diff
+before committing promoted scenario content.
 
-## Local gate
+## Local proof
 
-The pre-commit hook runs the required local checks. GitHub Actions are not the
-private proof gate. Public docs deploy separately with
-`scripts/deploy-docs.sh`. `AGENTS.md` owns the exact proof commands.
+```bash
+uv run ruff check .
+uv run pytest benchmark/tests -q
+uv run python scripts/lint_turn_indices.py --strict
+helm evidence driver check --driver evidence-driver.json
+```
 
-Contributor entry points: `docs/quickstart.md`, `docs/architecture.md`,
-`docs/scoring-rubric.md`, `docs/verifier-validation.md`, and `DESIGN.md` for the
-target internal decomposition.
-
-## Wiki Aim contract
-
-Owner intent for this stream: `~/wiki/aims/givecare-bench.md` — read it before non-trivial work; it governs when this file and it disagree on intent (this file still owns execution).
+Public docs deploy separately with `scripts/deploy-docs.sh`.

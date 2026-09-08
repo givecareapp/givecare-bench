@@ -245,8 +245,8 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert summary["actual_cost_usd"] == 0.012345
     assert summary["actual_billable_api_calls"] == 1
     assert summary["actual_cost_by_model_usd"] == {"test/model": 0.012345}
-    assert "run_scan.py --profile dev" in summary["next_steps"]["dev_scan"]
-    assert "--llm-model openai/gpt-5-mini" in summary["next_steps"]["dev_scan"]
+    assert "run_scan.py --dry-run" in summary["next_steps"]["scan_dry_run"]
+    assert "--llm-model openai/gpt-5-mini" in summary["next_steps"]["scan_dry_run"]
 
 
 def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) -> None:

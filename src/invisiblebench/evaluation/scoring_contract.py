@@ -1,8 +1,4 @@
-"""Typed accessors for benchmark/configs/scoring.yaml.
-
-scoring.yaml is the single owner of publication thresholds; runtime code and
-QA scripts read them through this module instead of re-hardcoding values.
-"""
+"""Typed access to the active benchmark scoring contract."""
 
 from __future__ import annotations
 
@@ -21,12 +17,11 @@ def scoring_config_path() -> Path:
 
 @lru_cache(maxsize=1)
 def _load() -> dict[str, Any]:
-    return yaml.safe_load(scoring_config_path().read_text()) or {}
-
-
-def coverage_floor() -> float:
-    """Minimum resolved/eligible rate for a scenario result to be publishable."""
-    return float(_load()["coverage_floor"])
+    path = scoring_config_path()
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"scoring config must be an object: {path}")
+    return data
 
 
 def contract_version() -> str:
@@ -35,3 +30,27 @@ def contract_version() -> str:
 
 def version_stage() -> str:
     return str(_load()["version_stage"])
+
+
+def engine_version() -> str:
+    return str(_load()["engine_version"])
+
+
+def verdicts() -> tuple[str, ...]:
+    value = _load().get("verdicts") or []
+    return tuple(str(item) for item in value)
+
+
+def output_fields() -> tuple[str, ...]:
+    value = _load().get("output_fields") or []
+    return tuple(str(item) for item in value)
+
+
+__all__ = [
+    "contract_version",
+    "engine_version",
+    "output_fields",
+    "scoring_config_path",
+    "verdicts",
+    "version_stage",
+]

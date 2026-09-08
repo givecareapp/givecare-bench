@@ -1,119 +1,87 @@
 # Contributing
 
-Thanks for your interest in GiveCare Bench. This guide covers what kinds of
-contributions are welcome, how to set up the dev environment, and what a
-valid PR looks like.
+Contributions should keep the benchmark contract small and inspectable.
 
-## What's welcome
+## Welcome changes
 
-- **Scenario additions or improvements** — new public scenarios under
-  `benchmark/scenarios/`, or fixes to existing rubrics. See the
-  [scenario contract](#scenario-contract) below.
-- **Verifier bug fixes** — the executable checks live in `checks/`, with
-  verifier code under `src/invisiblebench/evaluation/verifiers/`. Add or
-  update focused unit tests under `benchmark/tests/unit/` alongside any fix.
-- **Docs** — tutorials, clarifications, typos. Follow the Diátaxis types
-  declared in [`CLAUDE.md`](CLAUDE.md).
-- **Test coverage** — focused regressions for benchmark contracts and runtime behavior.
+- public scenarios under `benchmark/scenarios/`;
+- check criteria and evidence requirements under `checks/`;
+- fixes to the single LLM judge path;
+- focused tests for runtime and artifact behavior;
+- documentation updates that match machine-readable sources.
 
-## What's not welcome
+Do not publish confidential scenarios, private transcripts, expected answers,
+judge prompts, credentials, or provider secrets.
 
-- Publication of confidential holdout scenarios, private transcripts, or
-  credentials. Public judge prompts are embedded in
-  `checks/<layer>/<dimension>/<ID>.yaml` as `prompt:` blocks.
-- Benchmark version bumps without maintainer sign-off. The public contract
-  version lives in `benchmark/benchmark_card.json`.
-
-## Dev setup
+## Setup
 
 ```bash
 git clone https://github.com/givecareapp/givecare-bench
 cd givecare-bench
-uv sync --extra dev --extra analytics
-cp .env.example .env   # then fill in at least one LLM provider key
-uv run bench doctor    # verifies env + runs_dir
+uv sync --extra dev
+cp .env.example .env
+uv run bench doctor
 ```
 
-Full install guidance (including how to put `bench` on PATH from any
-folder): [docs/install.md](docs/install.md).
-
-## Running tests and lint
+## Proof
 
 ```bash
-uv run pytest benchmark/tests -q
 uv run ruff check .
+uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
+helm evidence driver check --driver evidence-driver.json
 ```
 
-All three must pass. Checks run via a local pre-commit hook — one-time setup:
+Configure the local hook with:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-The hook runs ruff, lint_turn_indices, and pytest automatically on commit. Docs deploy locally via `scripts/deploy-docs.sh` (mkdocs gh-deploy — no GitHub Actions).
-
 ## Scenario contract
 
-Scenario JSONs live under `benchmark/scenarios/<category>/<subdir>/<id>.json`.
+Scenario JSON files live under `benchmark/scenarios/`. Use the canonical
+`category` field. Retired tier fields are invalid. Use the unified `criteria`
+shape for check rubrics. See
+[`SCENARIO_SCHEMA.yaml`](benchmark/scenarios/SCENARIO_SCHEMA.yaml).
 
-- `category` must be one of `safety`, `empathy`, `context`, `continuity`,
-  `confidential`. The retired `tier` field and `tier_0..tier_3` values
-  are rejected by the validator.
-- Required fields: `scenario_id`, `title`, `category`, `persona`,
-  `scoring_dimensions`, plus `turns` or `sessions`.
-- Turn contracts use `expected_behaviors` and/or one unified `rubric` list
-  (criteria with `kind: binary|ordinal|autofail`); the retired
-  `autofail_rubric` / `rubric_criteria` dialects are rejected.
-- Full schema: [`benchmark/scenarios/SCENARIO_SCHEMA.yaml`](benchmark/scenarios/SCENARIO_SCHEMA.yaml).
-
-Before submitting a new scenario:
+Run focused checks before opening a change:
 
 ```bash
 uv run python scripts/lint_turn_indices.py --strict
-uv run pytest benchmark/tests/unit/test_scenario_validator.py benchmark/tests/unit/test_scenario_models.py -q
+uv run pytest benchmark/tests/unit/test_scenario_validator.py \
+  benchmark/tests/unit/test_scenario_models.py -q
 ```
 
-## Running the benchmark
+## Running a scan
 
-See [docs/install.md](docs/install.md) for the "reproduce a leaderboard
-entry from scratch" walkthrough. The short version:
-
-`bench` generates target transcripts only; judge them in a separate step with
-`scripts/run_scan.py`:
+Generate transcripts and create a dry-run scan plan first:
 
 ```bash
-uv run bench --dry-run          # estimate cost only
-uv run bench -m deepseek -y --max-cost-usd 1   # single model, transcripts only
-uv run bench --full -y --max-cost-usd 50       # all public models, transcripts only
-uv run python scripts/run_scan.py --profile dev --enable-llm \
-  --max-cost-usd 2 --llm-model openai/gpt-5-mini results/run_<id>   # judge one model
+uv run bench -m your-org/your-model --dry-run
+uv run bench -m your-org/your-model -y --max-cost-usd <budget>
+uv run python scripts/run_scan.py results/run_<id> \
+  --dry-run --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py results/run_<id> \
+  --plan <scan-dir>/scan_plan.json \
+  --max-cost-usd <budget> --llm-model openai/gpt-5-mini
 ```
 
-## PR checklist
+The plan and live run must use the same transcript source and judge model.
+Every active check uses the same LLM judge path. Optional critique cannot
+change the result.
 
-- [ ] `uv run pytest benchmark/tests -q` passes
-- [ ] `uv run ruff check .` passes
-- [ ] `uv run python scripts/lint_turn_indices.py --strict` passes
-- [ ] Pre-commit hook is configured (`git config core.hooksPath .githooks`) and passes locally
-- [ ] New/changed behavior has a test under `benchmark/tests/unit/`
-- [ ] A new or retired check updates `check_count` in
-      `benchmark/benchmark_inventory.json`; a new claim-carrying check
-      (`hard_fail` or S5/S4_GATE severity) declares a `calibration:` block
-      with its evidence status (QA rejects hard-fail claims without one)
-- [ ] If public behavior changed, docs are updated (README, CLAUDE.md,
-      or the appropriate `docs/*.md` page)
-- [ ] Commit message follows Conventional Commits
-      (`feat(scorer): ...`, `fix(cli): ...`, `docs: ...`)
-- [ ] PR description explains the *why*, not just the *what*
+## Pull request checklist
 
-## Reporting issues
+- [ ] `uv run ruff check .` passes.
+- [ ] `uv run pytest benchmark/tests -q` passes.
+- [ ] `uv run python scripts/lint_turn_indices.py --strict` passes.
+- [ ] The change updates machine-readable inventory or contract files when
+      behavior or version changes.
+- [ ] New behavior has a focused test when the test proves a required contract.
+- [ ] Public docs match the current contract.
+- [ ] No private data or secrets enter the change.
+- [ ] The commit message uses the Conventional Commits format.
 
-- Bugs / feature requests: [GitHub Issues](https://github.com/givecareapp/givecare-bench/issues).
-- Security issues: see [SECURITY.md](SECURITY.md).
-- Scorer disagreements (you think a verifier scored a scenario incorrectly):
-  open an issue with the scenario id, model, run id, and what you'd expect.
-
-## Code of conduct
-
-By participating, you agree to the [Contributor Covenant](CODE_OF_CONDUCT.md).
+Report security issues through [`SECURITY.md`](SECURITY.md). Open other bugs
+and feature requests in GitHub Issues.

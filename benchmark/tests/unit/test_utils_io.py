@@ -85,5 +85,5 @@ def test_scanned_row_contract_uses_current_name() -> None:
     """Active code should use the Safety/Care scanned-row contract name."""
     import invisiblebench.version as version
 
-    assert version.SCANNED_ROW_CONTRACT_VERSION == "3.2.0"
+    assert version.SCANNED_ROW_CONTRACT_VERSION == "4.0.0"
     assert not hasattr(version, "V3_RESULT_CONTRACT_VERSION")
