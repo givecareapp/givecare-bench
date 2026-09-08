@@ -14,10 +14,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from invisiblebench.evaluation.check_registry import (
-    check_definition_hashes,
-    check_prompt_hashes,
-)
 from invisiblebench.utils.benchmark_inventory import (
     collect_confidential_scenario_paths,
     get_benchmark_version,
@@ -78,25 +74,6 @@ def scenario_corpus_hash(project_root: Path) -> str:
     return _scenario_hash(project_root / "benchmark" / "scenarios")
 
 
-def _scoring_config_hash(config_path: Path) -> str:
-    if config_path.exists():
-        return _file_hash(config_path)
-    return "missing"
-
-
-def _read_contract_version(config_path: Path) -> str:
-    if not config_path.exists():
-        return "unknown"
-    try:
-        import yaml
-
-        with open(config_path) as f:
-            cfg = yaml.safe_load(f)
-        return str(cfg.get("contract_version", "unknown"))
-    except (ImportError, OSError, yaml.YAMLError):
-        return "unknown"
-
-
 def generate_manifest(
     project_root: Path,
     model_ids: list[str],
@@ -112,23 +89,18 @@ def generate_manifest(
         run_id = str(uuid.uuid4())
 
     scenarios_dir = project_root / "benchmark" / "scenarios"
-    config_path = project_root / "benchmark" / "configs" / "scoring.yaml"
 
     extra_scenario_files = collect_confidential_scenario_paths(project_root) if include_confidential else []
 
     manifest = {
-        "schema": "invisiblebench-run-manifest/v2",
+        "schema": "invisiblebench-run-manifest/v3",
         "run_id": run_id,
         "git_sha": _git_sha(),
         "git_dirty": _git_dirty(),
         "scenario_hash": _scenario_hash(scenarios_dir, extra_files=extra_scenario_files),
         "scenario_ids": sorted(set(scenario_ids or [])),
-        "scoring_config_hash": _scoring_config_hash(config_path),
-        "check_definition_hashes": check_definition_hashes(project_root / "checks"),
-        "scorer_prompt_hashes": check_prompt_hashes(project_root / "checks"),
         "model_ids": model_ids,
         "run_date": datetime.now(timezone.utc).isoformat(),
-        "contract_version": _read_contract_version(config_path),
         "python_version": sys.version,
         "benchmark_version": get_benchmark_version(project_root),
         "code_version": get_code_version(project_root),

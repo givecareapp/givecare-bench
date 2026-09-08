@@ -199,23 +199,22 @@ def published_leaderboard_version() -> tuple[str | None, str | None]:
 
 
 def estimate_cost_per_model() -> float | str:
-    """Average per-model actual cost from the last published scan's source_merge.
+    """Recorded judge cost per model from the retained current publication."""
+    from invisiblebench.judge import load_scan
+    from invisiblebench.scoring import SCHEMA_VERSION, check_leaderboard
 
-    Used as a same-size-scan cost estimate for one new candidate model.
-    Returns "unknown" when no cost accounting is on record for the current
-    leaderboard (see benchmark/tests/unit/test_cost_accounting.py for the
-    accounting shape this reads).
-    """
     if not LEADERBOARD_PATH.exists():
         return "unknown"
     leaderboard = load_json(LEADERBOARD_PATH, "cost_estimate")
-    sources = leaderboard.get("scan_metadata", {}).get("source_merge", {}).get("sources", [])
-    costs = [
-        s["actual_cost_usd"] for s in sources if isinstance(s.get("actual_cost_usd"), (int, float))
-    ]
-    if not costs:
+    if leaderboard.get("schema") != SCHEMA_VERSION:
         return "unknown"
-    return round(sum(costs) / len(costs), 2)
+    try:
+        bundle = REPO_ROOT / leaderboard["scan_metadata"]["source_artifact"]
+        checked = check_leaderboard(bundle, LEADERBOARD_PATH)
+        _, records = load_scan(bundle)
+    except (OSError, ValueError, KeyError):
+        return "unknown"
+    return round(sum(record.cost_usd for record in records) / len(checked["models"]), 2)
 
 
 def last_watch_date(today: str) -> str | None:

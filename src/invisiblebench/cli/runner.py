@@ -7,10 +7,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -22,9 +19,6 @@ from invisiblebench.cli.agent_commands import (
     _run_doctor,
     _run_get,
     _run_leaderboard_status_json,
-)
-from invisiblebench.cli.result_helpers import (
-    _compute_success as _compute_success,  # re-exported: tests import from this module
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 
@@ -48,17 +42,8 @@ load_dotenv()
 MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 
-from invisiblebench.cli.result_helpers import (  # noqa: E402,F401
-    _make_error_result as _make_error_result,  # re-exported: tests import from this module
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    _print_audit_summary as _print_audit_summary,
-)
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
     _scenario_matches_filter as _scenario_matches_filter,  # re-exported: tests use this module
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    _write_run_audit as _write_run_audit,
 )
 from invisiblebench.cli.run_command import (  # noqa: E402,F401
     estimate_cost as estimate_cost,
@@ -187,9 +172,10 @@ Examples:
   uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
 
   # Judge transcripts, build the strict-QA leaderboard, then project it
-  uv run python scripts/run_scan.py <run-dir> --profile publish --dry-run --enable-llm
-  uv run python scripts/run_scan.py <run-dir> --profile publish --enable-llm --max-cost-usd <budget>
-  hound plan --driver hound-driver.json --operation corpus.project \
+  uv run python scripts/run_scan.py plan <run-dir> --output <scan-dir> --llm-model <judge>
+  uv run python scripts/run_scan.py run --plan <scan-dir>/scan_plan.json \
+    --max-cost-usd <budget>
+  helm evidence plan --driver evidence-driver.json --operation corpus.project \
     --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
     --output /tmp/gc-bench-leaderboard-plan.json
                                       Deterministic consumer projection
@@ -199,8 +185,6 @@ Examples:
   uv run bench explain <model> <scenario> --failures   Trace scan evidence
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
-  uv run bench review status          Inspect the blind-review batch and server
-  uv run bench review serve           Serve the current batch on loopback
   uv run bench archive --keep 5       Keep 5 most recent runs
         """,
     )
@@ -212,7 +196,7 @@ Examples:
         action="store_const",
         const="json",
         default=None,
-        help="Emit agent-friendly JSON envelope (runs/stats/leaderboard[status]/get)",
+        help="Emit agent-friendly JSON envelope (runs/leaderboard[status]/get)",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -236,33 +220,6 @@ Examples:
     # Health subcommand
     health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
     health_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
-
-    # Blind-review workflow
-    review_parser = subparsers.add_parser(
-        "review", help="Inspect, build, or serve a blind human-review batch"
-    )
-    review_subparsers = review_parser.add_subparsers(dest="review_action", required=True)
-    review_status = review_subparsers.add_parser(
-        "status", help="Show batch, progress, and server state"
-    )
-    review_status.add_argument("--dir", type=Path, default=None, dest="review_dir")
-    review_status.add_argument("--host", default="127.0.0.1")
-    review_status.add_argument("--port", type=int, default=3090)
-    review_build = review_subparsers.add_parser("build", help="Build a blind review batch")
-    review_build.add_argument("--out-dir", type=Path, default=None, dest="review_dir")
-    review_build.add_argument("--scan", type=Path, default=None)
-    review_build.add_argument(
-        "--publication",
-        action="store_true",
-        help="Stamp the scan escalation batch evidence_mode=publication (requires --scan)",
-    )
-    review_build.add_argument("--yes", action="store_true")
-    review_serve = review_subparsers.add_parser("serve", help="Run the existing review app")
-    review_serve.add_argument("--dir", type=Path, default=None, dest="review_dir")
-    review_serve.add_argument("--host", default="127.0.0.1")
-    review_serve.add_argument("--port", type=int, default=3090)
-    review_serve.add_argument("--publication", action="store_true")
-    review_serve.add_argument("--yes", action="store_true")
 
     # Archive subcommand
     archive_parser = subparsers.add_parser("archive", help="Archive old benchmark runs")
@@ -306,7 +263,7 @@ Examples:
     )
     explain_parser.add_argument(
         "--scan", type=str, default=None,
-        help="Scan per_run.jsonl to read (default: leaderboard scan_metadata.source_artifact)",
+        help="Scan bundle directory (default: published source_artifact)",
     )
     explain_parser.add_argument(
         "--leaderboard", type=str, default=None,
@@ -414,35 +371,6 @@ Examples:
         from invisiblebench.cli.health import run_health
 
         return run_health(verbose=args.verbose, json_output=json_output)
-
-    if args.command == "review":
-        from invisiblebench.cli.review import (
-            run_review_build,
-            run_review_serve,
-            run_review_status,
-        )
-
-        if args.review_action == "status":
-            return run_review_status(
-                review_dir=args.review_dir,
-                host=args.host,
-                port=args.port,
-                json_output=json_output,
-            )
-        if args.review_action == "build":
-            return run_review_build(
-                review_dir=args.review_dir,
-                scan=args.scan,
-                yes=args.yes,
-                publication=args.publication,
-            )
-        return run_review_serve(
-            review_dir=args.review_dir,
-            host=args.host,
-            port=args.port,
-            publication=args.publication,
-            yes=args.yes,
-        )
 
     if args.command == "archive":
         from invisiblebench.cli.archive import run_archive, run_list

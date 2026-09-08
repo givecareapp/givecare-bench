@@ -2,10 +2,20 @@
   "schema_version": "hound.driver.v1",
   "id": "gc-bench",
   "protocol": "hound.protocol.v1",
-  "owner": { "repo": "." },
-  "exec": ["python3", "-B", "scripts/evidence_driver.py"],
+  "owner": {
+    "repo": "."
+  },
+  "exec": [
+    ".venv/bin/python",
+    "-B",
+    "scripts/evidence_driver.py"
+  ],
   "run_root": ".evidence/runs",
-  "write_scopes": ["benchmark/scenarios", "data/releases/web-bench-release.tar.gz"],
+  "write_scopes": [
+    "benchmark/scenarios",
+    "data/releases/web-bench-release.tar.gz",
+    "data/leaderboard/leaderboard.json"
+  ],
   "ignored_snapshot_excludes": [
     ".evidence",
     ".pytest_cache",
@@ -23,7 +33,13 @@
   },
   "env_allowlist": [],
   "capabilities": {
-    "corpus.apply": { "effect": "write", "gate": "human" },
-    "corpus.project": { "effect": "write", "gate": "none" }
+    "corpus.apply": {
+      "effect": "write",
+      "gate": "human"
+    },
+    "corpus.project": {
+      "effect": "write",
+      "gate": "none"
+    }
   }
 }

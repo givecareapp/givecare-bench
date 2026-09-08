@@ -1,23 +1,20 @@
 """OpenRouter API client."""
 
 import asyncio
-import hashlib
 import json
 import math
 import os
 import threading
 import time
-from collections import OrderedDict
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import httpx
 import requests
 from dotenv import load_dotenv
 
 from invisiblebench.models._types import ChatMessage
-from invisiblebench.utils.prompt_hash import prompt_hash, prompt_template_hash
 
 _project_root = Path(__file__).parent.parent.parent.parent
 _env_file = _project_root / ".env"
@@ -25,14 +22,6 @@ if _env_file.exists():
     load_dotenv(_env_file)
 else:
     load_dotenv()
-
-try:
-    import httpx
-
-    HTTPX_AVAILABLE = True
-except ImportError:
-    HTTPX_AVAILABLE = False
-
 
 # Default judge IDs live here so both runtime selection and cost accounting use
 # the same spellings.
@@ -147,48 +136,6 @@ class CostTracker:
 cost_tracker = CostTracker()
 
 
-def _load_scorer_cache_size(default: int = 256) -> int:
-    raw = os.getenv("INVISIBLEBENCH_SCORER_CACHE_SIZE", "").strip()
-    if not raw:
-        return default
-    try:
-        size = int(raw)
-    except ValueError:
-        return default
-    return max(size, 0)
-
-
-class _LRUCache:
-
-
-    def __init__(self, max_entries: int):
-        self.max_entries = max_entries
-        self._data: OrderedDict[str, dict[str, Any]] = OrderedDict()
-        self._lock = threading.Lock()
-
-    def get(self, key: str) -> dict[str, Any] | None:
-        if self.max_entries <= 0:
-            return None
-        with self._lock:
-            if key not in self._data:
-                return None
-            self._data.move_to_end(key)
-            return deepcopy(self._data[key])
-
-    def set(self, key: str, value: dict[str, Any]) -> None:
-        if self.max_entries <= 0:
-            return
-        with self._lock:
-            self._data[key] = deepcopy(value)
-            self._data.move_to_end(key)
-            if len(self._data) > self.max_entries:
-                self._data.popitem(last=False)
-
-
-_SCORER_CACHE_MAX_ENTRIES = _load_scorer_cache_size()
-_SCORER_RESPONSE_CACHE = _LRUCache(_SCORER_CACHE_MAX_ENTRIES)
-
-
 class InsufficientCreditsError(RuntimeError):
     """HTTP 402: insufficient credits."""
 
@@ -301,8 +248,7 @@ class ModelAPIClient:
             )
 
         self.base_url = base_url
-        self._api_key = api_key  # Stored for instructor/structured extraction
-        self.headers = {"Authorization": f"Bearer {api_key}", **extra_headers}
+        self.headers = {"Authorization": f"Bearer {api_key}", "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0", **extra_headers}
 
         self.session = requests.Session()
         self.session.headers.update(self.headers)
@@ -351,35 +297,6 @@ class ModelAPIClient:
         return payload
 
     @staticmethod
-    def _is_cacheable(payload: dict[str, Any]) -> bool:
-        if payload.get("stream"):
-            return False
-        temp = payload.get("temperature")
-        try:
-            return float(temp) == 0.0
-        except (TypeError, ValueError):
-            return False
-
-    @staticmethod
-    def _cache_key(payload: dict[str, Any]) -> str | None:
-        normalized = dict(payload)
-        if "temperature" in normalized:
-            try:
-                normalized["temperature"] = float(normalized["temperature"])
-            except (TypeError, ValueError):
-                pass
-        try:
-            payload_json = json.dumps(
-                normalized,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=True,
-            )
-        except (TypeError, ValueError):
-            return None
-        return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
-
-    @staticmethod
     def _parse_response(data: dict[str, Any], model: str, start_time: float) -> dict[str, Any]:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"No choices in response: {data}")
@@ -416,19 +333,11 @@ class ModelAPIClient:
         messages: list[ChatMessage],
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        use_cache: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
         """Call a model and return response text, token counts, and latency."""
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
-        cache_key = None
-        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
-            cache_key = self._cache_key(payload)
-            if cache_key:
-                cached = _SCORER_RESPONSE_CACHE.get(cache_key)
-                if cached is not None:
-                    return cached
 
         for attempt in range(self.config.max_retries):
             try:
@@ -442,8 +351,6 @@ class ModelAPIClient:
 
                 data = response.json()
                 result = self._parse_response(data, model, start_time)
-                if cache_key:
-                    _SCORER_RESPONSE_CACHE.set(cache_key, result)
                 return result
 
             except requests.exceptions.RequestException as e:
@@ -463,58 +370,18 @@ class ModelAPIClient:
 
         raise RuntimeError(f"Failed to call model {model}")
 
-    def call_structured(
-        self,
-        model: str,
-        messages: list[ChatMessage],
-        response_model: type,
-        temperature: float = 0.0,
-        max_tokens: int = 2000,
-        max_retries: int = 2,
-    ) -> Any:
-        """Call a model and return a validated Pydantic instance via instructor."""
-        import instructor
-        from openai import OpenAI
-
-        client = instructor.from_openai(
-            OpenAI(
-                base_url=self.base_url,
-                api_key=self._api_key,
-            ),
-            mode=instructor.Mode.JSON,
-        )
-
-        return client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_model=response_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            max_retries=max_retries,
-        )
-
     async def call_model_async(
         self,
         model: str,
         messages: list[ChatMessage],
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        use_cache: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
         """Async variant of call_model. Requires httpx."""
-        if not HTTPX_AVAILABLE:
-            raise ImportError("httpx is required for async API calls: pip install httpx")
 
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
-        cache_key = None
-        if use_cache and _SCORER_CACHE_MAX_ENTRIES > 0 and self._is_cacheable(payload):
-            cache_key = self._cache_key(payload)
-            if cache_key:
-                cached = _SCORER_RESPONSE_CACHE.get(cache_key)
-                if cached is not None:
-                    return cached
 
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(self.config.timeout),
@@ -533,8 +400,6 @@ class ModelAPIClient:
 
                     data = response.json()
                     result = self._parse_response(data, model, start_time)
-                    if cache_key:
-                        _SCORER_RESPONSE_CACHE.set(cache_key, result)
                     return result
 
                 except (
@@ -559,60 +424,7 @@ class ModelAPIClient:
 
             raise RuntimeError(f"Failed to call model {model}") from last_error
 
-# Default model for LLM-based Safety/Care judges.
-#
-# Resolved once at import time based on which backend will actually be used
-# at runtime (INVISIBLEBENCH_API_BACKEND / OPENROUTER_API_KEY / OPENAI_API_KEY
-# — see _resolve_api_backend above): direct-OpenAI callers get the dated
-# OpenAI model id, OpenRouter callers get the "openai/..." id. Both spellings
-# name the SAME judge model — this is the single canonical owner of the judge
-# id (CLAUDE.md). Callers needing a judge model must import DEFAULT_JUDGE_MODEL
-# / DEFAULT_SCORER_MODEL from here rather than re-deriving or hardcoding either
-# spelling; the env var INVISIBLEBENCH_SCORER_MODEL overrides these defaults
-# at the call site. JUDGE_MODEL_OPENAI_ID / JUDGE_MODEL_OPENROUTER_ID expose
-# both known spellings (not just whichever one won at import time) so
-# consumers that must key data off the judge id under both backends — e.g.
-# judge.py's MODEL_PRICING cost-estimation table — have one place to read
-# them from instead of copying the literals.
-#
-# Drift detection: if this judge id ever changes, run_audit.py's
-# _audit_judge_health (~line 308) flags any scan artifact whose rows carry
-# more than one distinct `judge_model` value — that's the tripwire for a
-# judge swap that happened mid-run instead of a clean cutover.
+# Use the model ID accepted by the selected API backend.
 _, _default_base, _ = _resolve_api_backend()
 _USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
 DEFAULT_JUDGE_MODEL = JUDGE_MODEL_OPENAI_ID if _USING_OPENAI_DIRECT else JUDGE_MODEL_OPENROUTER_ID
-DEFAULT_SCORER_MODEL = DEFAULT_JUDGE_MODEL
-DEFAULT_SAFETY_REFERENCE_MODEL = "gpt-4.1-mini" if _USING_OPENAI_DIRECT else "google/gemini-2.5-flash"
-
-
-def compute_prompt_hash(prompt_text: str) -> str:
-    """Return SHA256 hex digest of trimmed prompt text."""
-    return prompt_hash(prompt_text)
-
-
-def compute_prompt_template_hash(*template_parts: str) -> str:
-    """Return a stable hash for one or more prompt-template fragments.
-
-    This is intended for judge comparability metadata. Callers should pass only
-    template/static instruction text here, not fully rendered prompts containing
-    scenario-specific conversation content.
-    """
-    return prompt_template_hash(*template_parts)
-
-
-def resolve_scorer_model(
-    api_client: ModelAPIClient,
-    scorer_name: str,
-    default: str = DEFAULT_SCORER_MODEL,
-) -> str:
-    """Resolve scorer model with env overrides."""
-    env_specific = os.getenv(f"INVISIBLEBENCH_{scorer_name.upper()}_MODEL")
-    env_global = os.getenv("INVISIBLEBENCH_SCORER_MODEL")
-
-    if env_specific:
-        return env_specific
-    if env_global:
-        return env_global
-
-    return default

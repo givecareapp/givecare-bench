@@ -160,52 +160,14 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setattr(run_command_mod, "RICH_AVAILABLE", False)
 
-    class FakeModelAPIClient:
-        pass
+    class FakeModelAPIClient(_FakeAsyncClient):
+        async def call_model_async(self, **kwargs):
+            response = await super().call_model_async(**kwargs)
+            run_command_mod.cost_tracker.record(kwargs["model"], 100, 50, actual_cost=0.012345)
+            return response
 
-    monkeypatch.setattr(
-        "invisiblebench.api.client.ModelAPIClient",
-        FakeModelAPIClient,
-    )
-
-    async def fake_evaluate_scenario_async(
-        model: dict[str, Any],
-        scenario: dict[str, Any],
-        api_client: Any,
-        output_dir: Path,
-        semaphore: asyncio.Semaphore,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        assert "score_transcript" not in kwargs
-        transcript_dir = output_dir / "transcripts"
-        transcript_dir.mkdir(parents=True, exist_ok=True)
-        transcript_path = transcript_dir / f"{model['id'].replace('/', '_')}_scenario.jsonl"
-        transcript_path.write_text('{"role":"assistant","content":"ok"}\n')
-        run_command_mod.cost_tracker.record(
-            model["id"],
-            prompt_tokens=100,
-            completion_tokens=50,
-            actual_cost=0.012345,
-        )
-        return {
-            "artifact_type": "transcript_result/v1",
-            "model": model["name"],
-            "model_id": model["id"],
-            "scenario": scenario["name"],
-            "scenario_id": scenario["scenario_id"],
-            "category": scenario["category"],
-            "transcript_path": str(transcript_path),
-            "cost": 0.012345,
-            "status": "transcript_ready",
-            "success": True,
-            "run_id": kwargs["run_id"],
-        }
-
-    monkeypatch.setattr(
-        run_command_mod,
-        "evaluate_scenario_async",
-        fake_evaluate_scenario_async,
-    )
+    client = FakeModelAPIClient()
+    monkeypatch.setattr("invisiblebench.api.client.ModelAPIClient", lambda: client)
 
     rc = run_command_mod.run_benchmark(
         models=[
@@ -229,7 +191,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert not (output_dir / "all_results.json").exists()
 
     manifest = json.loads((output_dir / "run_manifest.json").read_text())
-    assert manifest["schema"] == "invisiblebench-run-manifest/v2"
+    assert manifest["schema"] == "invisiblebench-run-manifest/v3"
     assert manifest["scenario_ids"] == ["context_regulatory_data_privacy_001"]
     assert manifest["transcript_policy"]["system_prompt_hash"]
     assert manifest["transcript_policy"]["temperature"] == 0.7
@@ -242,11 +204,19 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert "resolved_model_ids" in summary
     assert "resolved_providers" in summary
     assert summary["transcript_count"] == 1
-    assert summary["actual_cost_usd"] == 0.012345
-    assert summary["actual_billable_api_calls"] == 1
-    assert summary["actual_cost_by_model_usd"] == {"test/model": 0.012345}
-    assert "run_scan.py --profile dev" in summary["next_steps"]["dev_scan"]
-    assert "--llm-model openai/gpt-5-mini" in summary["next_steps"]["dev_scan"]
+    assert summary["actual_cost_usd"] == pytest.approx(len(client.calls) * 0.012345)
+    assert summary["actual_billable_api_calls"] == len(client.calls)
+    assert summary["actual_cost_by_model_usd"] == {"test/model": pytest.approx(len(client.calls) * 0.012345)}
+    assert "run_scan.py plan" in summary["next_steps"]["scan_plan"]
+    assert "--output" in summary["next_steps"]["scan_plan"]
+
+    from benchmark.tests.fixtures.current_scan import FixtureJudge
+    from invisiblebench.judge import load_scan, plan_scan, run_scan
+
+    bundle = tmp_path / "scan"
+    plan = plan_scan([output_dir], bundle)
+    run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
+    assert len(load_scan(bundle, complete=True)[1]) == len(plan.checks)
 
 
 def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) -> None:

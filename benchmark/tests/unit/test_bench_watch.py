@@ -261,12 +261,7 @@ def fixture_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
                 "scan_metadata": {
                     "benchmark_version": "4.0.0",
                     "generated_at": "2026-07-10T16:40:55.511183+00:00",
-                    "source_merge": {
-                        "sources": [
-                            {"model_ids": ["anthropic/claude-opus-4.8"], "actual_cost_usd": 5.85},
-                            {"model_ids": ["qwen/qwen3.6-35b-a3b"], "actual_cost_usd": 6.42},
-                        ]
-                    },
+
                 }
             }
         )
@@ -293,20 +288,20 @@ def test_build_proposal_with_no_eligible_releases_has_empty_candidates(
     assert any("top_n_capability inactive" in n for n in proposal["notes"])
 
 
-def test_build_proposal_estimates_cost_from_last_scan_source_merge(
-    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        bench_watch,
-        "fetch_catalog",
-        lambda: [_model("qwen/qwen3.8-max", created=NOW - dt.timedelta(days=30))],
-    )
-    proposal = bench_watch.build_proposal("2026-09-03", now=NOW)
+def test_cost_estimate_reads_the_current_ledger(tmp_path, monkeypatch):
+    from benchmark.tests.fixtures.current_scan import write_current_qa_fixture
+    from invisiblebench.scoring import generate_leaderboard
 
-    assert len(proposal["candidates"]) == 1
-    # (5.85 + 6.42) / 2 == 6.135, which round() resolves to 6.13 under
-    # float64 representation (6.135 is not exactly representable).
-    assert proposal["candidates"][0]["estimated_scan_cost_usd"] == round((5.85 + 6.42) / 2, 2)
+    paths = write_current_qa_fixture(tmp_path)
+    rows = [json.loads(line) for line in paths["ledger"].read_text().splitlines()]
+    rows[0]["cost_usd"] = 1.23
+    paths["ledger"].write_text("".join(json.dumps(row) + "\n" for row in rows))
+    generate_leaderboard(paths["scan"], paths["leaderboard"])
+    monkeypatch.setattr(bench_watch, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(bench_watch, "LEADERBOARD_PATH", paths["leaderboard"])
+    assert bench_watch.estimate_cost_per_model() == 1.23
+    paths["ledger"].write_text("")
+    assert bench_watch.estimate_cost_per_model() == "unknown"
 
 
 def test_run_propose_writes_dated_files_and_prints_declined_token(

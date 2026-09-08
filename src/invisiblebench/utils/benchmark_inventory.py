@@ -154,3 +154,35 @@ def collect_scenario_paths(
         return public_paths
 
     return sorted(public_paths + collect_confidential_scenario_paths(project_root))
+
+
+def regenerate_inventory() -> dict[str, Any]:
+    """Derive the inventory from the current source files."""
+    from collections import Counter
+
+    from invisiblebench.evaluation.check_registry import registered_check_ids
+    from invisiblebench.version import BENCHMARK_VERSION
+
+    paths = collect_public_scenario_paths()
+    return {
+        "benchmark_version": BENCHMARK_VERSION,
+        "public_scope": "benchmark-core-only",
+        "public_harness": "llm/raw",
+        "categories": dict(sorted(Counter(scenario_category_for_path(p) for p in paths).items())),
+        "standard_total": len(paths),
+        "check_count": len(registered_check_ids()),
+        "confidential_count": "external",
+    }
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Regenerate the benchmark inventory")
+    parser.add_argument("--write", action="store_true")
+    args = parser.parse_args()
+    text = json.dumps(regenerate_inventory(), indent=2) + "\n"
+    if args.write:
+        inventory_path().write_text(text)
+    else:
+        print(text, end="")

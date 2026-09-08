@@ -1,6 +1,6 @@
 [project]
 name = "invisiblebench"
-version = "4.0.0"
+version = "5.0.0"
 description = "AI Safety Benchmark for Persistent Caregiving Relationships"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,22 +26,11 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "requests>=2.0.0",
-    "openai>=1.50.0",
     "httpx>=0.27.0",
     "jsonlines>=4.0.0",
-    "instructor>=1.14.5",
 ]
 
 [project.optional-dependencies]
-analytics = [
-    "numpy>=1.24.0",
-    "pandas>=2.0.0",
-    "scipy>=1.10.0",
-]
-visualization = [
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-]
 docs = [
     "mkdocs-material>=9.5.0",
 ]
@@ -53,7 +42,7 @@ dev = [
     "ruff>=0.1.0",
 ]
 all = [
-    "invisiblebench[analytics,visualization,dev,docs]",
+    "invisiblebench[dev,docs]",
 ]
 
 [project.scripts]
@@ -64,7 +53,6 @@ Homepage = "https://givecareapp.github.io/givecare-bench"
 Repository = "https://github.com/givecareapp/givecare-bench"
 Issues = "https://github.com/givecareapp/givecare-bench/issues"
 Documentation = "https://givecareapp.github.io/givecare-bench/"
-Paper = "https://github.com/givecareapp/givecare-bench/tree/main/internal/papers/invisiblebench"
 
 [build-system]
 requires = ["hatchling"]

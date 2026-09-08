@@ -10,10 +10,7 @@ next publish.
 
 from __future__ import annotations
 
-import json
 import re
-
-import pytest
 
 from invisiblebench.evaluation.check_registry import registered_check_ids
 from invisiblebench.utils.benchmark_inventory import (
@@ -55,20 +52,6 @@ def test_inventory_check_count_matches_taxonomy() -> None:
     )
 
 
-def test_checked_in_leaderboard_matches_current_benchmark_if_present() -> None:
-    leaderboard_path = ROOT / "data" / "leaderboard" / "leaderboard.json"
-    if not leaderboard_path.exists():
-        return
-
-    data = json.loads(leaderboard_path.read_text())
-    inventory = load_inventory()
-    scan_meta = data.get("scan_metadata") or {}
-    assert scan_meta.get("benchmark_version") == inventory["benchmark_version"]
-    total = scan_meta.get("total_scenarios")
-    assert total is not None, (
-        "leaderboard.json must carry total_scenarios in scan_metadata"
-    )
-    assert total == inventory["standard_total"]
 
 
 def test_every_public_scenario_embeds_the_canary() -> None:
@@ -85,16 +68,8 @@ def test_every_public_scenario_embeds_the_canary() -> None:
     assert missing == [], f"scenarios missing canary GUID: {missing}"
 
 
-def test_claude_md_cites_current_counts() -> None:
-    """The contract section's counts must match the inventory owner.
 
-    CLAUDE.md is a gitignored local operating doc, so this guard only runs
-    on checkouts that have it (dev machines, not CI).
-    """
-    claude_md = ROOT / "CLAUDE.md"
-    if not claude_md.exists():
-        pytest.skip("CLAUDE.md is local-only (gitignored); absent in CI checkouts")
-    text = claude_md.read_text()
-    inventory = load_inventory()
-    assert f"checks: {inventory['check_count']} across" in text
-    assert f"public scenarios: `{inventory['standard_total']}`" in text
+
+def test_inventory_is_regenerated_from_the_current_sources():
+    from invisiblebench.utils.benchmark_inventory import regenerate_inventory
+    assert load_inventory() == regenerate_inventory()

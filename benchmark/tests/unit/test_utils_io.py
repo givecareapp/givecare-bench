@@ -12,15 +12,15 @@ from invisiblebench.utils.io import artifact_reference, leaderboard_rows
 
 def test_artifact_reference_is_repo_relative_or_basename(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
-    inside = repo_root / "results" / "scan" / "per_run.jsonl"
+    inside = repo_root / "results" / "scan" / "judgments.jsonl"
     inside.parent.mkdir(parents=True)
     inside.touch()
-    outside = tmp_path / "private" / "per_run.jsonl"
+    outside = tmp_path / "private" / "judgments.jsonl"
     outside.parent.mkdir()
     outside.touch()
 
-    assert artifact_reference(inside, repo_root) == "results/scan/per_run.jsonl"
-    assert artifact_reference(outside, repo_root) == "per_run.jsonl"
+    assert artifact_reference(inside, repo_root) == "results/scan/judgments.jsonl"
+    assert artifact_reference(outside, repo_root) == "judgments.jsonl"
 
 
 def test_leaderboard_rows_current_models_key() -> None:
@@ -79,11 +79,3 @@ def test_benchmark_version_single_source_of_truth() -> None:
 
     assert BENCHMARK_VERSION == inventory["benchmark_version"]
     assert BENCHMARK_VERSION == card["benchmark_details"]["version"]
-
-
-def test_scanned_row_contract_uses_current_name() -> None:
-    """Active code should use the Safety/Care scanned-row contract name."""
-    import invisiblebench.version as version
-
-    assert version.SCANNED_ROW_CONTRACT_VERSION == "3.2.0"
-    assert not hasattr(version, "V3_RESULT_CONTRACT_VERSION")

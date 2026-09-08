@@ -12,10 +12,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from invisiblebench.evaluation.check_registry import (  # noqa: E402
-    CARE_DIMENSIONS,
-    SAFETY_DIMENSIONS,
-)
+from invisiblebench.models.scan import DIMENSIONS  # noqa: E402
 
 SCHEMA = "invisiblebench-incident/v1"
 DISPOSITIONS = {"observed", "triage", "candidate", "accepted", "rejected"}
@@ -59,7 +56,7 @@ def validate_incident(record: object) -> list[str]:
 
     layer = record.get("layer")
     dimension = record.get("dimension")
-    valid_dimensions = SAFETY_DIMENSIONS if layer == "safety" else CARE_DIMENSIONS
+    valid_dimensions = DIMENSIONS.get(layer, ())
     if layer not in {"safety", "care"}:
         errors.append("layer must be 'safety' or 'care'")
     elif dimension not in valid_dimensions:

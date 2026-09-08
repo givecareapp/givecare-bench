@@ -21,14 +21,11 @@ Transcript = list[dict[str, Any]]
 # -- Raw scenario JSON before Pydantic model parsing --
 ScenarioData = dict[str, Any]
 
-# -- Flat result row (one scenario x one model) as carried by results_io / stats --
+# -- Generic JSON row used at transcript and scan boundaries --
 ResultRow = dict[str, Any]
 
 # -- check definition (checks/<ID>.yaml) for one mode --
 ModeConfig = dict[str, Any]
-
-# -- routing block (checks/<ID>.yaml `routing:`) for one mode --
-RoutingConfig = dict[str, Any]
 
 # -- Chat message {"role": ..., "content": ...} used in API call signatures --
 ChatMessage = dict[str, str]

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -16,7 +17,6 @@ from invisiblebench.cli.result_helpers import (
     _make_transcript_result,
 )
 from invisiblebench.evaluation.branching import resolve_branch
-from invisiblebench.utils.prompt_hash import prompt_hash
 from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ def transcript_policy(api_client: "ModelAPIClient") -> dict[str, Any]:
     backend = "openrouter" if "openrouter" in base_url else "openai-compatible"
     return {
         "backend": backend,
-        "system_prompt_hash": prompt_hash(SYSTEM_PROMPT),
+        "system_prompt_hash": hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest(),
         "temperature": TRANSCRIPT_TEMPERATURE,
         "max_reply_tokens": MAX_REPLY_TOKENS,
         "empty_response_retries": EMPTY_RESPONSE_RETRIES,

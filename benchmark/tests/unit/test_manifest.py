@@ -34,18 +34,14 @@ class TestGenerateManifest:
             "git_dirty",
             "scenario_hash",
             "scenario_ids",
-            "scoring_config_hash",
-            "check_definition_hashes",
-            "scorer_prompt_hashes",
             "model_ids",
             "run_date",
-            "contract_version",
             "python_version",
             "benchmark_version",
             "code_version",
         }
         assert required == set(manifest.keys())
-        assert manifest["schema"] == "invisiblebench-run-manifest/v2"
+        assert manifest["schema"] == "invisiblebench-run-manifest/v3"
 
     def test_git_sha_format(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
@@ -85,11 +81,6 @@ class TestGenerateManifest:
         manifest = generate_manifest(project_root, model_ids=[], run_id="test-uuid-1234")
         assert manifest["run_id"] == "test-uuid-1234"
 
-    def test_contract_version_from_config(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        # Should read contract_version from scoring.yaml (not "unknown")
-        assert manifest["contract_version"] != "unknown"
-        assert re.match(r"\d+\.\d+\.\d+", manifest["contract_version"])
 
     def test_benchmark_version_from_inventory(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
@@ -109,21 +100,7 @@ class TestGenerateManifest:
 
         datetime.fromisoformat(manifest["run_date"])
 
-    def test_scorer_prompt_hashes_snapshot_current_check_templates(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        hashes = manifest["scorer_prompt_hashes"]
-        assert len(hashes) == 46
-        assert all(len(value) == 16 for value in hashes.values())
-        assert "crisis.passive-ideation" in hashes
 
-    def test_check_definition_hashes_snapshot_complete_check_files(
-        self, project_root: Path
-    ) -> None:
-        hashes = generate_manifest(project_root, model_ids=[])["check_definition_hashes"]
-
-        assert len(hashes) == 50
-        assert all(len(value) == 64 for value in hashes.values())
-        assert "crisis.passive-ideation" in hashes
 
 
 class TestScenarioHash:

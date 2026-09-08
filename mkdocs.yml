@@ -1,6 +1,6 @@
 site_name: InvisibleBench
 site_url: https://givecareapp.github.io/givecare-bench/
-site_description: AI safety benchmark for longitudinal caregiver support
+site_description: Evidence benchmark for caregiver-support model behavior
 site_author: Ali Madad
 repo_url: https://github.com/givecareapp/givecare-bench
 repo_name: givecareapp/givecare-bench
@@ -34,24 +34,9 @@ theme:
 
 nav:
   - Home: index.md
-  - The Model — Safety + Care: ontology.md
-  - What InvisibleBench Owns: what-invisiblebench-owns.md
-  - Quickstart: quickstart.md
-  - Install: install.md
-  - Scoring Rubric: scoring-rubric.md
-  - Architecture: architecture.md
-  - Helm Evidence Owner Lane: evidence-lane.md
-  - Methodology: methodology.md
-  - Publishing Audit: publishing-audit.md
-  - Taxonomy: taxonomy.md
-  - Check Inventory: checks.md
-  - Results Experience: results-experience.md
-  - Verifier Validation: verifier-validation.md
-  - Verifier Unit Tests: verifier-unit-tests.md
-  - Governance: governance.md
-
-exclude_docs: |
-  paper-draft/
+  - Run and inspect: quickstart.md
+  - Method: methodology.md
+  - Owner projection: evidence-lane.md
 
 plugins:
   - search

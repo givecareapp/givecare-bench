@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import shlex
 import time
 import uuid
 from pathlib import Path
@@ -29,16 +30,12 @@ from invisiblebench.api.client import (
 )
 from invisiblebench.cli._console import make_console
 from invisiblebench.cli.display import print_banner
-from invisiblebench.cli.result_helpers import (
-    _compute_success as _compute_success,  # re-exported: tests import from this module
-)
 from invisiblebench.cli.transcript import (
     evaluate_scenario_async,
     transcript_policy,
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.results_io import write_json
-from invisiblebench.run_audit import audit_results_source, render_audit_markdown
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
     get_private_confidential_dir,
@@ -230,43 +227,6 @@ def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
     return sorted(indices)
 
 
-def _write_run_audit(
-    source: Path,
-    *,
-    output_dir: Path,
-    expected_scenario_count: int | None,
-    harness: str,
-    mode: str,
-    previous_source: Path | None = None,
-) -> dict[str, Any]:
-    """Generate run audit artifacts and return the audit dict."""
-    audit = audit_results_source(
-        source,
-        expected_scenario_count=expected_scenario_count,
-        harness=harness,
-        mode=mode,
-        previous_source=previous_source,
-    )
-    write_json(output_dir / "run_audit.json", audit)
-    (output_dir / "run_audit.md").write_text(render_audit_markdown(audit))
-    return audit
-
-
-def _print_audit_summary(audit: dict[str, Any], console: Console | None = None) -> None:
-    """Print compact audit summary to console/stdout."""
-    msg = (
-        f"Audit: {audit.get('summary_status', 'WARN')} | "
-        f"valid={'yes' if audit.get('run_valid') else 'no'} | "
-        f"publishable={'yes' if audit.get('publishable') else 'no'} | "
-        f"owner={audit.get('primary_owner', 'benchmark')}"
-    )
-    if console:
-        color = "green" if audit.get("summary_status") == "PASS" else "yellow" if audit.get("summary_status") == "WARN" else "red"
-        console.print(f"[{color}]{msg}[/{color}]")
-    else:
-        print(msg)
-
-
 def _write_transcript_run_summary(
     *,
     output_dir: Path,
@@ -353,51 +313,32 @@ def _write_transcript_run_summary(
                 "scenario": r.get("scenario"),
                 "scenario_id": r.get("scenario_id"),
                 "category": r.get("category"),
-                "reason": "; ".join(str(x) for x in r.get("hard_fail_reasons", []))
-                or r.get("error")
+                "reason": r.get("error")
                 or r.get("status"),
             }
             for r in errors
         ],
-        "next_steps": {
-            "dev_scan": (
-                "uv run python scripts/run_scan.py --profile dev --enable-llm "
-                "--max-cost-usd 25 "
-                f"--llm-model {DEFAULT_JUDGE_MODEL} "
-                f"{output_dir}"
-            ),
-            "publish_scan_dry_run": (
-                "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
-                f"--llm-model {DEFAULT_JUDGE_MODEL} "
-                f"{output_dir}"
-            ),
-        },
+        "next_steps": {"scan_plan": _scan_plan_command(output_dir)},
     }
     path = output_dir / "transcript_run.json"
     write_json(path, summary)
     return path
 
 
+def _scan_plan_command(output_dir: Path) -> str:
+    return shlex.join([
+        "uv", "run", "python", "scripts/run_scan.py", "plan", str(output_dir),
+        "--output", str(output_dir.with_name("scan_" + output_dir.name)),
+        "--llm-model", DEFAULT_JUDGE_MODEL,
+    ])
+
+
 def _print_transcript_next_steps(output_dir: Path, console: Console | None = None) -> None:
-    dev_cmd = (
-        "uv run python scripts/run_scan.py --profile dev --enable-llm "
-        "--max-cost-usd 25 "
-        f"--llm-model {DEFAULT_JUDGE_MODEL} "
-        f"{output_dir}"
-    )
-    publish_dry_run_cmd = (
-        "uv run python scripts/run_scan.py --profile publish --dry-run --enable-llm "
-        f"--llm-model {DEFAULT_JUDGE_MODEL} "
-        f"{output_dir}"
-    )
+    command = _scan_plan_command(output_dir)
     if console:
-        console.print("[cyan]Next stage: judge transcripts with Safety/Care scan[/cyan]")
-        console.print(f"[dim]{dev_cmd}[/dim]")
-        console.print(f"[dim]{publish_dry_run_cmd}[/dim]")
+        console.print(f"Next: {command}")
     else:
-        print("Next stage: judge transcripts with Safety/Care scan")
-        print(dev_cmd)
-        print(publish_dry_run_cmd)
+        print(f"Next: {command}")
 
 
 def run_benchmark(
@@ -468,7 +409,7 @@ def run_benchmark(
             console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
             console.print(
                 "[cyan]Conservative budget includes target transcript generation only. "
-                f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost.[/cyan]\n"
+                f"Use scripts/run_scan.py plan for {DEFAULT_JUDGE_MODEL} judging cost.[/cyan]\n"
             )
             console.print("[bold]Selected models:[/bold]")
             all_catalog = MODELS_FULL
@@ -486,7 +427,7 @@ def run_benchmark(
             print("DRY RUN - No evaluations will be run")
             print(
                 "Conservative budget includes target transcript generation only. "
-                f"Use scripts/run_scan.py --dry-run for {DEFAULT_JUDGE_MODEL} judging cost."
+                f"Use scripts/run_scan.py plan for {DEFAULT_JUDGE_MODEL} judging cost."
             )
             print("\nSelected models:")
             all_catalog = MODELS_FULL
@@ -601,7 +542,7 @@ def run_benchmark(
                 idx, result = await task
                 completed.append((idx, result))
                 transcript_rows.append(result)
-                is_error = result.get("status") in ("fail", "error") or result.get("hard_fail")
+                is_error = result.get("status") == "error"
                 status = "ERROR" if is_error else "TRANSCRIPT"
                 print(
                     f"[{len(completed)}/{len(tasks)}] {model['name']} - "
