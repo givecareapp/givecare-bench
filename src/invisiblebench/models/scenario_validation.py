@@ -1,12 +1,10 @@
-"""Scenario loading and validation."""
+"""Validate public scenario authoring fields."""
 
-import json
-from pathlib import Path
 from typing import Any
 
-from invisiblebench.models import Scenario, ScenarioCategory, ScoringDimension
+from invisiblebench.models import ScenarioCategory, ScoringDimension
 from invisiblebench.models.scenario import retired_rubric_paths
-from invisiblebench.utils.turn_index import get_turn_index, normalize_turn_indices
+from invisiblebench.utils.turn_index import get_turn_index
 
 
 class ScenarioValidator:
@@ -211,39 +209,3 @@ class ScenarioValidator:
             errors.append("dif_variables must be a list")
 
         return errors
-
-
-class ScenarioLoader:
-
-
-    def __init__(self, scenario_dir: str = "./scenarios"):
-
-        self.scenario_dir = Path(scenario_dir)
-        self.validator = ScenarioValidator()
-
-    def load_all(self) -> list[Scenario]:
-
-        scenarios = []
-
-        if not self.scenario_dir.exists():
-            raise FileNotFoundError(f"Scenario directory not found: {self.scenario_dir}")
-
-        for json_file in sorted(self.scenario_dir.rglob("*.json")):
-            scenario = self.load_scenario(json_file)
-            scenarios.append(scenario)
-
-        return scenarios
-
-    def load_scenario(self, file_path: Path) -> Scenario:
-
-        with open(file_path, "r") as f:
-            data = json.load(f)
-
-        normalize_turn_indices(data)
-
-        errors = self.validator.validate_scenario(data)
-        if errors:
-            raise ValueError(f"Scenario validation errors in {file_path}:\n" + "\n".join(errors))
-
-        scenario = Scenario.from_dict(data)
-        return scenario

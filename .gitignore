@@ -62,6 +62,10 @@ results/
 runs/
 .evidence/
 
+# Local release-watch proposals and retired publication staging
+/delivery/watch/
+/data/publication-source/
+
 # Autoresearch campaign artifacts
 internal/autoresearch/results/*.json
 internal/autoresearch/results.tsv

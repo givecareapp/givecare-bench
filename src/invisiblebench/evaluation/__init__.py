@@ -1,1 +1,1 @@
-"""Evaluation logic and scoring — Safety/Care mode-engine verifier pattern."""
+"""Conversation branching, check definitions, and model judgments."""

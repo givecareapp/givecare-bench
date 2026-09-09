@@ -2,14 +2,9 @@
 
 ## Supported versions
 
-The current benchmark contract is **3.1.0** (per
-`benchmark/benchmark_card.json` and `pyproject.toml`). Security fixes
-land on `main` and are published as a new patch or minor version.
-
-| Version | Supported |
-|---------|-----------|
-| 3.1.x   | Yes       |
-| < 3.1   | No        |
+Security fixes land on `main` for the current version defined in
+[`src/invisiblebench/version.py`](src/invisiblebench/version.py).
+Historical versions do not receive fixes.
 
 ## Reporting a vulnerability
 
@@ -18,6 +13,7 @@ Please do **not** open a public GitHub issue for security concerns.
 Preferred channel: [GitHub's private security advisory form](https://github.com/givecareapp/givecare-bench/security/advisories/new).
 
 Alternative: email `ali@scty.org`. Please include:
+
 - A description of the issue and its impact
 - Steps to reproduce (scenario id, model, transcript, run id if applicable)
 - Your disclosure timeline preference
@@ -28,9 +24,9 @@ Alternative: email `ali@scty.org`. Please include:
   systematically misjudge a response class.
 - **Prompt injection against judges** — scenario content that escapes into
   the judge's instruction context.
-- **Leaked private material** — if any gitignored prompt, rule file, or
-  Convex key shows up in a published artifact (`data/leaderboard/`,
-  released Convex payload, test fixtures, git history).
+- **Leaked private material** — private transcripts, scenarios, expected
+  answers, or judge prompts in public projections, release archives, test
+  fixtures, or Git history.
 - **Credential exposure** — hardcoded keys, tokens, or deployment IDs in
   committed code or CI logs.
 - **Supply-chain issues** — compromised dependencies, typosquatting,

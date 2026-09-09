@@ -3,10 +3,6 @@
 from invisiblebench.models._types import (
     ChatMessage,
     JsonMap,
-    ModeConfig,
-    ResultRow,
-    ScenarioData,
-    Transcript,
 )
 from invisiblebench.models.config import (
     MODELS_FULL,
@@ -25,10 +21,6 @@ __all__ = [
     # Type aliases
     "ChatMessage",
     "JsonMap",
-    "ModeConfig",
-    "ResultRow",
-    "ScenarioData",
-    "Transcript",
     # Config
     "ModelConfig",
     "MODELS_FULL",

@@ -28,8 +28,8 @@ for owner review. Never send or publish them from this workflow.
 
 `scripts/bench_watch.py --propose` reads the roster, benchmark inventory,
 leaderboard metadata, and the public model catalog. It writes a dated proposal
-under `delivery/watch/`. It does not run a scan, call a paid model, or emit a
-task.
+under gitignored `delivery/watch/`. These are local operator reports, not
+repository source. It does not run a scan, call a paid model, or emit a task.
 
 Cost estimates use recorded judge costs from the retained current scan bundle.
 The estimate is `unknown` when that publication cannot pass QA.

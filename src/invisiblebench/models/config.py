@@ -17,12 +17,6 @@ class ModelConfig(BaseModel):
     cost_per_m_input: float = Field(..., ge=0, description="Cost per million input tokens")
     cost_per_m_output: float = Field(..., ge=0, description="Cost per million output tokens")
 
-    @property
-    def safe_id(self) -> str:
-        return self.id.replace("/", "_")
-
-
-
 # Default model configurations
 #
 # 15 models × 3 metadata axes: class (frontier/flash/small), origin (US/China),

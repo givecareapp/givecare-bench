@@ -55,16 +55,9 @@ uv run pytest benchmark/tests/unit/test_scenario_validator.py \
 
 ## Running a scan
 
-Generate transcripts and create a dry-run scan plan first:
-
-```bash
-uv run bench -m your-org/your-model --dry-run
-uv run bench -m your-org/your-model -y --max-cost-usd <budget>
-uv run python scripts/run_scan.py plan results/run_<id> \
-  --output <scan-dir> --llm-model openai/gpt-5-mini
-uv run python scripts/run_scan.py run \
-  --plan <scan-dir>/scan_plan.json --max-cost-usd <budget>
-```
+Follow the [quickstart](docs/quickstart.md) to generate transcripts, plan a scan,
+and inspect its Jury Card. Plan each paid step first. Set an explicit
+`--max-cost-usd` for each live command.
 
 The plan and live run must use the same transcript source and judge model.
 Every active check uses the same LLM judge path. Optional critique cannot

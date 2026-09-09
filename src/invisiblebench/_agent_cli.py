@@ -1,57 +1,24 @@
-"""Agent-friendly CLI helpers.
-
-Single-file reference implementation of the conventions in
-`~/agents/_rules/general/cli.md`.
-
-Usage:
-    from invisiblebench._agent_cli import (
-        doctor_runner, create_console, read_stdin_or_file,
-        confirm_or_abort, emit_json, emit_path,
-    )
-"""
+"""CLI health checks, confirmation, and JSON output."""
 from __future__ import annotations
 
 import json
-import os
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from rich.console import Console
-
 __all__ = [
     "DoctorCheck",
     "doctor_runner",
-    "create_console",
-    "read_stdin_or_file",
     "confirm_or_abort",
     "emit_json",
-    "emit_path",
     "is_tty",
-    "no_color",
 ]
 
 
 def is_tty() -> bool:
     """True if stdout is a real terminal."""
     return sys.stdout.isatty()
-
-
-def no_color() -> bool:
-    """Honor the NO_COLOR env var (https://no-color.org/) or a non-tty stdout."""
-    return bool(os.environ.get("NO_COLOR")) or not is_tty()
-
-
-def create_console() -> Console:
-    """Return a Rich Console that auto-disables ANSI on non-tty / NO_COLOR."""
-    return Console(
-        force_terminal=not no_color(),
-        no_color=no_color(),
-        highlight=False,
-        soft_wrap=True,
-    )
-
 
 
 @dataclass
@@ -102,18 +69,6 @@ def doctor_runner(checks: Iterable[DoctorCheck | tuple], *, exit_on_fail: bool =
         return 1
     print("\ndoctor: all checks passed", file=sys.stderr)
     return 0
-
-
-
-def read_stdin_or_file(arg: str) -> str:
-    """Return the contents of `arg`, treating "-" as stdin.
-
-    Raises FileNotFoundError if a real path is given and doesn't exist.
-    """
-    if arg == "-":
-        return sys.stdin.read()
-    with open(arg, "r", encoding="utf-8") as f:
-        return f.read()
 
 
 
@@ -194,12 +149,3 @@ def emit_json(
         payload["error"] = error
     sys.stdout.write(json.dumps(payload, separators=(",", ":"), default=str) + "\n")
     sys.stdout.flush()
-
-
-def emit_path(path: str | os.PathLike, label: str | None = None) -> None:
-    """Echo a file path to STDERR so stdout stays parseable.
-
-    When --json is set, stdout carries the envelope; path goes to stderr.
-    """
-    prefix = f"{label}: " if label else "wrote: "
-    print(f"{prefix}{os.fspath(path)}", file=sys.stderr)

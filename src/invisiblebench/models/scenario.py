@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
@@ -191,21 +189,6 @@ class Scenario(BaseModel):
             if turn.turn_number == turn_number:
                 return turn
         return None
-
-    def get_expected_behaviors(self, turn_number: int) -> list[str]:
-        turn = self.get_turn(turn_number)
-        return turn.expected_behaviors if turn else []
-
-    def get_autofail_triggers(self, turn_number: int) -> list[str]:
-        turn = self.get_turn(turn_number)
-        return turn.autofail_triggers if turn else []
-
-    @classmethod
-    def from_file(cls, path: str | Path) -> "Scenario":
-        scenario_path = Path(path)
-        with open(scenario_path) as f:
-            data = json.load(f)
-        return cls.from_dict(data, source_path=str(scenario_path))
 
     @classmethod
     def from_dict(

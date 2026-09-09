@@ -395,7 +395,7 @@ def run_benchmark(
     )
 
     if RICH_AVAILABLE and console:
-        print_banner(console, "full", models, scenarios, total_cost)
+        print_banner(console, models, scenarios, total_cost)
         console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
     else:
         print("\nInvisibleBench")

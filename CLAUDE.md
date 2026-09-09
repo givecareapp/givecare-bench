@@ -11,12 +11,13 @@ Operational map for InvisibleBench. Read `VISION.md` for intent and
 | `benchmark/` | Public scenarios, inventory, contract, and tests |
 | `src/invisiblebench/cli/` | Transcript, scan, inspect, and run commands |
 | `src/invisiblebench/models/scan.py` | Typed scan and judgment contract |
+| `src/invisiblebench/models/scenario_validation.py` | Scenario authoring validation |
 | `src/invisiblebench/jury_card.py` | Standard Jury Card from saved evidence |
 | `src/invisiblebench/evaluation/` | Check registry and single model judgment |
 | `src/invisiblebench/scoring.py` | Deterministic Safety/Care projection and QA |
 | `src/invisiblebench/judge.py` | Scan planning and execution |
 | `scripts/` | Scan, QA, inventory, intake, and Evidence drivers |
-| `delivery/watch/` | Dated release-watch proposals |
+| `delivery/watch/` | Gitignored local release-watch proposals |
 | `intake/` | Gitignored private candidate data |
 | `results/<UTC-run-id>/` | One private run: Jury Card and its evidence bundle |
 | `results/archive/` | Historical runs and retired reports |

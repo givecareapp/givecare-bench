@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from invisiblebench.evaluation.check_registry import registered_check_ids
-from invisiblebench.loaders.scenario_loader import ScenarioValidator
+from invisiblebench.models.scenario_validation import ScenarioValidator
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 

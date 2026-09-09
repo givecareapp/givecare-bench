@@ -61,7 +61,7 @@
           "gate": "none",
           "adapter": {
             "kind": "cli",
-            "ref": "uv run python scripts/run_scan.py plan <run> --output <scan> --llm-model <judge>"
+            "ref": "uv run python scripts/run_scan.py plan <run> --llm-model <judge>"
           },
           "accepts": [
             "invisiblebench-run-manifest/v3",
@@ -77,7 +77,7 @@
           "gate": "none",
           "adapter": {
             "kind": "cli",
-            "ref": "uv run python scripts/run_scan.py run --plan <scan>/scan_plan.json --max-cost-usd <budget>"
+            "ref": "uv run python scripts/run_scan.py run --plan <run>/scan_plan.json --max-cost-usd <budget>"
           },
           "accepts": [
             "invisiblebench-scan/v1"

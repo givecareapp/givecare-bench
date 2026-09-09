@@ -22,6 +22,24 @@ import pytest
 from invisiblebench.cli import run_command as run_command_mod
 from invisiblebench.cli import runner as runner_mod
 
+
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [("ANTHROPIC_API_KEY", 1), ("OPENROUTER_API_KEY", 0), ("OPENAI_API_KEY", 0)],
+)
+def test_doctor_requires_a_supported_api_key(monkeypatch, tmp_path, capsys, key, expected):
+    from invisiblebench.cli import agent_commands
+
+    for name in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "INVISIBLEBENCH_API_BACKEND"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(key, "test-key")
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: tmp_path)
+
+    assert agent_commands._run_doctor(json_output=True) == expected
+    result = json.loads(capsys.readouterr().out)
+    assert result["data"]["checks"][0]["passed"] is (expected == 0)
+
+
 # -------------------- --out flag --------------------
 
 
