@@ -1,6 +1,6 @@
-# GiveCare Bench
+# Invisible Bench
 
-**GiveCare Bench evaluates caregiver-support conversations and produces a Jury
+**Invisible Bench evaluates caregiver-support conversations and produces a Jury
 Card for each completed scan.** One LLM judge checks the full conversation
 against each active criterion. Safety and Care stay separate. There is no
 composite score or model rank.
@@ -22,7 +22,6 @@ Later cues, response timing, and session context remain visible to the judge.
 
 - [Run and inspect](quickstart.md): generate conversations, plan a scan, and read its Jury Card.
 - [Method](methodology.md): understand the rules, rates, uncertainty, and limits.
-- [Owner projection](evidence-lane.md): create a checked release through Helm Evidence.
 
 Versions and counts come from the benchmark inventory. Check definitions live
 in `checks/`. The scan contract lives in `src/invisiblebench/models/scan.py`.

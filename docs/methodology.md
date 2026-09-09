@@ -113,11 +113,11 @@ does not claim that an independent held-out validation set exists.
 Per-criterion model grading and realistic conversation context have useful
 precedents. HealthBench uses model grading over detailed health-conversation
 rubrics. Its physician-built criteria and separate validation evidence are
-properties of that benchmark; they do not transfer to GiveCare Bench.
+properties of that benchmark; they do not transfer to Invisible Bench.
 [HealthBench paper](https://arxiv.org/abs/2505.08775).
 
 Inspect documents explicit grader roles, conversation history, generation
-settings, and retained evaluation logs. GiveCare Bench uses those ideas in its
+settings, and retained evaluation logs. Invisible Bench uses those ideas in its
 existing runtime. It does not require another evaluation framework.
 [Inspect model grading](https://inspect.aisi.org.uk/model-graded.html),
 [Inspect logs](https://inspect.aisi.org.uk/eval-logs.html).

@@ -1,10 +1,10 @@
-# GiveCare Bench
+# Invisible Bench
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**GiveCare Bench evaluates caregiver-support conversations and produces a Jury
-Card for each completed scan.** The Python package and CLI use the name
-InvisibleBench.
+**Invisible Bench evaluates caregiver-support conversations and produces a Jury
+Card for each completed scan.** Use the `bench` CLI from the `invisiblebench`
+Python package.
 
 One LLM judge checks the full conversation against each active criterion.
 Safety and Care stay separate. There is no composite score or model rank.
@@ -85,7 +85,7 @@ replay a scan.
 | [`checks/`](checks/) | Criteria and evidence requirements |
 | [`src/invisiblebench/`](src/invisiblebench/) | Runtime, CLI, and Jury Card generation |
 | [`scripts/`](scripts/) | Scan, validation, intake, and release commands |
-| [`docs/`](docs/index.md) | Method and operator guides |
+| [`docs/`](docs/index.md) | Method and run guides |
 | [`data/`](data/) | Committed projections and retained release artifacts |
 
 Use the [inventory](benchmark/benchmark_inventory.json) for current corpus facts
@@ -97,7 +97,6 @@ and the [scan contract](src/invisiblebench/models/scan.py) for artifact fields.
 uv run ruff check .
 uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
-helm evidence driver check --driver evidence-driver.json
 ```
 
 Enable the required local hook with `git config core.hooksPath .githooks`.
@@ -111,14 +110,9 @@ scan artifacts, and separate Safety/Care projection. It does not own GiveCare
 product policy, model training, clinical guidance, or real-world outcome
 claims.
 
-Private transcripts, scenario text, expected answers, judge prompts,
-and credentials stay in protected local or Evidence paths.
-The repository does not write into a consumer repository.
-
-Candidate scenario content can move through the human-gated
-`evidence-driver.json#corpus.apply` operation. That gate protects content
-provenance. It does not approve or change a model verdict. The deterministic
-`corpus.project` operation creates the owner projection from a checked score candidate and retained scan.
+Private transcripts, private scenarios, expected answers, judge prompts,
+and credentials stay in local storage. Public releases contain aggregate
+results with recorded provenance.
 
 Committed historical releases keep their original bytes and labels. New
 releases use the current contract and a new release version.
@@ -127,6 +121,6 @@ Local release-watch reports stay under gitignored `delivery/watch/`.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the scenario contract, proof
-commands, and pull request checks. See [`SECURITY.md`](SECURITY.md) for
+See [contribution guidelines](.github/CONTRIBUTING.md) for the scenario contract,
+proof commands, and pull request checks. See the [security policy](.github/SECURITY.md) for
 private security reports.

@@ -398,7 +398,7 @@ def run_benchmark(
         print_banner(console, models, scenarios, total_cost)
         console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
     else:
-        print("\nInvisibleBench")
+        print("\nInvisible Bench")
         print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
         print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
         print("Transcript-only mode: judge/scorer calls are skipped")

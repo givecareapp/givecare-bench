@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "InvisibleBench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships"
+title: "Invisible Bench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships"
 authors:
   - family-names: "Madad"
     given-names: "Ali"

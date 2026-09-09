@@ -1,6 +1,6 @@
 """Unit tests for scripts/bench_watch.py — the read-only OpenRouter release watcher.
 
-The watcher is a proposal-only lane (see AUTOMATION.md § Watch): it never
+The watcher only proposes work: it never
 scans and never spends money, so these tests exercise eligibility filtering
 and proposal assembly against a fixture catalog and fixture repo files, never
 the live OpenRouter API or a real leaderboard.
@@ -374,4 +374,3 @@ def test_standard_change_detected_end_to_end_proposes_rescan_of_scanned_models(
     rules = {c["qualifying_rule"] for c in proposal["candidates"]}
     assert rules == {"standard_change"}
     assert {c["model_id"] for c in proposal["candidates"]} == set(SCANNED)
-

@@ -1,4 +1,4 @@
-site_name: InvisibleBench
+site_name: Invisible Bench
 site_url: https://givecareapp.github.io/givecare-bench/
 site_description: Evidence benchmark for caregiver-support model behavior
 site_author: Ali Madad
@@ -36,7 +36,6 @@ nav:
   - Home: index.md
   - Run and inspect: quickstart.md
   - Method: methodology.md
-  - Owner projection: evidence-lane.md
 
 plugins:
   - search

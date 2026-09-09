@@ -29,7 +29,6 @@ uv run bench doctor
 uv run ruff check .
 uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
-helm evidence driver check --driver evidence-driver.json
 ```
 
 Configure the local hook with:
@@ -43,7 +42,7 @@ git config core.hooksPath .githooks
 Scenario JSON files live under `benchmark/scenarios/`. Use the canonical
 `category` field. Retired tier fields are invalid. Use the unified `criteria`
 shape for check rubrics. See
-[`SCENARIO_SCHEMA.yaml`](benchmark/scenarios/SCENARIO_SCHEMA.yaml).
+[`SCENARIO_SCHEMA.yaml`](../benchmark/scenarios/SCENARIO_SCHEMA.yaml).
 
 Run focused checks before opening a change:
 
@@ -55,7 +54,7 @@ uv run pytest benchmark/tests/unit/test_scenario_validator.py \
 
 ## Running a scan
 
-Follow the [quickstart](docs/quickstart.md) to generate transcripts, plan a scan,
+Follow the [quickstart](../docs/quickstart.md) to generate transcripts, plan a scan,
 and inspect its Jury Card. Plan each paid step first. Set an explicit
 `--max-cost-usd` for each live command.
 

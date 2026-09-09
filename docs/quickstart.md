@@ -75,17 +75,6 @@ uv run python scripts/lint_turn_indices.py --strict
 
 The scan can contain `UNCLEAR`. It remains evidence and does not start a second resolution pipeline.
 
-Generate a private score candidate and check it:
-
-```bash
-uv run python scripts/generate_leaderboard.py --scan <scan-dir>
-uv run python scripts/qa_leaderboard.py --scan <scan-dir> \
-  --leaderboard <scan-dir>/leaderboard.candidate.json
-```
-
-Use the [owner projection operation](evidence-lane.md) to create release files.
-The generator cannot write the canonical leaderboard.
-
 After a refactor, replay a frozen current-contract scan without API calls:
 
 ```bash

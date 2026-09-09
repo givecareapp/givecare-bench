@@ -21,7 +21,7 @@ def print_banner(
 
     console.print()
     console.print(
-        f"[bold cyan]InvisibleBench[/bold cyan] [dim]v{get_benchmark_version()}[/dim]  "
+        f"[bold cyan]Invisible Bench[/bold cyan] [dim]v{get_benchmark_version()}[/dim]  "
         f"{len(models)} model{'s' if len(models) > 1 else ''} × {len(scenarios)} scenarios  "
         f"[dim]({cats_str})[/dim]  "
         f"[magenta]~${total_cost:.2f}[/magenta]"

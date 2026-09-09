@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes land on `main` for the current version defined in
-[`src/invisiblebench/version.py`](src/invisiblebench/version.py).
+[`src/invisiblebench/version.py`](../src/invisiblebench/version.py).
 Historical versions do not receive fixes.
 
 ## Reporting a vulnerability

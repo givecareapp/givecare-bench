@@ -1,6 +1,6 @@
 {
   "benchmark_details": {
-    "name": "InvisibleBench",
+    "name": "Invisible Bench",
     "version": "5.0.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI behavior benchmark",

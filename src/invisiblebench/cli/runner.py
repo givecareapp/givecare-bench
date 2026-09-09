@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""InvisibleBench CLI runner."""
+"""Invisible Bench CLI runner."""
 from __future__ import annotations
 
 import argparse
@@ -160,7 +160,7 @@ def _run_runs(
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="InvisibleBench - AI Safety Benchmark Runner",
+        description="Invisible Bench - AI Safety Benchmark Runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
