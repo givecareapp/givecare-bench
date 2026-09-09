@@ -29,7 +29,7 @@
     
     
       
-        <title>Run and inspect - InvisibleBench</title>
+        <title>Run and inspect - Invisible Bench</title>
       
     
     
@@ -96,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="InvisibleBench" class="md-header__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+    <a href=".." title="Invisible Bench" class="md-header__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +110,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            InvisibleBench
+            Invisible Bench
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -232,13 +232,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="InvisibleBench" class="md-nav__button md-logo" aria-label="InvisibleBench" data-md-component="logo">
+    <a href=".." title="Invisible Bench" class="md-nav__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    InvisibleBench
+    Invisible Bench
   </label>
   
     <div class="md-nav__source">
@@ -346,33 +346,6 @@
   
 
     
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../evidence-lane/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Owner projection
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -466,15 +439,8 @@ private. Archive complete run directories under <code>results/archive/</code>.</
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/lint_turn_indices.py<span class="w"> </span>--strict
 </code></pre></div>
 <p>The scan can contain <code>UNCLEAR</code>. It remains evidence and does not start a second resolution pipeline.</p>
-<p>Generate a private score candidate and check it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/generate_leaderboard.py<span class="w"> </span>--scan<span class="w"> </span>&lt;scan-dir&gt;
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/qa_leaderboard.py<span class="w"> </span>--scan<span class="w"> </span>&lt;scan-dir&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--leaderboard<span class="w"> </span>&lt;scan-dir&gt;/leaderboard.candidate.json
-</code></pre></div>
-<p>Use the <a href="../evidence-lane/">owner projection operation</a> to create release files.
-The generator cannot write the canonical leaderboard.</p>
 <p>After a refactor, replay a frozen current-contract scan without API calls:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rescore_diff.py<span class="w"> </span>--frozen<span class="w"> </span>&lt;scan-dir&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rescore_diff.py<span class="w"> </span>--frozen<span class="w"> </span>&lt;scan-dir&gt;
 </code></pre></div>
 <p>Replay checks the request, parsing, and evidence. It does not rerun
 model inference. A scan from a retired contract requires a new benchmark run.</p>
