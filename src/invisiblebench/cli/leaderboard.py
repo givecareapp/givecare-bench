@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Leaderboard status view for InvisibleBench.
-
-Consumer projection writes go through Hound `corpus.project`, not this module.
-Canonical leaderboard generation and strict QA remain explicit owner steps.
-Only the read-only `status` health view remains.
-"""
+"""Read-only status for Invisible Bench aggregate results."""
 from __future__ import annotations
 
 from pathlib import Path

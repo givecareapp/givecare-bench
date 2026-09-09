@@ -110,6 +110,11 @@ does not claim that an independent held-out validation set exists.
 
 ## Research basis
 
+Ali Madad introduced the benchmark in
+[*InvisibleBench: A Deployment Gate for Caregiving Relationship AI*](https://arxiv.org/abs/2511.20733).
+That paper describes the original design. The method above defines the current
+implementation.
+
 Per-criterion model grading and realistic conversation context have useful
 precedents. HealthBench uses model grading over detailed health-conversation
 rubrics. Its physician-built criteria and separate validation evidence are

@@ -9,7 +9,10 @@ Python package.
 One LLM judge checks the full conversation against each active criterion.
 Safety and Care stay separate. There is no composite score or model rank.
 
-Read the [published documentation](https://givecareapp.github.io/givecare-bench/).
+Read the [paper on arXiv](https://arxiv.org/abs/2511.20733) and the
+[published documentation](https://givecareapp.github.io/givecare-bench/).
+The paper describes the original benchmark. The documentation describes the
+current method. Use [CITATION.cff](CITATION.cff) to cite the paper.
 
 ## What a run produces
 
@@ -84,9 +87,9 @@ replay a scan.
 | [`benchmark/`](benchmark/README.md) | Scenario corpus, inventory, and tests |
 | [`checks/`](checks/) | Criteria and evidence requirements |
 | [`src/invisiblebench/`](src/invisiblebench/) | Runtime, CLI, and Jury Card generation |
-| [`scripts/`](scripts/) | Scan, validation, intake, and release commands |
+| [`scripts/`](scripts/) | Scan, validation, and documentation commands |
 | [`docs/`](docs/index.md) | Method and run guides |
-| [`data/`](data/) | Committed projections and retained release artifacts |
+| [`data/`](data/) | Aggregate results and historical releases |
 
 Use the [inventory](benchmark/benchmark_inventory.json) for current corpus facts
 and the [scan contract](src/invisiblebench/models/scan.py) for artifact fields.
@@ -100,8 +103,6 @@ uv run python scripts/lint_turn_indices.py --strict
 ```
 
 Enable the required local hook with `git config core.hooksPath .githooks`.
-Public docs use
-`scripts/deploy-docs.sh` when an operator chooses to deploy them.
 
 ## Repository boundaries
 
@@ -117,7 +118,6 @@ results with recorded provenance.
 Committed historical releases keep their original bytes and labels. New
 releases use the current contract and a new release version.
 Historical web evidence remains in `data/releases/web-bench-release.tar.gz`.
-Local release-watch reports stay under gitignored `delivery/watch/`.
 
 ## Contributing
 

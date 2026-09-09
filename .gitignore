@@ -97,3 +97,18 @@ adapters/
 /intake/
 /archive/
 /legacy/
+
+# Private workspace integrations and their tests
+/evidence-driver.json
+/.givecare/
+/scripts/bench_watch.py
+/scripts/evidence_driver.py
+/scripts/sync_evals_projection.py
+/scripts/intake/
+/benchmark/configs/roster.json
+/benchmark/tests/unit/test_bench_watch.py
+/benchmark/tests/unit/test_hound_driver.py
+/benchmark/tests/unit/test_import_evals_hound.py
+/benchmark/tests/unit/test_incident_registry.py
+/benchmark/tests/unit/test_sync_evals_projection.py
+/data/imports/

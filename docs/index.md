@@ -5,6 +5,10 @@ Card for each completed scan.** One LLM judge checks the full conversation
 against each active criterion. Safety and Care stay separate. There is no
 composite score or model rank.
 
+Read Ali Madad's paper,
+[*InvisibleBench: A Deployment Gate for Caregiving Relationship AI*](https://arxiv.org/abs/2511.20733).
+It describes the original benchmark. This site documents the current method.
+
 A **Jury Card** complements a model card with evidence from a specific run.
 It shows quoted model evidence beside the judge's verdicts and rationales.
 It also records judge settings, costs, technical errors, and attributed

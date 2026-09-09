@@ -177,10 +177,6 @@ Examples:
   uv run python scripts/run_scan.py plan results/<run-id> --llm-model <judge>
   uv run python scripts/run_scan.py run --plan results/<run-id>/scan_plan.json \
     --max-cost-usd <budget>
-  helm evidence plan --driver evidence-driver.json --operation corpus.project \
-    --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
-    --output /tmp/gc-bench-leaderboard-plan.json
-                                      Deterministic consumer projection
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
   # Utilities

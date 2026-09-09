@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use Invisible Bench, please cite the paper below."
 title: "Invisible Bench: A Benchmark for Evaluating AI Safety in Persistent Caregiving Relationships"
 authors:
   - family-names: "Madad"
@@ -9,6 +9,15 @@ repository-code: "https://github.com/givecareapp/givecare-bench"
 url: "https://github.com/givecareapp/givecare-bench"
 license: MIT
 type: software
+preferred-citation:
+  type: article
+  title: "InvisibleBench: A Deployment Gate for Caregiving Relationship AI"
+  authors:
+    - family-names: "Madad"
+      given-names: "Ali"
+  year: 2025
+  journal: "arXiv"
+  url: "https://arxiv.org/abs/2511.20733"
 keywords:
   - ai-safety
   - caregiving
