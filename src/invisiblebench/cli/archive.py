@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from invisiblebench.utils.benchmark_inventory import get_project_root
+from invisiblebench.utils.manifest import run_timestamp
 
 try:
     from rich.console import Console
@@ -20,45 +21,35 @@ except ImportError:
     Console = None
 
 
-def parse_run_date(run_name: str) -> datetime | None:
-    """Parse date from run directory name (run_YYYYMMDD_HHMMSS)."""
-    if not run_name.startswith("run_"):
-        return None
-    date_str = run_name[4:12]  # YYYYMMDD
-    try:
-        return datetime.strptime(date_str, "%Y%m%d")
-    except ValueError:
-        return None
-
-
 def get_run_info(run_path: Path) -> dict[str, Any]:
     """Get info about a run directory."""
-    results_file = run_path / "all_results.json"
     manifest_file = run_path / "run_manifest.json"
     info = {
         "path": run_path,
         "name": run_path.name,
-        "date": parse_run_date(run_path.name),
+        "date": None,
         "size_mb": sum(f.stat().st_size for f in run_path.rglob("*") if f.is_file())
         / (1024 * 1024),
-        "has_results": results_file.exists(),
+        "has_results": False,
         "artifact_state": "empty_no_results",
         "models": [],
         "scenarios": 0,
+        "manifests": [],
+        "jury_card": str(run_path / "jury-card.md") if (run_path / "jury-card.md").is_file() else None,
     }
-
-    if results_file.exists():
+    if (run_path / "scan_plan.json").exists():
+        from invisiblebench.judge import load_scan
         try:
-            with open(results_file) as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            data = None
-        if isinstance(data, list):
-            info["scenarios"] = len(data)
-            info["models"] = list({r.get("model", "unknown") for r in data})
-            info["artifact_state"] = "complete_results" if data else "empty_results"
-        else:
-            info["artifact_state"] = "invalid_results"
+            plan, records = load_scan(run_path)
+            info["models"] = sorted({ref.model_id for ref in plan.transcripts})
+            info["scenarios"] = len(plan.transcripts)
+            info["has_results"] = sum(record.error is None for record in records) == plan.planned_calls
+            info["artifact_state"] = "judged" if info["has_results"] else "judging_incomplete"
+            info["manifests"] = [
+                json.loads((run_path / source.manifest.path).read_bytes()) for source in plan.sources
+            ]
+        except (OSError, ValueError, KeyError) as exc:
+            info.update(artifact_state="invalid_scan", error=str(exc))
     elif (run_path / "transcript_run.json").exists():
         try:
             with open(run_path / "transcript_run.json") as f:
@@ -92,14 +83,24 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
             "incomplete_no_results" if has_partial_artifacts else "aborted_manifest_only"
         )
 
+    if not info["manifests"] and manifest_file.exists():
+        try:
+            manifest = json.loads(manifest_file.read_bytes())
+            if isinstance(manifest, dict):
+                info["manifests"] = [manifest]
+        except (OSError, ValueError):
+            pass
+    info["date"] = run_timestamp(run_path, info["manifests"])
     return info
 
 
 def list_runs(results_dir: Path) -> list[dict[str, Any]]:
     """List all run directories with info."""
     runs = []
-    for d in sorted(results_dir.iterdir()):
-        if d.is_dir() and d.name.startswith("run_"):
+    for d in sorted(results_dir.iterdir()) if results_dir.exists() else []:
+        if d.is_dir() and d.name != "archive" and any(
+            (d / name).is_file() for name in ("run_manifest.json", "scan_plan.json")
+        ):
             runs.append(get_run_info(d))
     return runs
 
@@ -137,7 +138,7 @@ def archive_runs(
             else:
                 to_keep.append(run)
     else:
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(UTC).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
         for run in runs:
             if run["date"] and run["date"] < today:
                 to_archive.append(run)
@@ -148,13 +149,11 @@ def archive_runs(
     if not dry_run and to_archive:
         archive_dir.mkdir(parents=True, exist_ok=True)
         for run in to_archive:
+            if (archive_dir / run["name"]).exists():
+                raise FileExistsError(f"archive destination already exists: {archive_dir / run['name']}")
+        for run in to_archive:
             src = run["path"]
             dst = archive_dir / run["name"]
-            if dst.exists():
-                i = 1
-                while dst.exists():
-                    dst = archive_dir / f"{run['name']}_{i}"
-                    i += 1
             shutil.move(str(src), str(dst))
             archived_paths.append(dst)
 
@@ -219,11 +218,15 @@ def run_archive(
             print(f"Invalid date format: {before}. Use YYYYMMDD.")
             return 1
 
-    archived, kept = archive_runs(
-        before_date=before_date,
-        keep_recent=keep,
-        dry_run=dry_run,
-    )
+    try:
+        archived, kept = archive_runs(
+            before_date=before_date,
+            keep_recent=keep,
+            dry_run=dry_run,
+        )
+    except OSError as exc:
+        print(f"Cannot archive: {exc}")
+        return 1
 
     print_archive_report(archived, kept, dry_run=dry_run, console=console)
 

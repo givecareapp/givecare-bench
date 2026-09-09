@@ -10,7 +10,7 @@ import json
 import subprocess
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,23 @@ from invisiblebench.utils.benchmark_inventory import (
     get_benchmark_version,
     get_code_version,
 )
+
+RUN_DIRECTORY_TIME_FORMAT = "%Y-%m-%d_%H-%M-%SZ"
+
+
+def run_timestamp(run_path: Path, manifests: list[dict[str, Any]]) -> datetime | None:
+    """Read a run's UTC timestamp; custom directory names use source dates."""
+    try:
+        return datetime.strptime(run_path.name, RUN_DIRECTORY_TIME_FORMAT)
+    except ValueError:
+        dates = []
+        for manifest in manifests:
+            try:
+                date = datetime.fromisoformat(manifest["run_date"])
+                dates.append(date.replace(tzinfo=date.tzinfo or UTC).astimezone(UTC).replace(tzinfo=None))
+            except (KeyError, TypeError, ValueError):
+                continue
+        return min(dates) if dates else None
 
 
 def _git_sha() -> str:
@@ -100,7 +117,7 @@ def generate_manifest(
         "scenario_hash": _scenario_hash(scenarios_dir, extra_files=extra_scenario_files),
         "scenario_ids": sorted(set(scenario_ids or [])),
         "model_ids": model_ids,
-        "run_date": datetime.now(timezone.utc).isoformat(),
+        "run_date": datetime.now(UTC).isoformat(),
         "python_version": sys.version,
         "benchmark_version": get_benchmark_version(project_root),
         "code_version": get_code_version(project_root),
@@ -118,6 +135,6 @@ def write_manifest(manifest: dict[str, Any], output_dir: Path) -> Path:
     """Write manifest to run_manifest.json; returns the written path."""
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "run_manifest.json"
-    with open(path, "w") as f:
+    with open(path, "x") as f:
         json.dump(manifest, f, indent=2)
     return path

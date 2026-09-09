@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from invisiblebench.api.client import DEFAULT_JUDGE_MODEL, CostBudgetExceededError  # noqa: E402
 from invisiblebench.judge import PLAN_FILE, plan_scan, run_scan  # noqa: E402
+from invisiblebench.jury_card import write_jury_card  # noqa: E402
 
 
 def main() -> int:
@@ -18,7 +19,7 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     plan = commands.add_parser("plan", help="Freeze inputs and estimate cost; no model calls.")
     plan.add_argument("run_dirs", nargs="+", type=Path)
-    plan.add_argument("--output", required=True, type=Path)
+    plan.add_argument("--output", type=Path, help="New scan directory. A single source is frozen in place by default.")
     plan.add_argument("--llm-model", default=DEFAULT_JUDGE_MODEL)
     plan.add_argument("--limit", type=int)
     plan.add_argument("--filter")
@@ -28,6 +29,10 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "plan":
+            if args.output is None:
+                if len(args.run_dirs) != 1:
+                    raise ValueError("multiple source runs require --output")
+                args.output = args.run_dirs[0]
             result = plan_scan(
                 args.run_dirs,
                 args.output,
@@ -48,6 +53,7 @@ def main() -> int:
                 f"Complete: {sum(record.error is None for record in records)} judgments; recorded cost: "
                 f"{sum(record.cost_usd for record in records):.6f} USD"
             )
+            print(f"Jury Card: {write_jury_card(args.plan.parent)}")
     except KeyboardInterrupt:
         print(
             "Interrupted. Completed judgments are saved. Run the same plan to resume.",

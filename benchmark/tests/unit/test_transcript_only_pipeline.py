@@ -208,7 +208,7 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert summary["actual_billable_api_calls"] == len(client.calls)
     assert summary["actual_cost_by_model_usd"] == {"test/model": pytest.approx(len(client.calls) * 0.012345)}
     assert "run_scan.py plan" in summary["next_steps"]["scan_plan"]
-    assert "--output" in summary["next_steps"]["scan_plan"]
+    assert "--output" not in summary["next_steps"]["scan_plan"]
 
     from benchmark.tests.fixtures.current_scan import FixtureJudge
     from invisiblebench.judge import load_scan, plan_scan, run_scan

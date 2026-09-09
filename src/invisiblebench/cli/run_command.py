@@ -328,7 +328,6 @@ def _write_transcript_run_summary(
 def _scan_plan_command(output_dir: Path) -> str:
     return shlex.join([
         "uv", "run", "python", "scripts/run_scan.py", "plan", str(output_dir),
-        "--output", str(output_dir.with_name("scan_" + output_dir.name)),
         "--llm-model", DEFAULT_JUDGE_MODEL,
     ])
 
@@ -471,6 +470,10 @@ def run_benchmark(
         print("ERROR: OPENROUTER_API_KEY not set")
         return 1
 
+    if (output_dir / "run_manifest.json").exists() or (output_dir / "scan_plan.json").exists():
+        print(f"ERROR: Run already exists: {output_dir}. Use a new run directory.")
+        return 2
+
     confirm_or_abort(
         "proceed with live transcript generation",
         yes=auto_confirm,
@@ -504,7 +507,11 @@ def run_benchmark(
     manifest["artifact_type"] = "transcript_run/v1"
     manifest["stage"] = "transcripts"
     manifest["scoring"] = "deferred_to_run_scan"
-    write_manifest(manifest, output_dir)
+    try:
+        write_manifest(manifest, output_dir)
+    except FileExistsError:
+        print(f"ERROR: Run already exists: {output_dir}. Use a new run directory.")
+        return 2
 
     start_time = time.time()
     passed = 0

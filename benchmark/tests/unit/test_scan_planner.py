@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -120,3 +121,37 @@ def test_current_cli_plan_run_and_replay(source, tmp_path, monkeypatch):
     ledger.write_text("".join(json.dumps(record) + "\n" for record in records))
     with pytest.raises(ValueError, match="raw judge decision"):
         judge.replay_scan(bundle)
+
+
+def test_plan_in_place_keeps_one_copy_and_preserves_source_on_error(source, monkeypatch):
+    saved = {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()}
+    assert invoke(monkeypatch, "plan", source) == 0
+    plan, _ = judge.load_scan(source)
+    assert plan.sources[0].manifest.path == "run_manifest.json"
+    assert not (source / "inputs").exists()
+    assert {p.relative_to(source) for p in source.rglob("*") if p.is_file()} == {
+        *saved, Path(judge.PLAN_FILE),
+    }
+    for path, content in saved.items():
+        assert (source / path).read_bytes() == content
+    before = (source / judge.PLAN_FILE).read_bytes()
+    assert invoke(monkeypatch, "plan", source) == 2
+    assert (source / judge.PLAN_FILE).read_bytes() == before
+    monkeypatch.setattr(judge, "ModelAPIClient", FixtureJudge)
+    assert invoke(
+        monkeypatch, "run", "--plan", source / judge.PLAN_FILE,
+        "--max-cost-usd", plan.estimated_cost_usd,
+    ) == 0
+    assert (source / "jury-card.md").is_file()
+    assert judge.replay_scan(source) == []
+    assert not (source / "inputs").exists()
+    for path, content in saved.items():
+        assert (source / path).read_bytes() == content
+
+
+def test_failed_in_place_plan_never_removes_transcripts(source, monkeypatch):
+    monkeypatch.setattr(judge, "load_checks", lambda: (_ for _ in ()).throw(ValueError("bad check")))
+    saved = {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError, match="bad check"):
+        judge.plan_scan([source], source)
+    assert {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()} == saved

@@ -11,13 +11,15 @@ Operational map for InvisibleBench. Read `VISION.md` for intent and
 | `benchmark/` | Public scenarios, inventory, contract, and tests |
 | `src/invisiblebench/cli/` | Transcript, scan, inspect, and run commands |
 | `src/invisiblebench/models/scan.py` | Typed scan and judgment contract |
+| `src/invisiblebench/jury_card.py` | Standard Jury Card from saved evidence |
 | `src/invisiblebench/evaluation/` | Check registry and single model judgment |
 | `src/invisiblebench/scoring.py` | Deterministic Safety/Care projection and QA |
 | `src/invisiblebench/judge.py` | Scan planning and execution |
 | `scripts/` | Scan, QA, inventory, intake, and Evidence drivers |
 | `delivery/watch/` | Dated release-watch proposals |
 | `intake/` | Gitignored private candidate data |
-| `results/` | Gitignored raw transcripts and scan artifacts |
+| `results/<UTC-run-id>/` | One private run: Jury Card and its evidence bundle |
+| `results/archive/` | Historical runs and retired reports |
 | `data/leaderboard/leaderboard.json` | Committed owner projection |
 
 `src/invisiblebench/models/scan.py` defines the scan contract.
@@ -33,20 +35,29 @@ uv run bench --full --dry-run
 uv run bench --full -y --max-cost-usd <budget>
 uv run bench runs --limit 25
 uv run bench get <run-id>
+uv run bench jury <run-id>
 uv run bench explain <model> <scenario> --failures
 ```
 
 Plan every paid scan first:
 
 ```bash
-uv run python scripts/run_scan.py plan <run> --output <scan> --llm-model <judge>
+uv run python scripts/run_scan.py plan <run> --llm-model <judge>
 uv run python scripts/run_scan.py run \
-  --plan <scan>/scan_plan.json --max-cost-usd <budget>
+  --plan <run>/scan_plan.json --max-cost-usd <budget>
 ```
 
-The plan freezes transcripts, source manifests, check definitions, and judge
-settings inside the scan bundle. The run command needs only that plan and a
-cost ceiling. Repeat it to resume. Saved judgments and costs remain intact.
+Run directories use UTC `YYYY-MM-DD_HH-MM-SSZ`. Model identity stays in the manifest
+and Jury Card. A later run of the same model gets a new directory. The CLI
+rejects overwrites and ambiguous run prefixes.
+
+Planning freezes a single source run in place. To judge saved responses again,
+use `--output <new-run-directory>`. That creates a separate portable snapshot.
+Repeat the run command to resume. Saved judgments and costs remain intact.
+Completion writes `jury-card.md`; `bench jury` regenerates it without API calls.
+The card replaces separate per-run reports and scorecard exports. Its marked
+commentary section stays outside the ledger and survives regeneration against
+the same evidence. Public projection candidates remain separate release inputs.
 
 ## Scan and projection
 

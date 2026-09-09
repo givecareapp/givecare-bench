@@ -85,12 +85,16 @@ def _transcript(content: bytes) -> list[dict[str, Any]]:
 
 def _snapshot(path: Path, destination: Path, bundle: Path) -> FileRef:
     content = path.read_bytes()
+    ref = FileRef(path=destination.relative_to(bundle).as_posix(), sha256=sha256(content))
+    if path == destination:
+        _read_ref(bundle, ref)
+        return ref
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("xb") as stream:
         stream.write(content)
         stream.flush()
         os.fsync(stream.fileno())
-    return FileRef(path=destination.relative_to(bundle).as_posix(), sha256=sha256(content))
+    return ref
 
 
 def plan_scan(
@@ -107,10 +111,18 @@ def plan_scan(
     if not run_dirs:
         raise ValueError("at least one transcript run is required")
     bundle = bundle.resolve()
-    bundle.mkdir(parents=True, exist_ok=False)
+    runs = sorted({path.resolve() for path in run_dirs})
+    in_place = runs == [bundle]
+    if in_place:
+        if (bundle / PLAN_FILE).exists() or (bundle / LEDGER_FILE).exists():
+            raise ValueError("this run already has a scan; use a new output directory to judge again")
+    else:
+        if any(run.is_relative_to(bundle) for run in runs):
+            raise ValueError("a new scan directory cannot contain its source runs")
+        bundle.mkdir(parents=True, exist_ok=False)
     try:
         sources = []
-        for run in sorted({path.resolve() for path in run_dirs}):
+        for run in runs:
             manifest_path, summary_path = run / "run_manifest.json", run / "transcript_run.json"
             manifest, summary = (
                 json.loads(manifest_path.read_bytes()),
@@ -131,7 +143,7 @@ def plan_scan(
                 selected = selected[:limit]
             if not selected:
                 raise ValueError(f"no transcripts selected from {run.name}")
-            destination = bundle / "inputs" / sha256(manifest_path.read_bytes())
+            destination = run if in_place else bundle / "inputs" / sha256(manifest_path.read_bytes())
             inputs = []
             for item in selected:
                 relative = FileRef(path=item["transcript_path"], sha256="0" * 64).path
@@ -194,7 +206,8 @@ def plan_scan(
             os.fsync(stream.fileno())
         return plan
     except BaseException:
-        shutil.rmtree(bundle)
+        if not in_place:
+            shutil.rmtree(bundle)
         raise
 
 

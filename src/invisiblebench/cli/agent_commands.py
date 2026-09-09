@@ -124,12 +124,13 @@ def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
         return None
 
     candidates: list[Path] = []
-    direct = results_dir / run_id
+    requested = Path(run_id).expanduser()
+    direct = requested if requested.is_absolute() or requested.is_dir() else results_dir / run_id
     if direct.is_dir():
         candidates = [direct]
     else:
         for entry in sorted(results_dir.iterdir()):
-            if entry.is_dir() and entry.name.startswith(run_id):
+            if entry.is_dir() and entry.name != "archive" and entry.name.startswith(run_id):
                 candidates.append(entry)
         # also check archive
         archive = results_dir / "archive"
@@ -139,16 +140,9 @@ def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
                     candidates.append(entry)
     if not candidates:
         return None
-    # pick newest mtime when multiple
-    run_path = max(candidates, key=lambda p: p.stat().st_mtime)
-
-    manifest_path = run_path / "run_manifest.json"
-    manifest: dict[str, Any] = {}
-    if manifest_path.exists():
-        try:
-            manifest = json.loads(manifest_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
-            manifest = {"_manifest_error": str(exc)}
+    if len(candidates) != 1:
+        raise ValueError("run prefix matches multiple runs; use the full run directory name")
+    run_path = candidates[0]
 
     from invisiblebench.cli.archive import get_run_info
 
@@ -156,19 +150,27 @@ def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
     return {
         "id": run_path.name,
         "path": str(run_path),
-        "date": info["date"].strftime("%Y-%m-%d") if info.get("date") else None,
+        "date": info["date"].isoformat(timespec="seconds") + "Z" if info.get("date") else None,
         "models": info.get("models", []),
         "scenarios": info.get("scenarios", 0),
         "size_mb": round(info.get("size_mb", 0.0), 2),
         "has_results": info.get("has_results", False),
         "artifact_state": info.get("artifact_state", "unknown"),
-        "manifest": manifest,
+        "manifests": info["manifests"],
+        "jury_card": info["jury_card"],
     }
 
 
 def _run_get(run_id: str, *, json_output: bool, out_path: str | None = None) -> int:
     """Handle `bench get <run-id>`."""
-    record = _load_run_metadata(run_id)
+    try:
+        record = _load_run_metadata(run_id)
+    except ValueError as exc:
+        if json_output:
+            emit_json(status="error", command="get", error=str(exc))
+        else:
+            print(str(exc), file=sys.stderr)
+        return 1
     if record is None:
         if json_output:
             emit_json(status="error", command="get", error=f"run not found: {run_id}")

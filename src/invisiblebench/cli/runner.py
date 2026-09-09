@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,7 @@ from invisiblebench.cli.agent_commands import (
     _run_leaderboard_status_json,
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
+from invisiblebench.utils.manifest import RUN_DIRECTORY_TIME_FORMAT
 
 try:
     from rich.table import Table  # noqa: F401
@@ -77,12 +78,13 @@ def _collect_runs() -> list[dict[str, Any]]:
         records.append(
             {
                 "id": r["name"],
-                "date": r["date"].strftime("%Y-%m-%d") if r.get("date") else None,
+                "date": r["date"].isoformat(timespec="seconds") + "Z" if r.get("date") else None,
                 "models": r.get("models", []),
                 "scenarios": r.get("scenarios", 0),
                 "size_mb": round(r.get("size_mb", 0.0), 2),
                 "has_results": r.get("has_results", False),
                 "artifact_state": r.get("artifact_state", "unknown"),
+                "jury_card": r["jury_card"],
             }
         )
     return records
@@ -171,9 +173,9 @@ Examples:
   uv run bench -m 7 --dry-run               Model 7 = DeepSeek V4 Pro
   uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
 
-  # Judge transcripts, build the strict-QA leaderboard, then project it
-  uv run python scripts/run_scan.py plan <run-dir> --output <scan-dir> --llm-model <judge>
-  uv run python scripts/run_scan.py run --plan <scan-dir>/scan_plan.json \
+  # Judge transcripts in their run directory and write a Jury Card
+  uv run python scripts/run_scan.py plan results/<run-id> --llm-model <judge>
+  uv run python scripts/run_scan.py run --plan results/<run-id>/scan_plan.json \
     --max-cost-usd <budget>
   helm evidence plan --driver evidence-driver.json --operation corpus.project \
     --input /tmp/gc-bench-leaderboard-input.json --as-of YYYY-MM-DD \
@@ -182,6 +184,7 @@ Examples:
   uv run bench leaderboard status     Health check (alias for 'bench health')
 
   # Utilities
+  uv run bench jury <run-id>           Regenerate the Jury Card without model calls
   uv run bench explain <model> <scenario> --failures   Trace scan evidence
   uv run bench health                 Check leaderboard for issues
   uv run bench runs                   List all benchmark runs
@@ -196,7 +199,7 @@ Examples:
         action="store_const",
         const="json",
         default=None,
-        help="Emit agent-friendly JSON envelope (runs/leaderboard[status]/get)",
+        help="Emit agent-friendly JSON envelope (runs/leaderboard[status]/get/jury)",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -216,6 +219,9 @@ Examples:
         default=None,
         help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
     )
+
+    jury_parser = subparsers.add_parser("jury", help="Generate a Jury Card from saved run evidence; no model calls")
+    jury_parser.add_argument("run_id", help="Run directory name, unique prefix, or path")
 
     # Health subcommand
     health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
@@ -362,6 +368,28 @@ Examples:
             out_path=getattr(args, "out", None),
         )
 
+    if args.command == "jury":
+        from invisiblebench._agent_cli import emit_json
+        from invisiblebench.cli.agent_commands import _load_run_metadata
+        from invisiblebench.jury_card import write_jury_card
+
+        try:
+            run = _load_run_metadata(args.run_id)
+            if run is None:
+                raise ValueError(f"run not found: {args.run_id}")
+            card = write_jury_card(Path(run["path"]))
+        except (OSError, ValueError, KeyError) as exc:
+            if json_output:
+                emit_json(status="error", command="jury", error=str(exc))
+            else:
+                print(str(exc), file=sys.stderr)
+            return 1
+        if json_output:
+            emit_json(command="jury", data={"path": str(card)})
+        else:
+            print(card)
+        return 0
+
     if args.command == "explain":
         from invisiblebench.cli.explain import explain_command
 
@@ -475,8 +503,8 @@ Examples:
     if args.output:
         output_dir = args.output
     else:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = Path(f"results/run_{timestamp}")
+        timestamp = datetime.now(UTC).strftime(RUN_DIRECTORY_TIME_FORMAT)
+        output_dir = Path("results") / timestamp
 
     return run_benchmark(
         models=models,

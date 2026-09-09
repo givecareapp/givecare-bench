@@ -76,8 +76,19 @@ Keep the critique outside the ledger. Preserve the original decision.
 If a critique changes a rule or judge setting,
 version that change and run a new scan. Do not edit the old verdict.
 
-The records already contain this decision trail. A future “Jury” view could
-present it. The benchmark does not need a new service or approval primitive.
+The **Jury Card** is the standard report for an evaluated run. It complements a
+model card by describing observed behavior under recorded test conditions.
+Its title identifies the model and the UTC run date and time.
+It shows separate Safety and Care results, recorded failure modes, unresolved
+judgments, model evidence, and the judge's rationale. It also records the judge,
+versions, execution errors, source-run costs, and elapsed times.
+
+`jury-card.md` is generated from the retained bundle without another model call.
+It replaces separate per-run reports and scorecard exports. The card's marked
+commentary section holds attributed observations and disputed interpretations.
+Regeneration preserves that section only when the evidence hashes match.
+Commentary remains outside the ledger. The public leaderboard remains a
+separate aggregate projection; the card contains private quoted evidence.
 
 ## Reproducibility and limits
 

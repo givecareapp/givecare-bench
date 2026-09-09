@@ -48,18 +48,24 @@ uv run bench -m your-org/your-model -y --max-cost-usd <budget>
 Create a scan plan, then run the same scan with that plan:
 
 ```bash
-uv run python scripts/run_scan.py plan results/run_<id> \
-  --output <scan-dir> --llm-model openai/gpt-5-mini
+uv run python scripts/run_scan.py plan results/<run-id> \
+  --llm-model openai/gpt-5-mini
 uv run python scripts/run_scan.py run \
-  --plan <scan-dir>/scan_plan.json --max-cost-usd <budget>
+  --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 
 Inspect evidence in a completed scan:
 
 ```bash
 uv run bench explain your-org/your-model <scenario-id> \
-  --failures --scan <scan-dir>
+  --failures --scan results/<run-id>
+uv run bench jury <run-id>
 ```
+
+Each run lives in `results/<run-id>/`, named by its UTC start time in
+`YYYY-MM-DD_HH-MM-SSZ` form. Model identity stays in the metadata. A completed scan
+writes `jury-card.md`: model results, judge rationales, evidence references, and
+attributed commentary. Historical runs live under `results/archive/`.
 
 ## Proof
 

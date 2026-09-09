@@ -24,10 +24,10 @@ A project input has this exact shape. Hash the retained files after candidate ge
 ```json
 {
   "schema_version": "gc-bench.web-benchmark-release.input/v3",
-  "bundle_path": "results/scan_<id>",
+  "bundle_path": "results/<run-id>",
   "plan_sha256": "<SHA-256 of scan_plan.json>",
   "judgments_sha256": "<SHA-256 of judgments.jsonl>",
-  "leaderboard_path": "results/scan_<id>/leaderboard.candidate.json",
+  "leaderboard_path": "results/<run-id>/leaderboard.candidate.json",
   "leaderboard_sha256": "<SHA-256 of leaderboard.candidate.json>"
 }
 ```
