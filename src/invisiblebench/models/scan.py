@@ -10,6 +10,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictInt,
     StringConstraints,
     field_validator,
@@ -105,6 +106,33 @@ class TranscriptSource(FileRef):
     model_id: Text
     scenario_id: Text
     category: Text
+
+
+class MemoryEvidence(Record):
+    turn: StrictInt = Field(ge=1)
+    operation: Literal["read", "remember", "forget", "correct"]
+    status: Literal["succeeded", "failed"]
+    memory_id: str = Field(min_length=1)
+    text: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def successful_content(self):
+        if not self.memory_id.strip():
+            raise ValueError("memory ID must not be blank")
+        if self.status == "succeeded" and self.operation != "forget" and not (self.text or "").strip():
+            raise ValueError("successful memory reads and writes require their exact text")
+        return self
+
+
+class MemoryContext(Record):
+    persistent_memory: StrictBool = False
+    evidence: list[MemoryEvidence] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def declared_capability(self):
+        if self.evidence and not self.persistent_memory:
+            raise ValueError("memory evidence requires declared persistent memory")
+        return self
 
 
 class SourceRun(Record):

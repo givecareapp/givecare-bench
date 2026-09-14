@@ -1,7 +1,7 @@
 {
   "benchmark_details": {
     "name": "Invisible Bench",
-    "version": "5.0.0",
+    "version": "5.1.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI behavior benchmark",
     "overview": "Evaluates caregiver-support conversations with one LLM judge per active check and a separate Safety/Care projection.",

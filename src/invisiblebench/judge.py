@@ -31,6 +31,7 @@ from invisiblebench.models.scan import (
     FileRef,
     JudgeSettings,
     Judgment,
+    MemoryContext,
     ScanPlan,
     SourceRun,
     TranscriptSource,
@@ -81,6 +82,42 @@ def _transcript(content: bytes) -> list[dict[str, Any]]:
         ):
             raise ValueError("conversation turns require content and a positive integer turn")
     return turns
+
+
+def _source_conversations(bundle: Path, source: SourceRun):
+    manifest = json.loads(_read_ref(bundle, source.manifest))
+    summary = json.loads(_read_ref(bundle, source.summary))
+    if not manifest.get("run_id") or manifest["run_id"] != summary.get("run_id"):
+        raise ValueError("source manifest and summary run IDs must match")
+    policy = manifest.get("transcript_policy", {})
+    if not isinstance(policy, dict):
+        raise ValueError("transcript_policy must be an object")
+    entries, identities = {}, set()
+    for item in summary["transcripts"]:
+        path, identity = item["transcript_path"], (item["model_id"], item["scenario_id"])
+        if path in entries or identity in identities:
+            raise ValueError("duplicate source transcript path or model/scenario identity")
+        entries[path] = item
+        identities.add(identity)
+    source_root = Path(source.summary.path).parent
+    for ref in source.transcripts:
+        item = entries.get(Path(ref.path).relative_to(source_root).as_posix())
+        if item is None or any(
+            item.get(key) != getattr(ref, key)
+            for key in ("model", "model_id", "scenario_id", "category")
+        ):
+            raise ValueError("planned transcript does not match its source summary")
+        memory = MemoryContext.model_validate({
+            "persistent_memory": policy.get("persistent_memory", False),
+            "evidence": item.get("memory_evidence", []),
+        })
+        if memory.persistent_memory and (manifest.get("harness"), manifest.get("mode")) != ("product", "committed"):
+            raise ValueError("raw model runs cannot declare persistent memory; use product/committed")
+        transcript = _transcript(_read_ref(bundle, ref))
+        response_turns = {turn["turn"] for turn in transcript if turn.get("role") == "assistant"}
+        if any(event.turn not in response_turns for event in memory.evidence):
+            raise ValueError("memory evidence must name an observed assistant response turn")
+        yield ref, transcript, memory
 
 
 def _snapshot(path: Path, destination: Path, bundle: Path) -> FileRef:
@@ -173,12 +210,12 @@ def plan_scan(
         token_envelope = sum(
             len(
                 json.dumps(
-                    request_messages(check, _transcript(_read_ref(bundle, transcript))),
+                    request_messages(check, transcript, memory_context=memory),
                     ensure_ascii=False,
                 ).encode()
             )
             for source in sources
-            for transcript in source.transcripts
+            for _, transcript, memory in _source_conversations(bundle, source)
             for check in checks
         )
         pricing = _MODEL_PRICING.get(judge_model)
@@ -297,10 +334,8 @@ def load_scan(
     checks = {check.id: check for check in plan.checks}
     transcripts = {}
     for source in plan.sources:
-        _read_ref(bundle, source.manifest)
-        _read_ref(bundle, source.summary)
-        for ref in source.transcripts:
-            transcripts[ref.model_id, ref.scenario_id] = _transcript(_read_ref(bundle, ref))
+        for ref, transcript, memory in _source_conversations(bundle, source):
+            transcripts[ref.model_id, ref.scenario_id] = (transcript, memory)
     ledger = bundle / LEDGER_FILE
     content = ledger.read_bytes() if ledger.exists() else b""
     if content and not content.endswith(b"\n"):
@@ -313,8 +348,8 @@ def load_scan(
             raise ValueError("duplicate or unplanned judgment")
         if record.plan_sha256 != plan_sha:
             raise ValueError("judgment is bound to a different scan plan")
-        transcript = transcripts[pair]
-        messages = request_messages(checks[record.check_id], transcript, plan.instructions)
+        transcript, memory = transcripts[pair]
+        messages = request_messages(checks[record.check_id], transcript, plan.instructions, memory_context=memory)
         if input_hash(messages) != record.input_sha256:
             raise ValueError("judgment request differs from the frozen inputs")
         if record.error is None:
@@ -376,8 +411,7 @@ def run_scan(
         client = client if client is not None else ModelAPIClient()
         plan_sha = sha256((bundle / PLAN_FILE).read_bytes())
         for source in plan.sources:
-            for ref in source.transcripts:
-                transcript = _transcript(_read_ref(bundle, ref))
+            for ref, transcript, memory in _source_conversations(bundle, source):
                 for check in plan.checks:
                     if (ref.model_id, ref.scenario_id, check.id) in done:
                         continue
@@ -390,6 +424,7 @@ def run_scan(
                         model_id=ref.model_id,
                         scenario_id=ref.scenario_id,
                         plan_sha256=plan_sha,
+                        memory_context=memory,
                     )
                     journal.write(record.model_dump_json().encode() + b"\n")
                     journal.flush()
@@ -406,11 +441,11 @@ def run_scan(
 def replay_scan(bundle: Path) -> list[str]:
     """Reparse saved responses through the current judge code without API calls."""
     plan, records = load_scan(bundle, complete=True)
-    _current_plan(plan)
     checks = {check.id: check for check in plan.checks}
     transcripts = {
-        (ref.model_id, ref.scenario_id): _transcript(_read_ref(bundle, ref))
-        for ref in plan.transcripts
+        (ref.model_id, ref.scenario_id): (transcript, memory)
+        for source in plan.sources
+        for ref, transcript, memory in _source_conversations(bundle, source)
     }
     differences = []
 
@@ -432,13 +467,14 @@ def replay_scan(bundle: Path) -> list[str]:
     for saved in records:
         replayed = judge_check(
             ReplayClient(saved),
-            transcripts[saved.model_id, saved.scenario_id],
+            transcripts[saved.model_id, saved.scenario_id][0],
             checks[saved.check_id],
             plan.judge,
             instructions=plan.instructions,
             model_id=saved.model_id,
             scenario_id=saved.scenario_id,
             plan_sha256=saved.plan_sha256,
+            memory_context=transcripts[saved.model_id, saved.scenario_id][1],
         )
         if replayed.model_dump(exclude={"cost_usd", "error_detail"}) != saved.model_dump(
             exclude={"cost_usd", "error_detail"}

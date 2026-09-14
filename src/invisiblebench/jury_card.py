@@ -153,6 +153,9 @@ def write_jury_card(bundle: Path) -> Path:
             f"- Source run: `{_cell(manifest['run_id'])}`; {_cell(manifest.get('run_date', 'date not recorded'))}.",
             f"- {_link('Manifest and generation settings', source.manifest.path)} · "
             f"{_link('Run summary', source.summary.path)}.",
+            f"- Harness: {_cell(manifest.get('harness', 'not recorded'))} / "
+            f"{_cell(manifest.get('mode', 'not recorded'))}; "
+            f"persistent memory: {'declared' if policy.get('persistent_memory') is True else 'not declared'}.",
             f"- Generation temperature: {_cell(policy.get('temperature', 'not recorded'))}; "
             f"tools: {_cell(policy.get('tools', 'not recorded'))}.",
             f"- Source generation elapsed seconds: {_cell(summary.get('elapsed_seconds', 'not recorded'))}.",

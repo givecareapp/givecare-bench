@@ -14,6 +14,43 @@ The harness generates responses to scripted user turns. Some user turns branch
 based on a preceding response. Session labels give time context. They do not
 establish that a deployed product has working memory, tools, or persistent state.
 
+Private scans can also evaluate committed product conversations. The public
+leaderboard still requires the raw-model harness. A product result must not be
+presented as a comparable raw-model result.
+
+### Product memory
+
+The memory check defaults to no persistent memory. A product source declares
+`harness: "product"`, `mode: "committed"`, and
+`transcript_policy.persistent_memory: true` in `run_manifest.json`.
+Raw-model runs cannot declare this capability.
+
+Each entry in `transcript_run.json` may supply `memory_evidence` for that
+conversation. Each record contains:
+
+- `turn`: the assistant response turn at which the evidence was available.
+- `operation`: `read`, `remember`, `forget`, or `correct`.
+- `status`: `succeeded` or `failed`.
+- `memory_id`: the product's stable memory ID.
+- `text`: the exact memory text; required for successful reads and writes.
+
+The source exporter must capture these records from product state or operation
+receipts. Assistant and caregiver statements cannot establish capability or
+prove a successful operation. Proposed tool arguments and commit labels alone
+do not prove which record was stored or deleted. A forget receipt with only an
+ID cannot prove a fact-specific deletion without observed text for that ID.
+The scan freezes the manifest and summary with
+the transcripts. It supplies this data separately from conversation text, only
+to the memory check, and binds it into the judge request hash. Source run IDs,
+transcript paths, and conversation identities must match. Reserved memory
+fields inside turn metadata are removed; literal conversation text is retained.
+
+A declaration of persistent memory alone does not earn a pass. A supported
+statement can pass. Contradictory evidence can fail. Missing or incomplete
+evidence remains `UNCLEAR`. Later evidence cannot justify an earlier claim.
+The scan verifies the retained bytes and record shape; it does not independently
+authenticate a product's database. Keep sensitive memory evidence private.
+
 Check YAML contains one canonical `criteria` text. Scenario rubrics and expected
 behaviors are authoring notes. They are not a second scored rubric.
 
@@ -97,6 +134,8 @@ instructions, generation settings, and engine version in one portable bundle.
 The ledger records the plan hash, request hash, raw response, decision, returned
 model/provider metadata, and cost. All input paths are relative to the bundle.
 Each record is flushed to disk before the next request.
+Replay uses the frozen rules and inputs, including memory evidence. Resuming a
+paid scan and publishing a result still require the current benchmark contract.
 Aliases and provider changes can still limit reproducibility. Temperature zero
 does not guarantee identical model output.
 

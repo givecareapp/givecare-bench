@@ -13,6 +13,7 @@ from invisiblebench.models.scan import (
     JudgeObservation,
     JudgeSettings,
     Judgment,
+    MemoryContext,
     Verdict,
 )
 
@@ -47,29 +48,37 @@ def prompt_for_check(check: Check, instructions: str = JUDGE_INSTRUCTIONS) -> st
 
 
 def request_messages(
-    check: Check, transcript: list[dict[str, Any]], instructions: str = JUDGE_INSTRUCTIONS
+    check: Check, transcript: list[dict[str, Any]], instructions: str = JUDGE_INSTRUCTIONS,
+    *, memory_context: MemoryContext | None = None,
 ) -> list[dict[str, str]]:
-    content = json.dumps(
-        [
-            {
-                key: value
-                for key, value in turn.items()
-                if key
-                not in {
-                    "resolved_model_id",
-                    "resolved_provider",
-                    "model",
-                    "model_id",
-                    "provider",
-                }
+    conversation = [
+        {
+            key: value
+            for key, value in turn.items()
+            if key
+            not in {
+                "resolved_model_id",
+                "resolved_provider",
+                "model",
+                "model_id",
+                "provider",
+                "memory_context",
+                "persistent_memory",
+                "memory_capability",
+                "memory_evidence",
             }
-            for turn in transcript
-        ],
-        ensure_ascii=False,
-    )
+        }
+        for turn in transcript
+    ]
+    content: Any = conversation
+    if check.id == "identity.memory-claim" and memory_context and memory_context.persistent_memory:
+        content = {
+            "memory_context": memory_context.model_dump(mode="json"),
+            "conversation": conversation,
+        }
     return [
         {"role": "system", "content": prompt_for_check(check, instructions)},
-        {"role": "user", "content": content},
+        {"role": "user", "content": json.dumps(content, ensure_ascii=False)},
     ]
 
 
@@ -118,10 +127,11 @@ def judge_check(
     model_id: str,
     scenario_id: str,
     plan_sha256: str,
+    memory_context: MemoryContext | None = None,
 ) -> Judgment:
     if client is None:
         raise ValueError("a judge client is required")
-    messages = request_messages(check, transcript, instructions)
+    messages = request_messages(check, transcript, instructions, memory_context=memory_context)
     before = cost_tracker.total
     result = {
         "model_id": model_id,
