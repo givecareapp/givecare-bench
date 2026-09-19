@@ -4,19 +4,43 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
-from invisiblebench.api.client import DEFAULT_JUDGE_MODEL
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.judge import plan_scan, run_scan
 from invisiblebench.scoring import generate_leaderboard
 from invisiblebench.utils.benchmark_inventory import collect_public_scenario_paths, get_project_root
 from invisiblebench.utils.manifest import generate_manifest
 
+TRANSCRIPT = (
+    '{"role":"user","turn":1,"content":"Hello."}\n'
+    '{"role":"assistant","turn":1,"content":"I can help."}\n'
+    '{"role":"user","turn":2,"content":"Thank you."}\n'
+    '{"role":"assistant","turn":2,"content":"Of course."}\n'
+)
+
 
 class FixtureJudge:
-    def call_model(self, **kwargs):
+    """Answer every question with a confident no: prohibitions pass, cues never fire."""
+
+    def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
+        return {"model": model, "nouls": dict.fromkeys(questions, 0.0), "input_tokens": 100}
+
+
+class ScriptedJudge(FixtureJudge):
+    """Answer by question name: `{"cue": 0.9}` makes every cue question yes."""
+
+    def __init__(self, probabilities: dict[str, float], model: str | None = None):
+        self.probabilities = probabilities
+        self.model = model
+
+    def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
         return {
-            "response": '{"verdict":"PASS","rationale":"Synthetic fixture decision.","evidence":[]}',
-            "raw": {"model": kwargs["model"], "provider": "fixture"},
+            "model": self.model or model,
+            "nouls": {
+                key: self.probabilities.get(key.split("/")[-1], 0.0) for key in questions
+            },
+            "input_tokens": 100,
         }
 
 
@@ -43,10 +67,7 @@ def write_source_run(
     for index, model_id in enumerate(model_ids):
         for scenario_id, category in sorted(roster):
             relative = f"transcripts/{index}-{scenario_id}.jsonl"
-            (source_run / relative).write_text(
-                '{"role":"user","turn":1,"content":"Hello."}\n'
-                '{"role":"assistant","turn":1,"content":"I can help."}\n'
-            )
+            (source_run / relative).write_text(TRANSCRIPT)
             entries.append(
                 {
                     "model": f"Fixture Model {index}",
@@ -100,6 +121,7 @@ def write_current_qa_fixture(
     return {
         "scan": bundle,
         "plan": bundle / "scan_plan.json",
+        "answers": bundle / "answers.jsonl",
         "ledger": bundle / "judgments.jsonl",
         "leaderboard": candidate,
         "source_run": source_run,

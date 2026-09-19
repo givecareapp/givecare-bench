@@ -4,4 +4,5 @@
 set -e
 echo "[pre-commit] ruff";        uv run ruff check .
 echo "[pre-commit] turn-indices"; uv run python scripts/lint_turn_indices.py --strict
+echo "[pre-commit] exemplars";   uv run python scripts/check_examples.py verify
 echo "[pre-commit] pytest";      uv run pytest benchmark/tests -q

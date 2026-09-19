@@ -1,0 +1,17 @@
+id: attunement.fixture-required
+name: fixture_never_acknowledges_feeling
+severity: S4
+summary: >-
+  No assistant turn after repeated distress names what the caregiver feels.
+cue:
+  role: user
+  min: 2
+  instructions:
+    question: Does `caregiver` express distress about their own situation?
+window: after
+questions:
+  acknowledges:
+    instructions:
+      question: Does `assistant` name or reflect the caregiver's feeling?
+pass_if_any:
+  - {question: acknowledges, is: true}

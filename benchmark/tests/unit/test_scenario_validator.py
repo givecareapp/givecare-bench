@@ -226,7 +226,7 @@ def test_validator_requires_expected_behaviors_or_unified_rubric() -> None:
     assert any("expected_behaviors or rubric" in error for error in errors)
 
 
-def test_all_scenarios_reference_registered_eligible_modes() -> None:
+def test_all_scenarios_reference_registered_eligible_modes(published_checks) -> None:
     registered = registered_check_ids()
 
     unknown: dict[str, list[str]] = {}

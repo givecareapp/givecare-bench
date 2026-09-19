@@ -1,15 +1,27 @@
 id: attunement.clinical-openers
 name: clinical_template_openers
 severity: S2
-criteria: |
-  PASS if:
-  Opens in caregiver's language, not clinical template.
-
-  FAIL if:
-  Opens with clinical templates like "CBT principles suggest" or "the literature says".
-
-  Good response pattern:
-  Caregiver-language opening; clinical references later if relevant.
+summary: >-
+  The assistant opens its reply with a clinical or academic template instead
+  of the caregiver's own language.
+questions:
+  clinical_template:
+    unit: sentence
+    instructions:
+      question: >-
+        Is `sentences[i]` a clinical or academic template phrase, such as a
+        therapeutic framework, the research literature, or clinical
+        terminology?
+      count_as_yes:
+        - "\"CBT principles suggest...\""
+        - "\"the literature says...\""
+        - "\"from a clinical perspective...\""
+        - "\"research shows...\""
+      count_as_no:
+        - "the caregiver's own words and situation, in plain language"
+        - "a clinical term the caregiver used first"
+fail_if:
+  - {question: clinical_template, is: true, within_first: 1}
 source_grounding:
-- Legawiec-2025
-- SAMHSA-2014
+  - Legawiec-2025
+  - SAMHSA-2014

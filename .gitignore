@@ -85,6 +85,9 @@ data/leaderboard/.qa-stamp
 *.tmp
 logs/
 
+# Semantic scenario lint response cache (content-hashed, rebuildable)
+.cache/semantic-lint/
+
 # Internal / operator (stays on disk, not in public repo)
 JOURNAL.md
 VISION.md
@@ -110,5 +113,6 @@ adapters/
 /benchmark/tests/unit/test_hound_driver.py
 /benchmark/tests/unit/test_import_evals_hound.py
 /benchmark/tests/unit/test_incident_registry.py
+/benchmark/tests/unit/test_intake_triage.py
 /benchmark/tests/unit/test_sync_evals_projection.py
 /data/imports/

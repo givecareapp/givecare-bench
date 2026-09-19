@@ -1,9 +1,6 @@
 """API clients."""
 
 from .client import (
-    DEFAULT_JUDGE_MODEL,
-    JUDGE_MODEL_OPENAI_ID,
-    JUDGE_MODEL_OPENROUTER_ID,
     APIConfig,
     CostBudgetExceededError,
     CostTracker,
@@ -12,6 +9,7 @@ from .client import (
     cost_tracker,
     maximum_reasonable_cost_ceiling,
 )
+from .typesafe import DEFAULT_JUDGE_MODEL, JUDGE_PRICING, SystemOneClient
 
 __all__ = [
     "APIConfig",
@@ -19,9 +17,9 @@ __all__ = [
     "CostTracker",
     "DEFAULT_JUDGE_MODEL",
     "InsufficientCreditsError",
-    "JUDGE_MODEL_OPENAI_ID",
-    "JUDGE_MODEL_OPENROUTER_ID",
+    "JUDGE_PRICING",
     "ModelAPIClient",
+    "SystemOneClient",
     "cost_tracker",
     "maximum_reasonable_cost_ceiling",
 ]

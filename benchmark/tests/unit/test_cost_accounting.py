@@ -8,7 +8,6 @@ import json
 import pytest
 
 from invisiblebench.api.client import (
-    JUDGE_MODEL_OPENROUTER_ID,
     APIConfig,
     CostBudgetExceededError,
     CostTracker,
@@ -146,7 +145,7 @@ def test_cost_tracker_prices_judge_when_provider_omits_cost() -> None:
     tracker = CostTracker()
 
     charged = tracker.record(
-        JUDGE_MODEL_OPENROUTER_ID,
+        "openai/gpt-5-mini",
         prompt_tokens=1_000_000,
         completion_tokens=1_000_000,
     )

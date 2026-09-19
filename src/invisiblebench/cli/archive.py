@@ -40,10 +40,10 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
     if (run_path / "scan_plan.json").exists():
         from invisiblebench.judge import load_scan
         try:
-            plan, records = load_scan(run_path)
+            plan, _answers, records = load_scan(run_path)
             info["models"] = sorted({ref.model_id for ref in plan.transcripts})
             info["scenarios"] = len(plan.transcripts)
-            info["has_results"] = sum(record.error is None for record in records) == plan.planned_calls
+            info["has_results"] = len(records) == plan.planned_judgments
             info["artifact_state"] = "judged" if info["has_results"] else "judging_incomplete"
             info["manifests"] = [
                 json.loads((run_path / source.manifest.path).read_bytes()) for source in plan.sources

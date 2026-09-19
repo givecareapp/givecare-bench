@@ -6,8 +6,10 @@
 Card for each completed scan.** Use the `bench` CLI from the `invisiblebench`
 Python package.
 
-One LLM judge checks the full conversation against each active criterion.
-Safety and Care stay separate. There is no composite score or model rank.
+One judge path evaluates each active check: yes/no questions answered as
+probabilities, and a code-owned rule that derives the verdict from the saved
+answers. Safety and Care stay separate. There is no composite score or model
+rank.
 
 Read the [paper on arXiv](https://arxiv.org/abs/2511.20733) and the
 [published documentation](https://givecareapp.github.io/givecare-bench/).
@@ -17,16 +19,16 @@ current method. Use [CITATION.cff](CITATION.cff) to cite the paper.
 ## What a run produces
 
 A **Jury Card** complements a model card with evidence from a specific run.
-It shows model results and quoted evidence beside the judge's verdicts and
-rationales. It also records judge settings, costs, technical errors, and
-attributed commentary.
+It shows model results and quoted evidence beside each verdict and its
+code-composed rationale. It also records judge settings, costs, technical
+errors, and attributed commentary.
 
 Each run has two parts in one private directory:
 
 | Part | Contents |
 | --- | --- |
 | `jury-card.md` | The standard report. Replaces separate per-run reports and scorecard exports. |
-| Saved evidence | `scan_plan.json`, `judgments.jsonl`, source manifests, and transcripts. Supports inspection and replay. |
+| Saved evidence | `scan_plan.json`, `answers.jsonl`, `judgments.jsonl`, source manifests, and transcripts. Supports inspection and replay. |
 
 Verdicts are `PASS`, `FAIL`, `UNCLEAR`, or `NOT_APPLICABLE`. Every `FAIL` needs
 transcript evidence. `UNCLEAR` stays visible. Commentary can dispute a judgment
@@ -53,11 +55,13 @@ uv run bench -m your-org/your-model -y --max-cost-usd <budget>
 ```
 
 Find the run ID with `uv run bench runs`. Replace `<run-id>` below with that
-directory name. Create a scan plan, then review its estimate before running it:
+directory name. Create a scan plan, then review its estimate before running
+it. `--llm-model` defaults to the pinned judge model in
+`src/invisiblebench/api/typesafe.py`:
 
 ```bash
 uv run python scripts/run_scan.py plan results/<run-id> \
-  --llm-model openai/gpt-5-mini
+  --llm-model <judge>
 uv run python scripts/run_scan.py run \
   --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
@@ -85,7 +89,7 @@ replay a scan.
 | Path | Purpose |
 | --- | --- |
 | [`benchmark/`](benchmark/README.md) | Scenario corpus, inventory, and tests |
-| [`checks/`](checks/) | Criteria and evidence requirements |
+| [`checks/`](checks/) | Questions, rule, evidence requirements, and exemplars with committed judge answers |
 | [`src/invisiblebench/`](src/invisiblebench/) | Runtime, CLI, and Jury Card generation |
 | [`scripts/`](scripts/) | Scan, validation, and documentation commands |
 | [`docs/`](docs/index.md) | Method and run guides |
@@ -111,8 +115,8 @@ scan artifacts, and separate Safety/Care projection. It does not own GiveCare
 product policy, model training, clinical guidance, or real-world outcome
 claims.
 
-Private transcripts, private scenarios, expected answers, judge prompts,
-and credentials stay in local storage. Public releases contain aggregate
+The judge questions are public in `checks/`. Private transcripts, private
+scenarios, expected answers, and credentials stay in local storage. Public releases contain aggregate
 results with recorded provenance.
 
 Committed historical releases keep their original bytes and labels. New

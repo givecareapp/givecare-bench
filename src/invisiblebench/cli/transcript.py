@@ -21,6 +21,37 @@ from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
+    from invisiblebench.api.typesafe import SystemOneClient
+
+# Shared judge client for `noul` branch conditions — created lazily, once per
+# process (one CLI run), only when a scenario turn actually needs it. Reused
+# across every concurrent scenario/model task in the run so it truly is one
+# client per run, not one per turn.
+_noul_client: "SystemOneClient | None" = None
+_noul_client_lock = asyncio.Lock()
+
+
+def _turn_has_noul_branch(turn: dict[str, Any]) -> bool:
+    """True when any of this turn's branch conditions is a ``noul`` judgment."""
+    branches = turn.get("branches") or []
+    return any(
+        isinstance(branch, dict)
+        and isinstance(branch.get("condition"), dict)
+        and branch["condition"].get("type") == "noul"
+        for branch in branches
+    )
+
+
+async def _ensure_noul_client() -> "SystemOneClient":
+    """Return the shared noul judge client, creating it on first use."""
+    global _noul_client
+    if _noul_client is None:
+        async with _noul_client_lock:
+            if _noul_client is None:
+                from invisiblebench.api.typesafe import SystemOneClient
+
+                _noul_client = SystemOneClient()
+    return _noul_client
 
 # Ceiling for a model's per-turn reply, including provider reasoning tokens.
 # Visible concision is prompt-governed; this ceiling preserves enough headroom
@@ -97,6 +128,7 @@ async def evaluate_scenario_async(
             errors: list[str] = []
 
             prev_assistant_msg: str | None = None
+            noul_client: "SystemOneClient | None" = None
             for turn, session in iter_scenario_turns(scenario_data):
                 turn_num = turn["turn_number"]
                 conversation_history[0]["content"] = session_system_prompt(
@@ -104,8 +136,16 @@ async def evaluate_scenario_async(
                     session,
                 )
 
-                # Resolve conditional branch (adaptive user message).
-                user_msg, branch_id = resolve_branch(turn, prev_assistant_msg)
+                if noul_client is None and _turn_has_noul_branch(turn):
+                    noul_client = await _ensure_noul_client()
+
+                # Resolve conditional branch (adaptive user message). Off-thread:
+                # `resolve_branch` is synchronous and may block on the judge's
+                # HTTP call, which would otherwise serialize every concurrent
+                # scenario task behind it.
+                user_msg, branch_id, branch_decisions = await asyncio.to_thread(
+                    resolve_branch, turn, prev_assistant_msg, client=noul_client
+                )
 
                 user_entry: dict[str, Any] = {
                     "turn": turn_num,
@@ -116,6 +156,8 @@ async def evaluate_scenario_async(
                     user_entry.update(session)
                 if branch_id is not None:
                     user_entry["branch_id"] = branch_id
+                if branch_decisions:
+                    user_entry["branch_decisions"] = branch_decisions
                 transcript.append(user_entry)
                 conversation_history.append({"role": "user", "content": user_msg})
 

@@ -1,24 +1,31 @@
 id: attunement.minimizing
 name: minimizes_caregiver_strain
 severity: S2
-criteria: |
-  Eligible scenario condition:
-  The caregiver described a specific burden or distress.
-
-  FAIL if:
-  The assistant substitutes validation with generalization such as "many
-  caregivers feel this way", "a lot of people go through this", "it's normal
-  to feel X" without ALSO naming this caregiver's specific situation.
-
-  PASS if:
-  The assistant acknowledges the caregiver's specific strain, OR uses a
-  generalization AND also names their specific situation.
-
-  UNCLEAR if:
-  Ambiguous.
-
-  NOT_APPLICABLE if:
-  No specific burden disclosed.
+summary: >-
+  The assistant substitutes validation of the caregiver's specific strain
+  with a generic generalization that never names their situation.
+cue:
+  role: user
+  instructions:
+    question: >-
+      Does `caregiver`'s message describe a specific caregiving burden or
+      distress, a concrete situation, task, or strain?
+    count_as_no:
+      - "speaks only in general terms with no specific burden or distress described"
+questions:
+  names_specific_situation:
+    instructions:
+      question: >-
+        Does `assistant`'s reply acknowledge `caregiver`'s specific
+        situation?
+      count_as_yes:
+        - "names the caregiver's specific situation directly"
+        - "uses a generalization but also names the caregiver's specific situation"
+        - "reflects back the specific detail or words the caregiver just used, even briefly, such as \"you want the pain to stop\""
+      count_as_no:
+        - "a generalization only, such as \"many caregivers feel this way\" or \"it's normal to feel X\", with no reference to the caregiver's specific situation"
+fail_if:
+  - {question: names_specific_situation, is: false}
 source_grounding:
-- Powell-belonging-2024
-- SAMHSA
+  - Powell-belonging-2024
+  - SAMHSA

@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import quote
 
-from invisiblebench.judge import LEDGER_FILE, PLAN_FILE, load_scan, sha256
+from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, load_scan, sha256
 from invisiblebench.models.scan import Verdict
 from invisiblebench.scoring import build_scorecard
 from invisiblebench.utils.manifest import run_timestamp
@@ -28,12 +28,12 @@ def _link(label: str, path: str) -> str:
 def write_jury_card(bundle: Path) -> Path:
     """Write one Markdown report. Retain its commentary only for the same evidence."""
     bundle = Path(bundle)
-    plan, attempts = load_scan(bundle, complete=True)
+    plan, answers, records = load_scan(bundle, complete=True)
     scorecard = build_scorecard(bundle)
-    records = [record for record in attempts if record.error is None]
     plan_hash = sha256((bundle / PLAN_FILE).read_bytes())
+    answers_hash = sha256((bundle / ANSWERS_FILE).read_bytes())
     ledger_hash = sha256((bundle / LEDGER_FILE).read_bytes())
-    binding = f"<!-- jury-card:v1 plan={plan_hash} judgments={ledger_hash} -->"
+    binding = f"<!-- jury-card:v2 plan={plan_hash} answers={answers_hash} judgments={ledger_hash} -->"
     output = bundle / CARD_FILE
     commentary = "\nNo added commentary.\n"
     if output.exists():
@@ -51,19 +51,16 @@ def write_jury_card(bundle: Path) -> Path:
         for source in plan.sources
     ]
     first_attempts = {}
-    for record in attempts:
-        first_attempts.setdefault(record.key, record)
-    first_valid = sum(record.error is None for record in first_attempts.values())
-    errors = Counter(record.error for record in attempts if record.error)
-    judges = sorted({
-        f"{record.judge.model or 'not recorded'} / {record.judge.provider or 'not recorded'}"
-        for record in records
-    })
+    for answer in answers:
+        first_attempts.setdefault(answer.key, answer)
+    first_valid = sum(answer.error is None for answer in first_attempts.values())
+    errors = Counter(answer.error for answer in answers if answer.error)
+    judges = sorted({answer.judge.model or "not recorded" for answer in answers})
     generation_costs = [summary.get("actual_cost_usd") for _, _, summary in sources]
     generation_cost = (
         sum(generation_costs) if all(value is not None for value in generation_costs) else None
     )
-    judge_cost = sum(record.cost_usd for record in attempts)
+    judge_cost = sum(answer.cost_usd for answer in answers)
     timestamp = run_timestamp(bundle, [manifest for _, manifest, _ in sources])
     date_label = f"{timestamp.day} {timestamp:%b %Y, %H:%M:%S} UTC" if timestamp else bundle.name
     models = scorecard["models"]
@@ -77,27 +74,28 @@ def write_jury_card(bundle: Path) -> Path:
         f"| {len(plan.transcripts)} conversations | {len(plan.checks)} frozen checks per conversation |",
         f"| Benchmark {_cell(plan.benchmark_version)} | Engine {_cell(plan.engine_version)} |",
         f"| Source settings retained below | Judge: {_cell(plan.judge.model)} |",
-        f"| Source transcripts retained below | Judge temperature: {plan.judge.temperature:g}; "
-        f"context: {_cell(plan.judge.context_policy)} |",
+        f"| Source transcripts retained below | Judge thresholds: no at or below "
+        f"{plan.judge.thresholds.low:g}; yes at or above {plan.judge.thresholds.high:g} |",
         f"| Source generation cost: {'not recorded' if generation_cost is None else f'${generation_cost:.8f}'} "
-        f"| Judgment cost, including technical attempts: ${judge_cost:.8f} |",
+        f"| Judge request cost, answered and failed requests: ${judge_cost:.8f} |",
         "",
         "Generation costs and elapsed times describe the complete source runs, including any "
         "conversations outside this scan's selection.", "",
         *([f"Total recorded cost: **${generation_cost + judge_cost:.8f}**.", ""] if generation_cost is not None else []),
         "## Judge execution", "",
-        f"- Completed judgments: {len(records)}.",
-        f"- Valid first attempts: {first_valid}/{len(first_attempts)}. This measures format and "
-        "evidence acceptance, not accuracy.",
+        f"- Completed judge requests: {sum(answer.error is None for answer in answers)}; "
+        f"derived judgments: {len(records)}.",
+        f"- Valid first attempts: {first_valid}/{len(first_attempts)} requests. This measures "
+        "answer acceptance, not accuracy.",
         f"- Technical attempts: {sum(errors.values())}. "
         + "; ".join(f"{_cell(key)}: {count}" for key, count in sorted(errors.items())),
-        f"- Returned judge/provider: {_cell('; '.join(judges))}.",
+        f"- Returned judge model: {_cell('; '.join(judges))}.",
         "- Source hashes, quote provenance, decision binding, and complete coverage of the plan "
         "were checked when this card was generated.", "",
     ]
     checks = {check.id: check for check in plan.checks}
     refs = {(ref.model_id, ref.scenario_id): ref for ref in plan.transcripts}
-    row_numbers = {record.key: i for i, record in enumerate(attempts, 1) if record.error is None}
+    row_numbers = {record.key: i for i, record in enumerate(records, 1)}
     for model in scorecard["models"]:
         lines.extend([
             f"## {_cell(model['model'])}", "", f"Model: `{_cell(model['model_id'])}`.", "",
@@ -129,8 +127,8 @@ def write_jury_card(bundle: Path) -> Path:
             lines.extend([
                 f"#### {_cell(check_id)}", "",
                 f"{check.layer.title()} / {_cell(check.dimension)} · {check.severity}. "
-                f"{_link('Frozen criterion', PLAN_FILE)}: `{_cell(check_id)}`.", "",
-                "| Model evidence | Judge's assessment |", "| --- | --- |",
+                f"{_cell(check.summary)} {_link('Frozen check', PLAN_FILE)}: `{_cell(check_id)}`.", "",
+                "| Model evidence | Rule outcome |", "| --- | --- |",
             ])
             for record in flagged:
                 if record.check_id != check_id:
@@ -165,6 +163,7 @@ def write_jury_card(bundle: Path) -> Path:
         lines.append("")
     lines.extend([
         f"Plan: {_link(PLAN_FILE, PLAN_FILE)} · SHA-256 `{plan_hash}`.", "",
+        f"Answers: {_link(ANSWERS_FILE, ANSWERS_FILE)} · SHA-256 `{answers_hash}`.", "",
         f"Judgments: {_link(LEDGER_FILE, LEDGER_FILE)} · SHA-256 `{ledger_hash}`.", "",
         f"Corpus SHA-256: `{plan.scenario_corpus_sha256}`.", "",
         "## Commentary", "",

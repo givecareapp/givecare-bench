@@ -1,4 +1,11 @@
-"""Plan, save, resume, validate, and replay a portable judgment ledger."""
+"""Plan, save, resume, validate, and replay a portable scan.
+
+A scan keeps two files. `answers.jsonl` is the append-only record of what the
+judge model returned: one row per conversation turn that carries questions.
+`judgments.jsonl` is derived: one verdict per conversation and check, a pure
+function of the plan and the saved answers. The derived file is rewritten from
+the answers, never edited, and every load checks that it still matches.
+"""
 
 from __future__ import annotations
 
@@ -12,26 +19,26 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench.api.client import (
-    _MODEL_PRICING,
-    DEFAULT_JUDGE_MODEL,
-    ModelAPIClient,
+    CostBudgetExceededError,
     cost_tracker,
     maximum_reasonable_cost_ceiling,
 )
-from invisiblebench.evaluation.check_registry import load_checks
-from invisiblebench.evaluation.judgment import (
-    JUDGE_INSTRUCTIONS,
-    input_hash,
-    judge_check,
-    parse_decision,
-    request_messages,
+from invisiblebench.api.typesafe import (
+    DEFAULT_JUDGE_MODEL,
+    SystemOneClient,
+    estimated_cost,
 )
+from invisiblebench.evaluation import rules
+from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.models.scan import (
-    Decision,
+    Answer,
+    Check,
     FileRef,
+    JudgeObservation,
     JudgeSettings,
     Judgment,
     MemoryContext,
+    Role,
     ScanPlan,
     SourceRun,
     TranscriptSource,
@@ -45,7 +52,12 @@ from invisiblebench.utils.manifest import scenario_corpus_hash
 from invisiblebench.version import ENGINE_VERSION
 
 PLAN_FILE = "scan_plan.json"
+ANSWERS_FILE = "answers.jsonl"
 LEDGER_FILE = "judgments.jsonl"
+
+Turn = dict[str, Any]
+Conversation = tuple[list[Turn], MemoryContext]
+Request = dict[str, Any]
 
 
 def sha256(content: bytes) -> str:
@@ -68,19 +80,25 @@ def _read_ref(bundle: Path, ref: FileRef) -> bytes:
     return content
 
 
-def _transcript(content: bytes) -> list[dict[str, Any]]:
+def _transcript(content: bytes) -> list[Turn]:
     turns = [json.loads(line) for line in content.splitlines() if line.strip()]
     if not turns or any(not isinstance(turn, dict) for turn in turns):
         raise ValueError("transcript must contain turn objects")
     if not any(turn.get("role") == "assistant" for turn in turns):
         raise ValueError("transcript must contain an assistant response")
+    seen: set[tuple[str, int]] = set()
     for turn in turns:
-        if turn.get("role") in {"user", "assistant"} and (
+        if turn.get("role") not in {"user", "assistant"}:
+            continue
+        if (
             type(turn.get("turn")) is not int
             or turn["turn"] < 1
             or not isinstance(turn.get("content"), str)
         ):
             raise ValueError("conversation turns require content and a positive integer turn")
+        if (turn["role"], turn["turn"]) in seen:
+            raise ValueError("a transcript cannot repeat a role and turn number")
+        seen.add((turn["role"], turn["turn"]))
     return turns
 
 
@@ -111,13 +129,47 @@ def _source_conversations(bundle: Path, source: SourceRun):
             "persistent_memory": policy.get("persistent_memory", False),
             "evidence": item.get("memory_evidence", []),
         })
-        if memory.persistent_memory and (manifest.get("harness"), manifest.get("mode")) != ("product", "committed"):
-            raise ValueError("raw model runs cannot declare persistent memory; use product/committed")
+        if memory.persistent_memory and (manifest.get("harness"), manifest.get("mode")) != (
+            "product",
+            "committed",
+        ):
+            raise ValueError(
+                "raw model runs cannot declare persistent memory; use product/committed"
+            )
         transcript = _transcript(_read_ref(bundle, ref))
         response_turns = {turn["turn"] for turn in transcript if turn.get("role") == "assistant"}
         if any(event.turn not in response_turns for event in memory.evidence):
             raise ValueError("memory evidence must name an observed assistant response turn")
         yield ref, transcript, memory
+
+
+def _conversations(bundle: Path, plan: ScanPlan) -> dict[tuple[str, str], Conversation]:
+    return {
+        (ref.model_id, ref.scenario_id): (transcript, memory)
+        for source in plan.sources
+        for ref, transcript, memory in _source_conversations(bundle, source)
+    }
+
+
+def _requests(
+    checks: list[Check], transcript: list[Turn], memory: MemoryContext
+) -> dict[tuple[Role, int], Request]:
+    """Every judge request for one conversation: a turn with at least one question."""
+    requests = {}
+    for role, turn in rules.request_turns(transcript):
+        request = rules.build_request(checks, transcript, role, turn, memory)
+        if request["questions"]:
+            requests[role, turn] = request
+    return requests
+
+
+def _planned_requests(
+    plan: ScanPlan, conversations: dict[tuple[str, str], Conversation]
+) -> dict[tuple[str, str], dict[tuple[Role, int], Request]]:
+    return {
+        pair: _requests(plan.checks, transcript, memory)
+        for pair, (transcript, memory) in conversations.items()
+    }
 
 
 def _snapshot(path: Path, destination: Path, bundle: Path) -> FileRef:
@@ -151,8 +203,10 @@ def plan_scan(
     runs = sorted({path.resolve() for path in run_dirs})
     in_place = runs == [bundle]
     if in_place:
-        if (bundle / PLAN_FILE).exists() or (bundle / LEDGER_FILE).exists():
-            raise ValueError("this run already has a scan; use a new output directory to judge again")
+        if (bundle / PLAN_FILE).exists() or (bundle / ANSWERS_FILE).exists():
+            raise ValueError(
+                "this run already has a scan; use a new output directory to judge again"
+            )
     else:
         if any(run.is_relative_to(bundle) for run in runs):
             raise ValueError("a new scan directory cannot contain its source runs")
@@ -206,36 +260,23 @@ def plan_scan(
                 )
             )
         checks = list(load_checks().values())
-        settings = JudgeSettings(model=judge_model)
-        token_envelope = sum(
-            len(
-                json.dumps(
-                    request_messages(check, transcript, memory_context=memory),
-                    ensure_ascii=False,
-                ).encode()
-            )
-            for source in sources
-            for _, transcript, memory in _source_conversations(bundle, source)
-            for check in checks
-        )
-        pricing = _MODEL_PRICING.get(judge_model)
-        calls = sum(len(source.transcripts) for source in sources) * len(checks)
-        estimate = (
-            (token_envelope * pricing[0] + calls * settings.max_tokens * pricing[1]) / 1_000_000
-            if pricing is not None
-            else None
-        )
+        envelope, planned = 0, 0
+        for source in sources:
+            for _ref, transcript, memory in _source_conversations(bundle, source):
+                for request in _requests(checks, transcript, memory).values():
+                    envelope += len(json.dumps(request, ensure_ascii=False).encode())
+                    planned += 1
         root = get_project_root()
         plan = ScanPlan(
             benchmark_version=get_benchmark_version(root),
             engine_version=ENGINE_VERSION,
             scenario_corpus_sha256=scenario_corpus_hash(root),
-            judge=settings,
-            instructions=JUDGE_INSTRUCTIONS,
+            judge=JudgeSettings(model=judge_model),
             checks=checks,
             sources=sources,
-            input_token_envelope=token_envelope,
-            estimated_cost_usd=estimate,
+            planned_requests=planned,
+            input_token_envelope=envelope,
+            estimated_cost_usd=estimated_cost(judge_model, envelope),
         )
         with (bundle / PLAN_FILE).open("xb") as stream:
             stream.write(json_bytes(plan.model_dump(mode="json")))
@@ -254,10 +295,9 @@ def _current_plan(plan: ScanPlan) -> None:
         or plan.engine_version != ENGINE_VERSION
         or plan.scenario_corpus_sha256 != scenario_corpus_hash(get_project_root())
         or plan.checks != list(load_checks().values())
-        or plan.instructions != JUDGE_INSTRUCTIONS.strip()
         or plan.judge != JudgeSettings(model=plan.judge.model)
     ):
-        raise ValueError("plan differs from the current benchmark, criteria, or judge settings")
+        raise ValueError("plan differs from the current benchmark, checks, or judge settings")
 
 
 def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
@@ -320,55 +360,195 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
         )
 
 
+def _read_answers(
+    bundle: Path,
+    plan_sha256: str,
+    requests: dict[tuple[str, str], dict[tuple[Role, int], Request]],
+) -> list[Answer]:
+    path = bundle / ANSWERS_FILE
+    content = path.read_bytes() if path.exists() else b""
+    if content and not content.endswith(b"\n"):
+        raise ValueError("ledger has an unfinished last line; resume the scan to recover it")
+    answers: list[Answer] = []
+    settled: set[tuple[str, str, str, int]] = set()
+    for line in content.splitlines():
+        answer = Answer.model_validate_json(line)
+        request = requests.get((answer.model_id, answer.scenario_id), {}).get(
+            (answer.role, answer.turn)
+        )
+        if request is None or answer.key in settled:
+            raise ValueError("duplicate or unplanned answer")
+        if answer.plan_sha256 != plan_sha256:
+            raise ValueError("answer is bound to a different scan plan")
+        if answer.input_sha256 != rules.input_hash(request):
+            raise ValueError("answer request differs from the frozen inputs")
+        if answer.nouls is not None and set(answer.nouls) != rules.answer_keys(request):
+            raise ValueError("answer does not cover exactly the questions of its request")
+        answers.append(answer)
+        if answer.error is None:
+            settled.add(answer.key)
+    return answers
+
+
+def derive_all(
+    plan: ScanPlan,
+    conversations: dict[tuple[str, str], Conversation],
+    answers: list[Answer],
+    plan_sha256: str,
+) -> list[Judgment]:
+    """Apply every check's rule to the saved answers. One judgment per pair and check."""
+    saved: dict[tuple[str, str], dict[tuple[Role, int], dict[str, float]]] = {}
+    for answer in answers:
+        if answer.nouls is not None:
+            saved.setdefault((answer.model_id, answer.scenario_id), {})[
+                answer.role, answer.turn
+            ] = answer.nouls
+    judgments = []
+    for ref in plan.transcripts:
+        pair = (ref.model_id, ref.scenario_id)
+        transcript, memory = conversations[pair]
+        for check in plan.checks:
+            judgments.append(
+                rules.derive(
+                    check,
+                    transcript,
+                    saved.get(pair, {}),
+                    plan.judge.thresholds,
+                    model_id=ref.model_id,
+                    scenario_id=ref.scenario_id,
+                    plan_sha256=plan_sha256,
+                    memory_declared=memory.persistent_memory,
+                )
+            )
+    return judgments
+
+
+def _write_judgments(bundle: Path, judgments: list[Judgment]) -> None:
+    content = b"".join(judgment.model_dump_json().encode() + b"\n" for judgment in judgments)
+    temporary = bundle / (LEDGER_FILE + ".tmp")
+    try:
+        with temporary.open("wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, bundle / LEDGER_FILE)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def load_scan(
     bundle: Path,
     *,
     complete: bool = False,
     current: bool = False,
-) -> tuple[ScanPlan, list[Judgment]]:
-    """Validate the same ledger for resume, inspection, scoring, and publication."""
+    verify_judgments: bool = True,
+) -> tuple[ScanPlan, list[Answer], list[Judgment]]:
+    """Validate the same scan for resume, inspection, scoring, and publication."""
     bundle = Path(bundle)
     plan_bytes = (bundle / PLAN_FILE).read_bytes()
     plan = ScanPlan.model_validate_json(plan_bytes)
     plan_sha = sha256(plan_bytes)
-    checks = {check.id: check for check in plan.checks}
-    transcripts = {}
-    for source in plan.sources:
-        for ref, transcript, memory in _source_conversations(bundle, source):
-            transcripts[ref.model_id, ref.scenario_id] = (transcript, memory)
+    conversations = _conversations(bundle, plan)
+    requests = _planned_requests(plan, conversations)
+    planned = sum(len(turns) for turns in requests.values())
+    answers = _read_answers(bundle, plan_sha, requests)
+    finished = {answer.key for answer in answers if answer.error is None}
     ledger = bundle / LEDGER_FILE
-    content = ledger.read_bytes() if ledger.exists() else b""
-    if content and not content.endswith(b"\n"):
-        raise ValueError("ledger has an unfinished last line; resume the scan to recover it")
-    records, seen = [], set()
-    for line in content.splitlines():
-        record = Judgment.model_validate_json(line)
-        pair = record.model_id, record.scenario_id
-        if record.key in seen or pair not in transcripts or record.check_id not in checks:
-            raise ValueError("duplicate or unplanned judgment")
-        if record.plan_sha256 != plan_sha:
-            raise ValueError("judgment is bound to a different scan plan")
-        transcript, memory = transcripts[pair]
-        messages = request_messages(checks[record.check_id], transcript, plan.instructions, memory_context=memory)
-        if input_hash(messages) != record.input_sha256:
-            raise ValueError("judgment request differs from the frozen inputs")
-        if record.error is None:
-            decision = parse_decision(
-                record.raw_response or "", record.judge.finish_reason, transcript
-            )
-            if decision.model_dump() != record.model_dump(include=set(Decision.model_fields)):
-                raise ValueError("stored judgment differs from the raw judge decision")
-        elif record.error == "judge_api_error" and record.raw_response is not None:
-            raise ValueError("an API error cannot contain a judge response")
-        records.append(record)
-        if record.error is None:
-            seen.add(record.key)
-    if (complete or current) and len(seen) != plan.planned_calls:
-        raise ValueError(f"scan is incomplete: {len(seen)}/{plan.planned_calls} judgments")
+    judgments: list[Judgment] = []
+    if ledger.exists():
+        judgments = [
+            Judgment.model_validate_json(line) for line in ledger.read_bytes().splitlines() if line
+        ]
+        if verify_judgments and (
+            len(finished) != planned
+            or judgments != derive_all(plan, conversations, answers, plan_sha)
+        ):
+            raise ValueError("stored judgments differ from the saved answers")
+    if complete or current:
+        if len(finished) != planned:
+            raise ValueError(f"scan is incomplete: {len(finished)}/{planned} answers")
+        if not ledger.exists():
+            raise ValueError("scan is incomplete: no judgments were derived from its answers")
     if current:
         _current_plan(plan)
         _publication_sources(bundle, plan)
-    return plan, records
+    return plan, answers, judgments
+
+
+def _invalid_output(result: Any, request: Request) -> str | None:
+    if not isinstance(result, dict) or not isinstance(result.get("nouls"), dict):
+        return "judge response must carry one probability per question"
+    nouls = result["nouls"]
+    if set(nouls) != rules.answer_keys(request):
+        return "judge answered a different set of questions"
+    for key, value in nouls.items():
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return f"{key} is not a probability"
+        if not math.isfinite(value) or not 0 <= value <= 1:
+            return f"{key} lies outside [0, 1]"
+    return None
+
+
+def _ask(
+    client: Any,
+    model: str,
+    request: Request,
+    *,
+    model_id: str,
+    scenario_id: str,
+    role: Role,
+    turn: int,
+    plan_sha256: str,
+) -> Answer:
+    identity = {
+        "model_id": model_id,
+        "scenario_id": scenario_id,
+        "role": role,
+        "turn": turn,
+        "plan_sha256": plan_sha256,
+        "input_sha256": rules.input_hash(request),
+    }
+    before = cost_tracker.total
+    try:
+        result = client.ask(
+            model=model, state=request["state"], questions=request["questions"]
+        )
+    except CostBudgetExceededError:
+        raise
+    except Exception as exc:
+        return Answer(
+            **identity,
+            judge=JudgeObservation(),
+            nouls=None,
+            cost_usd=cost_tracker.total - before,
+            error="judge_api_error",
+            error_detail=type(exc).__name__,
+        )
+    cost = cost_tracker.total - before
+    observed = result.get("model") if isinstance(result, dict) else None
+    judge = JudgeObservation(
+        model=observed if isinstance(observed, str) and observed.strip() else None
+    )
+    tokens = result.get("input_tokens") if isinstance(result, dict) else None
+    input_tokens = int(tokens) if isinstance(tokens, int) and tokens > 0 else 0
+    detail = _invalid_output(result, request)
+    if detail is not None:
+        return Answer(
+            **identity,
+            judge=judge,
+            nouls=None,
+            input_tokens=input_tokens,
+            cost_usd=cost,
+            error="invalid_judge_output",
+            error_detail=detail,
+        )
+    return Answer(
+        **identity,
+        judge=judge,
+        nouls={key: float(value) for key, value in result["nouls"].items()},
+        input_tokens=input_tokens,
+        cost_usd=cost,
+    )
 
 
 def run_scan(
@@ -377,11 +557,11 @@ def run_scan(
     max_cost_usd: float,
     client: Any | None = None,
 ) -> list[Judgment]:
-    """Resume from completed judgments. Save each result before the next call."""
+    """Resume from saved answers. Save each answer before the next request."""
     bundle = Path(bundle)
     if not (bundle / PLAN_FILE).is_file():
         raise ValueError("a saved dry-run scan plan is required")
-    with (bundle / LEDGER_FILE).open("a+b") as journal:
+    with (bundle / ANSWERS_FILE).open("a+b") as journal:
         try:
             fcntl.flock(journal.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -392,92 +572,70 @@ def run_scan(
             journal.truncate(content.rfind(b"\n") + 1)
             journal.flush()
             os.fsync(journal.fileno())
-        plan, records = load_scan(bundle)
+        plan, answers, _ = load_scan(bundle, verify_judgments=False)
         _current_plan(plan)
-        done = {record.key for record in records if record.error is None}
-        if len(done) == plan.planned_calls:
-            return records
-        estimate = plan.estimated_cost_usd
+        plan_sha = sha256((bundle / PLAN_FILE).read_bytes())
+        conversations = _conversations(bundle, plan)
+        requests = _planned_requests(plan, conversations)
+        done = {answer.key for answer in answers if answer.error is None}
+        pending = [
+            (model_id, scenario_id, role, turn, request)
+            for (model_id, scenario_id), turns in requests.items()
+            for (role, turn), request in turns.items()
+            if (model_id, scenario_id, role, turn) not in done
+        ]
         if not math.isfinite(max_cost_usd) or max_cost_usd <= 0:
             raise ValueError("max_cost_usd must be finite and positive")
-        if estimate is None or max_cost_usd < estimate:
-            raise ValueError("unknown pricing or the dry-run estimate exceeds max_cost_usd")
-        if max_cost_usd > maximum_reasonable_cost_ceiling(estimate):
-            raise ValueError("max_cost_usd exceeds the dry-run plan's accepted ceiling")
-        spent = sum(record.cost_usd for record in records)
-        if spent >= max_cost_usd:
-            raise ValueError("saved judgment costs have reached max_cost_usd")
-        cost_tracker.reset(max_cost_usd=max_cost_usd - spent)
-        client = client if client is not None else ModelAPIClient()
-        plan_sha = sha256((bundle / PLAN_FILE).read_bytes())
-        for source in plan.sources:
-            for ref, transcript, memory in _source_conversations(bundle, source):
-                for check in plan.checks:
-                    if (ref.model_id, ref.scenario_id, check.id) in done:
-                        continue
-                    record = judge_check(
-                        client,
-                        transcript,
-                        check,
-                        plan.judge,
-                        instructions=plan.instructions,
-                        model_id=ref.model_id,
-                        scenario_id=ref.scenario_id,
-                        plan_sha256=plan_sha,
-                        memory_context=memory,
+        if pending:
+            estimate = plan.estimated_cost_usd
+            if estimate is None or max_cost_usd < estimate:
+                raise ValueError("unknown pricing or the dry-run estimate exceeds max_cost_usd")
+            if max_cost_usd > maximum_reasonable_cost_ceiling(estimate):
+                raise ValueError("max_cost_usd exceeds the dry-run plan's accepted ceiling")
+            spent = sum(answer.cost_usd for answer in answers)
+            if spent >= max_cost_usd:
+                raise ValueError("saved judgment costs have reached max_cost_usd")
+            cost_tracker.reset(max_cost_usd=max_cost_usd - spent)
+            client = client if client is not None else SystemOneClient()
+            for model_id, scenario_id, role, turn, request in pending:
+                answer = _ask(
+                    client,
+                    plan.judge.model,
+                    request,
+                    model_id=model_id,
+                    scenario_id=scenario_id,
+                    role=role,
+                    turn=turn,
+                    plan_sha256=plan_sha,
+                )
+                journal.write(answer.model_dump_json().encode() + b"\n")
+                journal.flush()
+                os.fsync(journal.fileno())
+                answers.append(answer)
+                if answer.error is not None:
+                    raise RuntimeError(
+                        f"{scenario_id} {role} turn {turn}: {answer.error}; attempt saved. "
+                        "Resume to retry this unfinished request."
                     )
-                    journal.write(record.model_dump_json().encode() + b"\n")
-                    journal.flush()
-                    os.fsync(journal.fileno())
-                    records.append(record)
-                    if record.error is not None:
-                        raise RuntimeError(
-                            f"{record.check_id}: {record.error}; attempt saved. Resume to retry this unfinished request."
-                        )
-                    done.add(record.key)
-        return records
+        if pending or not (bundle / LEDGER_FILE).exists():
+            judgments = derive_all(plan, conversations, answers, plan_sha)
+            _write_judgments(bundle, judgments)
+            return judgments
+        return load_scan(bundle, complete=True)[2]
 
 
 def replay_scan(bundle: Path) -> list[str]:
-    """Reparse saved responses through the current judge code without API calls."""
-    plan, records = load_scan(bundle, complete=True)
-    checks = {check.id: check for check in plan.checks}
-    transcripts = {
-        (ref.model_id, ref.scenario_id): (transcript, memory)
-        for source in plan.sources
-        for ref, transcript, memory in _source_conversations(bundle, source)
+    """Derive the verdicts again from the saved answers, without API calls."""
+    bundle = Path(bundle)
+    plan, answers, saved = load_scan(bundle, complete=True, verify_judgments=False)
+    derived = derive_all(
+        plan, _conversations(bundle, plan), answers, sha256((bundle / PLAN_FILE).read_bytes())
+    )
+    differences = {
+        "/".join(judgment.key)
+        for judgment, stored in zip(derived, saved, strict=False)
+        if judgment != stored
     }
-    differences = []
-
-    class ReplayClient:
-        def __init__(self, saved: Judgment):
-            self.saved = saved
-
-        def call_model(self, **kwargs):
-            if self.saved.error == "judge_api_error":
-                raise RuntimeError("saved API failure")
-            if self.saved.raw_response is None:
-                return None
-            return {
-                "response": self.saved.raw_response,
-                "finish_reason": self.saved.judge.finish_reason,
-                "raw": {"model": self.saved.judge.model, "provider": self.saved.judge.provider},
-            }
-
-    for saved in records:
-        replayed = judge_check(
-            ReplayClient(saved),
-            transcripts[saved.model_id, saved.scenario_id][0],
-            checks[saved.check_id],
-            plan.judge,
-            instructions=plan.instructions,
-            model_id=saved.model_id,
-            scenario_id=saved.scenario_id,
-            plan_sha256=saved.plan_sha256,
-            memory_context=transcripts[saved.model_id, saved.scenario_id][1],
-        )
-        if replayed.model_dump(exclude={"cost_usd", "error_detail"}) != saved.model_dump(
-            exclude={"cost_usd", "error_detail"}
-        ):
-            differences.append("/".join(saved.key))
-    return differences
+    for extra in derived[len(saved):] + saved[len(derived):]:
+        differences.add("/".join(extra.key))
+    return sorted(differences)

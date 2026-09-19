@@ -9,8 +9,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from invisiblebench.api.client import DEFAULT_JUDGE_MODEL, CostBudgetExceededError  # noqa: E402
-from invisiblebench.judge import PLAN_FILE, plan_scan, run_scan  # noqa: E402
+from invisiblebench.api.client import CostBudgetExceededError  # noqa: E402
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL  # noqa: E402
+from invisiblebench.judge import PLAN_FILE, load_scan, plan_scan, run_scan  # noqa: E402
 from invisiblebench.jury_card import write_jury_card  # noqa: E402
 
 
@@ -42,16 +43,18 @@ def main() -> int:
             )
             print(f"Plan: {args.output / PLAN_FILE}")
             print(
-                f"Transcripts: {len(result.transcripts)}; checks: {len(result.checks)}; calls: {result.planned_calls}"
+                f"Transcripts: {len(result.transcripts)}; checks: {len(result.checks)}; "
+                f"requests: {result.planned_requests}; judgments: {result.planned_judgments}"
             )
             print(f"Estimated cost envelope: {result.estimated_cost_usd} USD")
         else:
             if args.plan.name != PLAN_FILE:
                 raise ValueError(f"--plan must name the saved {PLAN_FILE}")
-            records = run_scan(args.plan.parent, max_cost_usd=args.max_cost_usd)
+            judgments = run_scan(args.plan.parent, max_cost_usd=args.max_cost_usd)
+            answers = load_scan(args.plan.parent, complete=True)[1]
             print(
-                f"Complete: {sum(record.error is None for record in records)} judgments; recorded cost: "
-                f"{sum(record.cost_usd for record in records):.6f} USD"
+                f"Complete: {len(judgments)} judgments from {len(answers)} judge requests; "
+                f"recorded cost: {sum(answer.cost_usd for answer in answers):.6f} USD"
             )
             print(f"Jury Card: {write_jury_card(args.plan.parent)}")
     except KeyboardInterrupt:

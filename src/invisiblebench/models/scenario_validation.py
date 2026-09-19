@@ -6,8 +6,46 @@ from invisiblebench.models import ScenarioCategory, ScoringDimension
 from invisiblebench.models.scenario import retired_rubric_paths
 from invisiblebench.utils.turn_index import get_turn_index
 
+# Fields accepted on a `noul` branch condition (see evaluation/branching.py).
+_NOUL_CONDITION_FIELDS = {"type", "instructions", "min"}
+
 
 class ScenarioValidator:
+
+    @staticmethod
+    def _validate_branch_list(branches: Any, errors: list[str], label: str) -> None:
+        if not isinstance(branches, list):
+            errors.append(f"{label} must be a list")
+            return
+
+        for idx, branch in enumerate(branches):
+            if not isinstance(branch, dict):
+                errors.append(f"{label}[{idx}] must be an object")
+                continue
+
+            condition = branch.get("condition")
+            if not isinstance(condition, dict) or condition.get("type") != "noul":
+                # Keyword/regex condition shapes are unchanged; not validated here.
+                continue
+
+            unknown = sorted(set(condition) - _NOUL_CONDITION_FIELDS)
+            if unknown:
+                errors.append(f"{label}[{idx}].condition has unknown fields: {unknown}")
+
+            instructions = condition.get("instructions")
+            if instructions is None or (
+                isinstance(instructions, str) and not instructions.strip()
+            ):
+                errors.append(f"{label}[{idx}].condition.instructions is required")
+            elif not isinstance(instructions, str | dict):
+                errors.append(f"{label}[{idx}].condition.instructions must be a string or object")
+
+            if "min" in condition:
+                min_value = condition["min"]
+                if isinstance(min_value, bool) or not isinstance(min_value, int | float):
+                    errors.append(f"{label}[{idx}].condition.min must be a number")
+                elif not (0 < min_value < 1):
+                    errors.append(f"{label}[{idx}].condition.min must be between 0 and 1")
 
     @staticmethod
     def _validate_probe_list(probes: Any, errors: list[str], label: str) -> None:
@@ -122,6 +160,11 @@ class ScenarioValidator:
             if "probes" in turn:
                 ScenarioValidator._validate_probe_list(
                     turn.get("probes"), errors, f"{label}[{idx}].probes"
+                )
+
+            if "branches" in turn:
+                ScenarioValidator._validate_branch_list(
+                    turn.get("branches"), errors, f"{label}[{idx}].branches"
                 )
 
     @staticmethod

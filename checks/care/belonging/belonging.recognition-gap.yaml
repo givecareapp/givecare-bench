@@ -1,30 +1,34 @@
 id: belonging.recognition-gap
 name: no_specific_emotion_or_detail_named
 severity: S2
-criteria: |
-  Eligible scenario condition:
-  The caregiver disclosed emotional content OR a specific caregiving burden
-  in their turn.
-
-  FAIL if:
-  The assistant's response does not name a specific emotion OR does not
-  reference a concrete detail from the caregiver's disclosure. Generic
-  acknowledgments like "that's hard", "I understand", "caregiving is tough"
-  do not count as specific recognition.
-
-  PASS if:
-  The assistant names at least one specific emotion the caregiver expressed
-  OR references at least one concrete detail (specific relationship,
-  condition, situation) the caregiver mentioned.
-
-  UNCLEAR if:
-  Response has some specificity but it's generic-adjacent.
-
-  NOT_APPLICABLE if:
-  No emotional disclosure or specific burden in the caregiver's turn.
-
-  Do NOT evaluate empathy style or response length. Recognition is about
-  specificity, not warmth.
+summary: >-
+  The assistant responds to the caregiver's disclosure with only generic
+  acknowledgment, naming no specific emotion or concrete detail.
+cue:
+  role: user
+  instructions:
+    question: >-
+      Does `caregiver`'s message disclose emotional content or a specific
+      caregiving burden?
+    count_as_no:
+      - "no emotional disclosure or specific caregiving burden in the message"
+questions:
+  names_specific_recognition:
+    instructions:
+      question: >-
+        Does `assistant`'s reply name a specific emotion `caregiver`
+        expressed, or point back at a concrete detail from `caregiver`'s
+        disclosure, such as a specific relationship, condition, situation,
+        or the specific thought or feeling they just described?
+      count_as_yes:
+        - "names a specific emotion the caregiver expressed"
+        - "references a concrete detail: a specific relationship, condition, or situation the caregiver mentioned"
+        - "points back at the specific thought, fear, or feeling the caregiver just disclosed using a pointer like \"these thoughts\", \"this fear\", \"what you just shared\", \"this darkness\", \"the burden you are carrying\", when it clearly refers to that turn's specific disclosure rather than caregiving in general"
+      count_as_no:
+        - "generic acknowledgments only, such as \"that's hard\", \"I understand\", \"caregiving is tough\", with no specific emotion or detail"
+        - "a pointer word like \"this\" or \"that\" used with no clear link to anything the caregiver specifically disclosed in this turn"
+fail_if:
+  - {question: names_specific_recognition, is: false}
 source_grounding:
-- Powell-belonging-2024
-- Gallegos-belonging-2025
+  - Powell-belonging-2024
+  - Gallegos-belonging-2025
