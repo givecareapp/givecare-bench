@@ -31,12 +31,23 @@ class SystemOneClient:
     """Thin wrapper over the TypeSafe SDK. Output tokens are free; only input is billed."""
 
     def __init__(self, api_key: str | None = None, timeout: float = 60.0):
+        import httpx2
         from typesafe_sdk import TypeSafeClient
 
         key = api_key or os.environ.get(API_KEY_ENV)
         if not key:
             raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
-        self._client = TypeSafeClient(api_key=key, timeout=timeout)
+        def set_user_agent(request: httpx2.Request) -> None:
+            # The SDK overwrites constructor headers when it builds each request.
+            request.headers["User-Agent"] = "OpenAI File Downloader, XaiImageApiFetch/1.0"
+
+        self._client = TypeSafeClient(
+            api_key=key,
+            timeout=timeout,
+            http_client=httpx2.Client(
+                timeout=timeout, event_hooks={"request": [set_user_agent]}
+            ),
+        )
 
     def ask(self, *, model: str, state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
         """Return {"model", "nouls", "input_tokens"}; raises on transport failure.
@@ -45,32 +56,21 @@ class SystemOneClient:
         own key; a choice question contributes one key per option,
         `<question>=<option>`, holding that option's probability.
         """
-        from typesafe_sdk import Choice, Noul, NoulCriteria
-
-        cost_tracker.ensure_budget_available()
-        built: dict[str, Any] = {}
-        for key, spec in questions.items():
-            if spec.get("type") == "choice":
-                built[key] = Choice(instructions=spec["instructions"], criteria=spec["criteria"])
-                continue
-            criteria = spec.get("criteria")
-            built[key] = Noul(
-                instructions=spec["instructions"],
-                criteria=NoulCriteria(**criteria) if criteria else None,
-            )
-        response = self._client.system_one(model=model, state=state, questions=built)
-        input_tokens = int(response.usage.input_tokens)
-        # Bill before reading the answers: a malformed response still cost money.
-        cost_tracker.record(model, input_tokens, 0, actual_cost=request_cost(model, input_tokens))
+        if any(spec.get("type", "noul") not in {"noul", "choice"} for spec in questions.values()):
+            raise ValueError("ledger questions must use noul or choice")
+        response = self.ask_typed(
+            model=model, state=state,
+            questions={key: {"type": "noul", **spec} for key, spec in questions.items()},
+        )
         nouls: dict[str, float] = {}
         for key, spec in questions.items():
+            answer = response["answers"][key]
             if spec.get("type") == "choice":
-                probabilities = dict(response.choices[key].probabilities)
                 for option in spec["criteria"]:
-                    nouls[f"{key}={option}"] = float(probabilities[option])
+                    nouls[f"{key}={option}"] = float(answer["probabilities"][option])
                 continue
-            nouls[key] = float(response.nouls[key].noul)
-        return {"model": response.model, "nouls": nouls, "input_tokens": input_tokens}
+            nouls[key] = answer["noul"]
+        return {"model": response["model"], "nouls": nouls, "input_tokens": response["input_tokens"]}
 
     def ask_typed(
         self, *, model: str, state: Any, questions: dict[str, dict[str, Any]]
@@ -90,30 +90,12 @@ class SystemOneClient:
         `"confidence"`; score answers carry `"score"`, `"probabilities"`,
         `"confidence"`. Raises on transport failure or an unknown type.
         """
-        from typesafe_sdk import Choice, Noul, NoulCriteria, Score
-
         cost_tracker.ensure_budget_available()
-        built: dict[str, Any] = {}
-        for key, spec in questions.items():
+        for spec in questions.values():
             kind = spec["type"]
-            if kind == "noul":
-                criteria = spec.get("criteria")
-                built[key] = Noul(
-                    instructions=spec.get("instructions"),
-                    criteria=NoulCriteria(**criteria) if criteria else None,
-                )
-            elif kind == "choice":
-                built[key] = Choice(
-                    instructions=spec.get("instructions"), criteria=spec["criteria"]
-                )
-            elif kind == "score":
-                built[key] = Score(
-                    instructions=spec.get("instructions"), criteria=spec["criteria"]
-                )
-            else:
+            if kind not in {"noul", "choice", "score"}:
                 raise ValueError(f"unknown question type: {kind!r}")
-
-        response = self._client.system_one(model=model, state=state, questions=built)
+        response = self._client.system_one(model=model, state=state, questions=questions)
         input_tokens = int(response.usage.input_tokens)
         # Bill before reading the answers: a malformed response still cost money.
         cost_tracker.record(model, input_tokens, 0, actual_cost=request_cost(model, input_tokens))

@@ -280,6 +280,12 @@ class TestNoulCondition:
         assert decisions[0]["matched"] is False
         assert decisions[0]["probability"] == 0.64
 
+    @pytest.mark.parametrize("probability", [float("nan"), float("inf"), -0.1, 1.1])
+    def test_invalid_probability_stops_branch_selection(self, probability) -> None:
+        client = FakeNoulClient({"0": probability})
+        with pytest.raises(ValueError, match="invalid noul probability"):
+            resolve_branch(self._turn(), "some reply", client=client)
+
     def test_custom_min_overrides_default(self) -> None:
         client = FakeNoulClient({"0": 0.5})
         msg, bid, decisions = resolve_branch(

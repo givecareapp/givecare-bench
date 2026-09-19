@@ -24,6 +24,7 @@ turn regardless of how many ``noul`` branches it declares.
 
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
 
@@ -116,7 +117,13 @@ def _ask_noul_conditions(
     }
     result = client.ask(model=model, state={"assistant": prev_assistant_msg}, questions=questions)
     nouls = result["nouls"]
-    return {idx: float(nouls[str(idx)]) for idx in noul_indices}
+    probabilities = {}
+    for idx in noul_indices:
+        probability = float(nouls[str(idx)])
+        if not math.isfinite(probability) or not 0 <= probability <= 1:
+            raise ValueError(f"invalid noul probability for branch {idx}: {probability}")
+        probabilities[idx] = probability
+    return probabilities
 
 
 def _evaluate_condition(

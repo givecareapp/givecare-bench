@@ -1,5 +1,7 @@
 # Method
 
+<!-- Diátaxis: reference -->
+
 **The benchmark describes model judgments under recorded rules.** It does not
 measure clinical correctness, caregiver outcomes, or expert agreement.
 
@@ -14,7 +16,9 @@ The harness generates responses to scripted user turns. Some user turns branch
 based on a preceding response. A branch condition is either a keyword rule or
 a yes/no question put to the judge model; every branch decision and, for
 judged conditions, the answered probability are recorded in the transcript
-metadata. Session labels give time context. They do not establish that a
+metadata. Each branch probability must be finite and between 0 and 1, inclusive.
+An invalid probability stops branch selection.
+Session labels give time context. They do not establish that a
 deployed product has working memory, tools, or persistent state.
 
 Private scans can also evaluate committed product conversations. The public
