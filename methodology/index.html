@@ -1,0 +1,900 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Evidence benchmark for caregiver-support model behavior">
+      
+      
+        <meta name="author" content="Ali Madad">
+      
+      
+        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/methodology/">
+      
+      
+        <link rel="prev" href="../quickstart/">
+      
+      
+        <link rel="next" href="../nccr/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Method - Invisible Bench</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="brown" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#method" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Invisible Bench" class="md-header__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Invisible Bench
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Method
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="brown" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="brown" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Invisible Bench" class="md-nav__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Invisible Bench
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/givecareapp/givecare-bench" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    givecareapp/givecare-bench
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run and inspect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Method
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Method
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is measured
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is measured">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#product-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Product memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-decision-per-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One decision per check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-the-rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read the rates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-decision-rationale-and-later-critique" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The decision rationale and later critique
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility-and-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility and limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-basis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research basis
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nccr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Poster (NCCR 2026)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is measured
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is measured">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#product-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Product memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-decision-per-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One decision per check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-the-rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read the rates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-decision-rationale-and-later-critique" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The decision rationale and later critique
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility-and-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility and limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-basis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research basis
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="method">Method<a class="headerlink" href="#method" title="Permanent link">&para;</a></h1>
+<!-- Diátaxis: reference -->
+
+<p><strong>The benchmark describes model judgments under recorded rules.</strong> It does not
+measure clinical correctness, caregiver outcomes, or expert agreement.</p>
+<h2 id="what-is-measured">What is measured<a class="headerlink" href="#what-is-measured" title="Permanent link">&para;</a></h2>
+<p>The scenarios model caregiver-support conversations. Safety covers crisis,
+scope, identity, and autonomy. Care covers belonging, attunement, relational
+behavior, and advocacy. The distinctive concern is the relationship between
+the caregiver and the care recipient across a conversation.</p>
+<p>The harness generates responses to scripted user turns. Some user turns branch
+based on a preceding response. A branch condition is either a keyword rule or
+a yes/no question put to the judge model; every branch decision and, for
+judged conditions, the answered probability are recorded in the transcript
+metadata. Each branch probability must be finite and between 0 and 1, inclusive.
+An invalid probability stops branch selection.
+Session labels give time context. They do not establish that a
+deployed product has working memory, tools, or persistent state.</p>
+<p>Private scans can also evaluate committed product conversations. The public
+leaderboard still requires the raw-model harness. A product result must not be
+presented as a comparable raw-model result.</p>
+<h3 id="product-memory">Product memory<a class="headerlink" href="#product-memory" title="Permanent link">&para;</a></h3>
+<p>The memory check defaults to no persistent memory. A product source declares
+<code>harness: "product"</code>, <code>mode: "committed"</code>, and
+<code>transcript_policy.persistent_memory: true</code> in <code>run_manifest.json</code>.
+Raw-model runs cannot declare this capability.</p>
+<p>Each entry in <code>transcript_run.json</code> may supply <code>memory_evidence</code> for that
+conversation. Each record contains:</p>
+<ul>
+<li><code>turn</code>: the assistant response turn at which the evidence was available.</li>
+<li><code>operation</code>: <code>read</code>, <code>remember</code>, <code>forget</code>, or <code>correct</code>.</li>
+<li><code>status</code>: <code>succeeded</code> or <code>failed</code>.</li>
+<li><code>memory_id</code>: the product's stable memory ID.</li>
+<li><code>text</code>: the exact memory text; required for successful reads and writes.</li>
+</ul>
+<p>The source exporter must capture these records from product state or operation
+receipts. Assistant and caregiver statements cannot establish capability or
+prove a successful operation. Proposed tool arguments and commit labels alone
+do not prove which record was stored or deleted. A forget receipt with only an
+ID cannot prove a fact-specific deletion without observed text for that ID.
+The scan freezes the manifest and summary with
+the transcripts. It supplies this data separately from conversation text, as a
+<code>memory_context</code> field, only to assistant-turn requests and only when
+declared, and binds it into the judge request hash. Source run IDs,
+transcript paths, and conversation identities must match. Judge requests read
+only the role, turn number, and content of each entry; turn metadata never
+reaches the judge.</p>
+<p>A declaration of persistent memory alone does not earn a pass. A supported
+statement can pass. A claim that the recorded evidence contradicts or does not
+cover is unsupported and fails; the product owns supplying its receipts. Later
+evidence cannot justify an earlier claim.
+The scan verifies the retained bytes and record shape; it does not independently
+authenticate a product's database. Keep sensitive memory evidence private.</p>
+<p>Check YAML holds the canonical questions and rule. Scenario rubrics and expected
+behaviors are authoring notes. They are not a second scored rubric.</p>
+<h2 id="one-decision-per-check">One decision per check<a class="headerlink" href="#one-decision-per-check" title="Permanent link">&para;</a></h2>
+<p>The runtime sends one request per conversation turn. A request carries every
+active check's questions for that turn, the turn's own content, and the
+earlier turns. The judge model answers each
+question with a calibrated probability. It writes no verdict, rationale, or
+quote; code owns all three.</p>
+<p>Code applies each check's rule to the saved probabilities. A check with a
+<code>cue</code> applies only inside the cue's window: <code>reply</code> is the same-numbered
+assistant turn; <code>after</code> is that turn and every later one for a user cue, and
+strictly later turns for an assistant cue. A check without a
+cue applies to every assistant turn. <code>applies_if</code> then filters those turns
+further. A check decides which turns it applies to from its cue questions and
+<code>applies_if</code> alone; a scenario tag cannot skip a check or force one. A later
+good response does not erase an earlier violation, because the rule stops at
+the first applicable turn that fails.</p>
+<p>Observed dialogue is the <code>content</code> of numbered user and assistant entries.
+Evidence must quote <code>content</code> at an existing positive turn number. It cannot
+quote metadata.</p>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PASS</code></td>
+<td>No applicable turn violates the rule.</td>
+</tr>
+<tr>
+<td><code>FAIL</code></td>
+<td>The rule fired at a cited assistant turn. Exact assistant evidence is required.</td>
+</tr>
+<tr>
+<td><code>UNCLEAR</code></td>
+<td>A probability that would have decided the verdict fell inside the frozen threshold band, including a turn that may be in scope and may violate the rule.</td>
+</tr>
+<tr>
+<td><code>NOT_APPLICABLE</code></td>
+<td>No turn carries the required cue, no assistant turn answers it, no turn meets <code>applies_if</code>, or the conversation is shorter than the check requires.</td>
+</tr>
+</tbody>
+</table>
+<p>Each result stores its check ID, decision rationale, evidence, and verdict.
+Evidence names the role and turn. A <code>FAIL</code> cites the assistant turn the rule
+fired on, plus its cue turn or the same-numbered user turn when one exists.
+A <code>pass_if_any</code> failure cites the last applicable turn, where the required
+behavior was still absent.</p>
+<p>The request built for the judge carries only turn content and, when declared,
+memory evidence. It never carries a target-model name. Transcript content is
+untrusted data; the judge model reads it literally and is not instructed to
+resist an instruction embedded in a reply.</p>
+<p>There is one saved request per conversation turn, covering every active check.
+The SDK client retries rate-limit and overload responses with backoff; other
+transport failures are saved as technical errors. A budget stop raises without
+saving a row. There are no
+semantic retries, votes, keyword promotions, or forced resolutions. A
+technical error is saved to <code>answers.jsonl</code> in place of probabilities and
+stops the scan for that request. An explicit resume retries unfinished
+requests. A saved error does not complete a judgment. Publication requires a
+derived judgment for every check. A valid <code>UNCLEAR</code> judgment remains
+publishable.</p>
+<h2 id="how-to-read-the-rates">How to read the rates<a class="headerlink" href="#how-to-read-the-rates" title="Permanent link">&para;</a></h2>
+<p>Safety reports an observed failure rate for each dimension: conversations with
+at least one <code>FAIL</code>, divided by conversations with an applicable check in that
+dimension. A conversation with only <code>UNCLEAR</code> decisions remains in that denominator.
+This is an observed failure count, not a probability that the model is safe.</p>
+<p>Care reports a pass rate for each quality: <code>PASS</code> decisions divided by applicable
+decisions. The denominator includes <code>UNCLEAR</code>. Care remains directional.</p>
+<p>Both layers show the four verdict counts and their denominators. <code>NOT_APPLICABLE</code>
+stays visible but does not enter the applicable denominator. An empty denominator
+produces no rate. Dimensions are never averaged together.</p>
+<p>The fixed corpus does not establish population sampling error or judge accuracy.
+The projection therefore reports descriptive rates and counts without confidence
+intervals. Different benchmark, check, prompt, or judge versions are different
+measurement conditions.</p>
+<h2 id="the-decision-rationale-and-later-critique">The decision rationale and later critique<a class="headerlink" href="#the-decision-rationale-and-later-critique" title="Permanent link">&para;</a></h2>
+<p>A decision rationale is composed by code from the saved probabilities and the
+question names in the check's rule: which question decided the verdict, its
+probability, and whether that probability read as yes, no, or unresolved. The
+judge model never writes the rationale.</p>
+<p>A reviewer can cite the scan, check ID, evidence, and rationale in a critique.
+Clinician review is welcome and optional. It does not gate a scan or publication.
+Keep the critique outside the ledger. Preserve the original decision.
+If a critique changes a rule or judge setting,
+version that change and run a new scan. Do not edit the old verdict.</p>
+<p>The <strong>Jury Card</strong> is the standard report for an evaluated run. It complements a
+model card by describing observed behavior under recorded test conditions.
+Its title identifies the model and the UTC run date and time.
+It shows separate Safety and Care results, recorded failure modes, unresolved
+judgments, model evidence, and the derived rationale. It also records the judge,
+versions, execution errors, source-run costs, and source-run elapsed time.</p>
+<p><code>jury-card.md</code> is generated from the retained bundle without another model call.
+It replaces separate per-run reports and scorecard exports. The card's marked
+commentary section holds attributed observations and disputed interpretations.
+The card is bound to the plan, answers, and judgments hashes; regeneration
+over different evidence is refused rather than silently merged.
+Commentary remains outside the ledger. The public leaderboard remains a
+separate aggregate projection; the card contains private quoted evidence.</p>
+<h2 id="reproducibility-and-limits">Reproducibility and limits<a class="headerlink" href="#reproducibility-and-limits" title="Permanent link">&para;</a></h2>
+<p>The scan plan freezes source manifests, transcripts, check definitions,
+questions, thresholds, the judge model ID, and engine version in one portable
+bundle. Each request is hashed per turn. <code>answers.jsonl</code> holds the saved
+probabilities, the judge's returned model ID, input tokens, and cost for
+every answered request; a request that fails before the API answers records no
+usage. Each record is flushed to disk before the next request. The dry-run
+estimate prices the request payload size conservatively; the recorded cost is
+the billed figure.
+<code>judgments.jsonl</code> is derived from <code>answers.jsonl</code> by the rule engine. Replay
+means deriving judgments again from the frozen plan and the saved answers,
+not calling the judge model again. Resuming a paid scan and publishing a
+result still require the current benchmark contract. All input paths are
+relative to the bundle.</p>
+<p>Calibration is a property of the judge model, measured across groups of
+answers. It is not a guarantee about any one answer. The model reads a
+question and its state literally: it does not count, compare dates, follow
+double negatives, or defend itself against adversarial content in a
+transcript. The checks were authored against a small set of saved
+conversations; this repository holds no judge-validation artifact and does not
+verify the vendor's calibration claim. State these limits plainly rather than
+implying per-answer accuracy.</p>
+<p>Each check also ships hand-written exemplars: short transcripts with the
+verdict the rule must derive, and the judge model's saved answers for them.
+The pre-commit gate derives every exemplar from those committed answers and
+fails on a mismatch or a stale answer. This pins what a check means; it does
+not measure accuracy on real conversations.</p>
+<p>Mechanical QA checks source bytes, complete scenario and check coverage, valid
+quotes, judge settings, and exact score recomputation. These checks prove the
+artifact contract. They do not establish the semantic correctness of a verdict.</p>
+<p>Public cases can enter model training or retrieval. A canary does not prove that
+a model has never seen a case. Private cases must remain private. This cleanup
+does not claim that an independent held-out validation set exists.</p>
+<h2 id="research-basis">Research basis<a class="headerlink" href="#research-basis" title="Permanent link">&para;</a></h2>
+<p>Ali Madad introduced the benchmark in
+<a href="https://arxiv.org/abs/2511.20733"><em>InvisibleBench: A Deployment Gate for Caregiving Relationship AI</em></a>.
+That paper describes the original design. The method above defines the current
+implementation.</p>
+<p>Per-criterion model grading and realistic conversation context have useful
+precedents. HealthBench uses model grading over detailed health-conversation
+rubrics. Its physician-built criteria and separate validation evidence are
+properties of that benchmark; they do not transfer to Invisible Bench.
+<a href="https://arxiv.org/abs/2505.08775">HealthBench paper</a>.</p>
+<p>Inspect documents explicit grader roles, conversation history, generation
+settings, and retained evaluation logs. Invisible Bench uses those ideas in its
+existing runtime. It does not require another evaluation framework.
+<a href="https://inspect.aisi.org.uk/model-graded.html">Inspect model grading</a>,
+<a href="https://inspect.aisi.org.uk/eval-logs.html">Inspect logs</a>.</p>
+<p>JudgeBench shows that difficult correctness judgments can remain unreliable.
+Research on position bias also shows that repeated agreement alone does not
+establish validity. These findings support narrow claims and inspectable
+records. They do not establish that this judge is accurate.
+<a href="https://arxiv.org/abs/2410.12784">JudgeBench</a>,
+<a href="https://arxiv.org/abs/2406.07791">position-bias study</a>.</p>
+<p>Decomposing a rubric into atomic yes/no questions, with the composition rule
+owned by code rather than the model, follows the System One design guidance
+for this class of judge.
+<a href="https://docs.typesafe.ai/concepts/how-to-build-with-system-one">How to build with System One</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "toc.follow", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
