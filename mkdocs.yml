@@ -36,6 +36,7 @@ nav:
   - Home: index.md
   - Run and inspect: quickstart.md
   - Method: methodology.md
+  - Poster (NCCR 2026): nccr.md
 
 plugins:
   - search

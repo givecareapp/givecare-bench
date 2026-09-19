@@ -9,6 +9,7 @@ import pytest
 
 from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.cli import run_command as run_command_mod
+from invisiblebench.cli import transcript as transcript_mod
 from invisiblebench.cli.transcript import evaluate_scenario_async
 
 
@@ -152,6 +153,74 @@ def test_multisession_transcript_preserves_session_semantics(tmp_path: Path) -> 
     assert "Jamie returns after the appeal" in client.calls[-1][0]["content"]
 
 
+def test_evaluate_scenario_async_resolves_noul_branch_off_thread(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`resolve_branch` runs via `asyncio.to_thread` but still records the
+    branch decision on the user entry, using a fake judge client so no
+    network call happens."""
+    scenario_path = tmp_path / "branch_scenario.json"
+    scenario_path.write_text(
+        json.dumps(
+            {
+                "scenario_id": "branch_unit_test_001",
+                "category": "context",
+                "turns": [
+                    {"turn_number": 1, "user_message": "Hello"},
+                    {
+                        "turn_number": 2,
+                        "user_message": "Default path",
+                        "branches": [
+                            {
+                                "branch_id": "noul-branch",
+                                "condition": {
+                                    "type": "noul",
+                                    "instructions": "Did it help?",
+                                },
+                                "user_message": "Branch taken",
+                            }
+                        ],
+                    },
+                ],
+            }
+        )
+    )
+
+    class FakeNoulClient:
+        def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
+            return {"model": model, "nouls": dict.fromkeys(questions, 0.9), "input_tokens": 5}
+
+    async def fake_ensure_noul_client() -> FakeNoulClient:
+        return FakeNoulClient()
+
+    monkeypatch.setattr(transcript_mod, "_ensure_noul_client", fake_ensure_noul_client)
+
+    row = asyncio.run(
+        evaluate_scenario_async(
+            model={"id": "test/model", "name": "Test Model"},
+            scenario={
+                "path": str(scenario_path),
+                "name": "Branch Scenario",
+                "category": "context",
+            },
+            api_client=_FakeAsyncClient(),  # type: ignore[arg-type]
+            output_dir=tmp_path / "run",
+            semaphore=asyncio.Semaphore(1),
+        )
+    )
+
+    assert row["status"] == "transcript_ready"
+    transcript = [
+        json.loads(line) for line in Path(row["transcript_path"]).read_text().splitlines()
+    ]
+    branch_entry = next(e for e in transcript if e["turn"] == 2 and e["role"] == "user")
+    assert branch_entry["branch_id"] == "noul-branch"
+    assert branch_entry["content"] == "Branch taken"
+    assert branch_entry["branch_decisions"] == [
+        {"branch_id": "noul-branch", "type": "noul", "matched": True, "probability": 0.9}
+    ]
+
+
 def test_run_benchmark_transcript_only_writes_stage_artifact(
     tmp_path: Path,
     monkeypatch,
@@ -216,7 +285,9 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     bundle = tmp_path / "scan"
     plan = plan_scan([output_dir], bundle)
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
-    assert len(load_scan(bundle, complete=True)[1]) == len(plan.checks)
+    scan, answers, judgments = load_scan(bundle, complete=True)
+    assert len(answers) == scan.planned_requests
+    assert len(judgments) == len(plan.checks)
 
 
 def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) -> None:

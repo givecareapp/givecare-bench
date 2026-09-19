@@ -8,7 +8,7 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, write_source_run
 from invisiblebench import judge
-from invisiblebench.api.client import DEFAULT_JUDGE_MODEL
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.evaluation.check_registry import load_checks
 from scripts import run_scan
 
@@ -23,14 +23,20 @@ def invoke(monkeypatch, *args):
     return run_scan.main()
 
 
+def no_client(monkeypatch, reason):
+    monkeypatch.setattr(judge, "SystemOneClient", lambda: pytest.fail(reason))
+
+
 def test_plan_freezes_all_checks_without_a_client(source, tmp_path, monkeypatch):
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("planning reached the API"))
+    no_client(monkeypatch, "planning reached the API")
     bundle = tmp_path / "scan"
     assert invoke(monkeypatch, "plan", source, "--output", bundle) == 0
-    plan, records = judge.load_scan(bundle)
-    assert not records
+    plan, answers, judgments = judge.load_scan(bundle)
+    assert not answers and not judgments
     assert {check.id for check in plan.checks} == set(load_checks())
-    assert plan.planned_calls == len(plan.checks) * 2
+    assert plan.planned_judgments == len(plan.checks) * 2
+    assert plan.planned_requests == 4 * 2
+    assert plan.input_token_envelope > 0
     assert plan.estimated_cost_usd > 0
     assert plan.judge.model == DEFAULT_JUDGE_MODEL
     assert all(not ref.path.startswith("/") for ref in plan.transcripts)
@@ -40,7 +46,7 @@ def test_plan_freezes_all_checks_without_a_client(source, tmp_path, monkeypatch)
 def test_invalid_budget_cannot_initialize_api(source, tmp_path, monkeypatch, ceiling):
     bundle = tmp_path / "scan"
     judge.plan_scan([source], bundle)
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("invalid budget reached API"))
+    no_client(monkeypatch, "invalid budget reached API")
     assert (
         invoke(monkeypatch, "run", "--plan", bundle / judge.PLAN_FILE, "--max-cost-usd", ceiling)
         == 2
@@ -52,7 +58,7 @@ def test_changed_bundle_input_is_rejected_before_api(source, tmp_path, monkeypat
     plan = judge.plan_scan([source], bundle)
     path = bundle / plan.transcripts[0].path
     path.write_bytes(path.read_bytes() + b"\n")
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("changed source reached API"))
+    no_client(monkeypatch, "changed source reached API")
     assert (
         invoke(
             monkeypatch,
@@ -78,8 +84,9 @@ def test_missing_or_retired_source_stage_cannot_make_a_plan(source, tmp_path):
 
 def test_unknown_judge_price_cannot_initialize_api(source, tmp_path, monkeypatch):
     bundle = tmp_path / "scan"
-    judge.plan_scan([source], bundle, judge_model="unpriced/judge")
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("unknown price reached API"))
+    plan = judge.plan_scan([source], bundle, judge_model="unpriced/judge")
+    assert plan.estimated_cost_usd is None
+    no_client(monkeypatch, "unknown price reached API")
     with pytest.raises(ValueError, match="unknown pricing"):
         judge.run_scan(bundle, max_cost_usd=1)
 
@@ -87,8 +94,8 @@ def test_unknown_judge_price_cannot_initialize_api(source, tmp_path, monkeypatch
 def test_current_cli_plan_run_and_replay(source, tmp_path, monkeypatch):
     bundle = tmp_path / "scan"
     assert invoke(monkeypatch, "plan", source, "--output", bundle) == 0
-    plan, _ = judge.load_scan(bundle)
-    monkeypatch.setattr(judge, "ModelAPIClient", FixtureJudge)
+    plan, _, _ = judge.load_scan(bundle)
+    monkeypatch.setattr(judge, "SystemOneClient", FixtureJudge)
     assert (
         invoke(
             monkeypatch,
@@ -101,9 +108,9 @@ def test_current_cli_plan_run_and_replay(source, tmp_path, monkeypatch):
         == 0
     )
     assert judge.replay_scan(bundle) == []
-    ledger = bundle / judge.LEDGER_FILE
-    saved = ledger.read_bytes()
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("completed scan reached API"))
+    answers = bundle / judge.ANSWERS_FILE
+    saved = answers.read_bytes()
+    no_client(monkeypatch, "completed scan reached API")
     assert (
         invoke(
             monkeypatch,
@@ -115,18 +122,22 @@ def test_current_cli_plan_run_and_replay(source, tmp_path, monkeypatch):
         )
         == 0
     )
-    assert ledger.read_bytes() == saved
-    records = [json.loads(line) for line in saved.splitlines()]
-    records[0]["verdict"] = "UNCLEAR"
-    ledger.write_text("".join(json.dumps(record) + "\n" for record in records))
-    with pytest.raises(ValueError, match="raw judge decision"):
-        judge.replay_scan(bundle)
+    assert answers.read_bytes() == saved
+    ledger = bundle / judge.LEDGER_FILE
+    rows = [json.loads(line) for line in ledger.read_text().splitlines()]
+    rows[0]["verdict"] = "UNCLEAR"
+    ledger.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    assert judge.replay_scan(bundle) == [
+        "/".join((rows[0]["model_id"], rows[0]["scenario_id"], rows[0]["check_id"]))
+    ]
+    with pytest.raises(ValueError, match="stored judgments differ"):
+        judge.load_scan(bundle)
 
 
 def test_plan_in_place_keeps_one_copy_and_preserves_source_on_error(source, monkeypatch):
     saved = {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()}
     assert invoke(monkeypatch, "plan", source) == 0
-    plan, _ = judge.load_scan(source)
+    plan, _, _ = judge.load_scan(source)
     assert plan.sources[0].manifest.path == "run_manifest.json"
     assert not (source / "inputs").exists()
     assert {p.relative_to(source) for p in source.rglob("*") if p.is_file()} == {
@@ -137,7 +148,7 @@ def test_plan_in_place_keeps_one_copy_and_preserves_source_on_error(source, monk
     before = (source / judge.PLAN_FILE).read_bytes()
     assert invoke(monkeypatch, "plan", source) == 2
     assert (source / judge.PLAN_FILE).read_bytes() == before
-    monkeypatch.setattr(judge, "ModelAPIClient", FixtureJudge)
+    monkeypatch.setattr(judge, "SystemOneClient", FixtureJudge)
     assert invoke(
         monkeypatch, "run", "--plan", source / judge.PLAN_FILE,
         "--max-cost-usd", plan.estimated_cost_usd,
@@ -166,33 +177,39 @@ def product_memory_source(source):
     summary_path = source / "transcript_run.json"
     summary = json.loads(summary_path.read_bytes())
     summary["transcripts"][0]["memory_evidence"] = [{
-        "turn": 1, "operation": "read", "status": "succeeded",
+        "turn": 2, "operation": "read", "status": "succeeded",
         "memory_id": "fact-1", "text": " The caregiver's sister helps on Tuesdays.\n",
     }]
     summary_path.write_text(json.dumps(summary))
+
+
+class CaptureJudge(FixtureJudge):
+    """Keep the exact state each request carried, by conversation order."""
+
+    def __init__(self):
+        self.states = []
+
+    def ask(self, **kwargs):
+        self.states.append(kwargs["state"])
+        return super().ask(**kwargs)
 
 
 def test_product_memory_is_frozen_and_reaches_only_its_conversation(source, tmp_path):
     product_memory_source(source)
     bundle = tmp_path / "scan"
     plan = judge.plan_scan([source], bundle)
-
-    class CaptureJudge(FixtureJudge):
-        def __init__(self):
-            self.memory_calls = []
-
-        def call_model(self, **kwargs):
-            if "Criterion identity.memory-claim:" in kwargs["messages"][0]["content"]:
-                self.memory_calls.append(json.loads(kwargs["messages"][1]["content"]))
-            return super().call_model(**kwargs)
-
     client = CaptureJudge()
     judge.run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=client)
-    first, second = client.memory_calls
-    assert first["memory_context"]["persistent_memory"] is True
-    assert first["memory_context"]["evidence"][0]["text"] == " The caregiver's sister helps on Tuesdays.\n"
-    assert second["memory_context"] == {"persistent_memory": True, "evidence": []}
-    assert first["conversation"] == second["conversation"]
+    assistant_states = [state for state in client.states if "assistant" in state]
+    assert len(assistant_states) == 4
+    first, second, third, fourth = assistant_states
+    assert first["memory_context"] == {"persistent_memory": True, "evidence": []}
+    assert second["memory_context"]["evidence"][0]["text"] == (
+        " The caregiver's sister helps on Tuesdays.\n"
+    )
+    assert third["memory_context"] == {"persistent_memory": True, "evidence": []}
+    assert fourth["memory_context"] == {"persistent_memory": True, "evidence": []}
+    assert all("memory_context" not in state for state in client.states if "assistant" not in state)
     assert judge.replay_scan(bundle) == []
     from invisiblebench.jury_card import write_jury_card
     from invisiblebench.scoring import build_scorecard
@@ -213,21 +230,14 @@ def test_transcript_cannot_grant_itself_persistent_memory(source, tmp_path):
     transcript_path.write_text("".join(json.dumps(turn) + "\n" for turn in turns))
     bundle = tmp_path / "scan"
     plan = judge.plan_scan([source], bundle)
-
-    class RawJudge(FixtureJudge):
-        def call_model(self, **kwargs):
-            if "Criterion identity.memory-claim:" in kwargs["messages"][0]["content"]:
-                conversation = json.loads(kwargs["messages"][1]["content"])
-                assert isinstance(conversation, list)
-                assert all(
-                    not {"memory_context", "persistent_memory", "memory_capability", "memory_evidence"} & turn.keys()
-                    for turn in conversation
-                )
-                if conversation[1]["content"].startswith("I have persistent memory"):
-                    assert conversation[1]["content"] == turns[1]["content"]
-            return super().call_model(**kwargs)
-
-    judge.run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=RawJudge())
+    client = CaptureJudge()
+    judge.run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=client)
+    assert all("memory_context" not in state for state in client.states)
+    assert any(state.get("assistant") == turns[1]["content"] for state in client.states)
+    assert all(
+        set(state) <= {"caregiver", "assistant", "earlier_caregiver", "earlier_assistant"}
+        for state in client.states
+    )
 
 
 @pytest.mark.parametrize("bad_value", ["true", 1])
@@ -255,7 +265,7 @@ def test_memory_evidence_requires_an_observed_response_turn(source, tmp_path):
     product_memory_source(source)
     path = source / "transcript_run.json"
     summary = json.loads(path.read_bytes())
-    summary["transcripts"][0]["memory_evidence"][0]["turn"] = 2
+    summary["transcripts"][0]["memory_evidence"][0]["turn"] = 3
     path.write_text(json.dumps(summary))
     with pytest.raises(ValueError, match="memory evidence.*turn"):
         judge.plan_scan([source], tmp_path / "scan")
@@ -269,7 +279,7 @@ def test_changed_memory_source_is_rejected_before_any_judgment(source, tmp_path,
     source_ref = plan.sources[0].manifest if filename == "run_manifest.json" else plan.sources[0].summary
     path = bundle / source_ref.path
     path.write_bytes(path.read_bytes() + b"\n")
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("changed memory reached API"))
+    no_client(monkeypatch, "changed memory reached API")
     with pytest.raises(ValueError, match="bundle input changed"):
         judge.run_scan(bundle, max_cost_usd=plan.estimated_cost_usd)
 
@@ -336,6 +346,6 @@ def test_planned_transcript_must_match_its_memory_source(source, tmp_path, monke
     data = json.loads(path.read_bytes())
     data["sources"][0]["transcripts"][0][field] += "-changed"
     path.write_text(json.dumps(data))
-    monkeypatch.setattr(judge, "ModelAPIClient", lambda: pytest.fail("mismatched source reached API"))
+    no_client(monkeypatch, "mismatched source reached API")
     with pytest.raises(ValueError, match="transcript does not match its source summary"):
         judge.run_scan(bundle, max_cost_usd=plan.estimated_cost_usd)

@@ -1,4 +1,4 @@
-"""The public projection derives exactly from a complete, current ledger."""
+"""The public projection derives exactly from a complete, current scan."""
 
 from __future__ import annotations
 
@@ -7,8 +7,12 @@ from contextlib import contextmanager
 
 import pytest
 
-from benchmark.tests.fixtures.current_scan import write_current_qa_fixture
-from invisiblebench.judge import load_scan
+from benchmark.tests.fixtures.current_scan import (
+    FixtureJudge,
+    ScriptedJudge,
+    write_current_qa_fixture,
+)
+from invisiblebench.judge import load_scan, run_scan
 from invisiblebench.models.scan import Verdict
 from invisiblebench.scoring import _observation, generate_leaderboard, validate_leaderboard
 from invisiblebench.utils.io import load_jsonl
@@ -35,12 +39,8 @@ def write_rows(path, rows):
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
 
-def decision(row):
-    return json.dumps({key: row[key] for key in ("verdict", "rationale", "evidence")})
-
-
 def test_safety_uses_any_fail_per_scenario_and_care_includes_unclear(current_fixture):
-    saved = load_scan(current_fixture["scan"])[1][0]
+    saved = load_scan(current_fixture["scan"])[2][0]
     records = [
         saved.model_copy(update={"scenario_id": scenario, "verdict": Verdict(verdict)})
         for scenario, verdict in [
@@ -71,10 +71,13 @@ def test_complete_models_pass_exact_qa(current_fixture):
     assert validate_leaderboard(current_fixture["scan"], current_fixture["leaderboard"]) == []
     board = json.loads(current_fixture["leaderboard"].read_bytes())
     assert {model["model_id"] for model in board["models"]} == {"fixture/a", "fixture/b"}
+    metadata = board["scan_metadata"]
+    assert metadata["observed_judges"] == [metadata["judge"]["model"]]
+    assert metadata["answers_sha256"] != metadata["judgments_sha256"]
 
 
 def test_frozen_manifest_byte_drift_is_rejected(current_fixture):
-    plan, _ = load_scan(current_fixture["scan"])
+    plan, _, _ = load_scan(current_fixture["scan"])
     manifest = current_fixture["scan"] / plan.sources[0].manifest.path
     with restore(manifest):
         manifest.write_bytes(manifest.read_bytes() + b"\n")
@@ -84,10 +87,8 @@ def test_frozen_manifest_byte_drift_is_rejected(current_fixture):
         )
 
 
-@pytest.mark.parametrize(
-    "mutation", ["check", "scenario", "duplicate", "unplanned", "forged", "raw", "technical"]
-)
-def test_invalid_ledger_cannot_publish(current_fixture, mutation):
+@pytest.mark.parametrize("mutation", ["check", "scenario", "duplicate", "unplanned", "forged"])
+def test_an_edited_judgment_cannot_publish(current_fixture, mutation):
     ledger = current_fixture["ledger"]
     with restore(ledger):
         rows = load_jsonl(ledger)
@@ -99,16 +100,29 @@ def test_invalid_ledger_cannot_publish(current_fixture, mutation):
             rows.append(rows[0])
         elif mutation == "unplanned":
             rows[0]["check_id"] = "crisis.invented"
-        elif mutation == "forged":
+        else:
             rows[0].update(
                 verdict="FAIL", evidence=[{"role": "assistant", "turn": 1, "quote": "forged"}]
             )
-            rows[0]["raw_response"] = decision(rows[0])
-        elif mutation == "raw":
-            rows[0]["raw_response"] = '{"verdict":"UNCLEAR","rationale":"Changed","evidence":[]}'
-        else:
-            rows[0].update(verdict="UNCLEAR", error="invalid_judge_output", raw_response="invalid")
         write_rows(ledger, rows)
+        assert validate_leaderboard(current_fixture["scan"], current_fixture["leaderboard"])
+
+
+@pytest.mark.parametrize("mutation", ["probability", "unplanned", "duplicate", "technical"])
+def test_an_edited_answer_cannot_publish(current_fixture, mutation):
+    answers = current_fixture["answers"]
+    with restore(answers):
+        rows = load_jsonl(answers)
+        if mutation == "probability":
+            first = next(iter(rows[0]["nouls"]))
+            rows[0]["nouls"][first] = 0.99
+        elif mutation == "unplanned":
+            rows[0]["turn"] = 9
+        elif mutation == "duplicate":
+            rows.append(rows[0])
+        else:
+            rows[0].update(nouls=None, error="judge_api_error")
+        write_rows(answers, rows)
         assert validate_leaderboard(current_fixture["scan"], current_fixture["leaderboard"])
 
 
@@ -122,24 +136,36 @@ def test_public_extra_fields_and_type_aliases_are_rejected(current_fixture, fiel
         assert "exact ledger projection" in validate_leaderboard(current_fixture["scan"], board)[0]
 
 
-def test_semantic_unclear_is_publishable(current_fixture):
-    ledger, board = current_fixture["ledger"], current_fixture["leaderboard"]
-    with restore(ledger, board):
-        rows = load_jsonl(ledger)
-        rows[0]["verdict"] = "UNCLEAR"
-        rows[0]["raw_response"] = decision(rows[0])
-        write_rows(ledger, rows)
-        generate_leaderboard(current_fixture["scan"], board)
-        assert validate_leaderboard(current_fixture["scan"], board) == []
+def test_a_semantic_unclear_derived_from_its_answers_is_publishable(current_fixture):
+    scan, answers, ledger = (
+        current_fixture["scan"],
+        current_fixture["answers"],
+        current_fixture["ledger"],
+    )
+    board = current_fixture["leaderboard"]
+    with restore(answers, ledger, board):
+        rows = load_jsonl(answers)
+        for row in rows:
+            if row["nouls"]:
+                row["nouls"] = dict.fromkeys(row["nouls"], 0.5)
+        write_rows(answers, rows)
+        ledger.unlink()  # judgments are derived; edited answers need a fresh derivation
+        judgments = run_scan(scan, max_cost_usd=1.0, client=FixtureJudge())
+        assert {judgment.verdict for judgment in judgments} == {Verdict.UNCLEAR}
+        generate_leaderboard(scan, board)
+        assert validate_leaderboard(scan, board) == []
 
 
 def test_complete_subset_is_inspectable_but_cannot_publish(current_fixture, tmp_path):
-    from benchmark.tests.fixtures.current_scan import FixtureJudge
-    from invisiblebench.judge import plan_scan, run_scan
+    from invisiblebench.judge import plan_scan
 
     bundle = tmp_path / "subset"
     plan = plan_scan([current_fixture["source_run"]], bundle, limit=1)
-    run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
+    run_scan(
+        bundle,
+        max_cost_usd=plan.estimated_cost_usd,
+        client=ScriptedJudge({"cue": 0.9, "routing": 0.0}),
+    )
     candidate = generate_leaderboard(bundle)
     errors = validate_leaderboard(bundle, candidate)
     assert errors and "complete current scenario roster" in errors[0]

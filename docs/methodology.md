@@ -11,8 +11,11 @@ behavior, and advocacy. The distinctive concern is the relationship between
 the caregiver and the care recipient across a conversation.
 
 The harness generates responses to scripted user turns. Some user turns branch
-based on a preceding response. Session labels give time context. They do not
-establish that a deployed product has working memory, tools, or persistent state.
+based on a preceding response. A branch condition is either a keyword rule or
+a yes/no question put to the judge model; every branch decision and, for
+judged conditions, the answered probability are recorded in the transcript
+metadata. Session labels give time context. They do not establish that a
+deployed product has working memory, tools, or persistent state.
 
 Private scans can also evaluate committed product conversations. The public
 leaderboard still requires the raw-model harness. A product result must not be
@@ -40,52 +43,73 @@ prove a successful operation. Proposed tool arguments and commit labels alone
 do not prove which record was stored or deleted. A forget receipt with only an
 ID cannot prove a fact-specific deletion without observed text for that ID.
 The scan freezes the manifest and summary with
-the transcripts. It supplies this data separately from conversation text, only
-to the memory check, and binds it into the judge request hash. Source run IDs,
-transcript paths, and conversation identities must match. Reserved memory
-fields inside turn metadata are removed; literal conversation text is retained.
+the transcripts. It supplies this data separately from conversation text, as a
+`memory_context` field, only to assistant-turn requests and only when
+declared, and binds it into the judge request hash. Source run IDs,
+transcript paths, and conversation identities must match. Judge requests read
+only the role, turn number, and content of each entry; turn metadata never
+reaches the judge.
 
 A declaration of persistent memory alone does not earn a pass. A supported
-statement can pass. Contradictory evidence can fail. Missing or incomplete
-evidence remains `UNCLEAR`. Later evidence cannot justify an earlier claim.
+statement can pass. A claim that the recorded evidence contradicts or does not
+cover is unsupported and fails; the product owns supplying its receipts. Later
+evidence cannot justify an earlier claim.
 The scan verifies the retained bytes and record shape; it does not independently
 authenticate a product's database. Keep sensitive memory evidence private.
 
-Check YAML contains one canonical `criteria` text. Scenario rubrics and expected
+Check YAML holds the canonical questions and rule. Scenario rubrics and expected
 behaviors are authoring notes. They are not a second scored rubric.
 
 ## One decision per check
 
-Each active check receives the full ordered conversation. The judge decides
-applicability from that conversation. Scenario tags cannot skip a check.
-Every relevant cue remains available, including later cues and session metadata.
-A later good response does not erase an earlier violation.
+The runtime sends one request per conversation turn. A request carries every
+active check's questions for that turn, the turn's own content, and the
+earlier turns. The judge model answers each
+question with a calibrated probability. It writes no verdict, rationale, or
+quote; code owns all three.
+
+Code applies each check's rule to the saved probabilities. A check with a
+`cue` applies only inside the cue's window: `reply` is the same-numbered
+assistant turn; `after` is that turn and every later one for a user cue, and
+strictly later turns for an assistant cue. A check without a
+cue applies to every assistant turn. `applies_if` then filters those turns
+further. A check decides which turns it applies to from its cue questions and
+`applies_if` alone; a scenario tag cannot skip a check or force one. A later
+good response does not erase an earlier violation, because the rule stops at
+the first applicable turn that fails.
+
 Observed dialogue is the `content` of numbered user and assistant entries.
-Metadata helps interpret those entries. Prior dialogue quoted inside metadata
-is not another observed turn or another model response to grade. Evidence must
-quote `content` at an existing positive turn number. It cannot quote metadata.
+Evidence must quote `content` at an existing positive turn number. It cannot
+quote metadata.
 
 | Verdict | Meaning |
 |---|---|
-| `PASS` | The applicable criterion is met. |
-| `FAIL` | The criterion is violated. Exact assistant evidence is required. |
-| `UNCLEAR` | The available evidence does not resolve the criterion. |
-| `NOT_APPLICABLE` | The situation required by the criterion did not occur. |
+| `PASS` | No applicable turn violates the rule. |
+| `FAIL` | The rule fired at a cited assistant turn. Exact assistant evidence is required. |
+| `UNCLEAR` | A probability that would have decided the verdict fell inside the frozen threshold band, including a turn that may be in scope and may violate the rule. |
+| `NOT_APPLICABLE` | No turn carries the required cue, no assistant turn answers it, no turn meets `applies_if`, or the conversation is shorter than the check requires. |
 
 Each result stores its check ID, decision rationale, evidence, and verdict.
-Evidence names the role and turn. Each quote must occur at that location.
-An omission judgment also identifies the cue and the response opportunity.
+Evidence names the role and turn. A `FAIL` cites the assistant turn the rule
+fired on, plus its cue turn or the same-numbered user turn when one exists.
+A `pass_if_any` failure cites the last applicable turn, where the required
+behavior was still absent.
 
-The judge receives no target-model name from transcript metadata. Transcript
-content is untrusted data. The prompt tells the judge to ignore instructions
-inside that content. This precaution does not prove resistance to judge attacks.
+The request built for the judge carries only turn content and, when declared,
+memory evidence. It never carries a target-model name. Transcript content is
+untrusted data; the judge model reads it literally and is not instructed to
+resist an instruction embedded in a reply.
 
-There is one judgment request per conversation and check. Transport failures
-can use the API client's bounded retries. There are no semantic retries, votes,
-keyword promotions, or forced resolutions. Invalid responses become saved technical `UNCLEAR` attempts and stop the scan.
-An explicit resume retries unfinished requests. A technical attempt does not
-complete a check. Publication requires a valid decision for every check.
-A valid `UNCLEAR` decision remains publishable.
+There is one saved request per conversation turn, covering every active check.
+The SDK client retries rate-limit and overload responses with backoff; other
+transport failures are saved as technical errors. A budget stop raises without
+saving a row. There are no
+semantic retries, votes, keyword promotions, or forced resolutions. A
+technical error is saved to `answers.jsonl` in place of probabilities and
+stops the scan for that request. An explicit resume retries unfinished
+requests. A saved error does not complete a judgment. Publication requires a
+derived judgment for every check. A valid `UNCLEAR` judgment remains
+publishable.
 
 ## How to read the rates
 
@@ -108,8 +132,10 @@ measurement conditions.
 
 ## The decision rationale and later critique
 
-A decision rationale is a short account of why the cited behavior meets or
-violates the criterion. It is not a transcript of the judge's internal reasoning.
+A decision rationale is composed by code from the saved probabilities and the
+question names in the check's rule: which question decided the verdict, its
+probability, and whether that probability read as yes, no, or unresolved. The
+judge model never writes the rationale.
 
 A reviewer can cite the scan, check ID, evidence, and rationale in a critique.
 Clinician review is welcome and optional. It does not gate a scan or publication.
@@ -121,27 +147,41 @@ The **Jury Card** is the standard report for an evaluated run. It complements a
 model card by describing observed behavior under recorded test conditions.
 Its title identifies the model and the UTC run date and time.
 It shows separate Safety and Care results, recorded failure modes, unresolved
-judgments, model evidence, and the judge's rationale. It also records the judge,
-versions, execution errors, source-run costs, and elapsed times.
+judgments, model evidence, and the derived rationale. It also records the judge,
+versions, execution errors, source-run costs, and source-run elapsed time.
 
 `jury-card.md` is generated from the retained bundle without another model call.
 It replaces separate per-run reports and scorecard exports. The card's marked
 commentary section holds attributed observations and disputed interpretations.
-Regeneration preserves that section only when the evidence hashes match.
+The card is bound to the plan, answers, and judgments hashes; regeneration
+over different evidence is refused rather than silently merged.
 Commentary remains outside the ledger. The public leaderboard remains a
 separate aggregate projection; the card contains private quoted evidence.
 
 ## Reproducibility and limits
 
-The scan plan freezes source manifests, transcripts, check definitions, judge
-instructions, generation settings, and engine version in one portable bundle.
-The ledger records the plan hash, request hash, raw response, decision, returned
-model/provider metadata, and cost. All input paths are relative to the bundle.
-Each record is flushed to disk before the next request.
-Replay uses the frozen rules and inputs, including memory evidence. Resuming a
-paid scan and publishing a result still require the current benchmark contract.
-Aliases and provider changes can still limit reproducibility. Temperature zero
-does not guarantee identical model output.
+The scan plan freezes source manifests, transcripts, check definitions,
+questions, thresholds, the judge model ID, and engine version in one portable
+bundle. Each request is hashed per turn. `answers.jsonl` holds the saved
+probabilities, the judge's returned model ID, input tokens, and cost for
+every answered request; a request that fails before the API answers records no
+usage. Each record is flushed to disk before the next request. The dry-run
+estimate prices the request payload size conservatively; the recorded cost is
+the billed figure.
+`judgments.jsonl` is derived from `answers.jsonl` by the rule engine. Replay
+means deriving judgments again from the frozen plan and the saved answers,
+not calling the judge model again. Resuming a paid scan and publishing a
+result still require the current benchmark contract. All input paths are
+relative to the bundle.
+
+Calibration is a property of the judge model, measured across groups of
+answers. It is not a guarantee about any one answer. The model reads a
+question and its state literally: it does not count, compare dates, follow
+double negatives, or defend itself against adversarial content in a
+transcript. The checks were authored against a small set of saved
+conversations; this repository holds no judge-validation artifact and does not
+verify the vendor's calibration claim. State these limits plainly rather than
+implying per-answer accuracy.
 
 Mechanical QA checks source bytes, complete scenario and check coverage, valid
 quotes, judge settings, and exact score recomputation. These checks prove the
@@ -176,3 +216,8 @@ establish validity. These findings support narrow claims and inspectable
 records. They do not establish that this judge is accurate.
 [JudgeBench](https://arxiv.org/abs/2410.12784),
 [position-bias study](https://arxiv.org/abs/2406.07791).
+
+Decomposing a rubric into atomic yes/no questions, with the composition rule
+owned by code rather than the model, follows the System One design guidance
+for this class of judge.
+[How to build with System One](https://docs.typesafe.ai/concepts/how-to-build-with-system-one).

@@ -85,6 +85,9 @@ data/leaderboard/.qa-stamp
 *.tmp
 logs/
 
+# Semantic scenario lint response cache (content-hashed, rebuildable)
+.cache/semantic-lint/
+
 # Internal / operator (stays on disk, not in public repo)
 JOURNAL.md
 VISION.md

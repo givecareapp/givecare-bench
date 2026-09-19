@@ -103,11 +103,11 @@ def group_deltas(
 
 def contrast_report(bundle: Path, project_root: Path | None = None) -> dict[str, Any]:
     """Build the deterministic anchor-versus-variant view for one scan bundle."""
-    _, records = load_scan(bundle)
+    records = load_scan(bundle)[2]
     metadata = contrast_metadata(project_root)
     verdicts: dict[tuple[str, str], dict[str, str]] = defaultdict(dict)
     for record in records:
-        if record.error is not None or record.scenario_id not in metadata:
+        if record.scenario_id not in metadata:
             continue
         verdicts[record.model_id, record.scenario_id][record.check_id] = record.verdict.value
     return {"bundle": str(bundle), "groups": group_deltas(verdicts, metadata)}

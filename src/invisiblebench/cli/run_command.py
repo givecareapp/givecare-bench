@@ -22,12 +22,12 @@ from dotenv import load_dotenv
 
 from invisiblebench._agent_cli import confirm_or_abort
 from invisiblebench.api.client import (
-    DEFAULT_JUDGE_MODEL,
     CostBudgetExceededError,
     InsufficientCreditsError,
     cost_tracker,
     maximum_reasonable_cost_ceiling,
 )
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.cli._console import make_console
 from invisiblebench.cli.display import print_banner
 from invisiblebench.cli.transcript import (

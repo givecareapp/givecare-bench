@@ -7,7 +7,14 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from invisiblebench.judge import LEDGER_FILE, PLAN_FILE, json_bytes, load_scan, sha256
+from invisiblebench.judge import (
+    ANSWERS_FILE,
+    LEDGER_FILE,
+    PLAN_FILE,
+    json_bytes,
+    load_scan,
+    sha256,
+)
 from invisiblebench.models.scan import DIMENSIONS, Judgment, Verdict
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.io import artifact_reference
@@ -43,8 +50,7 @@ def _observation(records: list[Judgment], layer: str) -> dict[str, Any]:
 def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any]:
     """Build one deterministic view. Publication also requires current full coverage."""
     bundle = Path(bundle)
-    plan, attempts = load_scan(bundle, complete=True, current=publication)
-    records = [record for record in attempts if record.error is None]
+    plan, answers, records = load_scan(bundle, complete=True, current=publication)
     checks = {check.id: check for check in plan.checks}
     models = []
     for model_id in sorted({ref.model_id for ref in plan.transcripts}):
@@ -68,7 +74,7 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
                 for dimension in dimensions
             }
         models.append(entry)
-    judges = {record.judge.model_dump_json(exclude={"finish_reason"}) for record in records}
+    judges = {answer.judge.model for answer in answers if answer.judge.model is not None}
     return {
         "schema": SCHEMA_VERSION,
         "observation_type": "MODEL-JUDGED",
@@ -78,9 +84,10 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
             "engine_version": plan.engine_version,
             "source_artifact": artifact_reference(bundle, get_project_root()),
             "plan_sha256": sha256((bundle / PLAN_FILE).read_bytes()),
+            "answers_sha256": sha256((bundle / ANSWERS_FILE).read_bytes()),
             "judgments_sha256": sha256((bundle / LEDGER_FILE).read_bytes()),
             "judge": plan.judge.model_dump(mode="json"),
-            "observed_judges": [json.loads(judge) for judge in sorted(judges)],
+            "observed_judges": sorted(judges),
             "check_hashes": {check.id: check.definition_sha256 for check in plan.checks},
             "scenario_corpus_sha256": plan.scenario_corpus_sha256,
         },

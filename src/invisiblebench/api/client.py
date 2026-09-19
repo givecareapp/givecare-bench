@@ -23,17 +23,12 @@ if _env_file.exists():
 else:
     load_dotenv()
 
-# Default judge IDs live here so both runtime selection and cost accounting use
-# the same spellings.
-JUDGE_MODEL_OPENAI_ID = "gpt-5-mini-2025-08-07"
-JUDGE_MODEL_OPENROUTER_ID = "openai/gpt-5-mini"
-
-# Known pricing per million tokens (input, output)
+# Known generation-model pricing per million tokens (input, output)
 _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "google/gemini-2.5-flash-lite": (0.10, 0.40),
     "google/gemini-2.5-flash": (0.30, 2.50),
-    JUDGE_MODEL_OPENAI_ID: (0.25, 2.00),
-    JUDGE_MODEL_OPENROUTER_ID: (0.25, 2.00),
+    "gpt-5-mini-2025-08-07": (0.25, 2.00),
+    "openai/gpt-5-mini": (0.25, 2.00),
 }
 
 
@@ -423,8 +418,3 @@ class ModelAPIClient:
                     ) from e
 
             raise RuntimeError(f"Failed to call model {model}") from last_error
-
-# Use the model ID accepted by the selected API backend.
-_, _default_base, _ = _resolve_api_backend()
-_USING_OPENAI_DIRECT = _default_base == OPENAI_BASE_URL
-DEFAULT_JUDGE_MODEL = JUDGE_MODEL_OPENAI_ID if _USING_OPENAI_DIRECT else JUDGE_MODEL_OPENROUTER_ID

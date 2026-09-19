@@ -272,6 +272,23 @@ Examples:
         help="Leaderboard JSON used to resolve the default scan artifact",
     )
 
+    # Questions subcommand
+    questions_parser = subparsers.add_parser(
+        "questions", help="Rank judge questions by how often they land in the unresolved band"
+    )
+    questions_parser.add_argument("run_id", help="Run directory name, unique prefix, or path")
+    questions_parser.add_argument(
+        "--limit", type=int, default=None, help="Only show the top N questions"
+    )
+
+    # Compare subcommand
+    compare_parser = subparsers.add_parser(
+        "compare", help="Side-by-side of an old v1 judge ledger and a v2 scan over the same conversations"
+    )
+    compare_parser.add_argument("--old", required=True, help="Directory holding the v1 judgments.jsonl")
+    compare_parser.add_argument("--new", required=True, help="v2 scan bundle directory")
+    compare_parser.add_argument("--html", default=None, help="Write a self-contained HTML page here")
+
     # Leaderboard subcommand
     lb_parser = subparsers.add_parser(
         "leaderboard", help="Show leaderboard health status"
@@ -390,6 +407,15 @@ Examples:
         from invisiblebench.cli.explain import explain_command
 
         return explain_command(args)
+
+    if args.command == "questions":
+        from invisiblebench.cli.questions import questions_command
+
+        return questions_command(args)
+    if args.command == "compare":
+        from invisiblebench.cli.compare import compare_command
+
+        return compare_command(args)
 
     if args.command == "health":
         from invisiblebench.cli.health import run_health

@@ -44,7 +44,7 @@ def test_inventory_standard_total_is_consistent() -> None:
     assert inventory["standard_total"] == sum(_scenario_files_by_category().values())
 
 
-def test_inventory_check_count_matches_taxonomy() -> None:
+def test_inventory_check_count_matches_taxonomy(published_checks) -> None:
     inventory = load_inventory()
     assert inventory["check_count"] == len(registered_check_ids()), (
         "checks/ and benchmark_inventory.json disagree — update check_count "
@@ -70,6 +70,6 @@ def test_every_public_scenario_embeds_the_canary() -> None:
 
 
 
-def test_inventory_is_regenerated_from_the_current_sources():
+def test_inventory_is_regenerated_from_the_current_sources(published_checks):
     from invisiblebench.utils.benchmark_inventory import regenerate_inventory
     assert load_inventory() == regenerate_inventory()

@@ -1,4 +1,4 @@
-"""Read criteria, evidence, and decisions from a retained scan bundle."""
+"""Read checks, evidence, and derived verdicts from a retained scan bundle."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def explain_command(args: Any) -> int:
             if payload.get("schema") != SCHEMA_VERSION:
                 raise ValueError("no current published scan; pass --scan with a scan bundle")
             bundle = root / payload["scan_metadata"]["source_artifact"]
-        plan, records = load_scan(bundle)
+        plan, _answers, records = load_scan(bundle)
         checks = {check.id: check for check in plan.checks}
         sources = {(ref.model_id, ref.scenario_id): ref for ref in plan.transcripts}
         data = []
@@ -46,12 +46,31 @@ def explain_command(args: Any) -> int:
                 Verdict.UNCLEAR,
             }:
                 continue
+            check = checks[record.check_id]
             data.append(
                 {
                     **record.model_dump(mode="json"),
                     "model": source.model,
                     "category": source.category,
-                    "criterion": checks[record.check_id].criteria,
+                    "summary": check.summary,
+                    "rule": {
+                        "cue": None if check.cue is None else check.cue.model_dump(
+                            mode="json", by_alias=True
+                        ),
+                        "window": check.window,
+                        "applies_if": [
+                            clause.model_dump(mode="json", by_alias=True)
+                            for clause in check.applies_if
+                        ],
+                        "fail_if": [
+                            clause.model_dump(mode="json", by_alias=True)
+                            for clause in check.fail_if
+                        ],
+                        "pass_if_any": [
+                            clause.model_dump(mode="json", by_alias=True)
+                            for clause in check.pass_if_any
+                        ],
+                    },
                     "judge_settings": plan.judge.model_dump(mode="json"),
                     "transcript": str(bundle / source.path),
                 }
@@ -69,12 +88,10 @@ def explain_command(args: Any) -> int:
         return 0
     for item in data:
         print(f"{item['model']} × {item['scenario_id']} — {item['check_id']}: {item['verdict']}")
-        print(f"  Criterion: {item['criterion']}")
+        print(f"  Check: {item['summary']}")
         print(f"  Decision rationale: {item['rationale']}")
         for evidence in item["evidence"]:
             print(f"  {evidence['role']} turn {evidence['turn']}: {evidence['quote']}")
-        if item["error"]:
-            print(f"  Unfinished request: {item['error']} — {item['error_detail']}")
-        print(f"  Judge: {item['judge_settings']['model']}; observed: {item['judge']}")
+        print(f"  Judge: {item['judge_settings']['model']}")
         print(f"  Transcript: {item['transcript']}")
     return 0

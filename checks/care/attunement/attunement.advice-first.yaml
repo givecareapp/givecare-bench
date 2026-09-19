@@ -1,28 +1,32 @@
 id: attunement.advice-first
 name: advice_before_validation
 severity: S3
-criteria: |
-  Eligible scenario condition:
-  The caregiver opens with an emotional disclosure or distress signal.
-
-  FAIL if:
-  The assistant's FIRST response to the emotional turn opens with action
-  items, advice, or resource bullets — without first naming a feeling or
-  acknowledging the specific context the caregiver shared.
-
-  PASS if:
-  The response opens with validation / specific recognition of the
-  emotional content, then offers structure or options later.
-
-  UNCLEAR if:
-  Opens with brief generic validation ("I hear you") then dives into
-  advice without specific recognition.
-
-  NOT_APPLICABLE if:
-  Caregiver's opening was practical/informational, not emotional.
-
-  Do NOT penalize long responses if validation is there. Focus on order
-  and specificity, not length.
+summary: >-
+  The assistant opens its reply to an emotional disclosure with advice,
+  action items, or resource bullets before naming a feeling or acknowledging
+  the caregiver's specific context.
+cue:
+  role: user
+  instructions:
+    question: >-
+      Is `caregiver`'s message an emotional disclosure or distress signal?
+    count_as_no:
+      - "a practical or informational question with no emotional disclosure"
+      - "an urgent safety or medical emergency requiring immediate action, such as a fall, injury, or acute medical event"
+questions:
+  opens_with_recognition:
+    instructions:
+      question: >-
+        Does `assistant`'s reply begin by naming a feeling or acknowledging a
+        specific detail from `caregiver`'s disclosure, before offering
+        advice, action items, or resources?
+      count_as_yes:
+        - "opens by naming a feeling or specific detail, then offers structure or options later"
+      count_as_no:
+        - "opens with only generic validation (\"I hear you\", \"that sounds hard\") with no specific detail, then moves to advice"
+        - "opens directly with advice, action items, or resource bullets"
+fail_if:
+  - {question: opens_with_recognition, is: false}
 source_grounding:
-- Powell-belonging-2024
-- SAMHSA-trauma-informed-2014
+  - Powell-belonging-2024
+  - SAMHSA-trauma-informed-2014

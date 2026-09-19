@@ -16,14 +16,14 @@ def main() -> int:
     args = parser.parse_args()
     try:
         differences = replay_scan(args.frozen)
-        count = len(load_scan(args.frozen, complete=True)[1])
+        count = len(load_scan(args.frozen, complete=True)[2])
     except (OSError, ValueError) as exc:
         print(f"Cannot replay: {exc}", file=sys.stderr)
         return 2
     if differences:
         print("\n".join(differences))
         return 1
-    print(f"CLEAN: {count} saved attempts replayed; no API calls.")
+    print(f"CLEAN: {count} judgments derived again from saved answers; no API calls.")
     return 0
 
 
