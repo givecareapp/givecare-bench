@@ -4,18 +4,53 @@ from __future__ import annotations
 
 import pytest
 
-from invisiblebench.cli.runner import resolve_models
+from invisiblebench.cli.run_command import resolve_models
 
 # Minimal catalog for testing (mirrors real MODELS_FULL structure)
 CATALOG = [
-    {"id": "anthropic/claude-opus-4.5", "name": "Claude Opus 4.5", "cost_per_m_input": 5.0, "cost_per_m_output": 25.0},
-    {"id": "openai/gpt-5.2-20251211", "name": "GPT-5.2", "cost_per_m_input": 1.75, "cost_per_m_output": 14.0},
-    {"id": "google/gemini-3-pro-preview-20251117", "name": "Gemini 3 Pro Preview", "cost_per_m_input": 2.0, "cost_per_m_output": 12.0},
-    {"id": "anthropic/claude-sonnet-4.5", "name": "Claude Sonnet 4.5", "cost_per_m_input": 3.0, "cost_per_m_output": 15.0},
+    {
+        "id": "anthropic/claude-opus-4.5",
+        "name": "Claude Opus 4.5",
+        "cost_per_m_input": 5.0,
+        "cost_per_m_output": 25.0,
+    },
+    {
+        "id": "openai/gpt-5.2-20251211",
+        "name": "GPT-5.2",
+        "cost_per_m_input": 1.75,
+        "cost_per_m_output": 14.0,
+    },
+    {
+        "id": "google/gemini-3-pro-preview-20251117",
+        "name": "Gemini 3 Pro Preview",
+        "cost_per_m_input": 2.0,
+        "cost_per_m_output": 12.0,
+    },
+    {
+        "id": "anthropic/claude-sonnet-4.5",
+        "name": "Claude Sonnet 4.5",
+        "cost_per_m_input": 3.0,
+        "cost_per_m_output": 15.0,
+    },
     {"id": "x-ai/grok-4", "name": "Grok 4", "cost_per_m_input": 3.0, "cost_per_m_output": 15.0},
-    {"id": "openai/gpt-5-mini", "name": "GPT-5 Mini", "cost_per_m_input": 0.25, "cost_per_m_output": 2.0},
-    {"id": "deepseek/deepseek-v3.2-20251201", "name": "DeepSeek V3.2", "cost_per_m_input": 0.25, "cost_per_m_output": 0.38},
-    {"id": "google/gemini-2.5-flash", "name": "Gemini 2.5 Flash", "cost_per_m_input": 0.3, "cost_per_m_output": 2.5},
+    {
+        "id": "openai/gpt-5-mini",
+        "name": "GPT-5 Mini",
+        "cost_per_m_input": 0.25,
+        "cost_per_m_output": 2.0,
+    },
+    {
+        "id": "deepseek/deepseek-v3.2-20251201",
+        "name": "DeepSeek V3.2",
+        "cost_per_m_input": 0.25,
+        "cost_per_m_output": 0.38,
+    },
+    {
+        "id": "google/gemini-2.5-flash",
+        "name": "Gemini 2.5 Flash",
+        "cost_per_m_input": 0.3,
+        "cost_per_m_output": 2.5,
+    },
 ]
 
 
@@ -113,8 +148,13 @@ class TestEdgeCases:
 
 def test_resolve_models_passes_through_unknown_openrouter_ids() -> None:
     models = [
-        {"id": "openai/gpt-5.5", "name": "GPT-5.5", "provider": "openrouter",
-         "cost_per_m_input": 1.0, "cost_per_m_output": 3.0},
+        {
+            "id": "openai/gpt-5.5",
+            "name": "GPT-5.5",
+            "provider": "openrouter",
+            "cost_per_m_input": 1.0,
+            "cost_per_m_output": 3.0,
+        },
     ]
     indices = resolve_models("someorg/brand-new-model", models)
 

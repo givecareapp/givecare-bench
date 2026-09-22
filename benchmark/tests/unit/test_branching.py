@@ -231,11 +231,9 @@ class FakeNoulClient:
         self, *, model: str, state: Any, questions: dict[str, dict[str, Any]]
     ) -> dict[str, Any]:
         self.calls.append({"model": model, "state": state, "questions": questions})
-        return {
-            "model": model,
-            "nouls": {key: self.nouls[key] for key in questions},
-            "input_tokens": 42,
-        }
+        from benchmark.tests.fixtures.current_scan import judge_response
+
+        return judge_response(model, {key: self.nouls[key] for key in questions}, 42)
 
 
 class TestNoulCondition:
@@ -288,9 +286,7 @@ class TestNoulCondition:
 
     def test_custom_min_overrides_default(self) -> None:
         client = FakeNoulClient({"0": 0.5})
-        msg, bid, decisions = resolve_branch(
-            self._turn(min_value=0.4), "some reply", client=client
-        )
+        msg, bid, decisions = resolve_branch(self._turn(min_value=0.4), "some reply", client=client)
         assert bid == "missed_crisis"
         assert decisions[0]["matched"] is True
 

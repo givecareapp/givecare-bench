@@ -26,17 +26,17 @@ def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any
         for name, question in check.questions.items():
             if question.type == "choice":
                 # One row per option: each option key holds its own probability.
-                for option in question.options or {}:
-                    key_info[rules.option_key(check, name, option)] = (check.id, "choice")
+                for option in question.criteria or {}:
+                    key_info[f"{rules.question_key(check, name)}={option}"] = (check.id, "choice")
                 continue
             key_info[rules.question_key(check, name)] = (check.id, "question")
 
     thresholds = plan.judge.thresholds
     stats: dict[str, dict[str, Any]] = {}
     for answer in answers:
-        if answer.nouls is None:
+        if answer.answers is None:
             continue
-        for key, probability in answer.nouls.items():
+        for key, probability in rules.probabilities(answer.answers).items():
             # A sentence question is keyed `<check>/<name>[<index>]`; report it as one question.
             if key.endswith("]") and "[" in key:
                 key = key[: key.rindex("[")]

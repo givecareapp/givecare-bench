@@ -1,9 +1,9 @@
 """Transcript generation and async scenario evaluation helpers."""
+
 from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +17,7 @@ from invisiblebench.cli.result_helpers import (
     _make_transcript_result,
 )
 from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.models.scenario import Scenario
 from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
 
 if TYPE_CHECKING:
@@ -52,6 +53,7 @@ async def _ensure_noul_client() -> "SystemOneClient":
 
                 _noul_client = SystemOneClient()
     return _noul_client
+
 
 # Ceiling for a model's per-turn reply, including provider reasoning tokens.
 # Visible concision is prompt-governed; this ceiling preserves enough headroom
@@ -113,10 +115,16 @@ async def evaluate_scenario_async(
                 "Scenario file not found",
             )
 
-        with open(scenario_path) as f:
-            scenario_data = json.load(f)
+        try:
+            scenario_data = Scenario.model_validate_json(scenario_path.read_bytes()).model_dump(
+                mode="json", exclude_none=True, exclude_defaults=True
+            )
+        except ValueError as exc:
+            return _make_error_result(
+                model, scenario["name"], scenario_id, scenario["category"], str(exc)
+            )
 
-        scenario_id = scenario_data.get("scenario_id", scenario_id)
+        scenario_id = scenario_data["scenario_id"]
         transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
         transcript_path = output_dir / "transcripts" / transcript_name
 

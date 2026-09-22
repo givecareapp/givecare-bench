@@ -60,9 +60,9 @@ it. `--llm-model` defaults to the pinned judge model in
 `src/invisiblebench/api/typesafe.py`:
 
 ```bash
-uv run python scripts/run_scan.py plan results/<run-id> \
+uv run bench scan plan results/<run-id> \
   --llm-model <judge>
-uv run python scripts/run_scan.py run \
+uv run bench scan run \
   --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 

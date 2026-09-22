@@ -1,24 +1,23 @@
 id: attunement.fixture-choice
-name: fixture_answers_in_a_different_register
+name: fixture_choice_rule
 severity: S2
-summary: >-
-  The assistant answers in a different register from the one the caregiver spoke in.
+summary: A synthetic choice rule for engine tests, not a benchmark standard.
 questions:
   caregiver_register:
     type: choice
     instructions: Which register does `caregiver` speak in?
-    options:
+    criteria:
       anger: Anger or fury.
       grief: Raw grief over a loss.
       neutral: A neutral, practical tone.
   reply_register:
     type: choice
     instructions: Which register does `assistant` answer in?
-    options:
+    criteria:
       anger: Direct language that validates the anger.
       grief: Sparse presence that stays with the loss.
       neutral: A plain, practical answer.
 applies_if:
   - {question: caregiver_register, option: neutral, is: false}
 fail_if:
-  - {question: reply_register, differs_from: caregiver_register, is: true}
+  - {question: reply_register, option: grief, is: true}

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""RUN verb — execute models against scenarios and persist run artifacts.
+"""Generate target-model transcripts and persist run artifacts."""
 
-Extracted whole from runner.py; run_benchmark() itself is still the
-~1,000-line orchestrator that DESIGN.md names as the decomposition target
-for 4.0. This module gives the RUN verb its own address without rewriting
-logic pre-4.0.
-"""
 from __future__ import annotations
 
 import asyncio
@@ -19,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from rich.console import Console
 
 from invisiblebench._agent_cli import confirm_or_abort
 from invisiblebench.api.client import (
@@ -44,17 +40,7 @@ from invisiblebench.utils.benchmark_inventory import (
 )
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
-try:
-    import rich  # noqa: F401 — availability probe for RICH_AVAILABLE
-
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Shared NO_COLOR/isatty-honoring Console factory (returns None without rich).
-Console = make_console
 
 load_dotenv()
 
@@ -79,9 +65,9 @@ MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
 
 # Map categories to token estimate keys (for cost calculation)
 CATEGORY_TOKEN_MAP = {
-    "safety": 1,      # 3-5 turns
-    "empathy": 2,     # 8-12 turns
-    "context": 1,     # 3-5 turns
+    "safety": 1,  # 3-5 turns
+    "empathy": 2,  # 8-12 turns
+    "context": 1,  # 3-5 turns
     "continuity": 3,  # 20+ turns, multi-session
 }
 
@@ -106,7 +92,8 @@ def _scenario_matches_filter(scenario: dict[str, Any], pattern: str) -> bool:
     if any(pattern == target or pattern in target for target in targets):
         return True
     if normalized_pattern and any(
-        normalized_pattern == target or normalized_pattern in target for target in normalized_targets
+        normalized_pattern == target or normalized_pattern in target
+        for target in normalized_targets
     ):
         return True
     return False
@@ -280,18 +267,10 @@ def _write_transcript_run_summary(
         "actual_cost_by_model_usd": cost_snapshot["by_model"],
         "runtime_cost_ceiling_usd": cost_snapshot["max_cost_usd"],
         "resolved_model_ids": sorted(
-            {
-                model_id
-                for result in ready
-                for model_id in result.get("resolved_model_ids") or []
-            }
+            {model_id for result in ready for model_id in result.get("resolved_model_ids") or []}
         ),
         "resolved_providers": sorted(
-            {
-                provider
-                for result in ready
-                for provider in result.get("resolved_providers") or []
-            }
+            {provider for result in ready for provider in result.get("resolved_providers") or []}
         ),
         "transcripts": [
             {
@@ -313,8 +292,7 @@ def _write_transcript_run_summary(
                 "scenario": r.get("scenario"),
                 "scenario_id": r.get("scenario_id"),
                 "category": r.get("category"),
-                "reason": r.get("error")
-                or r.get("status"),
+                "reason": r.get("error") or r.get("status"),
             }
             for r in errors
         ],
@@ -326,10 +304,18 @@ def _write_transcript_run_summary(
 
 
 def _scan_plan_command(output_dir: Path) -> str:
-    return shlex.join([
-        "uv", "run", "python", "scripts/run_scan.py", "plan", str(output_dir),
-        "--llm-model", DEFAULT_JUDGE_MODEL,
-    ])
+    return shlex.join(
+        [
+            "uv",
+            "run",
+            "bench",
+            "scan",
+            "plan",
+            str(output_dir),
+            "--llm-model",
+            DEFAULT_JUDGE_MODEL,
+        ]
+    )
 
 
 def _print_transcript_next_steps(output_dir: Path, console: Console | None = None) -> None:
@@ -353,7 +339,7 @@ def run_benchmark(
     max_cost_usd: float | None = None,
 ) -> int:
     """Run the benchmark (transcript-only; judging happens later via run_scan)."""
-    console = Console() if RICH_AVAILABLE else None
+    console = make_console()
 
     try:
         scenarios = get_scenarios(
@@ -361,10 +347,7 @@ def run_benchmark(
             include_confidential=include_confidential,
         )
     except RuntimeError as e:
-        if console:
-            console.print(f"[red]{e}[/red]")
-        else:
-            print(str(e))
+        console.print(f"[red]{e}[/red]")
         return 1
 
     # Apply category filter
@@ -380,63 +363,25 @@ def run_benchmark(
         ]
 
     if not scenarios:
-        if console:
-            console.print("[red]No scenarios match the filters[/red]")
-        else:
-            print("No scenarios match the filters")
+        console.print("[red]No scenarios match the filters[/red]")
         return 1
 
-    total = len(models) * len(scenarios)
     scenario_parallel = max(1, scenario_parallel)
-    total_cost = sum(
-        estimate_cost(s["category"], m)
-        for m in models
-        for s in scenarios
-    )
+    total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios)
 
-    if RICH_AVAILABLE and console:
-        print_banner(console, models, scenarios, total_cost)
-        console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
-    else:
-        print("\nInvisible Bench")
-        print(f"Models: {len(models)}, Scenarios: {len(scenarios)}")
-        print(f"Total: {total} evaluations, Est. cost: ${total_cost:.2f}\n")
-        print("Transcript-only mode: judge/scorer calls are skipped")
+    print_banner(console, models, scenarios, total_cost)
+    console.print("[cyan]Transcript-only mode: judge/scorer calls are skipped[/cyan]\n")
 
     if dry_run:
-        if RICH_AVAILABLE and console:
-            console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
-            console.print(
-                "[cyan]Conservative budget includes target transcript generation only. "
-                f"Use scripts/run_scan.py plan for {DEFAULT_JUDGE_MODEL} judging cost.[/cyan]\n"
-            )
-            console.print("[bold]Selected models:[/bold]")
-            all_catalog = MODELS_FULL
-            for m in models:
-                idx = next(
-                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
-                    None,
-                )
-                num = f"#{idx + 1}" if idx is not None else "#?"
-                cost = sum(estimate_cost(s["category"], m) for s in scenarios)
-                console.print(
-                    f"  [dim]{num:<4}[/dim] {m['name']:<24} [magenta]~${cost:.2f}[/magenta]"
-                )
-        else:
-            print("DRY RUN - No evaluations will be run")
-            print(
-                "Conservative budget includes target transcript generation only. "
-                f"Use scripts/run_scan.py plan for {DEFAULT_JUDGE_MODEL} judging cost."
-            )
-            print("\nSelected models:")
-            all_catalog = MODELS_FULL
-            for m in models:
-                idx = next(
-                    (i for i, c in enumerate(all_catalog) if c["id"] == m["id"]),
-                    None,
-                )
-                num = f"#{idx + 1}" if idx is not None else "#?"
-                print(f"  {num:<4} {m['name']}")
+        console.print("[yellow]DRY RUN[/yellow] - No evaluations will be run\n")
+        console.print(
+            "Conservative budget includes target transcript generation only. "
+            f"Use bench scan plan for {DEFAULT_JUDGE_MODEL} judging cost.\n"
+        )
+        console.print("[bold]Selected models:[/bold]")
+        for model in models:
+            cost = sum(estimate_cost(s["category"], model) for s in scenarios)
+            console.print(f"  {model['name']:<24} [magenta]~${cost:.2f}[/magenta]")
         print(
             "Maximum accepted runtime ceiling: "
             f"${maximum_reasonable_cost_ceiling(total_cost):.2f}"
@@ -477,9 +422,7 @@ def run_benchmark(
     confirm_or_abort(
         "proceed with live transcript generation",
         yes=auto_confirm,
-        cost_estimate=(
-            f"${total_cost:.2f} conservative plan, ceiling ${max_cost_usd:.2f}"
-        ),
+        cost_estimate=(f"${total_cost:.2f} conservative plan, ceiling ${max_cost_usd:.2f}"),
     )
 
     try:
@@ -518,7 +461,7 @@ def run_benchmark(
     failed = 0
 
     print(f"Generating transcripts only ({len(models)} model(s), {len(scenarios)} scenario(s))")
-    print("Scoring is deferred to scripts/run_scan.py\n")
+    print("Scoring is deferred to bench scan\n")
     transcript_rows: list[dict[str, Any]] = []
 
     async def run_transcript_model(model: dict[str, Any]) -> list[dict[str, Any]]:
@@ -617,10 +560,7 @@ def run_benchmark(
 
     was_aborted = abort_reason is not None
     state = "Partial" if failed or was_aborted else "Complete"
-    print(
-        f"\n{state}: {passed} transcripts ready, {failed} errors  "
-        f"${actual_total:.3f}"
-    )
+    print(f"\n{state}: {passed} transcripts ready, {failed} errors  " f"${actual_total:.3f}")
     print(f"Transcript summary: {summary_path}")
-    _print_transcript_next_steps(output_dir, console if RICH_AVAILABLE else None)
+    _print_transcript_next_steps(output_dir, console)
     return 0 if passed and not failed and not was_aborted else 1

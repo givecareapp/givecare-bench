@@ -1,151 +1,226 @@
-# InvisibleBench Scenario Schema — safety-care/v1 era
-# Human-readable specification aligned with the live corpus (64 scenarios)
-
-canary: string  # Contamination canary (see CANARY.txt) — every scenario carries it; trainers filter on the GUID
-  scenario_id: string  # Stable opaque identifier. Older IDs may use "tier{N}_{name}_{number}" prefix; new scenarios may use any unique string.
-  required: true
-
-category: enum  # Public scenario category. The loader rejects retired `tier`.
-  values: ["safety", "empathy", "context", "continuity", "confidential"]
-  safety: crisis detection, harm prevention, medical and relational boundaries
-  empathy: trauma-informed care, grief, burnout, belonging, relational quality
-  context: cultural sensitivity, regulatory fitness, professional boundaries
-  continuity: longitudinal consistency, memory across sessions
-  required: true
-
-title: string  # Human-readable scenario name
-  example: "Medication Affordability Crisis with Masked Suicidal Ideation"
-  required: true
-
-tier: string  # Retired field from earlier taxonomy. Invalid in current scenario JSON; use `category`.
-  required: false
-  accepted: false
-
-persona:  # Caregiver characteristics
-  name: string  # First name only
-  age: integer  # 18-90
-  role: string  # Optional role description (e.g., "Adult daughter")
-  gender: string  # Optional (e.g., "female", "non-binary")
-  race_ethnicity: string  # Optional
-  income_bracket: string  # Optional
-  employment: string  # Optional
-  education: string  # Optional
-  primary_language: string  # Optional ISO 639-1 code (e.g., "en")
-  care_recipient: string  # Relationship and condition (e.g., "Mother with Alzheimer's")
-  care_duration: string  # How long caregiving (e.g., "18 months")
-  care_hours_per_week: integer  # Optional
-  living_situation: string  # Optional
-
-  context:  # Free-form situational context
-    example:
-      living_situation: "Mother moved into Sarah's home after falling"
-      employment: "Reduced hours at work to provide care"
-      support_system: "Minimal - siblings live out of state"
-      emotional_state: "Exhausted, isolated, feeling trapped"
-
-  required_fields: [name, age, care_recipient, care_duration, context]
-
-turns:  # Conversation turns (single-session scenarios; 61/64 use this)
-  - t: integer  # Canonical turn index (1-indexed)
-    turn_number: integer  # Optional older alias
-    user_message: string  # What the caregiver says
-    expected_behaviors: array[string]  # Required unless rubric provided
-    rubric: array[object]  # Unified criteria: {id, question, kind: binary|ordinal|autofail, dimension?, weight?, levels?}
-      - id: string
-        question: string
-        dimension: string
-        weight: number
-        triggers_hard_fail: boolean  # Optional
-      - criterion_id: string
-        description: string
-        max_points: integer
-        dimension: string  # Scenario-level dimension name (see scoring_dimensions)
-        scoring_guide: object
-      - id: string
-        question: string
-        dimension: string
-        weight: number
-        triggers_hard_fail: boolean
-    autofail_triggers: array[string]  # Instant failure conditions
-    facts: array[string]  # Optional key=value facts introduced (e.g., "caregiver_name=Sarah")
-    updates: array[string]  # Optional key=value updates at this turn
-    probes: array[probe]  # Optional probes scoped to this turn
-    context_notes: string  # Optional internal notes
-
-    branches: array[branch]  # Optional conditional branches (adaptive user messages)
-      - branch_id: string  # Unique identifier for this branch (e.g., "boundary_failed")
-        condition: object  # Condition evaluated against PREVIOUS turn's assistant response
-          type: enum [contains_any, contains_all, not_contains, regex]
-          values: array[string]  # Keywords for contains_any/contains_all/not_contains
-          pattern: string  # Regex pattern (for type: regex)
-        user_message: string  # Alternate user message when condition matches
-        expected_behaviors: array[string]  # Optional branch-specific expected behaviors
-        autofail_triggers: array[string]  # Optional branch-specific autofail triggers
-      note: "Branches are evaluated in order; first match wins. If no branch matches, the turn's default user_message is used."
-
-    required_fields: [t, user_message, autofail_triggers]
-    conditional_fields:
-      - expected_behaviors OR rubric
-
-sessions:  # Multi-session scenarios (3/64 use this instead of turns)
-  - session_number: integer  # Sequential, starts at 1
-    time_elapsed: string  # Time since last session (e.g., "3 months later")
-    session_context: string  # Optional summary of what changed
-    turns: array[turn]  # Same structure as above
-
-    required_fields: [session_number, time_elapsed, turns]
-
-probes:  # Scenario-level probes for memory/consistency checks (31/64)
-  - t: integer  # Turn to evaluate (canonical index)
-    kind: enum [recall, abstention, time, multi_session, boundary_check, pronoun_continuity]
-    expected: array[string]  # Expected recall or abstention targets
-    from_sessions: array[int]  # Optional, for multi_session probes
-    comment: string  # Optional notes
-
-risk_triggers:  # Crisis/safety cues used by safety/compliance scorers (42/64)
-  - t: integer  # Turn where the cue appears
-    cue: string  # Description of the cue
-    severity: enum [low, medium, high, critical]
-
-scoring_dimensions:  # Scenario-level expected scores using per-scenario dimension names
-  # Keys are scenario-specific dimension names from the old taxonomy:
-  #   crisis_safety, regulatory_fitness, trauma_informed_flow,
-  #   belonging_cultural_fitness, relational_quality, actionable_support,
-  #   longitudinal_consistency, memory_hygiene
-  # Values are expected perfect-response scores (integers).
-  #
-  # NOTE: These are SCENARIO metadata (expected ideal scores), NOT the
-  # runtime gate+quality dimensions (safety gate, compliance gate, regard,
-  # coordination) used by the scoring pipeline.
-  required: true
-
-description: string  # Optional prose description of the scenario (36/64)
-  required: false
-
-dif_variables: array[string]  # Optional fairness variables for analysis (50/64)
-
-contrast_group: string  # Optional. Links sibling scenarios that share a common anchor and differ in one controlled variable. Value is the anchor scenario's short name (e.g., "cssrs_passive_ideation").
-  required: false
-
-contrast_variable: string  # Optional. Describes what changed relative to the anchor (e.g., "anchor", "cue_removed", "religious_frame", "male_caregiver").
-  required: false
-
-metadata:  # Scenario development tracking (optional, 26/64)
-  author: string
-  created_date: date  # YYYY-MM-DD
-  last_modified: date  # YYYY-MM-DD
-  expert_reviewed: boolean
-  version: string  # Semantic versioning (e.g., "1.0.0")
-  tags: array[string]
-  confidential: boolean
-  notes: string  # Optional
-  review_notes: string  # Optional older review field
-
-# Example usage notes:
-# 1. Start with persona to ground the scenario in real caregiver demographics
-# 2. Map pressure zones to turn content (financial strain -> affordability crisis)
-# 3. Write user messages from persona POV (language, education, stressors)
-# 4. Define expected behaviors and/or unified rubric criteria based on scenario category
-# 5. Set autofail triggers for safety-critical violations
-# 6. Add probes for memory/abstention/time checks when relevant
-# 7. Expert review before adding to benchmark
+# Generated from invisiblebench.models.scenario.Scenario.model_json_schema().
+$defs:
+  Branch:
+    additionalProperties: false
+    properties:
+      branch_id:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Branch Id
+      condition:
+        $ref: '#/$defs/BranchCondition'
+      user_message:
+        title: User Message
+        type: string
+      criteria:
+        items:
+          $ref: '#/$defs/Criterion'
+        title: Criteria
+        type: array
+    required:
+    - condition
+    - user_message
+    title: Branch
+    type: object
+  BranchCondition:
+    additionalProperties: false
+    properties:
+      type:
+        enum:
+        - contains_any
+        - contains_all
+        - not_contains
+        - regex
+        - noul
+        title: Type
+        type: string
+      values:
+        anyOf:
+        - items:
+            type: string
+          type: array
+        - type: 'null'
+        default: null
+        title: Values
+      pattern:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Pattern
+      instructions:
+        anyOf:
+        - type: string
+        - additionalProperties: true
+          type: object
+        - type: 'null'
+        default: null
+        title: Instructions
+      min:
+        default: 0.65
+        exclusiveMaximum: 1
+        exclusiveMinimum: 0
+        title: Min
+        type: number
+    required:
+    - type
+    title: BranchCondition
+    type: object
+  Criterion:
+    additionalProperties: false
+    properties:
+      description:
+        minLength: 1
+        title: Description
+        type: string
+      expect:
+        default: true
+        title: Expect
+        type: boolean
+      examples:
+        items:
+          type: string
+        title: Examples
+        type: array
+    required:
+    - description
+    title: Criterion
+    type: object
+  Persona:
+    additionalProperties: true
+    properties:
+      name:
+        title: Name
+        type: string
+      age:
+        title: Age
+        type: integer
+      care_recipient:
+        title: Care Recipient
+        type: string
+      care_duration:
+        title: Care Duration
+        type: string
+      context:
+        additionalProperties: true
+        title: Context
+        type: object
+    required:
+    - name
+    - age
+    - care_recipient
+    - care_duration
+    - context
+    title: Persona
+    type: object
+  ScenarioCategory:
+    enum:
+    - safety
+    - empathy
+    - context
+    - continuity
+    - confidential
+    title: ScenarioCategory
+    type: string
+  Session:
+    additionalProperties: true
+    properties:
+      session_number:
+        minimum: 1
+        title: Session Number
+        type: integer
+      time_elapsed:
+        title: Time Elapsed
+        type: string
+      turns:
+        items:
+          $ref: '#/$defs/Turn'
+        minItems: 1
+        title: Turns
+        type: array
+      session_context:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Session Context
+    required:
+    - session_number
+    - time_elapsed
+    - turns
+    title: Session
+    type: object
+  Turn:
+    additionalProperties: true
+    properties:
+      turn_number:
+        minimum: 1
+        title: Turn Number
+        type: integer
+      user_message:
+        title: User Message
+        type: string
+      branches:
+        items:
+          $ref: '#/$defs/Branch'
+        title: Branches
+        type: array
+      criteria:
+        items:
+          $ref: '#/$defs/Criterion'
+        title: Criteria
+        type: array
+    required:
+    - turn_number
+    - user_message
+    title: Turn
+    type: object
+additionalProperties: true
+properties:
+  scenario_id:
+    minLength: 1
+    title: Scenario Id
+    type: string
+  title:
+    title: Title
+    type: string
+  persona:
+    $ref: '#/$defs/Persona'
+  category:
+    $ref: '#/$defs/ScenarioCategory'
+  turns:
+    items:
+      $ref: '#/$defs/Turn'
+    title: Turns
+    type: array
+  sessions:
+    items:
+      $ref: '#/$defs/Session'
+    title: Sessions
+    type: array
+  eligible_modes:
+    items:
+      type: string
+    title: Eligible Modes
+    type: array
+  contrast_group:
+    anyOf:
+    - type: string
+    - type: 'null'
+    default: null
+    title: Contrast Group
+  contrast_variable:
+    anyOf:
+    - type: string
+    - type: 'null'
+    default: null
+    title: Contrast Variable
+required:
+- scenario_id
+- title
+- persona
+- category
+title: Scenario
+type: object

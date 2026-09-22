@@ -1,393 +1,153 @@
-#!/usr/bin/env python3
-"""Invisible Bench CLI runner."""
+"""The bench command: generation, scans, evidence reads, and run storage."""
+
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
-from dotenv import load_dotenv
+from rich.table import Table
 
-from invisiblebench._agent_cli import (
-    confirm_or_abort,
-)
+from invisiblebench._agent_cli import confirm_or_abort, emit_json
+from invisiblebench.cli import agent_commands, run_command, scan
 from invisiblebench.cli._console import make_console
-from invisiblebench.cli.agent_commands import (
-    _run_doctor,
-    _run_get,
-    _run_leaderboard_status_json,
-)
-from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
+from invisiblebench.models.config import MODELS_FULL
 from invisiblebench.utils.manifest import RUN_DIRECTORY_TIME_FORMAT
 
-try:
-    from rich.table import Table  # noqa: F401
 
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
-
-# Shared NO_COLOR/isatty-honoring Console factory (returns None without rich).
-Console = make_console
-
-load_dotenv()
-
-# Cost-estimate constants (TOKEN_ESTIMATES, SCORER_*) live in
-# invisiblebench.cli.run_command, which owns estimate_cost().
-
-MODELS_FULL = [model.model_dump() for model in CONFIG_MODELS_FULL]
-
-
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    _scenario_matches_filter as _scenario_matches_filter,  # re-exported: tests use this module
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    estimate_cost as estimate_cost,
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    get_scenarios as get_scenarios,
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    resolve_models as resolve_models,
-)
-from invisiblebench.cli.run_command import (  # noqa: E402,F401
-    run_benchmark as run_benchmark,
-)
-
-# ---------- agent-friendly helpers ----------
-# Note: _collect_runs and _run_runs stay in this module (tests monkeypatch them here)
-
-
-def _collect_runs() -> list[dict[str, Any]]:
-    """Return run records sorted newest first, with narrow fields."""
-    from invisiblebench.cli.agent_commands import _runs_dir
+def _collect_runs():
     from invisiblebench.cli.archive import list_runs
 
-    results_dir = _runs_dir()
-    if not results_dir.exists():
-        return []
-    runs = list_runs(results_dir)
-    runs.sort(key=lambda r: r.get("date") or datetime.min, reverse=True)
-    records: list[dict[str, Any]] = []
-    for r in runs:
-        records.append(
-            {
-                "id": r["name"],
-                "date": r["date"].isoformat(timespec="seconds") + "Z" if r.get("date") else None,
-                "models": r.get("models", []),
-                "scenarios": r.get("scenarios", 0),
-                "size_mb": round(r.get("size_mb", 0.0), 2),
-                "has_results": r.get("has_results", False),
-                "artifact_state": r.get("artifact_state", "unknown"),
-                "jury_card": r["jury_card"],
-            }
-        )
-    return records
-
-
-def _run_runs(
-    *,
-    limit: int,
-    offset: int,
-    json_output: bool,
-    out_path: str | None = None,
-) -> int:
-    """Handle `bench runs` with optional --limit/--offset/--json/--out."""
-    from invisiblebench.cli.agent_commands import _emit_or_write_json
-
-    records = _collect_runs()
-    total = len(records)
-    if offset < 0:
-        offset = 0
-    if limit is None or limit < 0:
-        limit = 25
-    sliced = records[offset : offset + limit]
-
-    if json_output or out_path:
-        payload = {
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "runs": sliced,
+    runs = sorted(
+        list_runs(agent_commands._runs_dir()), key=lambda r: r["date"] or datetime.min, reverse=True
+    )
+    return [
+        {
+            "id": r["name"],
+            "date": r["date"].isoformat(timespec="seconds") + "Z" if r["date"] else None,
+            "models": r["models"],
+            "scenarios": r["scenarios"],
+            "size_mb": round(r["size_mb"], 2),
+            "has_results": r["has_results"],
+            "artifact_state": r["artifact_state"],
+            "jury_card": r["jury_card"],
         }
-        return _emit_or_write_json(
+        for r in runs
+    ]
+
+
+def _run_runs(*, limit, offset, json_output, out_path=None):
+    records = _collect_runs()
+    offset, limit = max(offset, 0), 25 if limit is None or limit < 0 else limit
+    selected = records[offset : offset + limit]
+    if json_output or out_path:
+        return agent_commands._emit_or_write_json(
             command="runs",
-            data=payload,
-            record_count=len(sliced),
+            data={"total": len(records), "limit": limit, "offset": offset, "runs": selected},
+            record_count=len(selected),
             out_path=out_path,
         )
-
-    if not sliced:
+    if not selected:
         print("No runs found.")
         return 0
-
-    if RICH_AVAILABLE:
-        console = Console()
-        table = Table(title=f"Benchmark Runs ({offset + 1}-{offset + len(sliced)} of {total})")
-        table.add_column("Date", style="cyan")
-        table.add_column("Run ID")
-        table.add_column("Models")
-        table.add_column("Scenarios", justify="right")
-        table.add_column("Size", justify="right")
-        table.add_column("State")
-        table.add_column("Results")
-        for r in sliced:
-            models = ", ".join(r["models"][:2])
-            if len(r["models"]) > 2:
-                models += f" +{len(r['models']) - 2}"
-            table.add_row(
-                r["date"] or "unknown",
-                r["id"],
-                models or "-",
-                str(r["scenarios"]) if r["scenarios"] else "-",
-                f"{r['size_mb']:.1f}MB",
-                r.get("artifact_state", "unknown"),
-                "yes" if r["has_results"] else "no",
-            )
-        console.print(table)
-    else:
-        for r in sliced:
-            print(f"{r['date'] or 'unknown'} | {r['id']} | {r['size_mb']:.1f}MB")
-
+    table = Table(title="Benchmark Runs")
+    for column in ("Date", "Run ID", "Models", "Scenarios", "Size", "State", "Results"):
+        table.add_column(column)
+    for r in selected:
+        names = ", ".join(r["models"][:2])
+        if len(r["models"]) > 2:
+            names += f" +{len(r['models']) - 2}"
+        table.add_row(
+            r["date"] or "unknown",
+            r["id"],
+            names or "-",
+            str(r["scenarios"] or "-"),
+            f"{r['size_mb']:.1f}MB",
+            r["artifact_state"],
+            "yes" if r["has_results"] else "no",
+        )
+    make_console().print(table)
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Invisible Bench - AI Safety Benchmark Runner",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
-Examples:
-  # Model Evaluation (raw LLM capability)
-  uv run bench --full --dry-run             Plan all {len(CONFIG_MODELS_FULL)} models
-  uv run bench -m deepseek --dry-run        Plan a single model by name
-  uv run bench -m deepseek -y --max-cost-usd 1
-                                             Run with an explicit ceiling
-  uv run bench -m 1-4 --dry-run             Models 1-4 (by index)
-  uv run bench -m 7 --dry-run               Model 7 = DeepSeek V4 Pro
-  uv run bench -c safety,empathy --dry-run  Safety + empathy categories only
-
-  # Judge transcripts in their run directory and write a Jury Card
-  uv run python scripts/run_scan.py plan results/<run-id> --llm-model <judge>
-  uv run python scripts/run_scan.py run --plan results/<run-id>/scan_plan.json \
-    --max-cost-usd <budget>
-  uv run bench leaderboard status     Health check (alias for 'bench health')
-
-  # Utilities
-  uv run bench jury <run-id>           Regenerate the Jury Card without model calls
-  uv run bench explain <model> <scenario> --failures   Trace scan evidence
-  uv run bench health                 Check leaderboard for issues
-  uv run bench runs                   List all benchmark runs
-  uv run bench archive --keep 5       Keep 5 most recent runs
-        """,
-    )
-
+def build_parser():
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--json",
-        "--format",
-        dest="json_output",
-        action="store_const",
-        const="json",
-        default=None,
-        help="Emit agent-friendly JSON envelope (runs/leaderboard[status]/get/jury)",
+        "--json", "--format", dest="json_output", action="store_const", const="json"
     )
-
-    subparsers = parser.add_subparsers(dest="command")
-
-    # Doctor subcommand
-    subparsers.add_parser(
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser(
         "doctor",
-        help="Validate env vars and runs dir (creates runs dir if missing)",
+        help="Check credentials and run storage; creates runs dir if missing and writes a temporary probe",
     )
+    get = sub.add_parser("get", help="Read one run")
+    get.add_argument("run_id")
+    get.add_argument("--out")
+    jury = sub.add_parser("jury", help="Regenerate a Jury Card from saved evidence")
+    jury.add_argument("run_id")
+    health = sub.add_parser("health", help="Check the owner leaderboard")
+    health.add_argument("--verbose", "-v", action="store_true")
+    archive = sub.add_parser("archive", help="Move explicitly selected old runs to the archive")
+    archive.add_argument("--before")
+    archive.add_argument("--keep", type=int)
+    archive.add_argument("--list", action="store_true", dest="list_runs")
+    archive.add_argument("--dry-run", action="store_true")
+    archive.add_argument("--yes", action="store_true", dest="archive_yes")
+    runs = sub.add_parser("runs", help="List runs")
+    runs.add_argument("--limit", type=int, default=25)
+    runs.add_argument("--offset", type=int, default=0)
+    runs.add_argument("--out")
+    explain = sub.add_parser("explain", help="Read a verdict and its exact evidence")
+    explain.add_argument("model")
+    explain.add_argument("scenario")
+    explain.add_argument("--check")
+    explain.add_argument("--failures", action="store_true")
+    explain.add_argument("--scan")
+    explain.add_argument("--leaderboard")
+    questions = sub.add_parser("questions", help="Inspect unresolved question probabilities")
+    questions.add_argument("run_id")
+    questions.add_argument("--limit", type=int)
+    compare = sub.add_parser("compare", help="Compare two current-format saved scans")
+    compare.add_argument("--old", required=True)
+    compare.add_argument("--new", required=True)
+    leaderboard = sub.add_parser("leaderboard", help="Read leaderboard status")
+    leaderboard.add_argument("action", choices=["status"])
+    leaderboard.add_argument("--verbose", "-v", action="store_true")
+    leaderboard.add_argument("--out")
+    scan.configure(sub.add_parser("scan", help="Plan, execute, or rejudge a frozen scan"))
+    parser.add_argument("--full", action="store_true")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--yes", "-y", action="store_true")
+    parser.add_argument("--max-cost-usd", type=float)
+    parser.add_argument("--category", "-c")
+    parser.add_argument("--scenario", "-s")
+    parser.add_argument("--parallel", "-p", type=int)
+    parser.add_argument("--scenario-parallel", type=int, default=1)
+    parser.add_argument("--models", "-m")
+    parser.add_argument("--confidential", action="store_true")
+    return parser
 
-    # Get subcommand (read single run by id)
-    get_parser = subparsers.add_parser("get", help="Read a single run's metadata by id")
-    get_parser.add_argument("run_id", type=str, help="Run directory name or prefix")
-    get_parser.add_argument(
-        "--out",
-        type=str,
-        default=None,
-        help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
-    )
 
-    jury_parser = subparsers.add_parser("jury", help="Generate a Jury Card from saved run evidence; no model calls")
-    jury_parser.add_argument("run_id", help="Run directory name, unique prefix, or path")
-
-    # Health subcommand
-    health_parser = subparsers.add_parser("health", help="Check leaderboard health and flag issues")
-    health_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
-
-    # Archive subcommand
-    archive_parser = subparsers.add_parser("archive", help="Archive old benchmark runs")
-    archive_parser.add_argument("--before", type=str, help="Archive runs before date (YYYYMMDD)")
-    archive_parser.add_argument("--keep", type=int, help="Keep N most recent runs")
-    archive_parser.add_argument(
-        "--list", action="store_true", dest="list_runs", help="List runs (dry run)"
-    )
-    archive_parser.add_argument(
-        "--dry-run", action="store_true", help="Show what would be archived"
-    )
-    archive_parser.add_argument(
-        "--yes",
-        action="store_true",
-        dest="archive_yes",
-        help="Auto-confirm (also accepted before the subcommand, as a top-level flag)",
-    )
-
-    # Runs subcommand (list runs)
-    runs_parser = subparsers.add_parser("runs", help="List all benchmark runs")
-    runs_parser.add_argument("--limit", type=int, default=25, help="Max rows (default 25)")
-    runs_parser.add_argument("--offset", type=int, default=0, help="Skip N rows (default 0)")
-    runs_parser.add_argument(
-        "--out",
-        type=str,
-        default=None,
-        help="Write full JSON payload to PATH; stdout gets {path,byte_count,record_count} summary",
-    )
-
-    # Explain subcommand
-    explain_parser = subparsers.add_parser(
-        "explain", help="Trace a leaderboard cell to its verdicts and transcript evidence"
-    )
-    explain_parser.add_argument("model", type=str, help="Model name or id (substring match)")
-    explain_parser.add_argument("scenario", type=str, help="Scenario id (substring match)")
-    explain_parser.add_argument(
-        "--check", type=str, default=None, help="Filter to checks whose id contains this"
-    )
-    explain_parser.add_argument(
-        "--failures", action="store_true", help="Show only FAIL/UNCLEAR checks"
-    )
-    explain_parser.add_argument(
-        "--scan", type=str, default=None,
-        help="Scan bundle directory (default: published source_artifact)",
-    )
-    explain_parser.add_argument(
-        "--leaderboard", type=str, default=None,
-        help="Leaderboard JSON used to resolve the default scan artifact",
-    )
-
-    # Questions subcommand
-    questions_parser = subparsers.add_parser(
-        "questions", help="Rank judge questions by how often they land in the unresolved band"
-    )
-    questions_parser.add_argument("run_id", help="Run directory name, unique prefix, or path")
-    questions_parser.add_argument(
-        "--limit", type=int, default=None, help="Only show the top N questions"
-    )
-
-    # Compare subcommand
-    compare_parser = subparsers.add_parser(
-        "compare", help="Side-by-side of an old v1 judge ledger and a v2 scan over the same conversations"
-    )
-    compare_parser.add_argument("--old", required=True, help="Directory holding the v1 judgments.jsonl")
-    compare_parser.add_argument("--new", required=True, help="v2 scan bundle directory")
-    compare_parser.add_argument("--html", default=None, help="Write a self-contained HTML page here")
-
-    # Leaderboard subcommand
-    lb_parser = subparsers.add_parser(
-        "leaderboard", help="Show leaderboard health status"
-    )
-    lb_parser.add_argument(
-        "action",
-        choices=["status"],
-        help="status: leaderboard health check (alias for 'bench health')",
-    )
-    lb_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed info")
-    lb_parser.add_argument(
-        "--out",
-        type=str,
-        default=None,
-        help="For --json status: write full leaderboard to PATH; stdout gets summary envelope",
-    )
-
-    # Main run arguments (default command)
-    parser.add_argument("--full", action="store_true", help=f"All {len(CONFIG_MODELS_FULL)} models × all scenarios")
-
-    parser.add_argument("--output", type=Path, default=None, help="Output directory")
-    parser.add_argument("--dry-run", action="store_true", help="Plan conservative costs only")
-    parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm")
-    parser.add_argument(
-        "--max-cost-usd",
-        type=float,
-        default=None,
-        metavar="USD",
-        help=(
-            "Required ceiling for live LLM transcript generation; run "
-            "--dry-run first to plan a conservative budget"
-        ),
-    )
-    parser.add_argument(
-        "--category",
-        "-c",
-        type=str,
-        default=None,
-        help="Filter to specific categories (e.g., 'safety' or 'safety,empathy')",
-    )
-    parser.add_argument(
-        "--scenario",
-        "-s",
-        type=str,
-        default=None,
-        help="Filter to specific scenarios by ID or name (comma-separated)",
-    )
-    parser.add_argument(
-        "--parallel",
-        "-p",
-        type=int,
-        default=None,
-        metavar="N",
-        help="Run N models in parallel (default: sequential)",
-    )
-    parser.add_argument(
-        "--scenario-parallel",
-        type=int,
-        default=1,
-        metavar="N",
-        help="Run up to N scenarios concurrently per model for the llm/raw harness (default: 1)",
-    )
-    parser.add_argument(
-        "--models",
-        "-m",
-        type=str,
-        default=None,
-        metavar="SPEC",
-        help="Select models by name or number: 'deepseek', 'gpt-5.6,claude', '1-4', '7', '1,deepseek'",
-    )
-    parser.add_argument(
-        "--confidential",
-        action="store_true",
-        help=(
-            "Include private confidential scenarios via "
-            "INVISIBLEBENCH_PRIVATE_CONFIDENTIAL_SCENARIOS_DIR"
-        ),
-    )
-    args = parser.parse_args(argv)
-
-    json_output = bool(getattr(args, "json_output", None))
-
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    json_output = bool(args.json_output)
+    if args.command == "scan":
+        return scan.scan_command(args)
     if args.command == "doctor":
-        return _run_doctor(json_output=json_output)
-
+        return agent_commands._run_doctor(json_output=json_output)
     if args.command == "get":
-        return _run_get(
-            args.run_id,
-            json_output=json_output,
-            out_path=getattr(args, "out", None),
+        return agent_commands._run_get(args.run_id, json_output=json_output, out_path=args.out)
+    if args.command == "runs":
+        return _run_runs(
+            limit=args.limit, offset=args.offset, json_output=json_output, out_path=args.out
         )
-
     if args.command == "jury":
-        from invisiblebench._agent_cli import emit_json
-        from invisiblebench.cli.agent_commands import _load_run_metadata
         from invisiblebench.jury_card import write_jury_card
 
         try:
-            run = _load_run_metadata(args.run_id)
+            run = agent_commands._load_run_metadata(args.run_id)
             if run is None:
                 raise ValueError(f"run not found: {args.run_id}")
             card = write_jury_card(Path(run["path"]))
@@ -402,12 +162,10 @@ Examples:
         else:
             print(card)
         return 0
-
     if args.command == "explain":
         from invisiblebench.cli.explain import explain_command
 
         return explain_command(args)
-
     if args.command == "questions":
         from invisiblebench.cli.questions import questions_command
 
@@ -416,125 +174,61 @@ Examples:
         from invisiblebench.cli.compare import compare_command
 
         return compare_command(args)
-
     if args.command == "health":
         from invisiblebench.cli.health import run_health
 
         return run_health(verbose=args.verbose, json_output=json_output)
-
-    if args.command == "archive":
-        from invisiblebench.cli.archive import run_archive, run_list
-
-        if args.list_runs:
-            return run_list()
-        if args.before is None and args.keep is None:
-            print(
-                f"{args.command}: pass --before YYYYMMDD or --keep N",
-                file=sys.stderr,
-            )
-            return 2
-        if args.before is not None and args.keep is not None:
-            print(
-                f"{args.command}: pass one of --before YYYYMMDD or --keep N, not both",
-                file=sys.stderr,
-            )
-            return 2
-        archive_yes = bool(getattr(args, "yes", False)) or bool(
-            getattr(args, "archive_yes", False)
-        )
-        if not args.dry_run:
-            if args.before:
-                prompt = f"archive runs older than {args.before}"
-            else:
-                prompt = f"archive runs keeping {args.keep} most recent"
-            confirm_or_abort(prompt, yes=archive_yes)
-        return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
-
-    if args.command == "runs":
-        return _run_runs(
-            limit=getattr(args, "limit", 25),
-            offset=getattr(args, "offset", 0),
-            json_output=json_output,
-            out_path=getattr(args, "out", None),
-        )
-
     if args.command == "leaderboard":
-        out_path = getattr(args, "out", None)
-        if json_output or out_path:
-            return _run_leaderboard_status_json(out_path=out_path)
+        if json_output or args.out:
+            return agent_commands._run_leaderboard_status_json(out_path=args.out)
         from invisiblebench.cli.leaderboard import run_leaderboard
 
         return run_leaderboard(action=args.action, verbose=args.verbose)
+    if args.command == "archive":
+        from invisiblebench.cli.archive import run_archive
 
-    category_filter = None
-    if args.category:
-        category_filter = [c.strip().lower() for c in args.category.split(",")]
-
-    scenario_filter = None
-    if args.scenario:
-        scenario_filter = [s.strip().lower() for s in args.scenario.split(",")]
-
-    # Default: raw LLM benchmark via llm/raw harness
-    all_models = MODELS_FULL
-
-    # Resolve which models to run
-    if args.full:
-        models = all_models
-    elif args.models:
-        try:
-            indices = resolve_models(args.models, all_models)
-            if not indices:
-                msg = f"No models match '{args.models}' (have {len(all_models)} models)"
-                print(msg)
-                return 1
-            models = [all_models[i] for i in indices]
-            selected = [m["name"] for m in models]
-            if RICH_AVAILABLE:
-                Console().print(f"[cyan]Models: {', '.join(selected)}[/cyan]")
-            else:
-                print(f"Models: {', '.join(selected)}")
-        except ValueError as e:
-            if RICH_AVAILABLE:
-                Console().print(f"[red]{e}[/red]")
-            else:
-                print(str(e))
-            return 1
-    else:
-        # No --full and no -m: show catalog and exit
-        if RICH_AVAILABLE:
-            c = Console()
-            c.print("[bold]No model selected.[/bold] Use [cyan]--full[/cyan] or [cyan]-m SPEC[/cyan].\n")
-            c.print("[bold]Available models:[/bold]")
-            for i, m in enumerate(all_models):
-                c.print(f"  [dim]{i+1:>2}.[/dim] {m['name']:<24} [dim]{m['id']}[/dim]")
-            c.print(
-                "\n[dim]Examples:  bench --full --dry-run  |  "
-                "bench -m deepseek -y --max-cost-usd 1[/dim]"
+        if args.list_runs:
+            return _run_runs(limit=sys.maxsize, offset=0, json_output=json_output)
+        if (args.before is None) == (args.keep is None):
+            print("archive: pass one of --before YYYYMMDD or --keep N", file=sys.stderr)
+            return 2
+        if not args.dry_run:
+            prompt = (
+                f"archive runs older than {args.before}"
+                if args.before
+                else f"archive runs keeping {args.keep} most recent"
             )
-        else:
+            confirm_or_abort(prompt, yes=args.yes or args.archive_yes)
+        return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
+
+    models = [m.model_dump() for m in MODELS_FULL]
+    if not args.full:
+        if not args.models:
             print("No model selected. Use --full or -m SPEC.\n")
-            print("Available models:")
-            for i, m in enumerate(all_models):
-                print(f"  {i+1:>2}. {m['name']:<24} {m['id']}")
-            print(
-                "\nExamples:  bench --full --dry-run  |  "
-                "bench -m deepseek -y --max-cost-usd 1"
-            )
-        return 1
-
-    if args.output:
-        output_dir = args.output
-    else:
-        timestamp = datetime.now(UTC).strftime(RUN_DIRECTORY_TIME_FORMAT)
-        output_dir = Path("results") / timestamp
-
-    return run_benchmark(
+            for i, model in enumerate(models, 1):
+                print(f"{i:>2}. {model['name']:<24} {model['id']}")
+            return 1
+        try:
+            indices = run_command.resolve_models(args.models, models)
+            if not indices:
+                raise ValueError(f"No models match '{args.models}'")
+            models = [models[i] for i in indices]
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        make_console().print(f"Models: {', '.join(m['name'] for m in models)}")
+    return run_command.run_benchmark(
         models=models,
-        output_dir=output_dir,
+        output_dir=args.output
+        or Path("results") / datetime.now(UTC).strftime(RUN_DIRECTORY_TIME_FORMAT),
         dry_run=args.dry_run,
         auto_confirm=args.yes,
-        category_filter=category_filter,
-        scenario_filter=scenario_filter,
+        category_filter=(
+            [c.strip().lower() for c in args.category.split(",")] if args.category else None
+        ),
+        scenario_filter=(
+            [s.strip().lower() for s in args.scenario.split(",")] if args.scenario else None
+        ),
         parallel=args.parallel,
         scenario_parallel=args.scenario_parallel,
         include_confidential=args.confidential,
@@ -543,4 +237,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

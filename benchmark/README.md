@@ -1,5 +1,7 @@
 # Benchmark data
 
+Type: reference.
+
 This directory contains the public benchmark contract.
 
 - `benchmark_inventory.json` is the source of truth for corpus version and
@@ -7,11 +9,16 @@ This directory contains the public benchmark contract.
 - `benchmark_card.json` describes intended use and limits.
 - `../src/invisiblebench/models/scan.py` defines the scan contract.
   `../src/invisiblebench/scoring.py` derives the public projection.
-- `scenarios/` contains the public scenario corpus and schema.
+- `scenarios/` contains the public scenarios. `models/scenario.py` in the runtime
+  owns validation; `scenarios/SCENARIO_SCHEMA.yaml` is its generated JSON Schema.
+  Turn `criteria` are authoring notes (`description`, `expect`, `examples`), not
+  scoring rules. Branches, sessions, persona context, and provenance are retained.
 - `tests/` proves the runtime and artifact contract.
 
 The runtime package lives in `src/invisiblebench/`. The active scan path uses
-one LLM judge per active check. It appends each decision to `judgments.jsonl`.
+one request per conversation turn containing all active checks' questions.
+It saves each native response in `answers.jsonl` before the next request and
+then derives `judgments.jsonl`.
 `NOT_APPLICABLE` is an explicit verdict.
 
 `PASS`, `FAIL`, `UNCLEAR`, and `NOT_APPLICABLE` are the machine verdicts. A
