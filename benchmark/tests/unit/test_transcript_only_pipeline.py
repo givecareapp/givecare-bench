@@ -7,10 +7,19 @@ from typing import Any
 
 import pytest
 
+from benchmark.tests.fixtures.current_scan import judge_response
 from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.cli import run_command as run_command_mod
 from invisiblebench.cli import transcript as transcript_mod
 from invisiblebench.cli.transcript import evaluate_scenario_async
+
+PERSONA = {
+    "name": "Jamie",
+    "age": 40,
+    "care_recipient": "Mother",
+    "care_duration": "a year",
+    "context": {},
+}
 
 
 class _FakeAsyncClient:
@@ -44,6 +53,7 @@ def _write_scenario(path: Path) -> None:
                 "scenario_id": "context_unit_test_001",
                 "category": "context",
                 "title": "Unit Test Scenario",
+                "persona": PERSONA,
                 "turns": [
                     {
                         "turn_number": 1,
@@ -109,6 +119,8 @@ def test_multisession_transcript_preserves_session_semantics(tmp_path: Path) -> 
         json.dumps(
             {
                 "scenario_id": "continuity_unit_test_001",
+                "title": "Continuity fixture",
+                "persona": PERSONA,
                 "category": "continuity",
                 "sessions": [
                     {
@@ -144,8 +156,7 @@ def test_multisession_transcript_preserves_session_semantics(tmp_path: Path) -> 
     )
 
     transcript = [
-        json.loads(line)
-        for line in Path(row["transcript_path"]).read_text().splitlines()
+        json.loads(line) for line in Path(row["transcript_path"]).read_text().splitlines()
     ]
     assert {entry["session_number"] for entry in transcript} == {1, 2}
     assert transcript[-1]["time_elapsed"] == "3 months later"
@@ -164,6 +175,8 @@ def test_evaluate_scenario_async_resolves_noul_branch_off_thread(
         json.dumps(
             {
                 "scenario_id": "branch_unit_test_001",
+                "title": "Branch fixture",
+                "persona": PERSONA,
                 "category": "context",
                 "turns": [
                     {"turn_number": 1, "user_message": "Hello"},
@@ -188,7 +201,7 @@ def test_evaluate_scenario_async_resolves_noul_branch_off_thread(
 
     class FakeNoulClient:
         def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
-            return {"model": model, "nouls": dict.fromkeys(questions, 0.9), "input_tokens": 5}
+            return judge_response(model, dict.fromkeys(questions, 0.9), 5)
 
     async def fake_ensure_noul_client() -> FakeNoulClient:
         return FakeNoulClient()
@@ -227,7 +240,6 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
 ) -> None:
     output_dir = tmp_path / "run"
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setattr(run_command_mod, "RICH_AVAILABLE", False)
 
     class FakeModelAPIClient(_FakeAsyncClient):
         async def call_model_async(self, **kwargs):
@@ -275,8 +287,10 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert summary["transcript_count"] == 1
     assert summary["actual_cost_usd"] == pytest.approx(len(client.calls) * 0.012345)
     assert summary["actual_billable_api_calls"] == len(client.calls)
-    assert summary["actual_cost_by_model_usd"] == {"test/model": pytest.approx(len(client.calls) * 0.012345)}
-    assert "run_scan.py plan" in summary["next_steps"]["scan_plan"]
+    assert summary["actual_cost_by_model_usd"] == {
+        "test/model": pytest.approx(len(client.calls) * 0.012345)
+    }
+    assert "bench scan plan" in summary["next_steps"]["scan_plan"]
     assert "--output" not in summary["next_steps"]["scan_plan"]
 
     from benchmark.tests.fixtures.current_scan import FixtureJudge
@@ -297,7 +311,7 @@ def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) ->
         observed.update(kwargs)
         return 0
 
-    monkeypatch.setattr("invisiblebench.cli.runner.run_benchmark", fake_run_benchmark)
+    monkeypatch.setattr("invisiblebench.cli.run_command.run_benchmark", fake_run_benchmark)
 
     from invisiblebench.cli import runner as runner_mod
 

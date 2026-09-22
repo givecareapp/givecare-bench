@@ -114,8 +114,8 @@ def test_an_edited_answer_cannot_publish(current_fixture, mutation):
     with restore(answers):
         rows = load_jsonl(answers)
         if mutation == "probability":
-            first = next(iter(rows[0]["nouls"]))
-            rows[0]["nouls"][first] = 0.99
+            first = next(iter(rows[0]["answers"]))
+            rows[0]["answers"][first]["noul"] = 0.99
         elif mutation == "unplanned":
             rows[0]["turn"] = 9
         elif mutation == "duplicate":
@@ -146,8 +146,8 @@ def test_a_semantic_unclear_derived_from_its_answers_is_publishable(current_fixt
     with restore(answers, ledger, board):
         rows = load_jsonl(answers)
         for row in rows:
-            if row["nouls"]:
-                row["nouls"] = dict.fromkeys(row["nouls"], 0.5)
+            if row["answers"]:
+                row["answers"] = {key: {"type": "noul", "noul": 0.5} for key in row["answers"]}
         write_rows(answers, rows)
         ledger.unlink()  # judgments are derived; edited answers need a fresh derivation
         judgments = run_scan(scan, max_cost_usd=1.0, client=FixtureJudge())

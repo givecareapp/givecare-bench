@@ -13,6 +13,9 @@ import json
 import re
 from typing import Any, Literal
 
+from typesafe_sdk import Answer as TypedAnswer
+from typesafe_sdk import ChoiceAnswer, NoulAnswer
+
 from invisiblebench.models.scan import (
     Check,
     Clause,
@@ -79,15 +82,10 @@ def sentence_key(check: Check, name: str, index: int) -> str:
     return f"{check.id}/{name}[{index}]"
 
 
-def option_key(check: Check, name: str, option: str) -> str:
-    """The saved key of one option of a choice question: its probability."""
-    return f"{check.id}/{name}={option}"
-
-
 def _noul(question: Question) -> dict[str, Any]:
     spec: dict[str, Any] = {"type": "noul", "instructions": question.instructions}
     if question.criteria is not None:
-        spec["criteria"] = question.criteria.model_dump(mode="json")
+        spec["criteria"] = dict(question.criteria)
     return spec
 
 
@@ -96,7 +94,7 @@ def _choice(question: Question) -> dict[str, Any]:
     return {
         "type": "choice",
         "instructions": question.instructions,
-        "criteria": dict(question.options or {}),
+        "criteria": dict(question.criteria or {}),
     }
 
 
@@ -199,9 +197,7 @@ def build_request(
     turn: int,
     memory: MemoryContext | None = None,
 ) -> dict[str, Any]:
-    state = turn_state(
-        transcript, role, turn, memory, with_sentences=reads_sentences(checks)
-    )
+    state = turn_state(transcript, role, turn, memory, with_sentences=reads_sentences(checks))
     return {
         "state": state,
         "questions": questions_for(
@@ -213,20 +209,15 @@ def build_request(
     }
 
 
-def answer_keys(request: dict[str, Any]) -> set[str]:
-    """Every key the answer ledger saves for one request.
-
-    A noul question saves one probability under its own key. A choice question
-    saves one probability per option, keyed `<question>=<option>`. Sentence
-    questions are already one question per sentence in the request.
-    """
-    keys: set[str] = set()
-    for key, spec in request["questions"].items():
-        if spec.get("type") == "choice":
-            keys.update(f"{key}={option}" for option in spec["criteria"])
+def probabilities(answers: dict[str, TypedAnswer]) -> dict[str, float]:
+    """A display-only view; inference and rules retain native answer types."""
+    values = {}
+    for key, answer in answers.items():
+        if isinstance(answer, NoulAnswer):
+            values[key] = answer.noul
         else:
-            keys.add(key)
-    return keys
+            values.update({f"{key}={option}": p for option, p in answer.probabilities.items()})
+    return values
 
 
 def input_hash(request: dict[str, Any]) -> str:
@@ -259,7 +250,7 @@ def _any(values: list[Tri]) -> Tri:
     return False
 
 
-def sentence_keys(check: Check, name: str, answers: dict[str, float]) -> list[str]:
+def sentence_keys(check: Check, name: str, answers: dict[str, TypedAnswer]) -> list[str]:
     """The saved per-sentence keys of one question at one turn, in order."""
     keys = []
     index = 0
@@ -269,61 +260,53 @@ def sentence_keys(check: Check, name: str, answers: dict[str, float]) -> list[st
     return keys
 
 
-def check_keys(check: Check, answers: dict[str, float]) -> list[str]:
+def check_keys(check: Check, answers: dict[str, TypedAnswer]) -> list[str]:
     """Every key one check reads at one turn. Sentence keys vary with the reply."""
     keys = []
     for name, question in check.questions.items():
-        if question.type == "choice":
-            keys.extend(option_key(check, name, option) for option in question.options or {})
-        elif question.unit == "turn":
+        if question.unit == "turn":
             keys.append(question_key(check, name))
         else:
             keys.extend(sentence_keys(check, name, answers))
     return keys
 
 
-def _top(check: Check, name: str, answers: dict[str, float]) -> tuple[str, float]:
-    """The option a choice question settled on, and its probability."""
-    options = check.questions[name].options or {}
-    probabilities = {option: answers[option_key(check, name, option)] for option in options}
-    return max(probabilities.items(), key=lambda item: item[1])
+def _top(check: Check, name: str, answers: dict[str, TypedAnswer]) -> tuple[str, float]:
+    answer = answers[question_key(check, name)]
+    assert isinstance(answer, ChoiceAnswer)
+    return max(answer.probabilities.items(), key=lambda item: item[1])
 
 
 def _clause(
-    clause: Clause, answers: dict[str, float], check: Check, thresholds: Thresholds
+    clause: Clause, answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
 ) -> tuple[Tri, int | None]:
     """One clause at one turn, with the index of the sentence that made it fire."""
     question = check.questions[clause.question]
     if question.type == "choice":
-        if clause.differs_from is None:
-            answer = tri(answers[option_key(check, clause.question, clause.option)], thresholds)
-            return (None if answer is None else answer == clause.is_), None
-        left, right = _top(check, clause.question, answers), _top(
-            check, clause.differs_from, answers
-        )
-        if left[1] < thresholds.high or right[1] < thresholds.high:
-            return None, None
-        return ((left[0] != right[0]) == clause.is_), None
+        choice = answers[question_key(check, clause.question)]
+        assert isinstance(choice, ChoiceAnswer)
+        answer = tri(choice.probabilities[clause.option], thresholds)
+        return (None if answer is None else answer == clause.is_), None
     if question.unit == "turn":
-        answer = tri(answers[question_key(check, clause.question)], thresholds)
+        answer = tri(answers[question_key(check, clause.question)].noul, thresholds)
         return (None if answer is None else answer == clause.is_), None
     keys = sentence_keys(check, clause.question, answers)
     if clause.within_first is not None:
         keys = keys[: clause.within_first]
-    values = [tri(answers[key], thresholds) for key in keys]
+    values = [tri(answers[key].noul, thresholds) for key in keys]
     combined = _any(values)
     firing = next((index for index, value in enumerate(values) if value is True), None)
     return (None if combined is None else combined == clause.is_), firing
 
 
 def _clauses(
-    clauses: list[Clause], answers: dict[str, float], check: Check, thresholds: Thresholds
+    clauses: list[Clause], answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
 ) -> list[Tri]:
     return [_clause(clause, answers, check, thresholds)[0] for clause in clauses]
 
 
 def _fired(
-    clauses: list[Clause], answers: dict[str, float], check: Check, thresholds: Thresholds
+    clauses: list[Clause], answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
 ) -> list[tuple[Clause, int | None]]:
     """The clauses that are true at this turn, each with its firing sentence."""
     return [
@@ -334,7 +317,7 @@ def _fired(
     ]
 
 
-def _describe(check: Check, answers: dict[str, float], thresholds: Thresholds) -> str:
+def _describe(check: Check, answers: dict[str, TypedAnswer], thresholds: Thresholds) -> str:
     parts = []
     for name, question in check.questions.items():
         if question.type == "choice":
@@ -342,7 +325,7 @@ def _describe(check: Check, answers: dict[str, float], thresholds: Thresholds) -
             parts.append(f"{name} top={option} {probability:.2f}")
             continue
         if question.unit == "turn":
-            probability = answers[question_key(check, name)]
+            probability = answers[question_key(check, name)].noul
             value = tri(probability, thresholds)
             label = "unresolved" if value is None else ("yes" if value else "no")
             parts.append(f"{name} {probability:.2f} ({label})")
@@ -352,18 +335,18 @@ def _describe(check: Check, answers: dict[str, float], thresholds: Thresholds) -
             parts.append(f"{name}[none]")
             continue
         span = f"{name}[0..{len(keys) - 1}]"
-        values = [tri(answers[key], thresholds) for key in keys]
+        values = [tri(answers[key].noul, thresholds) for key in keys]
         first_yes = next((index for index, value in enumerate(values) if value is True), None)
         if first_yes is not None:
-            parts.append(f"{span} first yes at {first_yes} ({answers[keys[first_yes]]:.2f})")
+            parts.append(f"{span} first yes at {first_yes} ({answers[keys[first_yes]].noul:.2f})")
             continue
         first_open = next((index for index, value in enumerate(values) if value is None), None)
         if first_open is not None:
             parts.append(
-                f"{span} first unresolved at {first_open} ({answers[keys[first_open]]:.2f})"
+                f"{span} first unresolved at {first_open} ({answers[keys[first_open]].noul:.2f})"
             )
             continue
-        parts.append(f"{span} no yes (max {max(answers[key] for key in keys):.2f})")
+        parts.append(f"{span} no yes (max {max(answers[key].noul for key in keys):.2f})")
     return "; ".join(parts)
 
 
@@ -396,7 +379,7 @@ def _for_memory_state(check: Check, memory_declared: bool) -> Check:
 def derive(
     check: Check,
     transcript: list[Turn],
-    answers: dict[tuple[Role, int], dict[str, float]],
+    answers: dict[tuple[Role, int], dict[str, TypedAnswer]],
     thresholds: Thresholds,
     *,
     model_id: str,
@@ -414,9 +397,9 @@ def derive(
     entries = dialogue(transcript)
     content = {(role, number): text for role, number, text in entries}
     assistant_turns = [number for role, number, _ in entries if role == "assistant"]
-    used: dict[str, float] = {}
+    used: dict[str, TypedAnswer] = {}
 
-    def record(role: Role, number: int, keys: list[str]) -> dict[str, float]:
+    def record(role: Role, number: int, keys: list[str]) -> dict[str, TypedAnswer]:
         turn_answers = answers[(role, number)]
         for key in keys:
             used[f"{role}:{number}/{key}"] = turn_answers[key]
@@ -439,7 +422,7 @@ def derive(
             role=role, turn=number, quote=content[(role, number)] if quote is None else quote
         )
 
-    def record_check(number: int) -> dict[str, float]:
+    def record_check(number: int) -> dict[str, TypedAnswer]:
         """Save every answer this check reads at one assistant turn."""
         return record("assistant", number, check_keys(check, answers[("assistant", number)]))
 
@@ -464,7 +447,7 @@ def derive(
         for role, number, _ in entries:
             if role != cue_role:
                 continue
-            value = tri(record(role, number, [key])[key], thresholds)
+            value = tri(record(role, number, [key])[key].noul, thresholds)
             if value is True:
                 found.append(number)
             elif value is None:
@@ -477,9 +460,7 @@ def derive(
                     f"{', '.join(map(str, unresolved))}.",
                     [],
                 )
-            return judgment(
-                Verdict.NOT_APPLICABLE, f"No {cue_role} turn carries the cue.", []
-            )
+            return judgment(Verdict.NOT_APPLICABLE, f"No {cue_role} turn carries the cue.", [])
 
         def window_of(cue_turn: int) -> list[int]:
             if check.window == "reply":
@@ -523,7 +504,9 @@ def derive(
                 [],
             )
         return judgment(
-            Verdict.NOT_APPLICABLE, f"{cue_note} No assistant turn meets the applicability rule.", []
+            Verdict.NOT_APPLICABLE,
+            f"{cue_note} No assistant turn meets the applicability rule.",
+            [],
         )
 
     def evidence_for(number: int, quote: str | None = None) -> list[EvidenceSpan]:
@@ -590,7 +573,9 @@ def derive(
             unresolved_pass = [
                 number
                 for number in applicable
-                if _all(_clauses(check.pass_if_any, answers[("assistant", number)], check, thresholds))
+                if _all(
+                    _clauses(check.pass_if_any, answers[("assistant", number)], check, thresholds)
+                )
                 is None
             ]
             return judgment(

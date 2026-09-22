@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from invisiblebench.cli import runner
+from invisiblebench.cli import run_command as runner
+from invisiblebench.cli import runner as runner_cli
+from invisiblebench.models.config import ModelConfig
 
 
 def test_get_scenarios_includes_private_confidential_when_requested(
@@ -53,15 +55,12 @@ def test_main_passes_confidential_flag_to_llm_benchmark(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        runner,
+        runner_cli,
         "MODELS_FULL",
         [
-            {
-                "id": "test/model",
-                "name": "Test Model",
-                "cost_per_m_input": 1.0,
-                "cost_per_m_output": 1.0,
-            }
+            ModelConfig(
+                id="test/model", name="Test Model", cost_per_m_input=1.0, cost_per_m_output=1.0
+            )
         ],
     )
 
@@ -71,12 +70,14 @@ def test_main_passes_confidential_flag_to_llm_benchmark(monkeypatch) -> None:
 
     monkeypatch.setattr(runner, "run_benchmark", fake_run_benchmark)
 
-    exit_code = runner.main([
-        "-m",
-        "1",
-        "--dry-run",
-        "--confidential",
-    ])
+    exit_code = runner_cli.main(
+        [
+            "-m",
+            "1",
+            "--dry-run",
+            "--confidential",
+        ]
+    )
 
     assert exit_code == 0
     assert captured["include_confidential"] is True

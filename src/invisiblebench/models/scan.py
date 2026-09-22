@@ -23,6 +23,7 @@ from pydantic import (
     model_serializer,
     model_validator,
 )
+from typesafe_sdk import Answer as TypedAnswer
 
 DIMENSIONS = {
     "safety": ("crisis", "scope", "identity", "autonomy"),
@@ -52,16 +53,11 @@ class EvidenceSpan(Record):
     quote: str
 
 
-class NoulCriteria(Record):
-    true: JSONContent
-    false: JSONContent
-
-
 class Question(Record):
     """One question about one turn.
 
     A `noul` question is yes/no: a high probability means yes. A `choice`
-    question settles which of its `options` the turn is; the judge returns one
+    question settles which of its `criteria` the turn is; the judge returns one
     probability per option and they sum to one, so the answer is relative.
 
     `unit: turn` asks the question once about the whole assistant reply.
@@ -73,33 +69,27 @@ class Question(Record):
     """
 
     instructions: JSONContent
-    criteria: NoulCriteria | None = None
+    criteria: dict[Identifier, JSONContent] | None = None
     unit: Literal["turn", "sentence"] = "turn"
     type: Literal["noul", "choice"] = "noul"
-    options: dict[Identifier, JSONContent] | None = Field(
-        default=None, min_length=2, max_length=255
-    )
     memory: Literal["declared", "undeclared"] | None = None
 
     @model_validator(mode="after")
     def one_kind_of_question(self):
         if self.type == "choice":
-            if self.options is None:
-                raise ValueError("a choice question needs options")
-            if self.criteria is not None:
-                raise ValueError("a choice question describes its options, not true and false")
+            if not isinstance(self.criteria, dict) or not 2 <= len(self.criteria) <= 255:
+                raise ValueError("a choice question needs 2..255 criteria")
             if self.unit != "turn":
                 raise ValueError("a choice question reads a whole turn, not a sentence")
-        elif self.options is not None:
-            raise ValueError("options need type: choice")
+        elif self.criteria is not None and set(self.criteria) != {"true", "false"}:
+            raise ValueError("a noul uses true and false criteria")
         return self
 
     @model_serializer(mode="wrap")
     def written_form(self, handler):
-        """A question serializes as it was written: unset options are omitted, so
-        a plan frozen before an option existed keeps its digest."""
+        """Omit absent execution context from the frozen definition."""
         data = handler(self)
-        for option in ("options", "memory"):
+        for option in ("memory",):
             if data.get(option) is None:
                 data.pop(option, None)
         return data
@@ -129,8 +119,7 @@ class Clause(Record):
     the reply. Without it the clause reads every sentence of the reply.
 
     `option` reads one option of a choice question: the clause tests that
-    option's probability. `differs_from` names a second choice question at the
-    same turn and is true when the two questions settle on different options.
+    option's probability. All inference and rule inputs retain native typed answers.
     """
 
     question: Identifier
@@ -138,20 +127,12 @@ class Clause(Record):
     within_first: StrictInt | None = Field(default=None, ge=1)
     memory: Literal["declared", "undeclared"] | None = None
     option: Identifier | None = None
-    differs_from: Identifier | None = None
-
-    @model_validator(mode="after")
-    def one_test_per_clause(self):
-        if self.option is not None and self.differs_from is not None:
-            raise ValueError("a clause reads one option or compares two questions, not both")
-        return self
 
     @model_serializer(mode="wrap")
     def written_form(self, handler):
-        """A clause serializes as it was written: unset options are omitted, so a
-        plan frozen before an option existed keeps its digest."""
+        """Omit absent clause modifiers."""
         data = handler(self)
-        for option in ("within_first", "memory", "option", "differs_from"):
+        for option in ("within_first", "memory", "option"):
             if data.get(option) is None:
                 data.pop(option, None)
         return data
@@ -180,9 +161,7 @@ class CheckDefinition(Record):
                 raise ValueError(f"clause names an unknown question: {clause.question}")
             question = self.questions[clause.question]
             if clause.within_first is not None and question.unit != "sentence":
-                raise ValueError(
-                    f"within_first needs a sentence question: {clause.question}"
-                )
+                raise ValueError(f"within_first needs a sentence question: {clause.question}")
             if clause.memory != question.memory and question.memory is not None:
                 raise ValueError(
                     f"a clause on a memory-gated question needs the same memory state: "
@@ -191,21 +170,12 @@ class CheckDefinition(Record):
             if clause.option is not None:
                 if question.type != "choice":
                     raise ValueError(f"option needs a choice question: {clause.question}")
-                if clause.option not in (question.options or {}):
+                if clause.option not in (question.criteria or {}):
                     raise ValueError(
                         f"option is not one of {clause.question}'s options: {clause.option}"
                     )
-            if clause.differs_from is not None:
-                other = self.questions.get(clause.differs_from)
-                if question.type != "choice" or other is None or other.type != "choice":
-                    raise ValueError(
-                        f"differs_from compares two choice questions: {clause.question}"
-                    )
-            if question.type == "choice" and clause.option is None and clause.differs_from is None:
-                raise ValueError(
-                    f"a clause on a choice question needs option or differs_from: "
-                    f"{clause.question}"
-                )
+            if question.type == "choice" and clause.option is None:
+                raise ValueError(f"a clause on a choice question needs option: {clause.question}")
         for name, question in self.questions.items():
             if question.unit == "sentence" and not isinstance(question.instructions, str | dict):
                 raise ValueError(f"a sentence question needs text or object instructions: {name}")
@@ -286,7 +256,11 @@ class MemoryEvidence(Record):
     def successful_content(self):
         if not self.memory_id.strip():
             raise ValueError("memory ID must not be blank")
-        if self.status == "succeeded" and self.operation != "forget" and not (self.text or "").strip():
+        if (
+            self.status == "succeeded"
+            and self.operation != "forget"
+            and not (self.text or "").strip()
+        ):
             raise ValueError("successful memory reads and writes require their exact text")
         return self
 
@@ -309,7 +283,7 @@ class SourceRun(Record):
 
 
 class ScanPlan(Record):
-    schema_version: Literal["invisiblebench-scan/v2"] = "invisiblebench-scan/v2"
+    schema_version: Literal["invisiblebench-scan/v3"] = "invisiblebench-scan/v3"
     benchmark_version: Text
     engine_version: Text
     scenario_corpus_sha256: Digest
@@ -339,6 +313,36 @@ class ScanPlan(Record):
         return len(self.transcripts) * len(self.checks)
 
 
+class RequestTask(Record):
+    model_id: Text
+    scenario_id: Text
+    role: Role
+    turn: StrictInt = Field(ge=1)
+    state: dict[str, Any]
+    questions: dict[str, dict[str, Any]] = Field(min_length=1)
+
+    @property
+    def request(self) -> dict[str, Any]:
+        return {"state": self.state, "questions": self.questions}
+
+
+class QuestionPlan(Record):
+    """Frozen authoring requests. Replaces tool-local caches and transient requests."""
+
+    schema_version: Literal["invisiblebench-questions/v1"] = "invisiblebench-questions/v1"
+    judge: JudgeSettings
+    tasks: list[RequestTask] = Field(min_length=1)
+    inputs: list[FileRef] = Field(default_factory=list)
+    estimated_cost_usd: float | None = Field(ge=0)
+
+    @model_validator(mode="after")
+    def unique_requests(self):
+        keys = [(t.model_id, t.scenario_id, t.role, t.turn) for t in self.tasks]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate question task")
+        return self
+
+
 class Answer(Record):
     """One saved judge request: every question for one conversation turn."""
 
@@ -349,7 +353,7 @@ class Answer(Record):
     plan_sha256: Digest
     input_sha256: Digest
     judge: JudgeObservation
-    nouls: dict[str, float] | None
+    answers: dict[str, TypedAnswer] | None
     input_tokens: StrictInt = Field(default=0, ge=0)
     cost_usd: float = Field(ge=0)
     error: Literal["judge_api_error", "invalid_judge_output"] | None = None
@@ -357,10 +361,8 @@ class Answer(Record):
 
     @model_validator(mode="after")
     def error_state(self):
-        if (self.error is None) == (self.nouls is None):
-            raise ValueError("an answer has either probabilities or an error")
-        if self.nouls is not None and any(not 0 <= value <= 1 for value in self.nouls.values()):
-            raise ValueError("probabilities must lie in [0, 1]")
+        if (self.error is None) == (self.answers is None):
+            raise ValueError("an answer has either typed answers or an error")
         return self
 
     @property
@@ -378,7 +380,7 @@ class Judgment(Record):
     verdict: Verdict
     rationale: Text
     evidence: list[EvidenceSpan]
-    answers: dict[str, float]
+    answers: dict[str, TypedAnswer]
 
     @model_validator(mode="after")
     def fail_cites_assistant(self):

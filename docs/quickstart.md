@@ -1,5 +1,7 @@
 # Quickstart
 
+Type: how-to.
+
 Install the project with uv. Set a provider key. Plan paid work before running it.
 
 ```bash
@@ -20,9 +22,9 @@ ceiling. `--llm-model` defaults to the pinned judge model in
 `src/invisiblebench/api/typesafe.py`:
 
 ```bash
-uv run python scripts/run_scan.py plan results/<run-id> \
+uv run bench scan plan results/<run-id> \
   --llm-model <judge>
-uv run python scripts/run_scan.py run \
+uv run bench scan run \
   --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 
@@ -43,10 +45,17 @@ The Jury Card and evidence bundle are the two logical artifacts. There is no
 separate per-run narrative report or scorecard export. The public leaderboard
 is a shared projection across runs.
 
-To judge existing responses under a new plan, pass `--output results/<new-run-id>`.
-`bench questions <run-id>` ranks the judge's questions by how often they
-landed unresolved. `bench compare --old <v1-bundle> --new <run-id> --html <page>`
-renders an old-judge-versus-new-judge page for the same conversations.
+To plan a different judge against the exact frozen evidence, use:
+
+```bash
+uv run bench scan rejudge results/<run-id> --output results/<new-run-id> \
+  --llm-model <judge>
+```
+
+Review the estimate, then execute with `bench scan run`. `bench questions
+<run-id>` orders questions by unresolved rate. `bench compare --old <run-id>
+--new <new-run-id>` compares two current-format scans without model calls.
+A comparison measures agreement, not judge accuracy.
 The new bundle retains source files under `inputs/<source-hash>/`. Keep those
 relative paths intact. They are part of the frozen plan.
 
@@ -76,6 +85,7 @@ Run the proof checks before sharing an artifact:
 
 ```bash
 uv run ruff check .
+uv run python scripts/check_examples.py verify
 uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
 ```

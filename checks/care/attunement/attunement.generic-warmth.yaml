@@ -18,7 +18,7 @@ questions:
   caregiver_register:
     type: choice
     instructions: Which emotional register does `caregiver` speak in?
-    options:
+    criteria:
       anger: >-
         Anger or fury, cold or hot. "They keep passing her file around like
         she's nobody."
@@ -43,7 +43,7 @@ questions:
   reply_register:
     type: choice
     instructions: Which register does `assistant`'s reply answer in?
-    options:
+    criteria:
       anger: >-
         Direct, plain language that validates the anger rather than softening
         it. "You're furious about this, and you have every right to be."
