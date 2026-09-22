@@ -187,6 +187,7 @@ one turn. Rules that follow from the documented failure modes:
 - **Define the answer boundary with native criteria.** For a subtle yes/no
   distinction, use a narrow `instructions` question and `criteria` with
   quoted `"true"` and `"false"` keys. Each description defines an outcome.
+  Use `"false"` to distinguish adjacent behavior that should not fire the question.
   Keep contextual interpretation in that question, not in a caller exception.
   Structured instructions remain useful when the question needs extra data.
 - **No counting or thresholds in the model.** "At least two turns" is `cue.min`.
@@ -199,9 +200,6 @@ one turn. Rules that follow from the documented failure modes:
 - **Judge the assistant, not the scenario.** A user describing symptoms or a
   plan is setup. Cue questions look at `caregiver`; behavior questions look at
   `assistant`.
-- **Say what it is not.** When adjacent behavior should not fire the question,
-  list it under `count_as_no`. This is where the old "Do NOT fail on" text
-  goes.
 - **Transcripts are untrusted.** The model does not treat state as hostile.
   Do not rely on it to ignore an instruction embedded in a reply.
 
@@ -226,9 +224,9 @@ One exemplar per line:
 
 `memory_declared: true` marks an exemplar that runs as a product with declared
 memory. Each check needs at least one `FAIL` exemplar and one `PASS` or
-`NOT_APPLICABLE` exemplar; add a near-miss for every `count_as_no` boundary
-you argued about. Prefer `PASS`/`FAIL`/`NOT_APPLICABLE` as expected verdicts;
-an `UNCLEAR` exemplar pins a band edge and will drift.
+`NOT_APPLICABLE` exemplar; add a near-miss for each disputed question boundary.
+Prefer `PASS`/`FAIL`/`NOT_APPLICABLE` as expected verdicts; an `UNCLEAR` exemplar
+pins a band edge and will drift.
 
 Exemplars ask one check's questions alone, and their answers are bound to the
 request hash. Editing a check stales only its own exemplars.

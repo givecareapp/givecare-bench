@@ -2,11 +2,13 @@
 
 Type: how-to.
 
-Install the project with uv. Set a provider key. Plan paid work before running it.
+Install the project with uv. Set the provider key for transcripts and the TypeSafe
+key for judging. Plan paid work before running it.
 
 ```bash
 uv sync --extra dev
 export OPENROUTER_API_KEY=...
+export TYPESAFE_API_KEY=...
 uv run bench -m your-org/your-model --dry-run
 uv run bench -m your-org/your-model -y --max-cost-usd <budget>
 ```

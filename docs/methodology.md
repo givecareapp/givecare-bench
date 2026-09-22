@@ -170,8 +170,8 @@ bundle. Each request is hashed per turn. `answers.jsonl` holds the saved
 native typed answers, the judge's returned model ID, input tokens, and cost for
 every answered request; a request that fails before the API answers records no
 usage. Each record is flushed to disk before the next request. The dry-run
-estimate prices the request payload size conservatively; the recorded cost is
-the billed figure.
+estimate uses request payload size. It is approximate and can understate cost.
+Recorded cost uses the API's reported input tokens and the pinned judge price.
 `judgments.jsonl` is derived from `answers.jsonl` by the rule engine. Replay
 means deriving judgments again from the frozen plan and the saved answers,
 not calling the judge model again. Resuming a paid scan and publishing a

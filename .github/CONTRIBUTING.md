@@ -1,5 +1,7 @@
 # Contributing
 
+Type: how-to.
+
 Contributions should keep the benchmark contract small and inspectable.
 
 ## Welcome changes
@@ -27,6 +29,7 @@ uv run bench doctor
 
 ```bash
 uv run ruff check .
+uv run python scripts/check_examples.py verify
 uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
 ```
@@ -40,16 +43,16 @@ git config core.hooksPath .githooks
 ## Scenario contract
 
 Scenario JSON files live under `benchmark/scenarios/`. Use the canonical
-`category` field. Retired tier fields are invalid. Use the unified `criteria`
-shape for check rubrics. See
+`category` field. Retired tier fields are invalid. Turn `criteria` hold authoring
+notes, not scoring rules. The scenario model owns validation and generates
 [`SCENARIO_SCHEMA.yaml`](../benchmark/scenarios/SCENARIO_SCHEMA.yaml).
+Checks use the separate [question and rule grammar](../checks/README.md).
 
 Run focused checks before opening a change:
 
 ```bash
 uv run python scripts/lint_turn_indices.py --strict
-uv run pytest benchmark/tests/unit/test_scenario_validator.py \
-  benchmark/tests/unit/test_scenario_models.py -q
+uv run pytest benchmark/tests/unit/test_scenario_models.py -q
 ```
 
 ## Running a scan
@@ -65,6 +68,7 @@ change the result.
 ## Pull request checklist
 
 - [ ] `uv run ruff check .` passes.
+- [ ] `uv run python scripts/check_examples.py verify` passes.
 - [ ] `uv run pytest benchmark/tests -q` passes.
 - [ ] `uv run python scripts/lint_turn_indices.py --strict` passes.
 - [ ] The change updates machine-readable inventory or contract files when

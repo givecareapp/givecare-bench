@@ -1,5 +1,7 @@
 # Invisible Bench
 
+Type: how-to.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Invisible Bench evaluates caregiver-support conversations and produces a Jury
@@ -40,11 +42,13 @@ clinical outcomes. Care remains directional. Read the
 
 ## Quickstart
 
-Install dependencies and set a provider key:
+Install dependencies. Set the provider key for transcripts and the TypeSafe key
+for judging:
 
 ```bash
 uv sync --extra dev
 export OPENROUTER_API_KEY=...
+export TYPESAFE_API_KEY=...
 ```
 
 Generate transcripts. Review the dry-run estimate before setting a cost ceiling:
@@ -102,6 +106,7 @@ and the [scan contract](src/invisiblebench/models/scan.py) for artifact fields.
 
 ```bash
 uv run ruff check .
+uv run python scripts/check_examples.py verify
 uv run pytest benchmark/tests -q
 uv run python scripts/lint_turn_indices.py --strict
 ```
