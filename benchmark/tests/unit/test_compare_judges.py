@@ -1,78 +1,59 @@
-"""The comparison pairs old and new verdicts and renders the disagreement queue."""
-
-from __future__ import annotations
+"""Judge comparison uses the ordinary scan executor, including interruption and resume."""
 
 import json
-from types import SimpleNamespace
 
-from benchmark.tests.fixtures.current_scan import ScriptedJudge, write_source_run
-from invisiblebench.cli.compare import compare_command, compare_ledgers, render_html
-from invisiblebench.judge import load_scan, plan_scan, run_scan
+import pytest
+
+from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
+from invisiblebench.api import typesafe
+from invisiblebench.cli.compare import compare_ledgers
+from invisiblebench.judge import (
+    ANSWERS_FILE,
+    PLAN_FILE,
+    load_scan,
+    plan_rejudge,
+    plan_scan,
+    run_scan,
+)
 
 
-def _scan(tmp_path):
-    source = write_source_run(tmp_path, roster=[("case", "context")])
-    bundle = tmp_path / "scan"
-    plan_scan([source], bundle)
-    run_scan(bundle, max_cost_usd=0.5, client=ScriptedJudge({"cue": 0.9, "routing": 0.0}))
-    return bundle
-
-
-def _old_ledger(tmp_path, judgments):
+def test_rejudge_retains_progress_and_compares_native_scans(tmp_path, monkeypatch):
+    monkeypatch.setitem(typesafe.JUDGE_PRICING, "candidate", 0.042)
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
     old = tmp_path / "old"
-    old.mkdir()
-    rows = []
-    for index, judgment in enumerate(judgments):
-        verdict = "PASS" if index else "FAIL"  # disagree on the first pair only
-        rows.append(
-            {
-                "model_id": judgment.model_id,
-                "scenario_id": judgment.scenario_id,
-                "check_id": judgment.check_id,
-                "verdict": verdict,
-                "rationale": f"old reasoning {index}",
-                "evidence": [{"role": "assistant", "turn": 1, "quote": "I can help."}],
-                "error": None,
-            }
-        )
-    rows.append({**rows[0], "verdict": "UNCLEAR", "error": "invalid_judge_output"})
-    (old / "judgments.jsonl").write_text("".join(json.dumps(row) + "\n" for row in rows))
-    return old
+    plan_scan([source], old)
+    run_scan(old, max_cost_usd=1, client=ScriptedJudge({"cue": 0.9, "routing": 0.9}))
+    original = {p.relative_to(old): p.read_bytes() for p in old.rglob("*") if p.is_file()}
+    new = tmp_path / "new"
+    plan = plan_rejudge(old, new, model="candidate")
+
+    class Interrupted(FixtureJudge):
+        calls = 0
+
+        def ask(self, **kwargs):
+            self.calls += 1
+            if self.calls == 2:
+                raise KeyboardInterrupt
+            return super().ask(**kwargs)
+
+    with pytest.raises(KeyboardInterrupt):
+        run_scan(new, max_cost_usd=1, client=Interrupted())
+    retained = (new / ANSWERS_FILE).read_bytes()
+    assert len(retained.splitlines()) == 1
+    run_scan(new, max_cost_usd=1, client=FixtureJudge())
+    assert (new / ANSWERS_FILE).read_bytes().startswith(retained)
+    assert len(load_scan(new, complete=True)[1]) == plan.planned_requests
+    assert original == {p.relative_to(old): p.read_bytes() for p in old.rglob("*") if p.is_file()}
+    report = compare_ledgers(old, new)
+    assert report["old_judge"] == typesafe.DEFAULT_JUDGE_MODEL
+    assert report["new_judge"] == "candidate"
+    assert report["verdict_flips"]
+    assert report["accuracy_claim"] is False
+    assert json.loads((new / PLAN_FILE).read_bytes())["judge"]["model"] == "candidate"
+    for answer in load_scan(new)[1]:
+        assert answer.plan_sha256 != load_scan(old)[1][0].plan_sha256
 
 
-def test_pairs_by_key_and_counts_agreement(tmp_path):
-    bundle = _scan(tmp_path)
-    judgments = load_scan(bundle)[2]
-    old = _old_ledger(tmp_path, judgments)
-    report = compare_ledgers(old, bundle)
-    assert report["covered"] == len(judgments)
-    new_first = judgments[0].verdict.value
-    first = report["rows"][0]
-    assert first["old"]["verdict"] == "FAIL" and first["new"]["verdict"] == new_first
-    assert first["agree"] == (new_first == "FAIL")
-    assert sum(row["agree"] for row in report["rows"]) == report["agree"]
-    assert f"FAIL->{new_first}" in report["confusion"]
-    # the invalid attempt did not overwrite the valid old row
-    assert first["old"]["rationale"] == "old reasoning 0"
-
-
-def test_html_holds_every_pair_and_the_filter(tmp_path):
-    bundle = _scan(tmp_path)
-    old = _old_ledger(tmp_path, load_scan(bundle)[2])
-    page = render_html(compare_ledgers(old, bundle))
-    assert page.count('<section class="pair') == len(load_scan(bundle)[2])
-    assert "old reasoning 0" in page and "data-filter=\"disagree\"" in page
-    assert "<script" in page and "prefers-color-scheme" in page
-
-
-def test_command_writes_page_and_json(tmp_path, capsys):
-    bundle = _scan(tmp_path)
-    old = _old_ledger(tmp_path, load_scan(bundle)[2])
-    out = tmp_path / "compare.html"
-    args = SimpleNamespace(old=str(old), new=str(bundle), html=str(out), json_output=True)
-    assert compare_command(args) == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["status"] == "ok" and "rows" not in payload["data"]
-    assert out.exists()
-    missing = SimpleNamespace(old=str(tmp_path / "nope"), new=str(bundle), html=None, json_output=True)
-    assert compare_command(missing) == 1
+def test_rejudge_cannot_write_into_or_over_its_source(tmp_path):
+    with pytest.raises(ValueError, match="separate"):
+        plan_rejudge(tmp_path, tmp_path / "nested")

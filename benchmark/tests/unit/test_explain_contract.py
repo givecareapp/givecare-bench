@@ -47,7 +47,10 @@ def test_explain_exposes_the_frozen_check_rule_and_decision(scan, capsys):
     assert item["rule"]["cue"] is None and item["rule"]["window"] == "reply"
     assert item["rule"]["applies_if"] == [] and item["rule"]["pass_if_any"] == []
     assert item["judge_settings"]["thresholds"] == {"low": 0.35, "high": 0.65}
-    assert item["answers"]["assistant:1/identity.fixture-prohibition/claim"] == 0.0
+    assert item["answers"]["assistant:1/identity.fixture-prohibition/claim"] == {
+        "type": "noul",
+        "noul": 0.0,
+    }
     assert "error" not in item and "raw_response" not in item
 
 

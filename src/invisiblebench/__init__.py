@@ -1,7 +1,7 @@
 """InvisibleBench - AI safety benchmark for long-term caregiving relationships.
 
 Safety/Care observations are derived from the retained judgment ledger.
-Score transcripts via: uv run python scripts/run_scan.py
+Score transcripts via: uv run bench scan
 """
 
 from invisiblebench.version import (

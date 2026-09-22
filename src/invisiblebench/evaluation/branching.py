@@ -112,14 +112,14 @@ def _ask_noul_conditions(
         raise ValueError("a judge client is required for noul branch conditions")
 
     questions = {
-        str(idx): {"instructions": branches[idx]["condition"]["instructions"]}
+        str(idx): {"type": "noul", "instructions": branches[idx]["condition"]["instructions"]}
         for idx in noul_indices
     }
     result = client.ask(model=model, state={"assistant": prev_assistant_msg}, questions=questions)
-    nouls = result["nouls"]
+    nouls = result.nouls
     probabilities = {}
     for idx in noul_indices:
-        probability = float(nouls[str(idx)])
+        probability = float(nouls[str(idx)].noul)
         if not math.isfinite(probability) or not 0 <= probability <= 1:
             raise ValueError(f"invalid noul probability for branch {idx}: {probability}")
         probabilities[idx] = probability

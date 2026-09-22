@@ -12,7 +12,6 @@ from invisiblebench.models.scenario import (
     Persona,
     Scenario,
     ScenarioCategory,
-    ScoringDimension,
     Session,
     Turn,
 )
@@ -30,5 +29,4 @@ __all__ = [
     "Session",
     "Scenario",
     "ScenarioCategory",
-    "ScoringDimension",
 ]

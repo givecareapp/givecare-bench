@@ -61,8 +61,8 @@ evidence cannot justify an earlier claim.
 The scan verifies the retained bytes and record shape; it does not independently
 authenticate a product's database. Keep sensitive memory evidence private.
 
-Check YAML holds the canonical questions and rule. Scenario rubrics and expected
-behaviors are authoring notes. They are not a second scored rubric.
+Check YAML holds the canonical questions and rule. Scenario `criteria` are
+authoring notes. They are not a second scored rubric.
 
 ## One decision per check
 
@@ -167,7 +167,7 @@ separate aggregate projection; the card contains private quoted evidence.
 The scan plan freezes source manifests, transcripts, check definitions,
 questions, thresholds, the judge model ID, and engine version in one portable
 bundle. Each request is hashed per turn. `answers.jsonl` holds the saved
-probabilities, the judge's returned model ID, input tokens, and cost for
+native typed answers, the judge's returned model ID, input tokens, and cost for
 every answered request; a request that fails before the API answers records no
 usage. Each record is flushed to disk before the next request. The dry-run
 estimate prices the request payload size conservatively; the recorded cost is
@@ -191,7 +191,11 @@ Each check also ships hand-written exemplars: short transcripts with the
 verdict the rule must derive, and the judge model's saved answers for them.
 The pre-commit gate derives every exemplar from those committed answers and
 fails on a mismatch or a stale answer. This pins what a check means; it does
-not measure accuracy on real conversations.
+not measure accuracy on real conversations. Comparing two judge runs also
+measures agreement, not accuracy. Accuracy validation needs unseen caregiver
+conversations with independent labels, including caregiver–recipient safety
+cases. Those labels must not be inferred from either judge or the exemplars.
+Such research remains separate from runtime verdicts and publication QA.
 
 Mechanical QA checks source bytes, complete scenario and check coverage, valid
 quotes, judge settings, and exact score recomputation. These checks prove the

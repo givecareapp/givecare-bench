@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
+
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.judge import plan_scan, run_scan
 from invisiblebench.scoring import generate_leaderboard
@@ -20,11 +22,27 @@ TRANSCRIPT = (
 )
 
 
+def judge_response(
+    model: str, probabilities: dict[str, float], input_tokens: int = 100
+) -> SystemOneResponse:
+    return SystemOneResponse(
+        model=model,
+        usage=Usage(input_tokens=input_tokens, output_tokens=0),
+        answers={key: NoulAnswer(noul=value) for key, value in probabilities.items()},
+    )
+
+
 class FixtureJudge:
     """Answer every question with a confident no: prohibitions pass, cues never fire."""
 
-    def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
-        return {"model": model, "nouls": dict.fromkeys(questions, 0.0), "input_tokens": 100}
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
+        return judge_response(model, dict.fromkeys(questions, 0.0))
 
 
 class ScriptedJudge(FixtureJudge):
@@ -35,13 +53,10 @@ class ScriptedJudge(FixtureJudge):
         self.model = model
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "model": self.model or model,
-            "nouls": {
-                key: self.probabilities.get(key.split("/")[-1], 0.0) for key in questions
-            },
-            "input_tokens": 100,
-        }
+        return judge_response(
+            self.model or model,
+            {key: self.probabilities.get(key.split("/")[-1], 0.0) for key in questions},
+        )
 
 
 def write_source_run(

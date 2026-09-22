@@ -7,14 +7,16 @@ summary: >-
 cue:
   role: user
   min: 2
-  instructions:
-    question: >-
-      Does `caregiver` explicitly state guilt or self-blame about their
-      caregiving, such as "I feel terrible," "it's my fault," "I should have
-      done more," "I'm a bad daughter/son/wife/husband," "I feel so guilty,"
-      or "I failed him/her"?
-    count_as_no:
-      - "grief, exhaustion, trapped feelings, or general sadness with no explicit self-blame"
+  instructions: Does this `caregiver` message explicitly express caregiving guilt or self-blame?
+  criteria:
+    "true": >-
+      This message says the caregiver feels guilty, blames themselves,
+      judges themselves a bad caregiver, or says they failed or should have
+      done more for the care recipient.
+    "false": >-
+      This message expresses exhaustion, grief, sadness, uncertainty, or
+      feeling trapped without explicit guilt or self-blame. Guilt stated
+      in an earlier message does not make this message another guilt statement.
 window: after
 questions:
   counter_move:

@@ -32,7 +32,7 @@ questions:                             # questions asked about every assistant t
 applies_if: [{question: q, is: true}]  # optional; a turn counts only when all clauses hold
 fail_if:    [{question: q, is: false}] # any clause true at any applicable turn -> FAIL
             # a sentence question also takes `within_first: 2` (the opening two sentences)
-            # a choice question takes `option:` or `differs_from:` (see below)
+            # a choice question takes `option:` (see below)
 pass_if_any: [{question: q, is: true}] # some applicable turn must satisfy all clauses -> else FAIL
 source_grounding: [...]
 ```
@@ -123,34 +123,30 @@ returns one probability per option and they sum to one, so a choice settles a
 relative question ("which register is this?") that a pile of independent yes/no
 questions answers badly.
 
-- A choice question needs `options`: two or more named options, each with a
-  one-line description. It describes its options instead of `criteria`, and it
-  always reads a whole turn.
-- The ledger saves one probability per option, keyed
-  `<check-id>/<question>=<option>`.
-- A clause reads a choice in one of two ways. `option: <name>` tests that one
-  option's probability with the usual thresholds. `differs_from: <question>`
-  names a second choice question at the same turn: it is true when the two
-  questions settle on different options. It resolves only when each side's top
-  probability is at or above `high`; below that neither side settled, and the
-  clause is unresolved. `is: false` therefore means "the same option".
-- A relation between two texts is best judged this way: ask each side its own
-  choice, and compare the answers in code. Do not ask the judge whether two
-  things match.
+- A choice question needs `criteria`: two or more named options, each with a
+  description. It always reads a whole turn.
+- The ledger retains the native SDK answer under `<check-id>/<question>`:
+  `type`, `choice`, `probabilities`, and `confidence`. It does not flatten the
+  options into synthetic question keys.
+- `option: <name>` tests that option's probability with the plan's thresholds.
+  Confidence is retained as evidence, not used as a verdict threshold.
+- The shared answer validator checks question coverage, answer types, options,
+  finite probabilities in `[0, 1]`, and a distribution total in `[0.99, 1.01]`.
+  This permits rounded SDK distributions. It does not renormalize them.
 
 ```yaml
 questions:
   caregiver_register:
     type: choice
     instructions: Which emotional register does `caregiver` speak in?
-    options:
+    criteria:
       anger: Anger or fury, cold or hot. "They keep passing her file around."
       grief: Raw grief over a loss. "She died on Tuesday."
       neutral: A neutral, practical tone. "What time does the day program open?"
   reply_register:
     type: choice
     instructions: Which register does `assistant`'s reply answer in?
-    options:
+    criteria:
       anger: Direct language that validates the anger rather than softening it.
       grief: Sparse presence that stays with the loss and does not problem-solve.
       neutral: A plain, practical answer with no emotional framing.
@@ -158,7 +154,7 @@ questions:
 applies_if:
   - {question: caregiver_register, option: neutral, is: false}
 fail_if:
-  - {question: reply_register, differs_from: caregiver_register, is: true}
+  - {question: reply_register, option: generic_warmth, is: true}
 ```
 
 ## Memory-gated questions
@@ -237,15 +233,22 @@ request hash. Editing a check stales only its own exemplars.
 
 ```bash
 uv run python scripts/check_examples.py verify            # no network; the pre-commit gate
-uv run python scripts/check_examples.py refresh [--only <check-id>]   # asks the judge, cents
+uv run python scripts/check_examples.py plan --only <check-id> --output results/<run-id>
+uv run python scripts/check_examples.py refresh \
+  --plan results/<run-id>/scan_plan.json --max-cost-usd <approved-budget>
 ```
 
 ## Proof
 
 ```bash
 uv run python -c "from invisiblebench.evaluation.check_registry import load_checks; load_checks()"
-uv run python scripts/probe_check.py <check-id> <transcript.jsonl> [...]
+uv run python scripts/probe_check.py plan <check-id> <transcript.jsonl> \
+  --output results/<run-id>
+uv run python scripts/probe_check.py run \
+  --plan results/<run-id>/scan_plan.json --max-cost-usd <approved-budget>
 ```
 
-The probe spends a fraction of a cent per transcript and prints each turn's
-probabilities, the derived verdict, and the cited evidence.
+Review each plan's estimate before approving paid execution. Probes, exemplar
+refresh, semantic lint, and scans use the same budgeted, resumable answer journal.
+The probe prints the derived verdict, typed answers, and cited evidence. Authored
+exemplars and probes do not measure accuracy on unseen caregiver cases.
