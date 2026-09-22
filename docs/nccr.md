@@ -97,8 +97,9 @@ downloads. The canonical run replays all 196 judgments without model calls.
   every question's probability, request hash, tokens, and cost.
 - [judgments.jsonl](assets/nccr/ledger/judgments.jsonl): one derived verdict
   per conversation and check, with rationale and quoted evidence.
-- [jury-card.md](assets/nccr/ledger/jury-card.md): the standard report for
-  this run.
+- [jury-card.md](assets/nccr/ledger/jury-card.md.txt){ download="jury-card.md" }:
+  the original Markdown report for this run. Its relative input links require
+  the canonical run; this download is not a standalone web page.
 
 ## Contest a verdict
 
