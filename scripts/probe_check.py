@@ -1,62 +1,79 @@
 #!/usr/bin/env python3
-"""Run one check against one transcript with the judge model and print the trace.
-
-An authoring tool. It spends a fraction of a cent per transcript and writes
-nothing. Use it to see each turn's probabilities and the verdict the rule
-derives before committing a check definition.
-"""
+"""Plan one check against transcripts, then run the frozen, budgeted probe."""
 
 from __future__ import annotations
 
 import argparse
-import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, SystemOneClient  # noqa: E402
-from invisiblebench.evaluation.check_registry import CHECKS_DIR, load_check  # noqa: E402
-from invisiblebench.evaluation.rules import (  # noqa: E402
-    build_request,
-    derive,
-    request_turns,
-)
-from invisiblebench.models.scan import JudgeSettings  # noqa: E402
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.evaluation import rules
+from invisiblebench.evaluation.check_registry import CHECKS_DIR, load_check
+from invisiblebench.judge import PLAN_FILE, _read_ref, _transcript, plan_questions, run_questions, sha256
+from invisiblebench.models.scan import QuestionPlan, RequestTask
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("check_id")
-    parser.add_argument("transcripts", nargs="+", type=Path, help="transcript .jsonl files")
-    parser.add_argument("--model", default=DEFAULT_JUDGE_MODEL)
-    args = parser.parse_args()
-    paths = list(CHECKS_DIR.rglob(f"{args.check_id}.yaml"))
+def plan_probe(check_id: str, transcripts: list[Path], output: Path, *, model=DEFAULT_JUDGE_MODEL):
+    paths = list(CHECKS_DIR.rglob(f"{check_id}.yaml"))
     if len(paths) != 1:
-        print(f"unknown check: {args.check_id}", file=sys.stderr)
-        return 2
+        raise ValueError(f"unknown check: {check_id}")
     check = load_check(paths[0])
-    settings = JudgeSettings(model=args.model)
-    client = SystemOneClient()
-    for path in args.transcripts:
-        transcript = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-        answers = {}
-        print(f"== {path.name}")
-        for role, turn in request_turns(transcript):
-            request = build_request([check], transcript, role, turn)
-            if not request["questions"]:
-                continue
-            result = client.ask(model=args.model, state=request["state"], questions=request["questions"])
-            answers[(role, turn)] = result["nouls"]
-            trace = ", ".join(f"{k.split('/')[-1]} {v:.2f}" for k, v in result["nouls"].items())
-            print(f"  {role} {turn}: {trace}")
-        judgment = derive(
-            check, transcript, answers, settings.thresholds,
-            model_id="probe", scenario_id=path.stem, plan_sha256="0" * 64,
-        )
-        print(f"  -> {judgment.verdict.value}: {judgment.rationale}")
-        for span in judgment.evidence:
-            print(f"     {span.role} turn {span.turn}: {span.quote[:120]!r}")
+    sources = {f"inputs/checks/{check.layer}/{check.dimension}/{check.id}.yaml": paths[0]}
+    tasks = []
+    for index, path in enumerate(transcripts):
+        scenario = f"{index}-{path.stem}"
+        sources[f"inputs/transcripts/{scenario}.jsonl"] = path
+        transcript = _transcript(path.read_bytes())
+        for role, turn in rules.request_turns(transcript):
+            request = rules.build_request([check], transcript, role, turn)
+            if request["questions"]:
+                tasks.append(RequestTask(model_id=check.id, scenario_id=scenario, role=role, turn=turn, **request))
+    return plan_questions(output, tasks, model=model, sources=sources)
+
+
+def run_probe(bundle: Path, *, max_cost_usd: float, client=None):
+    content = (bundle / PLAN_FILE).read_bytes()
+    plan = QuestionPlan.model_validate_json(content)
+    for ref in plan.inputs:
+        _read_ref(bundle, ref)
+    check = load_check(next(bundle / ref.path for ref in plan.inputs if ref.path.endswith(".yaml")))
+    transcripts = {Path(ref.path).stem: _transcript(_read_ref(bundle, ref))
+                   for ref in plan.inputs if ref.path.endswith(".jsonl")}
+    for task in plan.tasks:
+        if task.model_id != check.id or task.request != rules.build_request(
+            [check], transcripts[task.scenario_id], task.role, task.turn,
+        ):
+            raise ValueError("probe inputs differ from the frozen requests")
+    answers = run_questions(bundle, max_cost_usd=max_cost_usd, client=client)
+    judgments = []
+    for scenario, transcript in transcripts.items():
+        saved = {(a.role, a.turn): a.answers for a in answers
+                 if a.scenario_id == scenario and a.error is None}
+        judgments.append(rules.derive(check, transcript, saved, plan.judge.thresholds,
+                                     model_id=check.id, scenario_id=scenario, plan_sha256=sha256(content)))
+    return judgments
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    plan = commands.add_parser("plan")
+    plan.add_argument("check_id")
+    plan.add_argument("transcripts", nargs="+", type=Path)
+    plan.add_argument("--output", type=Path, required=True)
+    plan.add_argument("--model", default=DEFAULT_JUDGE_MODEL)
+    run = commands.add_parser("run")
+    run.add_argument("--plan", type=Path, required=True)
+    run.add_argument("--max-cost-usd", type=float, required=True)
+    args = parser.parse_args()
+    if args.command == "plan":
+        result = plan_probe(args.check_id, args.transcripts, args.output, model=args.model)
+        print(f"Plan: {args.output / PLAN_FILE}; requests: {len(result.tasks)}; estimate: ${result.estimated_cost_usd}")
+    else:
+        if args.plan.name != PLAN_FILE:
+            parser.error("--plan must name scan_plan.json")
+        for judgment in run_probe(args.plan.parent, max_cost_usd=args.max_cost_usd):
+            print(judgment.model_dump_json())
     return 0
 
 

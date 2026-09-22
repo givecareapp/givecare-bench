@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from typesafe_sdk import ChoiceAnswer, SystemOneResponse, Usage
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
 from invisiblebench.api.client import cost_tracker
@@ -110,7 +111,7 @@ def test_technical_attempt_retains_cost_and_only_unfinished_work_retries(tmp_pat
         run_scan(bundle, max_cost_usd=BUDGET, client=BrokenJudge())
     attempt = load_scan(bundle)[1][0]
     assert attempt.error == "invalid_judge_output" and attempt.cost_usd == 0.001
-    assert attempt.nouls is None
+    assert attempt.answers is None
     run_scan(bundle, max_cost_usd=BUDGET, client=FixtureJudge())
     plan, answers, judgments = load_scan(bundle, complete=True)
     assert len(answers) == plan.planned_requests + 1
@@ -131,7 +132,7 @@ def test_a_judge_api_failure_is_saved_and_retried(tmp_path):
     with pytest.raises(RuntimeError, match="attempt saved"):
         run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=UnavailableJudge())
     attempt = load_scan(bundle)[1][0]
-    assert attempt.error == "judge_api_error" and attempt.nouls is None
+    assert attempt.error == "judge_api_error" and attempt.answers is None
     assert attempt.error_detail == "RuntimeError"
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
     assert load_scan(bundle, complete=True)[2]
@@ -236,7 +237,7 @@ def test_an_invalid_answer_keeps_its_billed_tokens(tmp_path):
     class HalfAnswer(FixtureJudge):
         def ask(self, **kwargs):
             result = super().ask(**kwargs)
-            result["nouls"].popitem()
+            result.answers.popitem()
             return result
 
     with pytest.raises(RuntimeError, match="invalid_judge_output"):
@@ -272,14 +273,12 @@ class ChoiceJudge:
         self.specs: list[dict] = []
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
-        nouls = {}
+        answers = {}
         for key, spec in questions.items():
             self.specs.append(spec)
-            assert spec["type"] == "choice"
-            for option, probability in self.distributions[key.split("/")[-1]].items():
-                assert option in spec["criteria"]
-                nouls[f"{key}={option}"] = probability
-        return {"model": model, "nouls": nouls, "input_tokens": 100}
+            values = self.distributions[key.split("/")[-1]]
+            answers[key] = ChoiceAnswer(choice=max(values, key=values.get), confidence=0.9, probabilities=values)
+        return SystemOneResponse(model=model, answers=answers, usage=Usage(input_tokens=100, output_tokens=0))
 
 
 @pytest.fixture
@@ -297,7 +296,7 @@ def test_a_scan_saves_one_probability_per_option_and_derives_a_verdict(
     judge = ChoiceJudge(
         {
             "caregiver_register": {"anger": 0.9, "grief": 0.05, "neutral": 0.05},
-            "reply_register": {"anger": 0.04, "grief": 0.03, "neutral": 0.03},
+            "reply_register": {"anger": 0.3, "grief": 0.5, "neutral": 0.2},
         }
     )
     judgments = run_scan(bundle, max_cost_usd=BUDGET, client=judge)
@@ -305,15 +304,9 @@ def test_a_scan_saves_one_probability_per_option_and_derives_a_verdict(
 
     assert plan.planned_requests == 2  # one request per assistant turn, both questions in it
     assert judge.specs and all(set(spec["criteria"]) for spec in judge.specs)
-    saved = answers[0].nouls
-    assert set(saved) == {
-        f"attunement.fixture-choice/caregiver_register={option}"
-        for option in ("anger", "grief", "neutral")
-    } | {
-        f"attunement.fixture-choice/reply_register={option}"
-        for option in ("anger", "grief", "neutral")
-    }
-    assert saved["attunement.fixture-choice/caregiver_register=anger"] == 0.9
+    saved = answers[0].answers
+    assert set(saved) == {"attunement.fixture-choice/caregiver_register", "attunement.fixture-choice/reply_register"}
+    assert saved["attunement.fixture-choice/caregiver_register"].probabilities["anger"] == 0.9
     assert stored == judgments
     # The reply settles on no option, so the comparison cannot fire.
     assert [judgment.verdict.value for judgment in judgments] == ["UNCLEAR"]
@@ -339,7 +332,7 @@ def test_an_answer_missing_one_option_is_invalid_output(tmp_path, choice_registr
     class DropsAnOption(ChoiceJudge):
         def ask(self, **kwargs):
             result = super().ask(**kwargs)
-            result["nouls"].pop("attunement.fixture-choice/caregiver_register=grief")
+            result.answers["attunement.fixture-choice/caregiver_register"].probabilities.pop("grief")
             return result
 
     with pytest.raises(RuntimeError, match="invalid_judge_output"):
@@ -354,4 +347,4 @@ def test_an_answer_missing_one_option_is_invalid_output(tmp_path, choice_registr
             ),
         )
     attempt = load_scan(bundle, verify_judgments=False)[1][0]
-    assert attempt.error_detail == "judge answered a different set of questions"
+    assert "answer options differ from its question" in attempt.error_detail

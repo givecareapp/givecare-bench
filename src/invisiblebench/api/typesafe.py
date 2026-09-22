@@ -1,124 +1,107 @@
-"""The judge model client: one request of yes/no questions over one turn."""
+"""TypeSafe transport and the request/answer contract shared by every judge caller."""
 
 from __future__ import annotations
 
+import math
 import os
 from typing import Any
+
+import httpx2
+from typesafe_sdk import (
+    Answer,
+    ChoiceAnswer,
+    NoulAnswer,
+    ScoreAnswer,
+    SystemOneResponse,
+    TypeSafeClient,
+)
 
 from invisiblebench.api.client import cost_tracker
 
 DEFAULT_JUDGE_MODEL = "jev-1.13.0"
 JUDGE_PRICE_PER_MTOK_INPUT = 0.042
 JUDGE_PRICING: dict[str, float] = {DEFAULT_JUDGE_MODEL: JUDGE_PRICE_PER_MTOK_INPUT}
-# Observed on saved scans: about 4.3 UTF-8 bytes per billed token. Three keeps the estimate above cost.
 ESTIMATED_BYTES_PER_TOKEN = 3
 API_KEY_ENV = "TYPESAFE_API_KEY"
+USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0"
 
 
 def estimated_cost(model: str, request_bytes: int) -> float | None:
-    """A conservative dry-run estimate from the request payload size."""
     price = JUDGE_PRICING.get(model)
-    if price is None:
-        return None
-    return request_bytes / ESTIMATED_BYTES_PER_TOKEN / 1_000_000 * price
+    return None if price is None else request_bytes / ESTIMATED_BYTES_PER_TOKEN / 1_000_000 * price
 
 
 def request_cost(model: str, input_tokens: int) -> float:
+    if model not in JUDGE_PRICING:
+        raise ValueError(f"no pricing is known for judge model: {model}")
     return input_tokens / 1_000_000 * JUDGE_PRICING[model]
 
 
-class SystemOneClient:
-    """Thin wrapper over the TypeSafe SDK. Output tokens are free; only input is billed."""
+def validate_answers(answers: dict[str, Answer], questions: dict[str, Any]) -> None:
+    """Validate both live responses and retained records against their frozen questions."""
+    if set(answers) != set(questions):
+        raise ValueError("judge answered a different set of questions")
+    for key, spec in questions.items():
+        answer = answers[key]
+        if answer.type != spec.get("type", "noul"):
+            raise ValueError(f"{key}: answer type differs from its question")
+        if isinstance(answer, NoulAnswer):
+            values = [answer.noul]
+        else:
+            options = spec["criteria"]
+            expected = set(options) if isinstance(options, dict) else set(range(len(options)))
+            if set(answer.probabilities) != expected:
+                raise ValueError(f"{key}: answer options differ from its question")
+            values = [*answer.probabilities.values(), answer.confidence]
+            if not math.isclose(sum(answer.probabilities.values()), 1, abs_tol=0.001):
+                raise ValueError(f"{key}: choice probabilities must sum to one")
+            if isinstance(answer, ChoiceAnswer) and (
+                answer.choice not in expected
+                or answer.probabilities[answer.choice] != max(answer.probabilities.values())
+            ):
+                raise ValueError(f"{key}: selected choice must have the largest probability")
+            if isinstance(answer, ScoreAnswer) and not math.isfinite(answer.score):
+                raise ValueError(f"{key}: score must be finite")
+        if any(not math.isfinite(value) or not 0 <= value <= 1 for value in values):
+            raise ValueError(f"{key}: probabilities must lie in [0, 1]")
 
-    def __init__(self, api_key: str | None = None, timeout: float = 60.0):
-        import httpx2
-        from typesafe_sdk import TypeSafeClient
 
+class InvalidJudgeOutput(ValueError):
+    def __init__(self, message: str, response: SystemOneResponse):
+        super().__init__(message)
+        self.response = response
+
+
+class SystemOneClient(TypeSafeClient):
+    def __init__(
+        self, api_key: str | None = None, timeout: float = 60.0,
+        *, http_client: httpx2.Client | None = None,
+    ):
         key = api_key or os.environ.get(API_KEY_ENV)
         if not key:
             raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
-        def set_user_agent(request: httpx2.Request) -> None:
-            # The SDK overwrites constructor headers when it builds each request.
-            request.headers["User-Agent"] = "OpenAI File Downloader, XaiImageApiFetch/1.0"
+        transport = http_client or httpx2.Client(timeout=timeout)
 
-        self._client = TypeSafeClient(
-            api_key=key,
-            timeout=timeout,
-            http_client=httpx2.Client(
-                timeout=timeout, event_hooks={"request": [set_user_agent]}
-            ),
-        )
+        def user_agent(request: httpx2.Request) -> None:
+            request.headers["User-Agent"] = USER_AGENT
 
-    def ask(self, *, model: str, state: Any, questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Return {"model", "nouls", "input_tokens"}; raises on transport failure.
+        transport.event_hooks["request"].append(user_agent)
+        super().__init__(api_key=key, timeout=timeout, http_client=transport)
 
-        `nouls` is the ledger's probability map. A noul question contributes its
-        own key; a choice question contributes one key per option,
-        `<question>=<option>`, holding that option's probability.
-        """
-        if any(spec.get("type", "noul") not in {"noul", "choice"} for spec in questions.values()):
-            raise ValueError("ledger questions must use noul or choice")
-        response = self.ask_typed(
-            model=model, state=state,
-            questions={key: {"type": "noul", **spec} for key, spec in questions.items()},
-        )
-        nouls: dict[str, float] = {}
-        for key, spec in questions.items():
-            answer = response["answers"][key]
-            if spec.get("type") == "choice":
-                for option in spec["criteria"]:
-                    nouls[f"{key}={option}"] = float(answer["probabilities"][option])
-                continue
-            nouls[key] = answer["noul"]
-        return {"model": response["model"], "nouls": nouls, "input_tokens": response["input_tokens"]}
-
-    def ask_typed(
-        self, *, model: str, state: Any, questions: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:
-        """One request mixing noul, choice, and score questions.
-
-        Each `questions[key]` is `{"type": "noul" | "choice" | "score",
-        "instructions": ..., "criteria": ...}`. A noul's criteria is an
-        optional `{"true": ..., "false": ...}` map, unlike `ask`'s bare
-        instructions. A choice's criteria maps each option to its
-        description; a score's criteria is an ordered list of level
-        descriptions, one per level from zero.
-
-        Returns `{"model", "answers", "input_tokens"}`. Each `answers[key]`
-        keeps its question's `"type"` plus that type's fields: noul answers
-        carry `"noul"`; choice answers carry `"choice"`, `"probabilities"`,
-        `"confidence"`; score answers carry `"score"`, `"probabilities"`,
-        `"confidence"`. Raises on transport failure or an unknown type.
-        """
+    def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         cost_tracker.ensure_budget_available()
-        for spec in questions.values():
-            kind = spec["type"]
-            if kind not in {"noul", "choice", "score"}:
-                raise ValueError(f"unknown question type: {kind!r}")
-        response = self._client.system_one(model=model, state=state, questions=questions)
-        input_tokens = int(response.usage.input_tokens)
-        # Bill before reading the answers: a malformed response still cost money.
-        cost_tracker.record(model, input_tokens, 0, actual_cost=request_cost(model, input_tokens))
-
-        answers: dict[str, Any] = {}
-        for key, spec in questions.items():
-            kind = spec["type"]
-            if kind == "noul":
-                answers[key] = {"type": "noul", "noul": float(response.nouls[key].noul)}
-            elif kind == "choice":
-                choice = response.choices[key]
-                answers[key] = {
-                    "type": "choice",
-                    "choice": choice.choice,
-                    "probabilities": dict(choice.probabilities),
-                    "confidence": float(choice.confidence),
-                }
-            else:
-                score = response.scores[key]
-                answers[key] = {
-                    "type": "score",
-                    "score": float(score.score),
-                    "probabilities": dict(score.probabilities),
-                    "confidence": float(score.confidence),
-                }
-        return {"model": response.model, "answers": answers, "input_tokens": input_tokens}
+        request_cost(model, 0)
+        response = self.system_one(model=model, state=state, questions=questions)
+        cost_tracker.record(
+            model, response.usage.input_tokens or 0, 0,
+            actual_cost=request_cost(model, response.usage.input_tokens or 0),
+        )
+        try:
+            validate_answers(response.answers, questions)
+            if response.model != model:
+                raise ValueError("returned judge differs from the requested model")
+            if response.usage.input_tokens is None:
+                raise ValueError("judge did not report input usage")
+        except ValueError as exc:
+            raise InvalidJudgeOutput(str(exc), response) from exc
+        return response

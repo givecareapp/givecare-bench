@@ -137,11 +137,12 @@ class ChoiceJudge:
     """Answer each choice question with a flat distribution over its options."""
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> dict[str, Any]:
-        nouls = {}
+        from typesafe_sdk import ChoiceAnswer, SystemOneResponse, Usage
+        answers = {}
         for key, spec in questions.items():
-            share = 1.0 / len(spec["criteria"])
-            nouls.update({f"{key}={option}": share for option in spec["criteria"]})
-        return {"model": model, "nouls": nouls, "input_tokens": 100}
+            values = dict.fromkeys(spec["criteria"], 1.0 / len(spec["criteria"]))
+            answers[key] = ChoiceAnswer(choice=next(iter(values)), probabilities=values, confidence=0.0)
+        return SystemOneResponse(model=model, answers=answers, usage=Usage(input_tokens=100))
 
 
 def test_a_choice_question_reports_one_row_per_option(tmp_path, monkeypatch, capsys):

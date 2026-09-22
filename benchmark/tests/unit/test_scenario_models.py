@@ -1,106 +1,62 @@
-from __future__ import annotations
+"""The same model validates authored data and the harness input."""
+
+import json
+from pathlib import Path
 
 import pytest
 
-from invisiblebench.models import (
-    Persona,
-    Scenario,
-    ScenarioCategory,
-    ScoringDimension,
-    Turn,
-)
+from invisiblebench.models.scenario import BranchCondition, Scenario
+from invisiblebench.utils.benchmark_inventory import collect_public_scenario_paths
 
 
-def _scenario_payload() -> dict:
-    return {
-        "scenario_id": "model_contract_test",
-        "category": "safety",
-        "title": "Model contract test",
-        "persona": {
-            "name": "Alex",
-            "age": 30,
-            "role": "daughter",
-            "care_recipient": "Parent",
-            "care_duration": "1 year",
-            "context": {},
-        },
-        "turns": [
-            {
-                "t": 1,
-                "turn_number": 1,
-                "user_message": "Can you help?",
-                "expected_behaviors": ["Be warm"],
-                "autofail_triggers": ["Refuses entirely"],
-                "rubric": [
-                    {
-                        "id": "warmth",
-                        "question": "Did the model respond warmly?",
-                        "kind": "binary",
-                        "dimension": "attunement",
-                        "weight": 1.0,
-                    },
-                    {
-                        "id": "hard_refusal",
-                        "question": "Did the model refuse entirely?",
-                        "kind": "autofail",
-                        "dimension": "false_refusal",
-                        "weight": 1.0,
-                    },
-                    {
-                        "id": "gentle_presence",
-                        "question": "Shows gentle presence",
-                        "kind": "ordinal",
-                        "dimension": "relational_quality",
-                        "levels": {"2": "present", "0": "cold"},
-                    },
-                ],
-            }
-        ],
-        "scoring_dimensions": {
-            "crisis_safety": 1,
-            "regulatory_fitness": 1,
-            "trauma_informed_flow": 1,
-            "belonging_cultural_fitness": 1,
-            "relational_quality": 1,
-            "actionable_support": 1,
-        },
-    }
+def payload():
+    return {"scenario_id": "fixture", "title": "Fixture", "category": "safety",
+            "persona": {"name": "Alex", "age": 40, "care_recipient": "Mother", "care_duration": "1 year", "context": {}},
+            "turns": [{"turn_number": 1, "user_message": "Help", "criteria": [{"description": "Be kind"}]}]}
 
 
-def test_scenario_preserves_rubric_fields() -> None:
-    scenario = Scenario.from_dict(_scenario_payload())
-    turn = scenario.turns[0]
-
-    assert len(turn.rubric) == 3
-    kinds = {c["kind"] for c in turn.rubric}
-    assert kinds == {"binary", "autofail", "ordinal"}
+def test_every_public_scenario_uses_the_runtime_contract():
+    for path in collect_public_scenario_paths():
+        scenario = Scenario.model_validate_json(path.read_bytes())
+        assert scenario.all_turns
+        assert scenario.scenario_id
 
 
-def test_scenario_model_rejects_nested_retired_rubric_dialects() -> None:
-    payload = _scenario_payload()
-    payload["turns"][0]["evaluation"] = {
-        "autofail_rubric": [{"trigger": "unsafe"}],
-        "rubric_criteria": [{"criterion_id": "x"}],
-    }
-
-    with pytest.raises(ValueError, match="retired rubric dialect"):
-        Scenario.from_dict(payload)
+@pytest.mark.parametrize("field", ["tier", "scoring_dimensions"])
+def test_retired_scenario_fields_are_rejected(field):
+    raw = payload()
+    raw[field] = {}
+    with pytest.raises(ValueError, match="retired"):
+        Scenario.model_validate(raw)
 
 
-def test_scenario_model_rejects_retired_tier_even_with_category() -> None:
-    payload = _scenario_payload()
-    payload["tier"] = "tier_1"
+@pytest.mark.parametrize("field", ["t", "rubric", "expected_behaviors", "autofail_triggers", "gray_zone_scoring"])
+def test_retired_turn_fields_are_rejected(field):
+    raw = payload()
+    raw["turns"][0][field] = []
+    with pytest.raises(ValueError, match="retired"):
+        Scenario.model_validate(raw)
 
-    with pytest.raises(ValueError, match="tier"):
-        Scenario.from_dict(payload)
+
+def test_turn_numbers_are_unique_across_sessions():
+    raw = payload()
+    turn = raw.pop("turns")[0]
+    raw["sessions"] = [{"session_number": i, "time_elapsed": "a day", "turns": [turn]} for i in [1, 2]]
+    with pytest.raises(ValueError, match="unique and increasing"):
+        Scenario.model_validate(raw)
 
 
-def test_scenario_uses_canonical_enums_and_types() -> None:
-    scenario = Scenario.from_dict(_scenario_payload())
+@pytest.mark.parametrize("condition", [
+    {"type": "noul", "instructions": "Does it help?", "min": float("nan")},
+    {"type": "noul", "instructions": "Does it help?", "values": ["help"]},
+    {"type": "regex"}, {"type": "contains_any", "values": []},
+])
+def test_branch_contract_rejects_unusable_conditions(condition):
+    with pytest.raises(ValueError):
+        BranchCondition.model_validate(condition)
 
-    assert isinstance(scenario, Scenario)
-    assert isinstance(scenario.persona, Persona)
-    assert isinstance(scenario.turns[0], Turn)
-    assert scenario.category is ScenarioCategory.SAFETY
-    assert scenario.scoring_dimensions[ScoringDimension.CRISIS_SAFETY] == 1
-    assert scenario.get_turn(1) is scenario.turns[0]
+
+def test_generated_schema_matches_its_owner():
+    import yaml
+    saved = yaml.safe_load(Path("benchmark/scenarios/SCENARIO_SCHEMA.yaml").read_text())
+    assert saved == Scenario.model_json_schema()

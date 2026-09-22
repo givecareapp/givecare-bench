@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-import requests
 from dotenv import load_dotenv
 
 from invisiblebench.models._types import ChatMessage
@@ -245,15 +244,6 @@ class ModelAPIClient:
         self.base_url = base_url
         self.headers = {"Authorization": f"Bearer {api_key}", "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0", **extra_headers}
 
-        self.session = requests.Session()
-        self.session.headers.update(self.headers)
-        adapter = requests.adapters.HTTPAdapter(
-            pool_connections=self.config.pool_maxsize,
-            pool_maxsize=self.config.pool_maxsize,
-        )
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
-
     @staticmethod
     def _format_request_error(exc: Exception) -> str:
         detail = str(exc)
@@ -321,49 +311,6 @@ class ModelAPIClient:
             "model": model,
             "raw": data,
         }
-
-    def call_model(
-        self,
-        model: str,
-        messages: list[ChatMessage],
-        temperature: float = 0.7,
-        max_tokens: int = 2000,
-        **kwargs,
-    ) -> dict[str, Any]:
-        """Call a model and return response text, token counts, and latency."""
-        start_time = time.time()
-        payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
-
-        for attempt in range(self.config.max_retries):
-            try:
-                cost_tracker.ensure_budget_available()
-                response = self.session.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    timeout=self.config.timeout,
-                )
-                response.raise_for_status()
-
-                data = response.json()
-                result = self._parse_response(data, model, start_time)
-                return result
-
-            except requests.exceptions.RequestException as e:
-                error_detail = self._format_request_error(e)
-                status_code = getattr(getattr(e, "response", None), "status_code", None)
-                if status_code == 402:
-                    raise InsufficientCreditsError(
-                        "OpenRouter account has insufficient credits. "
-                        "Add credits at https://openrouter.ai/settings/credits"
-                    ) from e
-                if attempt < self.config.max_retries - 1:
-                    time.sleep(self.config.retry_delay * (attempt + 1))
-                    continue
-                raise RuntimeError(
-                    f"Failed to call model {model} after {self.config.max_retries} attempts: {error_detail}"
-                ) from e
-
-        raise RuntimeError(f"Failed to call model {model}")
 
     async def call_model_async(
         self,
