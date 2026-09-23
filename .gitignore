@@ -103,7 +103,9 @@ adapters/
 
 # Private workspace integrations and their tests
 /evidence-driver.json
-/.givecare/
+/.givecare/*
+!/.givecare/module.json
+!/.givecare/projection-driver.json
 /scripts/bench_watch.py
 /scripts/evidence_driver.py
 /scripts/sync_evals_projection.py

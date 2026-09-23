@@ -1,0 +1,32 @@
+{
+  "schema_version": "givecare.module/v1",
+  "repository": "gc-bench",
+  "modules": [
+    {
+      "id": "bench.publish",
+      "authority": {"kind": "git", "ref": "src/invisiblebench/scoring.py"},
+      "truth": [
+        {"kind": "leaderboard", "ref": "data/leaderboard/leaderboard.json"},
+        {"kind": "projection", "ref": "data/releases/web-bench-release.tar.gz"}
+      ],
+      "verifiers": ["uv run pytest benchmark/tests/unit/test_public_projection.py -q"],
+      "capabilities": [
+        {
+          "name": "benchmark.web-release.project",
+          "effect": "write",
+          "gate": "none",
+          "adapter": {
+            "kind": "evidence-operation",
+            "ref": ".givecare/projection-driver.json#corpus.project"
+          },
+          "accepts": ["gc-bench.web-benchmark-release.input/v3"],
+          "emits": [
+            "safety-care/v3",
+            "gc-bench.web-benchmark-release/v3",
+            "givecare.artifact-ref/v1"
+          ]
+        }
+      ]
+    }
+  ]
+}
