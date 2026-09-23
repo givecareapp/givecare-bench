@@ -202,6 +202,9 @@ def main(argv=None):
         return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
 
     models = [m.model_dump() for m in MODELS_FULL]
+    if args.full and args.models:
+        print("--full runs the whole roster; drop it to run only -m SPEC.", file=sys.stderr)
+        return 1
     if not args.full:
         if not args.models:
             print("No model selected. Use --full or -m SPEC.\n")

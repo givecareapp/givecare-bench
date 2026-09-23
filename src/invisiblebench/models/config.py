@@ -27,25 +27,26 @@ class ModelConfig(BaseModel):
 #   Small (3)     — edge-class open models (safety floor, what breaks first?)
 #
 # Exact IDs and list prices verified against OpenRouter on 2026-07-10.
-# Grok 4.5 is excluded because xAI rejects it in the benchmark run region;
-# Grok 4.3 is the newest xAI model that passes the live transcript canary.
+# US-closed frontier IDs and prices refreshed on 2026-09-23.
+# Grok 4.5 was excluded because xAI rejected it in the benchmark run region;
+# Grok 4.7 has not yet passed the live transcript canary.
 #
 MODELS_FULL = [
     # ── Frontier ──
     # US closed
     ModelConfig(
-        id="openai/gpt-5.6-sol",
-        name="GPT-5.6 Sol",
+        id="openai/gpt-6-sol",
+        name="GPT-6 Sol",
         provider="openrouter",
-        cost_per_m_input=5.00,
-        cost_per_m_output=30.00,
+        cost_per_m_input=2.00,
+        cost_per_m_output=10.00,
     ),
     ModelConfig(
-        id="anthropic/claude-fable-5",
-        name="Claude Fable 5",
+        id="anthropic/claude-opus-5.5",
+        name="Claude Opus 5.5",
         provider="openrouter",
-        cost_per_m_input=10.00,
-        cost_per_m_output=50.00,
+        cost_per_m_input=4.00,
+        cost_per_m_output=20.00,
     ),
     ModelConfig(
         id="google/gemini-3.1-pro-preview",
@@ -55,11 +56,11 @@ MODELS_FULL = [
         cost_per_m_output=12.00,
     ),
     ModelConfig(
-        id="x-ai/grok-4.3",
-        name="Grok 4.3",
+        id="x-ai/grok-4.7",
+        name="Grok 4.7",
         provider="openrouter",
-        cost_per_m_input=1.25,
-        cost_per_m_output=2.50,
+        cost_per_m_input=1.60,
+        cost_per_m_output=4.80,
     ),
     # China closed
     ModelConfig(

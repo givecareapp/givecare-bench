@@ -462,6 +462,18 @@ def test_legacy_inline_score_flag_is_removed(capsys) -> None:
     assert "legacy-inline-score" in capsys.readouterr().err
 
 
+def test_full_and_models_together_are_rejected(monkeypatch, capsys) -> None:
+    def fail_run(**_: Any) -> int:
+        raise AssertionError("run_benchmark must not start")
+
+    monkeypatch.setattr(run_command_mod, "run_benchmark", fail_run)
+
+    rc = runner_mod.main(["--full", "-m", "openai/gpt-6-sol", "--dry-run"])
+
+    assert rc == 1
+    assert "--full runs the whole roster" in capsys.readouterr().err
+
+
 def test_runs_flag_is_removed(capsys) -> None:
     with pytest.raises(SystemExit) as exc:
         runner_mod.main(["-m", "1", "--runs=3", "--dry-run"])

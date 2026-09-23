@@ -5,10 +5,10 @@ from __future__ import annotations
 from invisiblebench.models.config import MODELS_FULL
 
 EXPECTED_ROSTER = {
-    "openai/gpt-5.6-sol": (5.0, 30.0),
-    "anthropic/claude-fable-5": (10.0, 50.0),
+    "openai/gpt-6-sol": (2.0, 10.0),
+    "anthropic/claude-opus-5.5": (4.0, 20.0),
     "google/gemini-3.1-pro-preview": (2.0, 12.0),
-    "x-ai/grok-4.3": (1.25, 2.5),
+    "x-ai/grok-4.7": (1.6, 4.8),
     "moonshotai/kimi-k2.6": (0.66, 3.41),
     "minimax/minimax-m3": (0.3, 1.2),
     "deepseek/deepseek-v4-pro": (0.435, 0.87),
@@ -24,7 +24,7 @@ EXPECTED_ROSTER = {
 
 
 def test_full_roster_matches_live_catalog_snapshot() -> None:
-    """Keep live-canary IDs and list prices aligned as of 2026-07-10."""
+    """Keep live-canary IDs and list prices aligned as of 2026-07-10; US-closed frontier refreshed 2026-09-23."""
     actual = {
         model.id: (model.cost_per_m_input, model.cost_per_m_output)
         for model in MODELS_FULL
