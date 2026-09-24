@@ -1,7 +1,15 @@
-"""Deterministic public projection driver; private intake is a separate local tool."""
+"""Deterministic public projection: a plain script, not a driver protocol.
+
+Private intake is a separate local tool. This module owns `corpus.project`:
+it reads a bound scan bundle and a generated candidate leaderboard, reproves
+them against current, complete evidence, and atomically writes the committed
+public projection. Run it directly with `python -m invisiblebench.projection`;
+there is no request envelope, plan/execute handshake, or external runner.
+"""
 
 from __future__ import annotations
 
+import argparse
 import gzip
 import hashlib
 import io
@@ -18,7 +26,6 @@ from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.version import BENCHMARK_VERSION
 
 ROOT = get_project_root()
-RESPONSE_SCHEMA = "hound.driver.response.v1"
 MAX_PROJECTION_BYTES = 2_000_000
 WEB_RELEASE_VERSION = f"v{BENCHMARK_VERSION}"
 WEB_RELEASE_ARTIFACT = Path("data/releases/web-bench-release.tar.gz")
@@ -43,27 +50,6 @@ def _sha256(data: bytes) -> str:
 
 def _json_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
-
-
-def _response(
-    *,
-    ok: bool,
-    outcome: str,
-    data_schema: str,
-    data: dict[str, Any],
-    diagnostics: list[str] | None = None,
-    artifacts: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    return {
-        "schema_version": RESPONSE_SCHEMA,
-        "ok": ok,
-        "outcome": outcome,
-        "data_schema": data_schema,
-        "data": data,
-        "artifacts": artifacts or [],
-        "proofs": [],
-        "diagnostics": diagnostics or [],
-    }
 
 
 def _repo_path(value: Any, *, field: str, root: Path) -> Path:
@@ -355,58 +341,91 @@ def _web_release_outputs(payload: Any, *, root: Path) -> tuple[dict[Path, bytes]
     return outputs, result
 
 
-def handle(request: dict[str, Any]) -> dict[str, Any]:
-    mode = request.get("mode")
-    if mode == "check":
-        return _response(
-            ok=True,
-            outcome="completed",
-            data_schema="gc-bench.hound.check/v1",
-            data={"protocol": "hound.protocol.v1"},
+def project_web_release(
+    payload: dict[str, Any], *, root: Path = ROOT, dry_run: bool = False
+) -> dict[str, Any]:
+    """Compute the `corpus.project` outputs and, unless `dry_run`, write them.
+
+    Reuses the same hash-bound reads (`_read_bound_file`), the same deterministic
+    QA recomputation (`check_leaderboard`), and the same atomic, digest-verified,
+    rollback-on-failure write (`_write_outputs`) that the projection has always
+    used. The only thing removed is the external plan/execute request envelope:
+    this function is called directly, once, by the CLI below.
+    """
+    outputs, result = _web_release_outputs(payload, root=root)
+    effects = [_effect(path, outputs[path], root=root) for path in sorted(outputs)]
+    written: list[str] = []
+    if not dry_run and outputs:
+        _write_outputs(outputs, effects, root=root)
+        written = sorted(p.relative_to(root).as_posix() for p in outputs)
+    outcome = "dry-run" if dry_run else ("completed" if outputs else "no-change")
+    return {**result, "outcome": outcome, "expected_effects": effects, "written": written}
+
+
+def _bound_input(
+    *, bundle: Path, leaderboard: Path, root: Path, learning_lineage: dict[str, Any] | None
+) -> dict[str, Any]:
+    from invisiblebench.judge import LEDGER_FILE, PLAN_FILE
+
+    payload: dict[str, Any] = {
+        "schema_version": "gc-bench.web-benchmark-release.input/v3",
+        "bundle_path": bundle.relative_to(root).as_posix(),
+        "plan_sha256": _sha256((bundle / PLAN_FILE).read_bytes()),
+        "judgments_sha256": _sha256((bundle / LEDGER_FILE).read_bytes()),
+        "leaderboard_path": leaderboard.relative_to(root).as_posix(),
+        "leaderboard_sha256": _sha256(leaderboard.read_bytes()),
+    }
+    if learning_lineage is not None:
+        payload["learning_lineage"] = learning_lineage
+    return payload
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Compute and write the public gc-bench web-release projection "
+            "(data/leaderboard/leaderboard.json and the release archive) from "
+            "a complete, current scan bundle and its generated candidate "
+            "leaderboard. Strict QA and the publication currency gate run "
+            "on every call."
         )
-    if mode not in {"plan", "execute"}:
-        raise DriverError(f"unsupported mode: {mode!r}")
-    if request.get("operation") != "corpus.project":
-        raise DriverError(f"unsupported operation: {request.get('operation')!r}")
-    outputs, result = _web_release_outputs(request.get("input"), root=ROOT)
-    effects = [_effect(path, outputs[path], root=ROOT) for path in sorted(outputs)]
-    artifacts = [result["release"]]
-    if mode == "plan":
-        return _response(
-            ok=True,
-            outcome="planned",
-            data_schema=RELEASE_SCHEMA,
-            data={**result, "expected_effects": effects},
-            artifacts=artifacts,
-        )
-    plan = request.get("driver_plan")
-    if not isinstance(plan, dict) or plan.get("expected_effects") != effects:
-        raise DriverError("execute does not match the approved deterministic plan")
-    _write_outputs(outputs, effects, root=ROOT)
-    return _response(
-        ok=True,
-        outcome="completed" if outputs else "no-change",
-        data_schema=RELEASE_SCHEMA,
-        artifacts=artifacts,
-        data={**result, "written": sorted(p.relative_to(ROOT).as_posix() for p in outputs)},
+    )
+    parser.add_argument(
+        "--bundle", required=True, type=Path, help="Scan bundle directory, e.g. results/<run-id>"
+    )
+    parser.add_argument(
+        "--leaderboard",
+        type=Path,
+        help="Candidate leaderboard path (default: <bundle>/leaderboard.candidate.json)",
+    )
+    parser.add_argument(
+        "--learning-lineage", type=Path, help="Optional learning_lineage JSON file to attach"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute and print the projection without writing repository files",
+    )
+    args = parser.parse_args(argv)
+
+    root = ROOT
+    bundle = args.bundle if args.bundle.is_absolute() else root / args.bundle
+    leaderboard = args.leaderboard or (bundle / "leaderboard.candidate.json")
+    if not leaderboard.is_absolute():
+        leaderboard = root / leaderboard
+    learning_lineage = (
+        json.loads(args.learning_lineage.read_text()) if args.learning_lineage else None
     )
 
-
-def main() -> int:
     try:
-        request = json.load(sys.stdin)
-        if not isinstance(request, dict):
-            raise DriverError("request must be an object")
-        response = handle(request)
-    except (DriverError, json.JSONDecodeError, OSError, UnicodeError, ValueError) as error:
-        response = _response(
-            ok=False,
-            outcome="failed",
-            data_schema="gc-bench.hound.error/v1",
-            data={},
-            diagnostics=[f"gc-bench driver: {error}"],
+        payload = _bound_input(
+            bundle=bundle, leaderboard=leaderboard, root=root, learning_lineage=learning_lineage
         )
-    json.dump(response, sys.stdout, ensure_ascii=False, sort_keys=True)
+        result = project_web_release(payload, root=root, dry_run=args.dry_run)
+    except (DriverError, OSError, ValueError) as error:
+        print(f"gc-bench projection: {error}", file=sys.stderr)
+        return 1
+    json.dump(result, sys.stdout, ensure_ascii=False, sort_keys=True, indent=2)
     sys.stdout.write("\n")
     return 0
 

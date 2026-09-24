@@ -1,16 +1,12 @@
 {
-  "schema_version": "hound.driver.v1",
+  "schema_version": "givecare.evidence-driver/v1",
   "id": "gc-bench-projection",
-  "protocol": "hound.protocol.v1",
   "owner": {"repo": "."},
   "exec": ["uv", "run", "--frozen", "python", "-B", "-m", "invisiblebench.projection"],
-  "run_root": ".evidence/runs",
   "write_scopes": [
     "data/leaderboard/leaderboard.json",
     "data/releases/web-bench-release.tar.gz"
   ],
-  "env_allowlist": [],
-  "timeouts_seconds": {"default": 60},
   "capabilities": {
     "corpus.project": {"effect": "write", "gate": "none"}
   }
