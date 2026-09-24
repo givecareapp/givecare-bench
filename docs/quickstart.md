@@ -85,9 +85,10 @@ private. Archive complete run directories under `results/archive/`.
 
 ## Prepare a public projection
 
-The public contract is `.givecare/module.json`. Its single capability uses
-`.givecare/projection-driver.json` and the packaged `invisiblebench.projection`
-module. Projection needs no provider key or private workspace adapter.
+The public contract is `.givecare/module.json`. Its single capability points at
+the packaged `invisiblebench.projection` module, a plain script. It writes only
+`data/leaderboard/leaderboard.json` and the web release archive.
+Projection needs no provider key or private workspace adapter.
 
 Generate and check a candidate from a complete current-contract scan:
 
@@ -97,38 +98,34 @@ uv run python scripts/qa_leaderboard.py --scan results/<run-id> \
   --leaderboard results/<run-id>/leaderboard.candidate.json
 ```
 
-Save this request as `/tmp/bench-project.json`. Replace the paths and SHA-256
-digests with those of the retained scan and generated candidate:
-
-```json
-{
-  "mode": "plan",
-  "operation": "corpus.project",
-  "input": {
-    "schema_version": "gc-bench.web-benchmark-release.input/v3",
-    "bundle_path": "results/<run-id>",
-    "plan_sha256": "<SHA-256 of scan_plan.json>",
-    "judgments_sha256": "<SHA-256 of judgments.jsonl>",
-    "leaderboard_path": "results/<run-id>/leaderboard.candidate.json",
-    "leaderboard_sha256": "<SHA-256 of leaderboard.candidate.json>"
-  }
-}
-```
+Compute the projection first with `--dry-run` to inspect what would change:
 
 ```bash
 uv run python -m invisiblebench.projection \
-  < /tmp/bench-project.json > /tmp/bench-project-plan.json
+  --bundle results/<run-id> \
+  --leaderboard results/<run-id>/leaderboard.candidate.json \
+  --dry-run
 ```
 
-Require `ok: true` and inspect `data.expected_effects`. To execute, use the
-same request with `mode: "execute"` and the response's complete `data` object
-as `driver_plan`. Both modes run strict QA against the bound scan. Source
-runs must have complete current coverage and matching code and transcript
-policy. Changed inputs require a new plan.
+The script binds the plan, judgments, and candidate leaderboard by SHA-256,
+computed directly from the files at the given paths, and rejects a source run
+that is incomplete, not current (mismatched benchmark, checks, or judge
+settings), or has a dirty or missing `git_sha`. Changed inputs are re-hashed
+on the next run automatically.
 
-Execution replaces `data/leaderboard/leaderboard.json` and
-`data/releases/web-bench-release.tar.gz`. The archive contains only the
-aggregate leaderboard and its member manifest. It excludes conversations,
+Inspect `expected_effects` in the dry-run output, then execute for real by
+dropping `--dry-run`:
+
+```bash
+uv run python -m invisiblebench.projection \
+  --bundle results/<run-id> \
+  --leaderboard results/<run-id>/leaderboard.candidate.json
+```
+
+This replaces `data/leaderboard/leaderboard.json` and
+`data/releases/web-bench-release.tar.gz` with an atomic, digest-verified write
+(refuses symlinks, rolls back on partial failure). The archive contains only
+the aggregate leaderboard and its member manifest. It excludes conversations,
 judge answers, and private intake. Review and commit these outputs before a
 consumer reads them by exact commit. This command does not push or deploy.
 

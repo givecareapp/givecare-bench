@@ -16,8 +16,8 @@
           "effect": "write",
           "gate": "none",
           "adapter": {
-            "kind": "evidence-operation",
-            "ref": ".givecare/projection-driver.json#corpus.project"
+            "kind": "script",
+            "ref": "src/invisiblebench/projection.py"
           },
           "accepts": ["gc-bench.web-benchmark-release.input/v3"],
           "emits": [

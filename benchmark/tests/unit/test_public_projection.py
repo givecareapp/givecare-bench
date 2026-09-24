@@ -1,4 +1,4 @@
-"""Public projection works without the private workspace driver."""
+"""Public projection is a plain script; it works without a private workspace driver."""
 
 from __future__ import annotations
 
@@ -27,31 +27,23 @@ def test_public_contract_declares_only_projection() -> None:
     (capability,) = declaration["modules"][0]["capabilities"]
     assert capability["name"] == "benchmark.web-release.project"
     assert capability["adapter"] == {
-        "kind": "evidence-operation",
-        "ref": ".givecare/projection-driver.json#corpus.project",
+        "kind": "script",
+        "ref": "src/invisiblebench/projection.py",
     }
-    manifest = json.loads((ROOT / ".givecare/projection-driver.json").read_text())
-    assert manifest["capabilities"] == {"corpus.project": {"effect": "write", "gate": "none"}}
-    assert manifest["write_scopes"] == [
-        "data/leaderboard/leaderboard.json",
-        "data/releases/web-bench-release.tar.gz",
-    ]
-    assert "scripts/evidence_driver.py" not in json.dumps(manifest)
+    assert capability["effect"] == "write" and capability["gate"] == "none"
+    assert not (ROOT / ".givecare/projection-driver.json").exists()
 
 
-def test_module_entrypoint_refuses_private_intake() -> None:
-    for request, accepted in [
-        ({"mode": "check"}, True),
-        ({"mode": "plan", "operation": "corpus.apply"}, False),
-    ]:
-        result = subprocess.run(
-            [sys.executable, "-B", "-m", "invisiblebench.projection"],
-            input=json.dumps(request),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        assert json.loads(result.stdout)["ok"] is accepted
+def test_cli_rejects_a_bundle_that_is_not_bound_and_complete(tmp_path) -> None:
+    bundle = tmp_path / "results" / "missing-run"
+    result = subprocess.run(
+        [sys.executable, "-B", "-m", "invisiblebench.projection", "--bundle", str(bundle)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert "gc-bench projection:" in result.stderr
 
 
 def test_current_scan_projects_with_real_qa_and_keeps_decisions_private(monkeypatch, tmp_path):
@@ -65,15 +57,20 @@ def test_current_scan_projects_with_real_qa_and_keeps_decisions_private(monkeypa
         "leaderboard_path": paths["leaderboard"].relative_to(tmp_path).as_posix(),
         "leaderboard_sha256": sha(paths["leaderboard"].read_bytes()),
     }
-    request = {"operation": "corpus.project", "input": payload, "mode": "plan"}
-    first = projection.handle(request)
-    assert projection.handle(request) == first
-    with pytest.raises(projection.DriverError, match="approved deterministic plan"):
-        projection.handle({**request, "mode": "execute", "driver_plan": {}})
-    result = projection.handle({**request, "mode": "execute", "driver_plan": first["data"]})
-    assert result["ok"] and result["outcome"] == "completed"
+    dry = projection.project_web_release(payload, root=tmp_path, dry_run=True)
+    assert dry["outcome"] == "dry-run"
+    assert dry["written"] == []
+    assert not (tmp_path / "data/leaderboard/leaderboard.json").exists()
+
+    first = projection.project_web_release(payload, root=tmp_path)
+    assert first["outcome"] == "completed"
+    second = projection.project_web_release(payload, root=tmp_path)
+    assert second["outcome"] == "no-change"
+    assert second["written"] == []
+    assert second["release"] == first["release"]
+
     release = tmp_path / "data/releases/web-bench-release.tar.gz"
-    assert sha(release.read_bytes()) == first["artifacts"][0]["sha256"]
+    assert sha(release.read_bytes()) == first["release"]["sha256"]
     with tarfile.open(release, "r:gz") as archive:
         assert set(archive.getnames()) == {"leaderboard.json", "release-manifest.json"}
         public_bytes = archive.extractfile("leaderboard.json").read()
@@ -88,14 +85,37 @@ def test_current_scan_projects_with_real_qa_and_keeps_decisions_private(monkeypa
                 "sha256": sha(public_bytes),
             }
         ]
-    assert projection.handle(request)["data"]["expected_effects"] == []
+    assert projection.project_web_release(payload, root=tmp_path)["expected_effects"] == []
+
     from invisiblebench.judge import load_scan
 
     plan = load_scan(paths["scan"])[0]
     source_manifest = paths["scan"] / plan.sources[0].manifest.path
     source_manifest.write_bytes(source_manifest.read_bytes() + b"\n")
     with pytest.raises(projection.DriverError, match="Publication QA failed"):
-        projection.handle(request)
+        projection.project_web_release(payload, root=tmp_path)
+
+
+def test_bound_input_computes_matching_digests_and_schema(tmp_path) -> None:
+    from invisiblebench.judge import LEDGER_FILE, PLAN_FILE
+
+    bundle = tmp_path / "results" / "run-1"
+    bundle.mkdir(parents=True)
+    (bundle / PLAN_FILE).write_bytes(b'{"plan":true}\n')
+    (bundle / LEDGER_FILE).write_bytes(b'{"judgment":true}\n')
+    leaderboard = bundle / "leaderboard.candidate.json"
+    leaderboard.write_bytes(b'{"leaderboard":true}\n')
+
+    payload = projection._bound_input(
+        bundle=bundle, leaderboard=leaderboard, root=tmp_path, learning_lineage=None
+    )
+    assert payload["schema_version"] == "gc-bench.web-benchmark-release.input/v3"
+    assert payload["bundle_path"] == "results/run-1"
+    assert payload["leaderboard_path"] == "results/run-1/leaderboard.candidate.json"
+    assert payload["plan_sha256"] == sha((bundle / PLAN_FILE).read_bytes())
+    assert payload["judgments_sha256"] == sha((bundle / LEDGER_FILE).read_bytes())
+    assert payload["leaderboard_sha256"] == sha(leaderboard.read_bytes())
+    assert "learning_lineage" not in payload
 
 
 def test_writer_preserves_before_bytes_on_failed_exchange(monkeypatch, tmp_path):
