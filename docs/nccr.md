@@ -126,12 +126,15 @@ benchmark.
 | InvisibleBench, this pilot | ● five-turn conversations; every check sees all turns | ● relational and recipient-harm checks | ● an unmet required behavior fails | ● memory-claim, crisis-decay, retraction, and false-record checks exist; this run is one session with no memory, so they did not fire | ● judgments derive from saved probabilities by code | ○ no human labels | this page |
 | K-Bench (2026) | ● "200 multi-turn vignettes" | ○ not documented in the abstract | ◐ "risk exploration" is scored; rubric not public | ○ | ○ frozen GPT-4o judge | ● "94.2% exact agreement with clinician consensus" | [arXiv:2609.15855](https://arxiv.org/abs/2609.15855) |
 | HealthBench (2025) | ● single response to a multi-turn context, mean 2.6 turns | ◐ personas include "a loved one" | ◐ an unmet positive criterion earns nothing; no negative points for omission | ○ | ○ GPT-4.1 grader | ● macro-F1 0.709 against physician labels | [arXiv:2505.08775](https://arxiv.org/abs/2505.08775) |
+| MentalHealthBench (2026) | ◐ grades the reply to the final user turn; "on the surface, a single-turn eval" | ◐ caregiver is one of four user profiles, about 4.9% of tasks | ◐ an unmet positive criterion earns nothing; negative criteria penalize harmful behavior that occurs | ◐ 70 tasks (5.8%) supply prior user context | ○ GPT-5.6 Sol grader, four sampled replies per task | ○ rubrics are written and adjudicated by licensed experts; grader agreement with experts is not reported | [paper](https://cdn.openai.com/ctf-cdn/MentalHealthBench_A_Comprehensive_Benchmark_of_AI_Capabilities_in_Realistic_Mental_Health_Conversations.pdf) |
 | CARE-Bench (2026) | ● "dynamic multi-turn interactions" with expert-guided simulated clients | ○ | ○ scales for relationship, empathy, and skills; omission not documented | ○ | ○ GPT-4o scores dialogue histories | ● 0.72 consistency with two psychologists on 100 dialogues | [arXiv:2511.09407](https://arxiv.org/html/2511.09407v1) · [AAAI 2026](https://doi.org/10.1609/aaai.v40i46.41287) |
 | RubRIX (2026) | ○ one caregiver post, one reply; "turns" are refinement passes | ● Q2 patient harm, Q3 third-person harm | ● Inattention: "miss or fail to respond" | ○ | ○ GPT-5-nano auditor | ◐ 88.7% agreement with three coauthors on 150 items; clinician review qualitative | [arXiv:2601.13235](https://arxiv.org/abs/2601.13235) |
 | CounselBench (2025) | ○ single-turn by design | ○ | ○ | ○ | ○ experts rate; LLM judges shown to overrate | ● the labels are the experts | [arXiv:2506.08584](https://arxiv.org/abs/2506.08584) |
 | Single-turn safety and knowledge sets | ○ | ○ | ○ | ○ | ● scored against answer keys or a fixed classifier | — | [SafetyBench](https://arxiv.org/abs/2309.07045) · [HarmBench](https://arxiv.org/abs/2402.04249) · [EQ-Bench](https://arxiv.org/abs/2312.06281) · [ADRD-Bench](https://github.com/IIRL-ND/ADRD-Bench) |
 
-Read on September 20, 2026. Corrections welcome at the address above.
+Read on September 20, 2026. MentalHealthBench was released on September 23 and
+added from its paper on September 25, 2026; it is not on the printed board.
+Corrections welcome at the address above.
 
 ## Method and source
 
