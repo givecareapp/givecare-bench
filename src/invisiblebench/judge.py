@@ -369,7 +369,6 @@ def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) 
     turns = scenario.all_turns
     if len(transcript) != 2 * len(turns):
         raise ValueError("transcript does not hold exactly one reply per authored turn")
-    prev_assistant: str | None = None
     for index, turn in enumerate(turns):
         user_entry, assistant_entry = transcript[2 * index], transcript[2 * index + 1]
         if (
@@ -391,13 +390,12 @@ def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) 
                 raise ValueError(f"transcript turn {turn.turn_number} does not match its script")
         else:
             branch = next((b for b in turn.branches if b.branch_id == branch_id), None)
-            if branch is None or content != branch.user_message or prev_assistant is None:
+            if branch is None or content != branch.user_message or index == 0:
                 raise ValueError(f"transcript turn {turn.turn_number} took an invalid branch")
         for entry in (user_entry, assistant_entry):
             resolved = entry.get("resolved_model_id")
             if resolved is not None and resolved != model_id:
                 raise ValueError(f"transcript turn {turn.turn_number} resolved a different model")
-        prev_assistant = assistant_entry.get("content")
 
 
 def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
