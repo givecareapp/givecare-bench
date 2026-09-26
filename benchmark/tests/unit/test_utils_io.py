@@ -79,3 +79,27 @@ def test_benchmark_version_single_source_of_truth() -> None:
 
     assert BENCHMARK_VERSION == inventory["benchmark_version"]
     assert BENCHMARK_VERSION == card["benchmark_details"]["version"]
+
+
+def test_the_project_root_is_the_checkout_that_holds_the_benchmark(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """An installed wheel carries only code; it must not adopt another project's root."""
+    from invisiblebench.utils import benchmark_inventory
+    from invisiblebench.utils.benchmark_inventory import get_project_root
+
+    other = tmp_path / "other-project"
+    (other / ".venv" / "site-packages" / "invisiblebench").mkdir(parents=True)
+    (other / "pyproject.toml").write_text('[project]\nname = "other"\n')
+    installed = other / ".venv" / "site-packages" / "invisiblebench" / "module.py"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(benchmark_inventory, "__file__", str(installed))
+    with pytest.raises(FileNotFoundError, match="checkout"):
+        get_project_root()
+
+    checkout = tmp_path / "gc-bench"
+    (checkout / "checks").mkdir(parents=True)
+    (checkout / "benchmark").mkdir()
+    (checkout / "benchmark" / "benchmark_inventory.json").write_text("{}")
+    monkeypatch.chdir(checkout / "benchmark")
+    assert get_project_root() == checkout

@@ -14,7 +14,7 @@ from typesafe_sdk import Answer as TypedAnswer
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, validate_answers
 from invisiblebench.evaluation import rules
-from invisiblebench.evaluation.check_registry import CHECKS_DIR, load_checks
+from invisiblebench.evaluation.check_registry import default_checks_dir, load_checks
 from invisiblebench.judge import PLAN_FILE, plan_questions, run_questions
 from invisiblebench.models.scan import (
     Check,
@@ -231,13 +231,14 @@ def main() -> int:
     parser.add_argument(
         "command", choices=["verify", "plan", "refresh"], nargs="?", default="verify"
     )
-    parser.add_argument("--root", type=Path, default=CHECKS_DIR)
+    parser.add_argument("--root", type=Path, default=None)
     parser.add_argument("--only")
     parser.add_argument("--model", default=DEFAULT_JUDGE_MODEL)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--plan", type=Path)
     parser.add_argument("--max-cost-usd", type=float)
     args = parser.parse_args()
+    args.root = args.root or default_checks_dir()
     checks = load_checks(args.root)
     if args.command == "plan":
         if args.output is None:

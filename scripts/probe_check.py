@@ -21,7 +21,7 @@ from invisiblebench.models.scan import QuestionPlan, RequestTask
 
 
 def plan_probe(check_id: str, transcripts: list[Path], output: Path, *, model=DEFAULT_JUDGE_MODEL):
-    paths = list(check_registry.CHECKS_DIR.rglob(f"{check_id}.yaml"))
+    paths = list(check_registry.default_checks_dir().rglob(f"{check_id}.yaml"))
     if len(paths) != 1:
         raise ValueError(f"unknown check: {check_id}")
     check = load_check(paths[0])

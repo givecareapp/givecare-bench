@@ -81,7 +81,7 @@ def plan_lint(paths, output, *, model=DEFAULT_JUDGE_MODEL):
     for check_id in set().union(*(set(item.scenario.eligible_modes) for item in loaded)):
         check = checks[check_id]
         relative = f"{check.layer}/{check.dimension}/{check.id}.yaml"
-        sources[f"inputs/checks/{relative}"] = check_registry.CHECKS_DIR / relative
+        sources[f"inputs/checks/{relative}"] = check_registry.default_checks_dir() / relative
     return plan_questions(output, lint_tasks(loaded, checks), model=model, sources=sources)
 
 

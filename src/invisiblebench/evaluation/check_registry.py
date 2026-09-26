@@ -8,8 +8,14 @@ from pathlib import Path
 import yaml
 
 from invisiblebench.models.scan import Check, CheckDefinition
+from invisiblebench.utils.benchmark_inventory import get_project_root
 
-CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
+# None reads the checkout's checks/; tests point it at fixtures.
+CHECKS_DIR: Path | None = None
+
+
+def default_checks_dir() -> Path:
+    return CHECKS_DIR or get_project_root() / "checks"
 
 
 def load_check(path: Path) -> Check:
@@ -26,7 +32,7 @@ def load_check(path: Path) -> Check:
 
 
 def load_checks(checks_dir: Path | None = None) -> dict[str, Check]:
-    root = checks_dir or CHECKS_DIR
+    root = checks_dir or default_checks_dir()
     paths = sorted(path for path in root.rglob("*.yaml") if not path.name.startswith("_"))
     if not paths:
         raise FileNotFoundError(f"No checks found under {root}")

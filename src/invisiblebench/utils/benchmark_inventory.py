@@ -30,12 +30,23 @@ def scenario_category_for_path(
 
 
 def get_project_root(start: Path | None = None) -> Path:
-    """Find the project root (where pyproject.toml lives)."""
-    current = (start or Path(__file__)).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    return Path.cwd()
+    """The InvisibleBench checkout: the nearest ancestor holding its checks and inventory.
+
+    The benchmark runs from a source checkout; an installed wheel carries only
+    code. Search from `start`, else from this module and then the working
+    directory. Another project's pyproject.toml is never a root.
+    """
+    origins = [start] if start is not None else [Path(__file__), Path.cwd()]
+    for origin in origins:
+        current = origin.resolve()
+        for parent in (current, *current.parents):
+            if (parent / "checks").is_dir() and (
+                parent / "benchmark" / "benchmark_inventory.json"
+            ).is_file():
+                return parent
+    raise FileNotFoundError(
+        "No InvisibleBench checkout found: run bench from a clone of the repository."
+    )
 
 
 def inventory_path(project_root: Path | None = None) -> Path:
