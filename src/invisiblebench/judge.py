@@ -52,8 +52,10 @@ from invisiblebench.models.scan import (
     SourceRun,
     TranscriptSource,
 )
+from invisiblebench.models.scenario import Scenario
 from invisiblebench.utils.benchmark_inventory import (
     collect_public_scenario_ids,
+    collect_public_scenario_paths,
     get_benchmark_version,
     get_project_root,
 )
@@ -346,8 +348,61 @@ def _current_plan(plan: ScanPlan) -> None:
         raise ValueError("plan differs from the current benchmark, checks, or judge settings")
 
 
+def _public_scenarios() -> dict[str, Scenario]:
+    """Load every public scenario, keyed by its runtime id, for execution checks."""
+    scenarios = {}
+    for path in collect_public_scenario_paths():
+        scenario = Scenario.model_validate_json(path.read_bytes())
+        scenarios[scenario.scenario_id] = scenario
+    return scenarios
+
+
+def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) -> None:
+    """Reject anything but a genuine, unbroken run of `scenario` by `model_id`.
+
+    Accepts only a transcript whose entries are exactly the scenario's
+    authored turns, in order: one user turn and one non-blank, untruncated,
+    error-free assistant reply per turn, numbered to match, with user text
+    following the default path or one authored branch. A recorded resolved
+    model that differs from `model_id` is also rejected.
+    """
+    turns = scenario.all_turns
+    if len(transcript) != 2 * len(turns):
+        raise ValueError("transcript does not hold exactly one reply per authored turn")
+    prev_assistant: str | None = None
+    for index, turn in enumerate(turns):
+        user_entry, assistant_entry = transcript[2 * index], transcript[2 * index + 1]
+        if (
+            user_entry.get("role") != "user"
+            or user_entry.get("turn") != turn.turn_number
+            or assistant_entry.get("role") != "assistant"
+            or assistant_entry.get("turn") != turn.turn_number
+        ):
+            raise ValueError(f"transcript is out of order at turn {turn.turn_number}")
+        if user_entry.get("error") or assistant_entry.get("error"):
+            raise ValueError(f"transcript turn {turn.turn_number} carries an error marker")
+        if not str(assistant_entry.get("content") or "").strip():
+            raise ValueError(f"transcript turn {turn.turn_number} has a blank assistant reply")
+        if assistant_entry.get("truncated"):
+            raise ValueError(f"transcript turn {turn.turn_number} reply is truncated")
+        branch_id, content = user_entry.get("branch_id"), user_entry.get("content")
+        if branch_id is None:
+            if content != turn.user_message:
+                raise ValueError(f"transcript turn {turn.turn_number} does not match its script")
+        else:
+            branch = next((b for b in turn.branches if b.branch_id == branch_id), None)
+            if branch is None or content != branch.user_message or prev_assistant is None:
+                raise ValueError(f"transcript turn {turn.turn_number} took an invalid branch")
+        for entry in (user_entry, assistant_entry):
+            resolved = entry.get("resolved_model_id")
+            if resolved is not None and resolved != model_id:
+                raise ValueError(f"transcript turn {turn.turn_number} resolved a different model")
+        prev_assistant = assistant_entry.get("content")
+
+
 def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
     expected = set(collect_public_scenario_ids())
+    public_scenarios = _public_scenarios()
     by_model: dict[str, set[str]] = {}
     contracts = set()
     for source in plan.sources:
@@ -399,6 +454,11 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
                 or (parent / item["transcript_path"]).as_posix() != transcript.path
             ):
                 raise ValueError("transcript identity differs from the retained source summary")
+            scenario = public_scenarios.get(transcript.scenario_id)
+            if scenario is not None:
+                verify_execution(
+                    _transcript(_read_ref(bundle, transcript)), scenario, transcript.model_id
+                )
             by_model.setdefault(transcript.model_id, set()).add(transcript.scenario_id)
     if len(contracts) != 1 or any(scenarios != expected for scenarios in by_model.values()):
         raise ValueError(

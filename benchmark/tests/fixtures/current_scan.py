@@ -10,6 +10,7 @@ from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.judge import plan_scan, run_scan
+from invisiblebench.models.scenario import Scenario
 from invisiblebench.scoring import generate_leaderboard
 from invisiblebench.utils.benchmark_inventory import collect_public_scenario_paths, get_project_root
 from invisiblebench.utils.manifest import generate_manifest
@@ -20,6 +21,31 @@ TRANSCRIPT = (
     '{"role":"user","turn":2,"content":"Thank you."}\n'
     '{"role":"assistant","turn":2,"content":"Of course."}\n'
 )
+
+
+def _scripted_transcript(scenario: Scenario) -> str:
+    """A genuine, unbranched, default-path run of every authored turn.
+
+    Publication now verifies that a source transcript actually executed its
+    scenario (`invisiblebench.judge.verify_execution`), so a fixture standing
+    in for a real scan must replay each turn's authored user text in order
+    rather than a generic placeholder exchange.
+    """
+    lines = []
+    for turn in scenario.all_turns:
+        lines.append(
+            json.dumps({"role": "user", "turn": turn.turn_number, "content": turn.user_message})
+        )
+        lines.append(
+            json.dumps(
+                {
+                    "role": "assistant",
+                    "turn": turn.turn_number,
+                    "content": "Standard support response.",
+                }
+            )
+        )
+    return "\n".join(lines) + "\n"
 
 
 def judge_response(
@@ -68,21 +94,20 @@ def write_source_run(
     source_run = root / "source-run"
     transcripts = source_run / "transcripts"
     transcripts.mkdir(parents=True)
+    scenarios: dict[str, Scenario] = {}
     if roster is None:
         roster = []
         for path in collect_public_scenario_paths():
-            data = json.loads(path.read_bytes())
-            roster.append(
-                (
-                    data.get("id") or data.get("scenario_id") or path.stem,
-                    data.get("category") or path.parent.name,
-                )
-            )
+            scenario = Scenario.model_validate_json(path.read_bytes())
+            scenarios[scenario.scenario_id] = scenario
+            roster.append((scenario.scenario_id, scenario.category.value))
     entries = []
     for index, model_id in enumerate(model_ids):
         for scenario_id, category in sorted(roster):
             relative = f"transcripts/{index}-{scenario_id}.jsonl"
-            (source_run / relative).write_text(TRANSCRIPT)
+            scenario = scenarios.get(scenario_id)
+            content = _scripted_transcript(scenario) if scenario is not None else TRANSCRIPT
+            (source_run / relative).write_text(content)
             entries.append(
                 {
                     "model": f"Fixture Model {index}",

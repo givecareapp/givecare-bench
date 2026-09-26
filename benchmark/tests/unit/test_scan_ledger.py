@@ -18,7 +18,9 @@ from invisiblebench.judge import (
     plan_scan,
     replay_scan,
     run_scan,
+    verify_execution,
 )
+from invisiblebench.models.scenario import Persona, Scenario
 
 # The fixture judge bills a round cent per request, well above the plan's own
 # estimate, so paid tests approve a budget instead of the estimate.
@@ -352,3 +354,166 @@ def test_an_answer_missing_one_option_is_invalid_output(tmp_path, choice_registr
         )
     attempt = load_scan(bundle, verify_judgments=False)[1][0]
     assert "answer options differ from its question" in attempt.error_detail
+
+
+# --- F2: publication proves execution, not just roster completeness ----------
+
+PERSONA = Persona(
+    name="Jamie", age=41, care_recipient="Mother", care_duration="two years", context={}
+)
+
+
+def _scenario(**turn_overrides: Any) -> Scenario:
+    """A two-turn scenario; turn 2 branches on the assistant's first reply."""
+    default_turn_2: dict[str, Any] = {
+        "turn_number": 2,
+        "user_message": "How are you?",
+        "branches": [
+            {
+                "branch_id": "no_ack",
+                "condition": {"type": "contains_any", "values": ["no ack"]},
+                "user_message": "You didn't even acknowledge me.",
+            }
+        ],
+    }
+    default_turn_2.update(turn_overrides)
+    return Scenario(
+        scenario_id="fixture_execution_001",
+        title="Execution Fixture",
+        persona=PERSONA,
+        category="context",
+        turns=[{"turn_number": 1, "user_message": "Hello there"}, default_turn_2],
+    )
+
+
+def _valid_transcript() -> list[dict[str, Any]]:
+    return [
+        {"role": "user", "turn": 1, "content": "Hello there"},
+        {"role": "assistant", "turn": 1, "content": "Hi, glad you're here."},
+        {"role": "user", "turn": 2, "content": "How are you?"},
+        {"role": "assistant", "turn": 2, "content": "Doing well, thanks for asking."},
+    ]
+
+
+def test_verify_execution_accepts_a_genuine_default_path_run():
+    verify_execution(_valid_transcript(), _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_wrong_user_text():
+    transcript = _valid_transcript()
+    transcript[2]["content"] = "Something the scenario never authored."
+    with pytest.raises(ValueError, match="does not match its script"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_missing_reply():
+    transcript = _valid_transcript()[:3]  # drop the closing assistant turn
+    with pytest.raises(ValueError, match="exactly one reply per authored turn"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_blank_reply():
+    transcript = _valid_transcript()
+    transcript[1]["content"] = "   "
+    with pytest.raises(ValueError, match="blank assistant reply"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_out_of_order_entries():
+    transcript = _valid_transcript()
+    transcript[0], transcript[1] = transcript[1], transcript[0]
+    with pytest.raises(ValueError, match="out of order"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_an_error_marker():
+    transcript = _valid_transcript()
+    transcript[1]["error"] = True
+    with pytest.raises(ValueError, match="error marker"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_truncated_reply():
+    transcript = _valid_transcript()
+    transcript[3]["truncated"] = True
+    with pytest.raises(ValueError, match="truncated"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_resolved_model_mismatch():
+    transcript = _valid_transcript()
+    transcript[3]["resolved_model_id"] = "some-other/model"
+    with pytest.raises(ValueError, match="resolved a different model"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_an_invalid_branch_path():
+    transcript = _valid_transcript()
+    transcript[2]["content"] = "You didn't even acknowledge me."
+    transcript[2]["branch_id"] = "not-an-authored-branch"
+    with pytest.raises(ValueError, match="invalid branch"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_accepts_a_valid_branch_path():
+    transcript = _valid_transcript()
+    transcript[2]["content"] = "You didn't even acknowledge me."
+    transcript[2]["branch_id"] = "no_ack"
+    verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_branch_taken_on_the_opening_turn():
+    """The opening turn has no prior assistant reply, so it cannot branch."""
+    scenario = Scenario(
+        scenario_id="fixture_execution_002",
+        title="Execution Fixture",
+        persona=PERSONA,
+        category="context",
+        turns=[
+            {
+                "turn_number": 1,
+                "user_message": "Hello there",
+                "branches": [
+                    {
+                        "branch_id": "cannot_happen",
+                        "condition": {"type": "contains_any", "values": ["x"]},
+                        "user_message": "This can never be reached first.",
+                    }
+                ],
+            }
+        ],
+    )
+    transcript = [
+        {
+            "role": "user",
+            "turn": 1,
+            "content": "This can never be reached first.",
+            "branch_id": "cannot_happen",
+        },
+        {"role": "assistant", "turn": 1, "content": "Reply."},
+    ]
+    with pytest.raises(ValueError, match="invalid branch"):
+        verify_execution(transcript, scenario, "fixture/model")
+
+
+def test_publication_rejects_a_roster_complete_bundle_of_unexecuted_transcripts(tmp_path):
+    """Auditor's reproduction (F2): a complete roster of identical greetings, plus
+    one assistant-only truncated transcript, must never pass publication QA even
+    though the source manifest and summary list every public scenario for every
+    model. Offline inspection of the same bundle keeps working."""
+    from invisiblebench.scoring import build_scorecard
+    from invisiblebench.utils.benchmark_inventory import collect_public_scenario_paths
+
+    roster = [
+        (Scenario.model_validate_json(path.read_bytes()).scenario_id, path.parent.name)
+        for path in collect_public_scenario_paths()
+    ]
+    source = write_source_run(tmp_path, roster=roster)  # identical greeting per scenario
+    corrupted = next((source / "transcripts").glob("*.jsonl"))
+    corrupted.write_text('{"role":"assistant","turn":1,"content":"[cut off","truncated":true}\n')
+    bundle = tmp_path / "scan"
+    plan_scan([source], bundle)
+    run_scan(bundle, max_cost_usd=BUDGET, client=FixtureJudge())
+    assert build_scorecard(bundle, publication=False)  # offline inspection is unaffected
+    with pytest.raises(ValueError):
+        build_scorecard(bundle, publication=True)
