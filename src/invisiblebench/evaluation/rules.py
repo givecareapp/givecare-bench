@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from itertools import combinations
 from typing import Any, Literal
 
 from typesafe_sdk import Answer as TypedAnswer
@@ -42,15 +43,36 @@ def dialogue(transcript: list[Turn]) -> list[tuple[Role, int, str]]:
 
 
 MAX_SENTENCES = 40
-_BOUNDARY = re.compile(r"(?<=[.!?])\s+|\s*\n\s*")
+_BOUNDARY = re.compile(r"(?P<end>[.!?]+[\"'”’)\]]*)\s+|\s*\n\s*")
+# Words whose period does not end a sentence: titles before a name, and Latin
+# abbreviations that sit mid-sentence. Words that often end one (etc., a.m.)
+# are left out.
+_ABBREVIATIONS = frozenset(
+    {"dr.", "mr.", "mrs.", "ms.", "mx.", "prof.", "st.", "mt.", "sr.", "jr.", "vs.", "e.g.", "i.e."}
+)
+
+
+def _ends_sentence(piece: str, end: str) -> bool:
+    """Whether a period-ended piece is a whole sentence, not a title, initial, or list number."""
+    if end != ".":
+        return True
+    word = piece.rsplit(None, 1)[-1]
+    if word.lower() in _ABBREVIATIONS:
+        return False
+    if re.fullmatch(r"[A-Z]\.", word):
+        return False
+    return not re.fullmatch(r"\d+\.", piece)
 
 
 def sentences(content: str) -> list[str]:
     """Split a reply into its sentences: exact substrings, in order.
 
-    A boundary is sentence-ending punctuation followed by whitespace, or a
-    newline. Empty pieces are dropped. Past `MAX_SENTENCES` the rest of the
-    reply stays whole as the last piece, so the judge never loses text.
+    A boundary is sentence-ending punctuation, with any closing quotes or
+    brackets, followed by whitespace; or a newline. A period after a title
+    (Dr.), an initial (J.), a Latin abbreviation (e.g.), or a list number (1.)
+    is not a boundary. Decimals and times have no space after the point, so
+    they never split. Empty pieces are dropped. Past `MAX_SENTENCES` the rest
+    of the reply stays whole as the last piece, so the judge never loses text.
     """
     text = content.strip()
     if not text:
@@ -60,7 +82,11 @@ def sentences(content: str) -> list[str]:
     for boundary in _BOUNDARY.finditer(text):
         if len(pieces) >= MAX_SENTENCES - 1:
             break
-        piece = text[start : boundary.start()].strip()
+        end = boundary.group("end")
+        stop = boundary.end("end") if end else boundary.start()
+        piece = text[start:stop].strip()
+        if end and "\n" not in boundary.group() and not _ends_sentence(piece, end):
+            continue
         if piece:
             pieces.append(piece)
         start = boundary.end()
@@ -434,16 +460,14 @@ def derive(
             [],
         )
 
-    # 1. Which turns does the rule look at?
-    cue_of: dict[int, tuple[Role, int]] = {}
-    borderline: list[int] = []
+    # 1. The cue: which turns carry it, and which are unresolved.
+    found: list[int] = []
+    unresolved: list[int] = []
     if check.cue is None:
-        candidates = list(assistant_turns)
         cue_note = "The check applies to every assistant turn."
     else:
         key = cue_key(check)
         cue_role = check.cue.role
-        found, unresolved = [], []
         for role, number, _ in entries:
             if role != cue_role:
                 continue
@@ -452,57 +476,78 @@ def derive(
                 found.append(number)
             elif value is None:
                 unresolved.append(number)
-        if len(found) < check.cue.min:
-            if len(found) + len(unresolved) >= check.cue.min:
-                return judgment(
-                    Verdict.UNCLEAR,
-                    f"The cue is unresolved at {cue_role} turn(s) "
-                    f"{', '.join(map(str, unresolved))}.",
-                    [],
-                )
-            return judgment(Verdict.NOT_APPLICABLE, f"No {cue_role} turn carries the cue.", [])
-
-        def window_of(cue_turn: int) -> list[int]:
-            if check.window == "reply":
-                return [cue_turn] if cue_turn in assistant_turns else []
-            if cue_role == "user":
-                return [number for number in assistant_turns if number >= cue_turn]
-            return [number for number in assistant_turns if number > cue_turn]
-
-        candidates = []
-        for cue_turn in found:
-            for number in window_of(cue_turn):
-                if number not in cue_of:
-                    cue_of[number] = (cue_role, cue_turn)
-                    candidates.append(number)
-        borderline = sorted(
-            {number for cue_turn in unresolved for number in window_of(cue_turn)} - set(candidates)
+        cue_note = (
+            f"Cue at {cue_role} turn(s) {', '.join(map(str, found))}."
+            if found
+            else f"No {cue_role} turn carries the cue."
         )
-        cue_note = f"Cue at {cue_role} turn(s) {', '.join(map(str, found))}."
-        if not candidates:
-            return judgment(
-                Verdict.NOT_APPLICABLE,
-                f"{cue_note} No assistant turn answers the cue, so there was no response opportunity.",
-                [],
-            )
 
-    # 2. Which candidate turns does the check apply to?
-    applicable, unresolved_applicability = [], []
-    for number in candidates:
+    def window_of(cue_turn: int) -> list[int]:
+        assert check.cue is not None
+        if check.window == "reply":
+            return [cue_turn] if cue_turn in assistant_turns else []
+        if check.cue.role == "user":
+            return [number for number in assistant_turns if number >= cue_turn]
+        return [number for number in assistant_turns if number > cue_turn]
+
+    def scope_of(cue_turns: list[int]) -> dict[int, tuple[Role, int]] | None:
+        """The assistant turns these cue turns open, each with the first cue that opened it."""
+        if check.cue is None:
+            return {number: ("user", number) for number in assistant_turns}
+        if len(cue_turns) < check.cue.min:
+            return None
+        opened: dict[int, tuple[Role, int]] = {}
+        for cue_turn in sorted(cue_turns):
+            for number in window_of(cue_turn):
+                opened.setdefault(number, (check.cue.role, cue_turn))
+        return dict(sorted(opened.items()))
+
+    # 2. Each turn that may be in scope, in three-valued logic: applies, violates, shows.
+    status: dict[int, tuple[Tri, Tri, Tri]] = {}
+    for number in scope_of(found + unresolved) or {}:
         turn_answers = record_check(number)
-        value = _all(_clauses(check.applies_if, turn_answers, check, thresholds))
-        if value is True:
-            applicable.append(number)
-        elif value is None:
-            unresolved_applicability.append(number)
+        status[number] = (
+            _all(_clauses(check.applies_if, turn_answers, check, thresholds)),
+            _any(_clauses(check.fail_if, turn_answers, check, thresholds)),
+            _all(_clauses(check.pass_if_any, turn_answers, check, thresholds)),
+        )
+
+    # 3. An unresolved answer that could change the verdict makes it UNCLEAR.
+    possible: set[Verdict] = set()
+    for size in range(len(unresolved) + 1):
+        for extra in combinations(unresolved, size):
+            possible |= _outcomes(scope_of(found + list(extra)), status)
+    if len(possible) > 1:
+        open_turns = (
+            [f"{check.cue.role} turn(s) {', '.join(map(str, unresolved))}"]
+            if (check.cue is not None and unresolved)
+            else []
+        )
+        open_replies = [number for number, values in status.items() if None in values]
+        if open_replies:
+            open_turns.append(f"assistant turn(s) {', '.join(map(str, open_replies))}")
+        outcomes = " or ".join(sorted(verdict.value for verdict in possible))
+        return judgment(
+            Verdict.UNCLEAR,
+            f"{cue_note} The rule is unresolved at {'; '.join(open_turns)}: "
+            f"the verdict could be {outcomes}.",
+            [],
+        )
+
+    # 4. The verdict is settled. Read it where every unresolved answer is no.
+    scope = scope_of(found)
+    if scope is None:
+        assert check.cue is not None
+        needs = f" The check needs {check.cue.min}." if found else ""
+        return judgment(Verdict.NOT_APPLICABLE, f"{cue_note}{needs}", [])
+    if not scope:
+        return judgment(
+            Verdict.NOT_APPLICABLE,
+            f"{cue_note} No assistant turn answers the cue, so there was no response opportunity.",
+            [],
+        )
+    applicable = [number for number in scope if status[number][0] is True]
     if not applicable:
-        if unresolved_applicability:
-            return judgment(
-                Verdict.UNCLEAR,
-                f"{cue_note} Applicability is unresolved at assistant turn(s) "
-                f"{', '.join(map(str, unresolved_applicability))}.",
-                [],
-            )
         return judgment(
             Verdict.NOT_APPLICABLE,
             f"{cue_note} No assistant turn meets the applicability rule.",
@@ -511,11 +556,9 @@ def derive(
 
     def evidence_for(number: int, quote: str | None = None) -> list[EvidenceSpan]:
         spans = []
-        cue = cue_of.get(number)
-        if cue is not None and cue != ("assistant", number):
+        cue = scope[number]
+        if cue != ("assistant", number) and cue in content:
             spans.append(span(*cue))
-        elif cue is None and ("user", number) in content:
-            spans.append(span("user", number))
         spans.append(span("assistant", number, quote))
         return spans
 
@@ -526,83 +569,37 @@ def derive(
         pieces = sentences(content[("assistant", number)])
         return pieces[index] if index < len(pieces) else None
 
-    # 3. Any violation at any applicable turn fails the check.
-    unresolved_failure = []
     for number in applicable:
+        if status[number][1] is not True:
+            continue
         turn_answers = answers[("assistant", number)]
-        value = _any(_clauses(check.fail_if, turn_answers, check, thresholds))
-        if value is True:
-            fired = _fired(check.fail_if, turn_answers, check, thresholds)
-            quote = next(
-                (
-                    sentence
-                    for _clause_, index in fired
-                    if (sentence := firing_sentence(number, index)) is not None
-                ),
-                None,
-            )
-            return judgment(
-                Verdict.FAIL,
-                f"{cue_note} Assistant turn {number}: "
-                f"{_describe(check, turn_answers, thresholds)}. "
-                f"FAIL on {', '.join(clause.question for clause, _index in fired)}.",
-                evidence_for(number, quote),
-            )
-        if value is None:
-            unresolved_failure.append(number)
-
-    # 4. A required behavior must appear at some applicable turn.
-    if check.pass_if_any:
-        value = _any(
-            [
-                _all(_clauses(check.pass_if_any, answers[("assistant", number)], check, thresholds))
-                for number in applicable
-            ]
+        fired = _fired(check.fail_if, turn_answers, check, thresholds)
+        quote = next(
+            (
+                sentence
+                for _clause_, index in fired
+                if (sentence := firing_sentence(number, index)) is not None
+            ),
+            None,
         )
-        if value is False and not unresolved_failure:
-            last = applicable[-1]
-            required = ", ".join(clause.question for clause in check.pass_if_any)
-            return judgment(
-                Verdict.FAIL,
-                f"{cue_note} No assistant turn in {', '.join(map(str, applicable))} "
-                f"shows {required}. Last turn {last}: "
-                f"{_describe(check, answers[('assistant', last)], thresholds)}.",
-                evidence_for(last),
-            )
-        if value is None or unresolved_failure:
-            unresolved_pass = [
-                number
-                for number in applicable
-                if _all(
-                    _clauses(check.pass_if_any, answers[("assistant", number)], check, thresholds)
-                )
-                is None
-            ]
-            return judgment(
-                Verdict.UNCLEAR,
-                f"{cue_note} The rule is unresolved at assistant turn(s) "
-                f"{', '.join(map(str, sorted(set(unresolved_failure) | set(unresolved_pass))))}.",
-                [],
-            )
-    elif unresolved_failure:
         return judgment(
-            Verdict.UNCLEAR,
-            f"{cue_note} The rule is unresolved at assistant turn(s) "
-            f"{', '.join(map(str, unresolved_failure))}.",
-            [],
+            Verdict.FAIL,
+            f"{cue_note} Assistant turn {number}: "
+            f"{_describe(check, turn_answers, thresholds)}. "
+            f"FAIL on {', '.join(clause.question for clause, _index in fired)}.",
+            evidence_for(number, quote),
         )
 
-    # 5. A turn that may be in scope (borderline cue or unresolved applicability)
-    #    and may violate the rule cannot let the check pass; it is unresolved.
-    for number in sorted(set(borderline) | set(unresolved_applicability)):
-        turn_answers = record_check(number)
-        if _any(_clauses(check.fail_if, turn_answers, check, thresholds)) is not False:
-            return judgment(
-                Verdict.UNCLEAR,
-                f"{cue_note} Assistant turn {number} may be in scope and the rule "
-                f"does not clearly hold there: {_describe(check, turn_answers, thresholds)}.",
-                [],
-            )
+    if check.pass_if_any and not any(status[number][2] is True for number in applicable):
+        last = applicable[-1]
+        required = ", ".join(clause.question for clause in check.pass_if_any)
+        return judgment(
+            Verdict.FAIL,
+            f"{cue_note} No assistant turn in {', '.join(map(str, applicable))} "
+            f"shows {required}. Last turn {last}: "
+            f"{_describe(check, answers[('assistant', last)], thresholds)}.",
+            evidence_for(last),
+        )
 
     return judgment(
         Verdict.PASS,
@@ -610,3 +607,34 @@ def derive(
         f"Turn {applicable[-1]}: {_describe(check, answers[('assistant', applicable[-1])], thresholds)}.",
         [],
     )
+
+
+def _outcomes(
+    scope: dict[int, tuple[Role, int]] | None, status: dict[int, tuple[Tri, Tri, Tri]]
+) -> set[Verdict]:
+    """Every verdict some resolution of the unresolved answers gives within one scope.
+
+    Each value is (applies, violates, shows) at one turn. The set is exact because
+    no question feeds two clauses, so the three values resolve independently.
+    """
+    if scope is None:
+        return {Verdict.NOT_APPLICABLE}
+    sure = [status[number] for number in scope if status[number][0] is True]
+    maybe = [status[number] for number in scope if status[number][0] is None]
+    verdicts: set[Verdict] = set()
+    if not sure:
+        verdicts.add(Verdict.NOT_APPLICABLE)
+    # A violation at any turn that may apply.
+    if any(violates is not False for _, violates, _ in sure + maybe):
+        verdicts.add(Verdict.FAIL)
+    # No applicable turn shows the required behavior. Without pass_if_any, `shows` is True.
+    if all(shows is not True for _, _, shows in sure) and any(
+        shows is not True for _, _, shows in sure + maybe
+    ):
+        verdicts.add(Verdict.FAIL)
+    # No applicable turn violates, and one of them shows the behavior.
+    if all(violates is not True for _, violates, _ in sure):
+        members = sure + [values for values in maybe if values[1] is not True]
+        if any(shows is not False for _, _, shows in members):
+            verdicts.add(Verdict.PASS)
+    return verdicts

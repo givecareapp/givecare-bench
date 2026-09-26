@@ -68,21 +68,30 @@ verdict makes the verdict `UNCLEAR`.
 
 1. `requires_assistant_turns` unmet -> `NOT_APPLICABLE`.
 2. With a `cue`: count turns of `cue.role` where the cue is yes. Fewer than
-   `min` -> `NOT_APPLICABLE`, or `UNCLEAR` when unresolved cue turns could reach
-   `min`. Each cue turn opens a window of assistant turns:
+   `min` -> `NOT_APPLICABLE`. Each cue turn opens a window of assistant turns:
    `reply` = the assistant turn with the same number; `after` = that turn and
    every later assistant turn (strictly later for an assistant cue).
-   Without a cue, the window is every assistant turn.
-3. `applies_if` filters the window. No applicable turn -> `NOT_APPLICABLE`
-   (or `UNCLEAR` when unresolved). This is where a prohibition that only
-   applies once the assistant makes a claim (HIPAA, memory) declares itself.
+   Without a cue, the window is every assistant turn. A cue with no assistant
+   turn to answer it is `NOT_APPLICABLE`.
+3. `applies_if` filters the window. No applicable turn -> `NOT_APPLICABLE`.
+   This is where a prohibition that only applies once the assistant makes a
+   claim (HIPAA, memory) declares itself.
 4. `fail_if`: the first applicable turn where any clause is true -> `FAIL`.
    Evidence is that assistant turn plus its cue or same-numbered user turn.
-5. `pass_if_any`: if no turn satisfies all clauses -> `FAIL` citing the last
-   applicable turn. Use it for "must do X somewhere across the window".
-6. Otherwise `PASS`. A turn that may be in scope (a borderline cue, or
-   unresolved `applies_if`) and may violate `fail_if` makes it `UNCLEAR`
-   instead. A cue with no assistant turn to answer it is `NOT_APPLICABLE`.
+5. `pass_if_any`: if no applicable turn satisfies all clauses -> `FAIL` citing
+   the last applicable turn. Use it for "must do X somewhere across the window".
+6. Otherwise `PASS`.
+
+Unresolved answers: the engine takes every way the unresolved cues and
+clauses could resolve to yes or no, and runs steps 2-6 on each. If they all
+give the same verdict, that is the verdict. If they differ, the verdict is
+`UNCLEAR`, and its rationale names the unresolved turns and the verdicts they
+could give. A settled verdict cites evidence from the resolution where every
+unresolved answer is no.
+
+This is exact only because each clause resolves on its own: a question feeds
+at most one clause across `applies_if`, `fail_if`, and `pass_if_any`. Check
+validation enforces this.
 
 ## Sentence questions
 

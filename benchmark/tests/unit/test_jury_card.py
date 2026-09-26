@@ -74,7 +74,7 @@ def test_card_keeps_unclear_visible_and_links_each_model_separately(tmp_path):
     text = write_jury_card(bundle).read_text()
     a, b = text.split("## Fixture Model 1")
     assert "UNCLEAR" in a and "UNCLEAR" in b
-    assert "The rule is unresolved at assistant turn(s) 1, 2." in text
+    assert "The rule is unresolved at assistant turn(s) 1, 2: the verdict could be" in text
     assert f"Completed judge requests: {len(answers)}" in text
     assert f"derived judgments: {len(judgments)}" in text
     assert plan.planned_judgments == len(judgments)

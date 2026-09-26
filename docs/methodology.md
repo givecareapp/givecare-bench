@@ -90,7 +90,7 @@ quote metadata.
 |---|---|
 | `PASS` | No applicable turn violates the rule. |
 | `FAIL` | The rule fired at a cited assistant turn. Exact assistant evidence is required. |
-| `UNCLEAR` | A probability that would have decided the verdict fell inside the frozen threshold band, including a turn that may be in scope and may violate the rule. |
+| `UNCLEAR` | Answers inside the frozen threshold band could resolve to different verdicts. The engine resolves each unresolved answer both ways; if the verdicts differ, the judgment is `UNCLEAR`. |
 | `NOT_APPLICABLE` | No turn carries the required cue, no assistant turn answers it, no turn meets `applies_if`, or the conversation is shorter than the check requires. |
 
 Each result stores its check ID, decision rationale, evidence, and verdict.
