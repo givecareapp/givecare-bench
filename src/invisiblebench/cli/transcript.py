@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 from invisiblebench.api.client import (
     CostBudgetExceededError,
     InsufficientCreditsError,
-    cost_tracker,
 )
 from invisiblebench.cli.result_helpers import (
     _make_error_result,
@@ -105,7 +104,12 @@ async def evaluate_scenario_async(
     async with semaphore:
         scenario_path = Path(scenario["path"])
         scenario_id = scenario_path.stem
-        cost_before = cost_tracker.total
+        # Request-scoped, not a diff against the process-global tracker: with
+        # concurrent scenarios, another scenario's spend can land on the
+        # global total between "before" and "after" reads, so a diff would
+        # attribute someone else's cost here. Summing each call's own
+        # returned cost keeps this scenario's figure isolated.
+        scenario_cost = 0.0
         if not scenario_path.exists():
             return _make_error_result(
                 model,
@@ -180,6 +184,7 @@ async def evaluate_scenario_async(
                             temperature=TRANSCRIPT_TEMPERATURE,
                             max_tokens=MAX_REPLY_TOKENS,
                         )
+                        scenario_cost += response.get("cost") or 0.0
                         assistant_msg = response["response"] or ""
                         if assistant_msg.strip():
                             break
@@ -238,17 +243,16 @@ async def evaluate_scenario_async(
         except (CostBudgetExceededError, InsufficientCreditsError):
             raise  # Abort immediately — propagate to runner
         except Exception as e:
-            actual_cost = cost_tracker.total - cost_before
             return _make_error_result(
                 model,
                 scenario["name"],
                 scenario_id,
                 scenario["category"],
                 f"Transcript generation failed: {e}",
-                cost=actual_cost,
+                cost=scenario_cost,
             )
 
-        actual_cost = cost_tracker.total - cost_before
+        actual_cost = scenario_cost
         result = _make_transcript_result(
             model=model,
             scenario_name=scenario["name"],

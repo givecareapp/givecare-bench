@@ -266,6 +266,13 @@ def _write_transcript_run_summary(
         "actual_billable_api_calls": cost_snapshot["calls"],
         "actual_cost_by_model_usd": cost_snapshot["by_model"],
         "runtime_cost_ceiling_usd": cost_snapshot["max_cost_usd"],
+        # actual_cost_usd is a known-cost total (reported + estimated). Any
+        # unknown_calls_with_uncosted_usd are counted above in
+        # actual_billable_api_calls but contribute $0 here — they are not
+        # priced into the total, not folded in as a false zero.
+        "actual_reported_cost_usd": cost_snapshot["reported_total"],
+        "actual_estimated_cost_usd": cost_snapshot["estimated_total"],
+        "unknown_calls_with_uncosted_usd": cost_snapshot["unknown_calls"],
         "resolved_model_ids": sorted(
             {model_id for result in ready for model_id in result.get("resolved_model_ids") or []}
         ),

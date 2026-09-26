@@ -30,24 +30,131 @@ _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "openai/gpt-5-mini": (0.25, 2.00),
 }
 
+# A conservative token estimate for pre-dispatch reservations: real payloads
+# run above four characters per billed token, so dividing by a smaller
+# divisor keeps the reservation an upper bound, not a guess that undershoots.
+_CHARS_PER_TOKEN_RESERVE_ESTIMATE = 3
+
+
+def register_model_pricing(model: str, cost_per_m_input: float, cost_per_m_output: float) -> None:
+    """Register per-token pricing for a model outside the built-in catalog.
+
+    Lets callers with their own price list (e.g. the judge client, priced
+    only on input tokens) share the one cost tracker's reserve/settle path
+    instead of reimplementing it.
+    """
+    _MODEL_PRICING[model] = (cost_per_m_input, cost_per_m_output)
+
+
+def _lookup_model_pricing(model: str) -> tuple[float, float] | None:
+    pricing = _MODEL_PRICING.get(model)
+    if pricing is not None:
+        return pricing
+    try:
+        from invisiblebench.models.config import MODELS_FULL
+
+        for m in MODELS_FULL:
+            _MODEL_PRICING[m.id] = (m.cost_per_m_input, m.cost_per_m_output)
+    except ImportError:
+        return None
+    return _MODEL_PRICING.get(model)
+
+
+def estimate_request_reservation(model: str, messages: list[Any], max_tokens: int) -> float | None:
+    """An upper-bound dollar estimate for a not-yet-dispatched chat request.
+
+    Returns ``None`` when the model has no known pricing — the caller decides
+    whether an unknown-cost dispatch is acceptable.
+    """
+    pricing = _lookup_model_pricing(model)
+    if pricing is None:
+        return None
+    prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
+    prompt_tokens_estimate = math.ceil(prompt_chars / _CHARS_PER_TOKEN_RESERVE_ESTIMATE)
+    return (prompt_tokens_estimate / 1_000_000) * pricing[0] + (
+        max_tokens / 1_000_000
+    ) * pricing[1]
+
 
 class CostTracker:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._total: float = 0.0
+        self._reported_total: float = 0.0
+        self._estimated_total: float = 0.0
         self._calls: int = 0
+        self._unknown_calls: int = 0
         self._by_model: dict[str, float] = {}
         self._max_cost_usd: float | None = None
+        self._reserved: float = 0.0
+        self._next_token: int = 0
+        self._reservations: dict[int, float] = {}
+
+    def reserve(self, amount: float | None, *, allow_unknown: bool = False) -> int:
+        """Reserve an upper-bound dollar amount before dispatching a request.
+
+        ``amount`` is ``None`` when the request's cost cannot be estimated in
+        advance (no known pricing). Under an active ceiling, an unknown
+        amount is refused unless the caller opts in with ``allow_unknown``.
+        Returns a token to pass to :meth:`settle` or :meth:`release`.
+        """
+        with self._lock:
+            if amount is None:
+                if self._max_cost_usd is not None and not allow_unknown:
+                    raise UnpricedModelCostError(
+                        f"refusing to dispatch a call with unknown cost under the active "
+                        f"${self._max_cost_usd:.4f} runtime cost ceiling "
+                        "(pass allow_unknown=True to opt in)"
+                    )
+                reserved_amount = 0.0
+            else:
+                reserved_amount = max(float(amount), 0.0)
+            if self._max_cost_usd is not None:
+                projected = self._total + self._reserved + reserved_amount
+                if projected > self._max_cost_usd:
+                    raise CostBudgetExceededError(
+                        f"Runtime cost ceiling ${self._max_cost_usd:.4f} would be exceeded "
+                        f"(spent ${self._total:.4f}, reserved ${self._reserved:.4f}, "
+                        f"this request up to ${reserved_amount:.4f})"
+                    )
+            self._next_token += 1
+            token = self._next_token
+            self._reservations[token] = reserved_amount
+            self._reserved += reserved_amount
+            return token
+
+    def release(self, token: int) -> None:
+        """Cancel a reservation without recording a call (e.g. after an error)."""
+        with self._lock:
+            amount = self._reservations.pop(token, None)
+            if amount is not None:
+                self._reserved -= amount
+
+    def _apply(self, model: str, cost: float | None, kind: str) -> float:
+        with self._lock:
+            self._calls += 1
+            if kind == "unknown":
+                self._unknown_calls += 1
+                return 0.0
+            assert cost is not None
+            self._total += cost
+            self._by_model[model] = self._by_model.get(model, 0.0) + cost
+            if kind == "reported":
+                self._reported_total += cost
+            else:
+                self._estimated_total += cost
+            return cost
 
     def record(
         self,
         model: str,
-        prompt_tokens: int,
+        prompt_tokens: int | None,
         completion_tokens: int,
         *,
         actual_cost: float | None = None,
     ) -> float:
+        """Record one completed call. Always counts, even with unknown cost."""
 
         if actual_cost is not None:
             try:
@@ -61,31 +168,30 @@ class CostTracker:
         else:
             reported_cost = None
 
-        pricing = None if reported_cost is not None else _MODEL_PRICING.get(model)
-        if reported_cost is None and pricing is None:
-            # Try to import config pricing at runtime
-            try:
-                from invisiblebench.models.config import MODELS_FULL
+        if reported_cost is not None:
+            return self._apply(model, reported_cost, "reported")
 
-                for m in MODELS_FULL:
-                    _MODEL_PRICING[m.id] = (m.cost_per_m_input, m.cost_per_m_output)
-                pricing = _MODEL_PRICING.get(model)
-            except ImportError:
-                pass
-        if reported_cost is None and pricing is None:
-            return 0.0
+        pricing = _lookup_model_pricing(model)
+        if pricing is None or prompt_tokens is None:
+            return self._apply(model, None, "unknown")
 
-        cost = reported_cost
-        if cost is None:
-            assert pricing is not None
-            cost = (prompt_tokens / 1_000_000) * pricing[0] + (
-                completion_tokens / 1_000_000
-            ) * pricing[1]
-        with self._lock:
-            self._total += cost
-            self._calls += 1
-            self._by_model[model] = self._by_model.get(model, 0.0) + cost
-        return cost
+        cost = (prompt_tokens / 1_000_000) * pricing[0] + (
+            completion_tokens / 1_000_000
+        ) * pricing[1]
+        return self._apply(model, cost, "estimated")
+
+    def settle(
+        self,
+        token: int,
+        model: str,
+        prompt_tokens: int | None,
+        completion_tokens: int,
+        *,
+        actual_cost: float | None = None,
+    ) -> float:
+        """Release a reservation and record the call's actual cost in one step."""
+        self.release(token)
+        return self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
 
     @property
     def total(self) -> float:
@@ -97,6 +203,11 @@ class CostTracker:
         with self._lock:
             return self._calls
 
+    @property
+    def unknown_calls(self) -> int:
+        with self._lock:
+            return self._unknown_calls
+
     def snapshot(self) -> dict[str, Any]:
 
         with self._lock:
@@ -105,14 +216,22 @@ class CostTracker:
                 "calls": self._calls,
                 "by_model": dict(self._by_model),
                 "max_cost_usd": self._max_cost_usd,
+                "reported_total": self._reported_total,
+                "estimated_total": self._estimated_total,
+                "unknown_calls": self._unknown_calls,
             }
 
     def reset(self, *, max_cost_usd: float | None = None) -> None:
         with self._lock:
             self._total = 0.0
+            self._reported_total = 0.0
+            self._estimated_total = 0.0
             self._calls = 0
+            self._unknown_calls = 0
             self._by_model.clear()
             self._max_cost_usd = max_cost_usd
+            self._reserved = 0.0
+            self._reservations.clear()
 
     def ensure_budget_available(self) -> None:
         with self._lock:
@@ -132,6 +251,10 @@ class InsufficientCreditsError(RuntimeError):
 
 class CostBudgetExceededError(RuntimeError):
     """The process-level API cost ceiling has been reached."""
+
+
+class UnpricedModelCostError(CostBudgetExceededError):
+    """A call with unknown cost was refused under an active runtime ceiling."""
 
 
 MAX_COST_CEILING_MULTIPLIER = 1.5
@@ -276,7 +399,12 @@ class ModelAPIClient:
         return payload
 
     @staticmethod
-    def _parse_response(data: dict[str, Any], model: str, start_time: float) -> dict[str, Any]:
+    def _parse_response(
+        data: dict[str, Any],
+        model: str,
+        start_time: float,
+        reservation: int | None = None,
+    ) -> dict[str, Any]:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"No choices in response: {data}")
 
@@ -288,12 +416,21 @@ class ModelAPIClient:
         completion_tokens = usage.get("completion_tokens", 0)
         latency_ms = (time.time() - start_time) * 1000
 
-        cost_tracker.record(
-            model,
-            prompt_tokens,
-            completion_tokens,
-            actual_cost=usage.get("cost"),
-        )
+        if reservation is None:
+            cost = cost_tracker.record(
+                model,
+                prompt_tokens,
+                completion_tokens,
+                actual_cost=usage.get("cost"),
+            )
+        else:
+            cost = cost_tracker.settle(
+                reservation,
+                model,
+                prompt_tokens,
+                completion_tokens,
+                actual_cost=usage.get("cost"),
+            )
 
         return {
             "response": response_text,
@@ -304,6 +441,7 @@ class ModelAPIClient:
             "latency_ms": latency_ms,
             "model": model,
             "raw": data,
+            "cost": cost,
         }
 
     async def call_model_async(
@@ -312,50 +450,65 @@ class ModelAPIClient:
         messages: list[ChatMessage],
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        *,
+        allow_unknown_cost: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
-        """Async variant of call_model. Requires httpx."""
+        """Async variant of call_model. Requires httpx.
+
+        Reserves an upper-bound cost estimate before dispatch so concurrent
+        callers cannot collectively overshoot an active budget ceiling, then
+        settles the reservation to the actual (or estimated/unknown) cost
+        once a response arrives. ``allow_unknown_cost`` opts an unpriced
+        model into dispatch under a ceiling instead of being refused.
+        """
 
         start_time = time.time()
         payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
+        reservation_amount = estimate_request_reservation(model, messages, max_tokens)
+        reservation = cost_tracker.reserve(reservation_amount, allow_unknown=allow_unknown_cost)
 
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(self.config.timeout),
-            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-        ) as client:
-            last_error: Exception | None = None
-            for attempt in range(self.config.max_retries):
-                try:
-                    cost_tracker.ensure_budget_available()
-                    response = await client.post(
-                        f"{self.base_url}/chat/completions",
-                        json=payload,
-                        headers=self.headers,
-                    )
-                    response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(self.config.timeout),
+                limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+            ) as client:
+                last_error: Exception | None = None
+                for attempt in range(self.config.max_retries):
+                    try:
+                        response = await client.post(
+                            f"{self.base_url}/chat/completions",
+                            json=payload,
+                            headers=self.headers,
+                        )
+                        response.raise_for_status()
 
-                    data = response.json()
-                    result = self._parse_response(data, model, start_time)
-                    return result
+                        data = response.json()
+                        result = self._parse_response(data, model, start_time, reservation)
+                        return result
 
-                except (
-                    httpx.HTTPStatusError,
-                    httpx.RequestError,
-                    json.JSONDecodeError,
-                ) as e:
-                    last_error = e
-                    error_detail = self._format_request_error(e)
-                    status_code = getattr(getattr(e, "response", None), "status_code", None)
-                    if status_code == 402:
-                        raise InsufficientCreditsError(
-                            "OpenRouter account has insufficient credits. "
-                            "Add credits at https://openrouter.ai/settings/credits"
+                    except (
+                        httpx.HTTPStatusError,
+                        httpx.RequestError,
+                        json.JSONDecodeError,
+                    ) as e:
+                        last_error = e
+                        error_detail = self._format_request_error(e)
+                        status_code = getattr(getattr(e, "response", None), "status_code", None)
+                        if status_code == 402:
+                            raise InsufficientCreditsError(
+                                "OpenRouter account has insufficient credits. "
+                                "Add credits at https://openrouter.ai/settings/credits"
+                            ) from e
+                        if attempt < self.config.max_retries - 1:
+                            await asyncio.sleep(self.config.retry_delay * (attempt + 1))
+                            continue
+                        raise RuntimeError(
+                            f"Failed to call model {model} after {self.config.max_retries} "
+                            f"attempts: {error_detail}"
                         ) from e
-                    if attempt < self.config.max_retries - 1:
-                        await asyncio.sleep(self.config.retry_delay * (attempt + 1))
-                        continue
-                    raise RuntimeError(
-                        f"Failed to call model {model} after {self.config.max_retries} attempts: {error_detail}"
-                    ) from e
 
-            raise RuntimeError(f"Failed to call model {model}") from last_error
+                raise RuntimeError(f"Failed to call model {model}") from last_error
+        except BaseException:
+            cost_tracker.release(reservation)
+            raise

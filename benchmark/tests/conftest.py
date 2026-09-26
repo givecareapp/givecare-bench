@@ -36,3 +36,20 @@ def published_checks(monkeypatch):
 
     monkeypatch.setattr(check_registry, "CHECKS_DIR", PUBLISHED_CHECKS)
     return PUBLISHED_CHECKS
+
+
+@pytest.fixture(autouse=True)
+def _reset_global_cost_tracker():
+    """Isolate the process-global cost tracker between tests.
+
+    Several tests exercise real `run_benchmark`/`run_scan` paths that set a
+    runtime cost ceiling on the module-level singleton and never clear it.
+    Without a reset, a ceiling set by one test leaks into the next test that
+    touches the same singleton directly (unlike tests that monkeypatch their
+    own local `CostTracker`).
+    """
+    from invisiblebench.api.client import cost_tracker
+
+    cost_tracker.reset()
+    yield
+    cost_tracker.reset()

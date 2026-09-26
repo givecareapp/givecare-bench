@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import os
 from typing import Any
@@ -16,7 +17,7 @@ from typesafe_sdk import (
     TypeSafeClient,
 )
 
-from invisiblebench.api.client import cost_tracker
+from invisiblebench.api.client import cost_tracker, register_model_pricing
 
 DEFAULT_JUDGE_MODEL = "jev-1.13.0"
 JUDGE_PRICE_PER_MTOK_INPUT = 0.042
@@ -24,6 +25,13 @@ JUDGE_PRICING: dict[str, float] = {DEFAULT_JUDGE_MODEL: JUDGE_PRICE_PER_MTOK_INP
 ESTIMATED_BYTES_PER_TOKEN = 3
 API_KEY_ENV = "TYPESAFE_API_KEY"
 USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0"
+
+# The judge is billed only on input tokens. Registering it with the shared
+# cost tracker's pricing catalog lets `ask()` reserve and settle through the
+# same reserve/settle path every other dispatch uses, instead of a separate
+# implementation.
+for _model, _price in JUDGE_PRICING.items():
+    register_model_pricing(_model, _price, 0.0)
 
 
 def estimated_cost(model: str, request_bytes: int) -> float | None:
@@ -102,12 +110,23 @@ class SystemOneClient(TypeSafeClient):
         super().__init__(api_key=key, timeout=timeout, http_client=transport)
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
-        cost_tracker.ensure_budget_available()
+        # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
+        # paid scan must never dispatch against a model this process cannot
+        # price, ceiling or no ceiling.
         request_cost(model, 0)
-        response = self.system_one(model=model, state=state, questions=questions)
+
+        request_bytes = len(json.dumps({"state": state, "questions": questions}, default=str))
+        reservation = cost_tracker.reserve(estimated_cost(model, request_bytes))
+        try:
+            response = self.system_one(model=model, state=state, questions=questions)
+        except Exception:
+            cost_tracker.release(reservation)
+            raise
+
         tokens = response.usage.input_tokens
-        if tokens is not None and tokens >= 0:
-            cost_tracker.record(model, tokens, 0, actual_cost=request_cost(model, tokens))
+        cost_tracker.settle(
+            reservation, model, tokens if tokens is not None and tokens >= 0 else None, 0
+        )
         try:
             validate_response(response, model, questions)
         except ValueError as exc:
