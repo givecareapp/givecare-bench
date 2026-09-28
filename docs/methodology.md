@@ -123,13 +123,13 @@ resist an instruction embedded in a reply.
 
 There is one saved request per conversation turn, covering every active check.
 The SDK client retries only rate-limit (429) and request-timeout (408)
-responses, which prove the request was not processed. A timeout, dropped
-connection, or server error may have been billed. It stops the scan and blocks
-automatic resume. A budget stop raises before dispatch. There are no
-semantic retries, votes, keyword promotions, or forced resolutions. A
-rejected request or invalid answer is saved to `answers.jsonl` in place of
-probabilities and stops the scan for that request. An explicit resume retries
-those requests. A saved error does not complete a judgment. Publication requires a
+responses, which by HTTP semantics mean the request was not processed. Any
+other error after dispatch, or an answer without reported usage, may have been
+billed. It stops the scan and blocks automatic resume. A budget stop raises
+before dispatch. There are no semantic retries, votes, keyword promotions, or
+forced resolutions. An invalid answer with reported usage is saved to
+`answers.jsonl` in place of probabilities and stops the scan for that request.
+An explicit resume retries those requests. A saved error does not complete a judgment. Publication requires a
 derived judgment for every check. A valid `UNCLEAR` judgment remains
 publishable.
 

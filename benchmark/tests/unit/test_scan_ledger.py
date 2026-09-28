@@ -15,6 +15,7 @@ from invisiblebench.api.client import CostBudgetExceededError, cost_tracker
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.judge import (
     ANSWERS_FILE,
+    ATTEMPTS_FILE,
     LEDGER_FILE,
     load_scan,
     plan_scan,
@@ -150,19 +151,76 @@ def test_a_call_interrupted_before_its_answer_is_saved_is_never_reissued(tmp_pat
     assert (bundle / ANSWERS_FILE).read_bytes() == saved
 
 
-def test_an_unknown_judge_failure_blocks_resume(tmp_path):
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("connection dropped after sending"),
+        TypeSafeAPIError(400, {"error": "bad request"}, httpx2.Headers()),
+    ],
+)
+def test_an_error_after_dispatch_blocks_resume(tmp_path, error):
     bundle = tmp_path / "scan"
     plan = plan_scan([source_run(tmp_path)], bundle)
 
-    class UnreachableJudge:
+    class FailingJudge:
         def ask(self, **kwargs):
-            raise RuntimeError("connection dropped after sending")
+            raise error
 
     with pytest.raises(RuntimeError, match="outcome unknown"):
-        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=UnreachableJudge())
+        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FailingJudge())
     assert load_scan(bundle)[1] == []
     with pytest.raises(ValueError, match="no automatic resume"):
         run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
+
+
+def test_an_answer_without_reported_usage_is_retained_and_blocks_resume(tmp_path):
+    bundle = tmp_path / "scan"
+    plan_scan([source_run(tmp_path)], bundle)
+    accepted = []
+
+    class UnbilledJudge(FixtureJudge):
+        def ask(self, **kwargs):
+            accepted.append(kwargs)
+            response = super().ask(**kwargs)
+            return response.model_copy(update={"usage": Usage(input_tokens=None, output_tokens=0)})
+
+    with pytest.raises(RuntimeError, match="outcome unknown"):
+        run_scan(bundle, max_cost_usd=BUDGET, client=UnbilledJudge())
+    rows = [json.loads(line) for line in (bundle / ATTEMPTS_FILE).read_text().splitlines()]
+    assert rows[-1]["event"] == "unknown"
+    assert rows[-1]["response"]["usage"]["input_tokens"] is None
+    assert load_scan(bundle)[1] == []
+    with pytest.raises(ValueError, match="no automatic resume"):
+        run_scan(bundle, max_cost_usd=BUDGET, client=UnbilledJudge())
+    assert len(accepted) == 1
+
+
+def test_a_partial_scan_without_attempt_provenance_is_not_resumed(tmp_path):
+    bundle = tmp_path / "scan"
+    plan_scan([source_run(tmp_path)], bundle)
+    with pytest.raises(CostBudgetExceededError):
+        run_scan(bundle, max_cost_usd=BUDGET, client=Judge(bundle, stop_after=2))
+    (bundle / ATTEMPTS_FILE).unlink()
+    judge = Judge(bundle)
+    with pytest.raises(ValueError, match="without a recorded attempt; no automatic resume"):
+        run_scan(bundle, max_cost_usd=BUDGET, client=judge)
+    assert judge.calls == 0
+
+
+def test_a_blocked_scan_is_replanned_from_its_retained_transcripts(tmp_path):
+    source = source_run(tmp_path)
+    plan_scan([source], source)
+
+    class Interrupted(FixtureJudge):
+        def ask(self, **kwargs):
+            raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        run_scan(source, max_cost_usd=BUDGET, client=Interrupted())
+    fresh = tmp_path / "fresh"
+    plan_scan([source], fresh)
+    run_scan(fresh, max_cost_usd=BUDGET, client=FixtureJudge())
+    assert load_scan(fresh, complete=True)[2]
 
 
 def test_technical_attempt_retains_cost_and_only_unfinished_work_retries(tmp_path):
@@ -186,23 +244,6 @@ def test_technical_attempt_retains_cost_and_only_unfinished_work_retries(tmp_pat
     assert len([answer for answer in answers if answer.key == attempt.key]) == 2
     assert len(judgments) == plan.planned_judgments
     assert replay_scan(bundle) == []
-
-
-def test_a_rejected_judge_request_is_saved_and_retried(tmp_path):
-    bundle = tmp_path / "scan"
-    plan = plan_scan([source_run(tmp_path)], bundle)
-
-    class RejectingJudge:
-        def ask(self, **kwargs):
-            raise TypeSafeAPIError(400, {"error": "bad request"}, httpx2.Headers())
-
-    with pytest.raises(RuntimeError, match="attempt saved"):
-        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=RejectingJudge())
-    attempt = load_scan(bundle)[1][0]
-    assert attempt.error == "judge_api_error" and attempt.answers is None
-    assert attempt.error_detail == "TypeSafeAPIError"
-    run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
-    assert load_scan(bundle, complete=True)[2]
 
 
 def test_running_bundle_rejects_a_second_writer(tmp_path):

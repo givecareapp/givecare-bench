@@ -97,12 +97,20 @@ to `answers.jsonl` before the next request. Judgments are derived from those
 answers, not saved separately per request. Repeat the `bench scan run` command
 to resume unfinished judging.
 
-Resume retries a request only when its outcome is known: a budget refusal
-before dispatch, an HTTP 4xx rejection, or an invalid saved answer. An
-interruption, timeout, dropped connection, or server error leaves the outcome
-unknown and stops automatic resume, because a missing answer does not prove
-there was no charge. To continue, judge the saved responses again into a new
-directory with `bench scan rejudge`. Valid `UNCLEAR` decisions are complete.
+Resume retries a request only when its outcome and cost are known: a budget
+refusal before dispatch, or an invalid answer with reported usage. Any error
+after dispatch leaves the outcome unknown: an interruption, timeout, dropped
+connection, HTTP error, or an answer without reported usage. It stops automatic
+resume, because a missing answer does not prove there was no charge. A partial
+scan without an attempt journal also cannot resume. Keep the blocked bundle
+for inspection. To continue, plan a new scan from the retained transcript run:
+
+```bash
+uv run bench scan plan results/<run-id> --output results/<new-run-id>
+```
+
+Planning makes no paid calls. Review the estimate before `bench scan run`.
+Valid `UNCLEAR` decisions are complete.
 Move the entire bundle to retain replay.
 
 Inspect evidence with:

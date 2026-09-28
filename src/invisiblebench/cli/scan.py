@@ -63,7 +63,11 @@ def scan_command(args):
             )
             print(f"Estimated cost envelope: {result.estimated_cost_usd} USD")
     except KeyboardInterrupt:
-        print("Interrupted. Saved answers are retained; resume the same plan.", file=sys.stderr)
+        print(
+            "Interrupted. Saved answers are retained. A request in flight has an unknown "
+            "outcome and blocks resume; if so, plan a new scan with --output.",
+            file=sys.stderr,
+        )
         return 130
     except CostBudgetExceededError as exc:
         print(str(exc), file=sys.stderr)
