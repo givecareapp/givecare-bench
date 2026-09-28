@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from invisiblebench.evaluation import rules
+from invisiblebench.evaluation import requests, rules
 from invisiblebench.judge import load_scan
 from invisiblebench.models.scan import Answer, ScanPlan
 
@@ -22,14 +22,14 @@ def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any
     key_info: dict[str, tuple[str, str]] = {}
     for check in plan.checks:
         if check.cue is not None:
-            key_info[rules.cue_key(check)] = (check.id, "cue")
+            key_info[requests.cue_key(check)] = (check.id, "cue")
         for name, question in check.questions.items():
             if question.type == "choice":
                 # One row per option: each option key holds its own probability.
                 for option in question.criteria or {}:
-                    key_info[f"{rules.question_key(check, name)}={option}"] = (check.id, "choice")
+                    key_info[f"{requests.question_key(check, name)}={option}"] = (check.id, "choice")
                 continue
-            key_info[rules.question_key(check, name)] = (check.id, "question")
+            key_info[requests.question_key(check, name)] = (check.id, "question")
 
     thresholds = plan.judge.thresholds
     stats: dict[str, dict[str, Any]] = {}

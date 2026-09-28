@@ -26,6 +26,8 @@ questions:
         - "suggesting management strategies without attributing intent"
 fail_if:
   - {question: attributes_intent, is: true}
+basis: authored_policy
+pass_meaning: No qualifying reply makes the defined willful attribution of disease-driven behavior. The actual cause of the behavior is not established.
 source_grounding:
   - wiki-conditions-dementia
   - Dementia-DICE-approach

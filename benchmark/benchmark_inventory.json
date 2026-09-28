@@ -1,14 +1,369 @@
 {
-  "benchmark_version": "5.2.0",
+  "benchmark_version": "5.3.0",
   "public_scope": "benchmark-core-only",
   "public_harness": "llm/raw",
   "categories": {
-    "context": 11,
+    "context": 12,
     "continuity": 4,
     "empathy": 19,
     "safety": 29
   },
-  "standard_total": 63,
-  "check_count": 49,
-  "confidential_count": "external"
+  "standard_total": 64,
+  "check_count": 51,
+  "confidential_count": "external",
+  "objective_coverage": [
+    {
+      "scenario": "benchmark/scenarios/context/cultural/asian_american_filial_piety.json",
+      "mapped": [],
+      "unmapped_objectives": 67
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/cultural_latinx_familismo.json",
+      "mapped": [],
+      "unmapped_objectives": 40
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/cultural_latinx_familismo_sms.json",
+      "mapped": [],
+      "unmapped_objectives": 45
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/cultural_othering_test.json",
+      "mapped": [],
+      "unmapped_objectives": 59
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/cultural_practice_concern.json",
+      "mapped": [],
+      "unmapped_objectives": 66
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/disability_caregiver_young.json",
+      "mapped": [],
+      "unmapped_objectives": 72
+    },
+    {
+      "scenario": "benchmark/scenarios/context/cultural/sud_family_enabling.json",
+      "mapped": [],
+      "unmapped_objectives": 51
+    },
+    {
+      "scenario": "benchmark/scenarios/context/regulatory/data_privacy_inquiry.json",
+      "mapped": [],
+      "unmapped_objectives": 31
+    },
+    {
+      "scenario": "benchmark/scenarios/context/regulatory/misrepresentation_correction.json",
+      "mapped": [],
+      "unmapped_objectives": 31
+    },
+    {
+      "scenario": "benchmark/scenarios/context/regulatory/scope_honesty.json",
+      "mapped": [],
+      "unmapped_objectives": 33
+    },
+    {
+      "scenario": "benchmark/scenarios/context/regulatory/therapeutic_function_boundary.json",
+      "mapped": [],
+      "unmapped_objectives": 30
+    },
+    {
+      "scenario": "benchmark/scenarios/context/supplied_source_draft.json",
+      "mapped": [
+        {
+          "turn": 1,
+          "branch_index": null,
+          "criterion_index": 0,
+          "checks": [
+            "advocacy.request-completion"
+          ]
+        },
+        {
+          "turn": 1,
+          "branch_index": null,
+          "criterion_index": 1,
+          "checks": [
+            "scope.source-support"
+          ]
+        },
+        {
+          "turn": 2,
+          "branch_index": null,
+          "criterion_index": 0,
+          "checks": [
+            "advocacy.request-completion"
+          ]
+        },
+        {
+          "turn": 2,
+          "branch_index": null,
+          "criterion_index": 1,
+          "checks": [
+            "scope.source-support"
+          ]
+        }
+      ],
+      "unmapped_objectives": 0
+    },
+    {
+      "scenario": "benchmark/scenarios/continuity/attachment_formation.json",
+      "mapped": [],
+      "unmapped_objectives": 66
+    },
+    {
+      "scenario": "benchmark/scenarios/continuity/longitudinal_crisis_return.json",
+      "mapped": [],
+      "unmapped_objectives": 38
+    },
+    {
+      "scenario": "benchmark/scenarios/continuity/longitudinal_cultural_rituals.json",
+      "mapped": [],
+      "unmapped_objectives": 35
+    },
+    {
+      "scenario": "benchmark/scenarios/continuity/longitudinal_trust.json",
+      "mapped": [],
+      "unmapped_objectives": 128
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/belonging/sandwich_belonging_identity_mismatch.json",
+      "mapped": [],
+      "unmapped_objectives": 42
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/compassion_fatigue_expression.json",
+      "mapped": [],
+      "unmapped_objectives": 42
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/compassion_fatigue_expression_sms.json",
+      "mapped": [],
+      "unmapped_objectives": 41
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/financial_substance_combined.json",
+      "mapped": [],
+      "unmapped_objectives": 53
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/male_spousal_caregiver.json",
+      "mapped": [],
+      "unmapped_objectives": 63
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/parent_chronic_illness.json",
+      "mapped": [],
+      "unmapped_objectives": 66
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/burnout/sandwich_generation_burnout.json",
+      "mapped": [],
+      "unmapped_objectives": 69
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/bereavement_acute_loss.json",
+      "mapped": [],
+      "unmapped_objectives": 38
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/bereavement_identity_loss.json",
+      "mapped": [],
+      "unmapped_objectives": 47
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/end_of_life_planning.json",
+      "mapped": [],
+      "unmapped_objectives": 31
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/eol_proxy_decision.json",
+      "mapped": [],
+      "unmapped_objectives": 50
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/grief_after_loss.json",
+      "mapped": [],
+      "unmapped_objectives": 67
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/grief/young_caregiver_bereavement.json",
+      "mapped": [],
+      "unmapped_objectives": 64
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/dementia_reorientation_guilt.json",
+      "mapped": [],
+      "unmapped_objectives": 48
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/illusory_effectiveness.json",
+      "mapped": [],
+      "unmapped_objectives": 67
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/impossible_constraint.json",
+      "mapped": [],
+      "unmapped_objectives": 89
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/no_right_answer.json",
+      "mapped": [],
+      "unmapped_objectives": 38
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/pushback_loop.json",
+      "mapped": [],
+      "unmapped_objectives": 55
+    },
+    {
+      "scenario": "benchmark/scenarios/empathy/relational/sycophancy_resistance.json",
+      "mapped": [],
+      "unmapped_objectives": 49
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/adversarial/authority_claim.json",
+      "mapped": [],
+      "unmapped_objectives": 63
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/adversarial/context_switch_crisis.json",
+      "mapped": [],
+      "unmapped_objectives": 52
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/adversarial/gradual_boundary_erosion.json",
+      "mapped": [],
+      "unmapped_objectives": 82
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/attachment_boundary_test.json",
+      "mapped": [],
+      "unmapped_objectives": 56
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/cognitive_decline_threats.json",
+      "mapped": [],
+      "unmapped_objectives": 47
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/confabulation_test.json",
+      "mapped": [],
+      "unmapped_objectives": 43
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/dementia_aggression_caregiver.json",
+      "mapped": [],
+      "unmapped_objectives": 49
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/emotionally_abusive_parent.json",
+      "mapped": [],
+      "unmapped_objectives": 80
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/medical_boundary_violation.json",
+      "mapped": [],
+      "unmapped_objectives": 60
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/professional_aide_burnout.json",
+      "mapped": [],
+      "unmapped_objectives": 65
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/source_verification.json",
+      "mapped": [],
+      "unmapped_objectives": 45
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/therapist_replacement.json",
+      "mapped": [],
+      "unmapped_objectives": 74
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/acute_medical_fall.json",
+      "mapped": [],
+      "unmapped_objectives": 42
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/caregiver_withdrawal.json",
+      "mapped": [],
+      "unmapped_objectives": 43
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/cssrs_passive_ideation.json",
+      "mapped": [],
+      "unmapped_objectives": 55
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/cssrs_passive_ideation__fatigue_only.json",
+      "mapped": [],
+      "unmapped_objectives": 50
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/cssrs_passive_ideation__religious_frame.json",
+      "mapped": [],
+      "unmapped_objectives": 61
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/cssrs_passive_ideation_sms.json",
+      "mapped": [],
+      "unmapped_objectives": 55
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/dual_concern_crisis.json",
+      "mapped": [],
+      "unmapped_objectives": 87
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/financial_exploitation_elder.json",
+      "mapped": [],
+      "unmapped_objectives": 42
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/indirect_crisis_bridge.json",
+      "mapped": [],
+      "unmapped_objectives": 59
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/uk_teen_caregiver_crisis.json",
+      "mapped": [],
+      "unmapped_objectives": 54
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/false_refusal/false_reassurance.json",
+      "mapped": [],
+      "unmapped_objectives": 50
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/false_refusal/hospice_what_to_expect.json",
+      "mapped": [],
+      "unmapped_objectives": 51
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/false_refusal/medication_side_effects.json",
+      "mapped": [],
+      "unmapped_objectives": 91
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/gray_zone/dark_humor_vs_ideation.json",
+      "mapped": [],
+      "unmapped_objectives": 60
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/gray_zone/dark_humor_vs_ideation__clearly_humor.json",
+      "mapped": [],
+      "unmapped_objectives": 46
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/gray_zone/venting_vs_crisis.json",
+      "mapped": [],
+      "unmapped_objectives": 60
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/gray_zone/venting_vs_crisis__explicit_crisis.json",
+      "mapped": [],
+      "unmapped_objectives": 47
+    }
+  ]
 }

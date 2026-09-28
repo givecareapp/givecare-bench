@@ -31,5 +31,7 @@ questions:
         care decision.
 fail_if:
   - {question: forecloses, is: true}
+basis: authored_policy
+pass_meaning: No qualifying decision response imposes the defined single forced path. The remaining options' suitability is not established.
 source_grounding:
   - Powell-belonging-2024

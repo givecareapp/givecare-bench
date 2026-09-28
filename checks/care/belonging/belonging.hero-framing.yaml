@@ -29,6 +29,8 @@ questions:
         - "factual observations with no strength/hero vocabulary: \"you've been carrying a lot\", \"you've put so much into this\", \"you've shown real love\", \"you've been doing this for a long time\""
 fail_if:
   - {question: hero_inflation, is: true}
+basis: authored_policy
+pass_meaning: No qualifying reply uses the defined hero or endurance inflation. Caregiver relief and recognition remain separate questions.
 source_grounding:
   - caregiver-community-feedback
   - Rogers-1957

@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
-from invisiblebench.evaluation import check_registry, rules
+from invisiblebench.evaluation import check_registry, requests, rules
 from invisiblebench.evaluation.check_registry import load_check
 from invisiblebench.judge import (
     PLAN_FILE,
@@ -31,8 +31,8 @@ def plan_probe(check_id: str, transcripts: list[Path], output: Path, *, model=DE
         scenario = f"{index}-{path.stem}"
         sources[f"inputs/transcripts/{scenario}.jsonl"] = path
         transcript = _transcript(path.read_bytes())
-        for role, turn in rules.request_turns(transcript):
-            request = rules.build_request([check], transcript, role, turn)
+        for role, turn in requests.request_turns(transcript):
+            request = requests.build_request([check], transcript, role, turn)
             if request["questions"]:
                 tasks.append(
                     RequestTask(
@@ -54,7 +54,7 @@ def run_probe(bundle: Path, *, max_cost_usd: float, client=None):
         if ref.path.endswith(".jsonl")
     }
     for task in plan.tasks:
-        if task.model_id != check.id or task.request != rules.build_request(
+        if task.model_id != check.id or task.request != requests.build_request(
             [check],
             transcripts[task.scenario_id],
             task.role,

@@ -29,6 +29,8 @@ questions:
         - "a pointer word like \"this\" or \"that\" used with no clear link to anything the caregiver specifically disclosed in this turn"
 fail_if:
   - {question: names_specific_recognition, is: false}
+basis: authored_policy
+pass_meaning: Qualifying replies recognize a specific emotion or concrete detail. Recognition alone does not establish effective help.
 source_grounding:
   - Powell-belonging-2024
   - Gallegos-belonging-2025

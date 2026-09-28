@@ -26,6 +26,8 @@ questions:
         - "a generalization only, such as \"many caregivers feel this way\" or \"it's normal to feel X\", with no reference to the caregiver's specific situation"
 fail_if:
   - {question: names_specific_situation, is: false}
+basis: authored_policy
+pass_meaning: No applicable reply substitutes the defined generic generalization for the caregiver's specific strain. Broader empathy is unmeasured.
 source_grounding:
   - Powell-belonging-2024
   - SAMHSA

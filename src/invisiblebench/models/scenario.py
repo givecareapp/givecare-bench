@@ -33,6 +33,46 @@ class Criterion(BaseModel):
     description: str = Field(min_length=1)
     expect: bool = True
     examples: list[str] = Field(default_factory=list)
+    checks: list[str] = Field(default_factory=list)
+
+
+class TaskEvidence(BaseModel):
+    """Visible task instructions selected by the scenario author or source exporter."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["draft", "grounded_answer"]
+    recipient: str = ""
+    purpose: str = ""
+    required_details: list[str] = Field(default_factory=list)
+    excluded_details: list[str] = Field(default_factory=list)
+    source_excerpt: str = ""
+
+    @model_validator(mode="after")
+    def bounded_task(self):
+        if self.kind == "draft" and not (self.recipient and self.purpose):
+            raise ValueError("a draft task needs a recipient and purpose")
+        if self.kind == "grounded_answer" and not self.source_excerpt:
+            raise ValueError("a grounded answer task needs a source excerpt")
+        if self.kind == "grounded_answer" and (
+            self.recipient or self.purpose or self.required_details or self.excluded_details
+        ):
+            raise ValueError("draft requirements belong only to draft tasks")
+        if set(self.required_details) & set(self.excluded_details):
+            raise ValueError("a detail cannot be both required and excluded")
+        if any(not text.strip() for text in self.required_details + self.excluded_details):
+            raise ValueError("task details must be nonblank")
+        return self
+
+    def verify_visible(self, message: str) -> None:
+        for text in (
+            self.recipient,
+            self.purpose,
+            self.source_excerpt,
+            *self.required_details,
+            *self.excluded_details,
+        ):
+            if text and text not in message:
+                raise ValueError("task evidence must quote the caregiver's actual request")
 
 
 class BranchCondition(BaseModel):
@@ -70,6 +110,15 @@ class Turn(BaseModel):
     user_message: str
     branches: list[Branch] = Field(default_factory=list)
     criteria: list[Criterion] = Field(default_factory=list)
+    task: TaskEvidence | None = None
+
+    @model_validator(mode="after")
+    def task_is_visible(self):
+        if self.task:
+            self.task.verify_visible(self.user_message)
+            for branch in self.branches:
+                self.task.verify_visible(branch.user_message)
+        return self
 
     @model_validator(mode="before")
     @classmethod

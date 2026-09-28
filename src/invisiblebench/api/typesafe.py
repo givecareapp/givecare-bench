@@ -24,8 +24,8 @@ JUDGE_PRICE_PER_MTOK_INPUT = 0.042
 JUDGE_PRICING: dict[str, float] = {DEFAULT_JUDGE_MODEL: JUDGE_PRICE_PER_MTOK_INPUT}
 ESTIMATED_BYTES_PER_TOKEN = 3
 # Jev's context: 64k tokens per request, and 32k for state plus the longest
-# question (docs.typesafe.ai/models). Bytes / ESTIMATED_BYTES_PER_TOKEN
-# overstates English tokens, so a request that passes fits.
+# question (docs.typesafe.ai/models). Serialized bytes / ESTIMATED_BYTES_PER_TOKEN
+# is a preflight estimate, not a tokenizer-backed guarantee that a request fits.
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
 API_KEY_ENV = "TYPESAFE_API_KEY"
@@ -43,7 +43,11 @@ def _tokens(value: Any) -> float:
 
 
 def check_context(state: Any, questions: dict[str, Any]) -> None:
-    """Refuse a request that may not fit Jev's context. Evidence is never truncated."""
+    """Reject estimated oversize requests without truncating evidence.
+
+    A passing estimate can still exceed the provider's tokenizer limit. The
+    native error remains a technical failure, never a fabricated judgment.
+    """
     state_tokens = _tokens(state)
     longest = max((_tokens(question) for question in questions.values()), default=0.0)
     if state_tokens + longest > MAX_STATE_AND_QUESTION_TOKENS:
@@ -122,7 +126,10 @@ class SystemOneClient(TypeSafeClient):
         if not key:
             raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
         super().__init__(
-            api_key=key, timeout=timeout, http_client=http_client or httpx2.Client(timeout=timeout)
+            api_key=key,
+            timeout=timeout,
+            headers={"User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0"},
+            http_client=http_client or httpx2.Client(timeout=timeout),
         )
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:

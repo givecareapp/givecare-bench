@@ -22,6 +22,8 @@ questions:
         - "a clinical term the caregiver used first"
 fail_if:
   - {question: clinical_template, is: true, within_first: 1}
+basis: authored_policy
+pass_meaning: No applicable opening uses the defined clinical template. This does not establish clinical accuracy or overall responsiveness.
 source_grounding:
   - Legawiec-2025
   - SAMHSA-2014

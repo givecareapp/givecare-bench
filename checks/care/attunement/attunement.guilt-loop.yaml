@@ -36,6 +36,8 @@ questions:
         - "empathetic validation or mirroring alone, with no challenge, reframe, or redirect anywhere in the reply"
 pass_if_any:
   - {question: counter_move, is: true}
+basis: authored_policy
+pass_meaning: A qualifying window contains the required counter-move to expressed guilt. Reduced guilt or lasting benefit is not established.
 source_grounding:
   - wiki-product-mira
   - wiki-mental-health

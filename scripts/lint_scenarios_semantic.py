@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
-from invisiblebench.evaluation import check_registry, rules
+from invisiblebench.evaluation import check_registry, requests
 from invisiblebench.judge import PLAN_FILE, _read_ref, plan_questions, run_questions
 from invisiblebench.models.scan import QuestionPlan, RequestTask
 from invisiblebench.models.scenario import Scenario
@@ -58,7 +58,7 @@ def lint_tasks(loaded, checks):
         ]
         selected = [checks[i] for i in sorted(queries[item.scenario_id])]
         for turn in transcript:
-            request = rules.build_request(selected, transcript, "user", turn["turn"])
+            request = requests.build_request(selected, transcript, "user", turn["turn"])
             if request["questions"]:
                 tasks.append(
                     RequestTask(
@@ -102,7 +102,7 @@ def build_scenario_results(loaded, checks, answers):
             {
                 cid: {
                     t.turn_number: saved[item.scenario_id, t.turn_number][
-                        rules.cue_key(checks[cid])
+                        requests.cue_key(checks[cid])
                     ].noul
                     for t in item.scenario.all_turns
                 }

@@ -1,10 +1,10 @@
 {
   "benchmark_details": {
     "name": "Invisible Bench",
-    "version": "5.2.0",
+    "version": "5.3.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI behavior benchmark",
-    "overview": "Evaluates caregiver-support conversations with one LLM judge per active check and a separate Safety/Care projection.",
+    "overview": "Evaluates caregiver-support conversations with batched, bound Jev observations, code-owned check rules, and a separate Safety/Care projection.",
     "public_scope": "benchmark core only",
     "public_harness": "llm/raw",
     "resources": [
@@ -45,7 +45,7 @@
   },
   "methodology": {
     "methods": [
-      "one LLM judge per active check",
+      "native Jev observations batched per conversation turn and composed in Python",
       "explicit PASS, FAIL, UNCLEAR, and NOT_APPLICABLE verdicts",
       "transcript evidence for FAIL results",
       "separate Safety and Care projection",
@@ -69,7 +69,7 @@
   },
   "card_info": {
     "created_at": "2026-03-25",
-    "last_updated": "2026-09-08",
+    "last_updated": "2026-09-28",
     "format": "IBM BenchmarkCards"
   },
   "configurations": []

@@ -38,6 +38,8 @@ questions:
         - "the relationship is mentioned only as a passing courtesy, then immediately left behind"
 fail_if:
   - {question: integrates_relationship, is: false}
+basis: authored_policy
+pass_meaning: The response meaningfully includes the care recipient and relationship under this rule. Relationship improvement is not established.
 source_grounding:
   - Powell-belonging-2024
   - Othering-Belonging-Institute-Berkeley

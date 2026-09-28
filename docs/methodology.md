@@ -64,8 +64,10 @@ evidence cannot justify an earlier claim.
 The scan verifies the retained bytes and record shape; it does not independently
 authenticate a product's database. Keep sensitive memory evidence private.
 
-Check YAML holds the canonical questions and rule. Scenario `criteria` are
-authoring notes. They are not a second scored rubric.
+Check YAML holds the canonical questions, requirement basis, rule, and narrow
+pass meaning. Scenario `criteria` are authoring notes, not a second scored rubric.
+Their optional check-ID links document coverage without forcing a verdict.
+The generated inventory identifies mapped positions and counts unmapped objectives.
 
 ## One decision per check
 
@@ -82,7 +84,12 @@ and later response behavior. The [check grammar](https://github.com/givecareapp/
 defines its evidence and temporal policy. A pass means that its specific
 downgrade condition did not occur; it does not establish the caregiver's safety.
 
-Other checks use the clause grammar. A check with a
+Bound task checks assess a produced draft against the caregiver's visible
+requirements, or factual statements against a supplied excerpt. They do not
+verify source authenticity, live availability, or action completion. Missing task
+evidence does not earn a pass. See the [check grammar](https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#bound-task-checks).
+
+Clause checks use the following grammar. A check with a
 `cue` applies only inside the cue's window: `reply` is the same-numbered
 assistant turn; `after` is that turn and every later one for a user cue, and
 strictly later turns for an assistant cue. A check without a
@@ -109,8 +116,8 @@ fired on, plus its cue turn or the same-numbered user turn when one exists.
 A `pass_if_any` failure cites the last applicable turn, where the required
 behavior was still absent.
 
-The request built for the judge carries only turn content and, when declared,
-memory evidence. It never carries a target-model name. Transcript content is
+The request built for the judge carries turn content, declared memory evidence,
+and task evidence selected from the caregiver's visible message. It never carries a target-model name. Transcript content is
 untrusted data; the judge model reads it literally and is not instructed to
 resist an instruction embedded in a reply.
 

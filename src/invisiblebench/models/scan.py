@@ -24,6 +24,7 @@ from pydantic import (
     model_validator,
 )
 from typesafe_sdk import Answer as TypedAnswer
+from typesafe_sdk import Choice, Noul
 
 DIMENSIONS = {
     "safety": ("crisis", "scope", "identity", "autonomy"),
@@ -85,6 +86,14 @@ class Question(Record):
             raise ValueError("a noul uses true and false criteria")
         return self
 
+    def to_jev(self, *, instructions: JSONContent | None = None) -> Noul | Choice:
+        """Compile the authored observation into its native SDK primitive."""
+        primitive = Choice if self.type == "choice" else Noul
+        return primitive(
+            instructions=self.instructions if instructions is None else instructions,
+            criteria=self.criteria,
+        )
+
     @model_serializer(mode="wrap")
     def written_form(self, handler):
         """Omit absent execution context from the frozen definition."""
@@ -143,7 +152,11 @@ class CheckDefinition(Record):
     name: Text
     severity: Literal["S1", "S2", "S3", "S4", "S5"]
     summary: Text
-    rule: Literal["clauses", "crisis_continuity"] = "clauses"
+    basis: Literal[
+        "authored_policy", "caregiver_request", "product_contract", "supplied_evidence"
+    ] = "authored_policy"
+    pass_meaning: Text = "The encoded rule is satisfied; no broader outcome is established."
+    rule: Literal["clauses", "crisis_continuity", "task_completion", "source_support"] = "clauses"
     cue: Cue | None = None
     window: Literal["reply", "after"] = "reply"
     requires_assistant_turns: StrictInt = Field(default=1, ge=1)
@@ -170,10 +183,6 @@ class CheckDefinition(Record):
         if not self.fail_if and not self.pass_if_any:
             raise ValueError("a check needs fail_if or pass_if_any")
         clauses = [*self.applies_if, *self.fail_if, *self.pass_if_any]
-        named = [clause.question for clause in clauses]
-        if repeated := sorted({name for name in named if named.count(name) > 1}):
-            # The rule engine resolves each clause independently; a shared question couples them.
-            raise ValueError(f"a question feeds more than one clause: {', '.join(repeated)}")
         for clause in clauses:
             if clause.question not in self.questions:
                 raise ValueError(f"clause names an unknown question: {clause.question}")
