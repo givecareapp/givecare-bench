@@ -146,7 +146,7 @@ class TestEdgeCases:
         assert resolve_models(",,,", CATALOG) == []
 
 
-def test_resolve_models_passes_through_unknown_openrouter_ids() -> None:
+def test_resolve_models_rejects_unknown_ids_without_inventing_prices() -> None:
     models = [
         {
             "id": "openai/gpt-5.5",
@@ -156,9 +156,6 @@ def test_resolve_models_passes_through_unknown_openrouter_ids() -> None:
             "cost_per_m_output": 3.0,
         },
     ]
-    indices = resolve_models("someorg/brand-new-model", models)
-
-    assert len(indices) == 1
-    added = models[indices[0]]
-    assert added["id"] == "someorg/brand-new-model"
-    assert added["provider"] == "openrouter"
+    with pytest.raises(ValueError, match="pricing"):
+        resolve_models("someorg/brand-new-model", models)
+    assert len(models) == 1

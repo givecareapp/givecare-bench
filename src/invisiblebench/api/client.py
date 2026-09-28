@@ -30,10 +30,16 @@ _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "openai/gpt-5-mini": (0.25, 2.00),
 }
 
-# A conservative token estimate for pre-dispatch reservations: real payloads
-# run above four characters per billed token, so dividing by a smaller
-# divisor keeps the reservation an upper bound, not a guess that undershoots.
+# Pre-dispatch token estimate, not a tokenizer-backed billing guarantee.
+# Actual usage can exceed a reservation; settlement must still record it.
 _CHARS_PER_TOKEN_RESERVE_ESTIMATE = 3
+
+
+def _nonnegative_cost(value: float, name: str) -> float:
+    value = float(value)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return value
 
 
 def register_model_pricing(model: str, cost_per_m_input: float, cost_per_m_output: float) -> None:
@@ -43,7 +49,10 @@ def register_model_pricing(model: str, cost_per_m_input: float, cost_per_m_outpu
     only on input tokens) share the one cost tracker's reserve/settle path
     instead of reimplementing it.
     """
-    _MODEL_PRICING[model] = (cost_per_m_input, cost_per_m_output)
+    _MODEL_PRICING[model] = (
+        _nonnegative_cost(cost_per_m_input, "input price"),
+        _nonnegative_cost(cost_per_m_output, "output price"),
+    )
 
 
 def _lookup_model_pricing(model: str) -> tuple[float, float] | None:
@@ -61,7 +70,7 @@ def _lookup_model_pricing(model: str) -> tuple[float, float] | None:
 
 
 def estimate_request_reservation(model: str, messages: list[Any], max_tokens: int) -> float | None:
-    """An upper-bound dollar estimate for a not-yet-dispatched chat request.
+    """A dollar estimate for a not-yet-dispatched chat request.
 
     Returns ``None`` when the model has no known pricing — the caller decides
     whether an unknown-cost dispatch is acceptable.
@@ -79,7 +88,7 @@ def estimate_request_reservation(model: str, messages: list[Any], max_tokens: in
 class CostTracker:
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total: float = 0.0
         self._reported_total: float = 0.0
         self._estimated_total: float = 0.0
@@ -92,7 +101,7 @@ class CostTracker:
         self._reservations: dict[int, float] = {}
 
     def reserve(self, amount: float | None, *, allow_unknown: bool = False) -> int:
-        """Reserve an upper-bound dollar amount before dispatching a request.
+        """Reserve an estimated dollar amount before dispatching a request.
 
         ``amount`` is ``None`` when the request's cost cannot be estimated in
         advance (no known pricing). Under an active ceiling, an unknown
@@ -109,7 +118,7 @@ class CostTracker:
                     )
                 reserved_amount = 0.0
             else:
-                reserved_amount = max(float(amount), 0.0)
+                reserved_amount = _nonnegative_cost(amount, "reservation")
             if self._max_cost_usd is not None:
                 projected = self._total + self._reserved + reserved_amount
                 if projected > self._max_cost_usd:
@@ -190,8 +199,12 @@ class CostTracker:
         actual_cost: float | None = None,
     ) -> float:
         """Release a reservation and record the call's actual cost in one step."""
-        self.release(token)
-        return self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
+        with self._lock:
+            if token not in self._reservations:
+                raise ValueError("reservation is unknown or already settled")
+            cost = self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
+            self.release(token)
+            return cost
 
     @property
     def total(self) -> float:
@@ -222,6 +235,8 @@ class CostTracker:
             }
 
     def reset(self, *, max_cost_usd: float | None = None) -> None:
+        if max_cost_usd is not None:
+            max_cost_usd = _nonnegative_cost(max_cost_usd, "cost ceiling")
         with self._lock:
             self._total = 0.0
             self._reported_total = 0.0
@@ -263,8 +278,7 @@ MIN_COST_CEILING_HEADROOM_USD = 1.0
 
 def maximum_reasonable_cost_ceiling(planned_cost_usd: float) -> float:
     """Bound live approval so a nominal ceiling remains a meaningful guardrail."""
-    if planned_cost_usd < 0:
-        raise ValueError("planned cost must be non-negative")
+    planned_cost_usd = _nonnegative_cost(planned_cost_usd, "planned cost")
     return max(
         planned_cost_usd * MAX_COST_CEILING_MULTIPLIER,
         planned_cost_usd + MIN_COST_CEILING_HEADROOM_USD,
@@ -455,8 +469,8 @@ class ModelAPIClient:
     ) -> dict[str, Any]:
         """Async variant of call_model. Requires httpx.
 
-        Reserves an upper-bound cost estimate before dispatch so concurrent
-        callers cannot collectively overshoot an active budget ceiling, then
+        Reserves estimated cost before dispatch so concurrent callers share
+        the active budget guardrail. Estimates are not a billing guarantee. It
         settles the reservation to the actual (or estimated/unknown) cost
         once a response arrives. ``allow_unknown_cost`` opts an unpriced
         model into dispatch under a ceiling instead of being refused.
