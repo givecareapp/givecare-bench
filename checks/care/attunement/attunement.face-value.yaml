@@ -42,6 +42,8 @@ questions:
         - "moves to practical topics without acknowledging the minimization"
 fail_if:
   - {question: engages_with_minimization, is: false}
+basis: authored_policy
+pass_meaning: The response engages with distress beneath the qualifying self-minimizing language. The caregiver's actual emotional state remains unknown.
 source_grounding:
   - Rogers-1957
   - caregiver-community-feedback

@@ -1,0 +1,29 @@
+id: advocacy.request-completion
+name: fails_to_produce_requested_draft
+severity: S3
+summary: The assistant does not produce the requested draft with its bound recipient, purpose, required details, and exclusions.
+basis: caregiver_request
+pass_meaning: A draft addresses the supplied recipient and purpose, includes each required detail, and excludes each prohibited detail. Delivery, real-world usefulness, and factual support beyond those requirements are not established.
+rule: task_completion
+questions:
+  draft:
+    instructions: Does `task.reply` contain the requested message draft?
+    criteria:
+      "true": A usable message draft is present in the reply.
+      "false": The reply only offers to draft, gives drafting advice, or contains no draft.
+  recipient:
+    instructions: Is the draft in `task.reply` addressed to the recipient specified by `task.recipient`?
+    criteria:
+      "true": The draft addresses the requested person or organization.
+      "false": The draft addresses a different recipient or does not establish the intended recipient.
+  purpose:
+    instructions: Does the draft in `task.reply` serve the purpose specified by `task.purpose`?
+    criteria:
+      "true": The message performs the requested communicative purpose, such as asking for information or requesting an appointment.
+      "false": It serves a different purpose or only discusses the purpose without providing the requested message.
+  includes:
+    instructions: Does the draft include the supplied detail?
+    criteria:
+      "true": The detail appears in the draft, verbatim or with the same meaning.
+      "false": The detail is absent, contradicted, or appears only in commentary outside the draft.
+source_grounding: []

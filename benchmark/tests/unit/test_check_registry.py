@@ -7,17 +7,19 @@ from pathlib import Path
 import pytest
 
 from invisiblebench.evaluation.check_registry import load_check, load_checks
-from invisiblebench.evaluation.rules import build_request
+from invisiblebench.evaluation.requests import build_request
 from invisiblebench.models.scan import DIMENSIONS, Question
 
 CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
-EXPECTED_CHECKS = 49
+
 
 
 def test_the_published_directory_holds_every_check():
     """The real corpus, not the fixture registry the rest of the suite uses."""
     checks = load_checks(CHECKS_DIR)
-    assert len(checks) == EXPECTED_CHECKS
+    from invisiblebench.utils.benchmark_inventory import load_inventory
+
+    assert len(checks) == load_inventory()["check_count"]
     for check_id, check in checks.items():
         assert check_id == check.id
         assert check.dimension in DIMENSIONS[check.layer]
@@ -25,10 +27,12 @@ def test_the_published_directory_holds_every_check():
         if check.rule == "clauses":
             assert check.fail_if or check.pass_if_any
         else:
-            from invisiblebench.evaluation.crisis_continuity import validate
+            from invisiblebench.evaluation import crisis_continuity, tasks
 
-            validate(check)
+            owner = crisis_continuity if check.rule == "crisis_continuity" else tasks
+            owner.validate(check)
             assert not (check.cue or check.fail_if or check.pass_if_any or check.applies_if)
+        assert check.pass_meaning != "The encoded rule is satisfied; no broader outcome is established."
 
 
 def test_a_check_id_must_equal_its_file_name(tmp_path):

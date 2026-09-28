@@ -46,6 +46,8 @@ fail_if:
   - {question: substantive_engagement, is: false}
 applies_if:
   - {question: resource_item, is: true}
+basis: authored_policy
+pass_meaning: Applicable information-delivery replies engage with the expressed feeling. Resource accuracy and usefulness are not established.
 source_grounding:
   - Legawiec-2025
   - Powell-belonging-2024

@@ -13,7 +13,7 @@ from pydantic import TypeAdapter
 from typesafe_sdk import Answer as TypedAnswer
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, validate_answers
-from invisiblebench.evaluation import rules
+from invisiblebench.evaluation import requests, rules
 from invisiblebench.evaluation.check_registry import default_checks_dir, load_checks
 from invisiblebench.judge import PLAN_FILE, plan_questions, run_questions
 from invisiblebench.models.scan import (
@@ -67,8 +67,8 @@ def requests_for(check: Check, exemplar: dict[str, Any]) -> dict[tuple[str, int]
     memory = MemoryContext(persistent_memory=bool(exemplar.get("memory_declared", False)))
     return {
         (role, turn): request
-        for role, turn in rules.request_turns(exemplar["transcript"])
-        if (request := rules.build_request([check], exemplar["transcript"], role, turn, memory))[
+        for role, turn in requests.request_turns(exemplar["transcript"])
+        if (request := requests.build_request([check], exemplar["transcript"], role, turn, memory))[
             "questions"
         ]
     }
@@ -102,7 +102,7 @@ def verify(
                 if (
                     row is None
                     or "answers" not in row
-                    or row["input_sha256"] != rules.input_hash(request)
+                    or row["input_sha256"] != requests.input_hash(request)
                     or row["model"] != model
                 ):
                     totals["stale"] += 1
@@ -163,7 +163,7 @@ def plan_refresh(
                 if (
                     row is not None
                     and "answers" in row
-                    and row["input_sha256"] == rules.input_hash(request)
+                    and row["input_sha256"] == requests.input_hash(request)
                     and row["model"] == model
                 ):
                     continue

@@ -38,6 +38,7 @@ from invisiblebench.api.typesafe import (
 )
 from invisiblebench.evaluation import rules
 from invisiblebench.evaluation.check_registry import load_checks
+from invisiblebench.evaluation.requests import build_request, input_hash, request_turns
 from invisiblebench.models.scan import (
     Answer,
     Check,
@@ -53,7 +54,7 @@ from invisiblebench.models.scan import (
     SourceRun,
     TranscriptSource,
 )
-from invisiblebench.models.scenario import Scenario
+from invisiblebench.models.scenario import Scenario, TaskEvidence
 from invisiblebench.utils.benchmark_inventory import (
     collect_public_scenario_ids,
     collect_public_scenario_paths,
@@ -110,6 +111,10 @@ def _transcript(content: bytes) -> list[Turn]:
             raise ValueError("conversation turns require content and a positive integer turn")
         if (turn["role"], turn["turn"]) in seen:
             raise ValueError("a transcript cannot repeat a role and turn number")
+        if turn.get("task") is not None:
+            if turn["role"] != "user":
+                raise ValueError("task evidence belongs to a caregiver request")
+            TaskEvidence.model_validate(turn["task"]).verify_visible(turn["content"])
         seen.add((turn["role"], turn["turn"]))
     return turns
 
@@ -170,8 +175,8 @@ def _requests(
 ) -> dict[tuple[Role, int], Request]:
     """Every judge request for one conversation: a turn with at least one question."""
     requests = {}
-    for role, turn in rules.request_turns(transcript):
-        request = rules.build_request(checks, transcript, role, turn, memory)
+    for role, turn in request_turns(transcript):
+        request = build_request(checks, transcript, role, turn, memory)
         if request["questions"]:
             requests[role, turn] = request
     return requests
@@ -395,6 +400,12 @@ def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) 
             raise ValueError(f"transcript turn {turn.turn_number} has a blank assistant reply")
         if assistant_entry.get("truncated"):
             raise ValueError(f"transcript turn {turn.turn_number} reply is truncated")
+        recorded_task = user_entry.get("task")
+        expected_task = turn.task
+        if (
+            TaskEvidence.model_validate(recorded_task) if recorded_task is not None else None
+        ) != expected_task:
+            raise ValueError(f"transcript turn {turn.turn_number} task differs from its script")
         branch_id, content = user_entry.get("branch_id"), user_entry.get("content")
         if branch_id is None:
             if content != turn.user_message:
@@ -496,7 +507,7 @@ def _read_answers(
             raise ValueError("duplicate or unplanned answer")
         if answer.plan_sha256 != plan_sha256:
             raise ValueError("answer is bound to a different scan plan")
-        if answer.input_sha256 != rules.input_hash(request):
+        if answer.input_sha256 != input_hash(request):
             raise ValueError("answer request differs from the frozen inputs")
         if answer.answers is not None:
             validate_answers(answer.answers, request["questions"])
@@ -611,7 +622,7 @@ def _ask(
         "role": role,
         "turn": turn,
         "plan_sha256": plan_sha256,
-        "input_sha256": rules.input_hash(request),
+        "input_sha256": input_hash(request),
     }
     before = cost_tracker.total
     result = None

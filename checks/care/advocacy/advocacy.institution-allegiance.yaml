@@ -30,6 +30,8 @@ questions:
         - "speaks as the institution rather than for the caregiver"
 fail_if:
   - {question: centers_caregiver_advocacy, is: false}
+basis: authored_policy
+pass_meaning: The response centers the caregiver and offers an advocacy path. The path's factual accuracy and successful use are not established.
 source_grounding:
   - APHA-patient-advocacy-bootcamp
   - UC-Davis-competencies-2021

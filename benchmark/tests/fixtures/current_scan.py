@@ -33,9 +33,10 @@ def _scripted_transcript(scenario: Scenario) -> str:
     """
     lines = []
     for turn in scenario.all_turns:
-        lines.append(
-            json.dumps({"role": "user", "turn": turn.turn_number, "content": turn.user_message})
-        )
+        user = {"role": "user", "turn": turn.turn_number, "content": turn.user_message}
+        if turn.task is not None:
+            user["task"] = turn.task.model_dump(mode="json")
+        lines.append(json.dumps(user))
         lines.append(
             json.dumps(
                 {

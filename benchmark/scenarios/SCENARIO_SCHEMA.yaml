@@ -1,4 +1,3 @@
-# Generated from invisiblebench.models.scenario.Scenario.model_json_schema().
 $defs:
   Branch:
     additionalProperties: false
@@ -84,6 +83,11 @@ $defs:
           type: string
         title: Examples
         type: array
+      checks:
+        items:
+          type: string
+        title: Checks
+        type: array
     required:
     - description
     title: Criterion
@@ -152,6 +156,43 @@ $defs:
     - turns
     title: Session
     type: object
+  TaskEvidence:
+    additionalProperties: false
+    description: Visible task instructions selected by the scenario author or source
+      exporter.
+    properties:
+      kind:
+        enum:
+        - draft
+        - grounded_answer
+        title: Kind
+        type: string
+      recipient:
+        default: ''
+        title: Recipient
+        type: string
+      purpose:
+        default: ''
+        title: Purpose
+        type: string
+      required_details:
+        items:
+          type: string
+        title: Required Details
+        type: array
+      excluded_details:
+        items:
+          type: string
+        title: Excluded Details
+        type: array
+      source_excerpt:
+        default: ''
+        title: Source Excerpt
+        type: string
+    required:
+    - kind
+    title: TaskEvidence
+    type: object
   Turn:
     additionalProperties: true
     properties:
@@ -172,6 +213,11 @@ $defs:
           $ref: '#/$defs/Criterion'
         title: Criteria
         type: array
+      task:
+        anyOf:
+        - $ref: '#/$defs/TaskEvidence'
+        - type: 'null'
+        default: null
     required:
     - turn_number
     - user_message

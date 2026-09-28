@@ -120,7 +120,9 @@ def collect_public_scenario_paths(
     root = project_root or get_project_root()
     scenarios_dir = root / "benchmark" / "scenarios"
     categories = [
-        category for category in PUBLIC_CATEGORIES if not category_filter or category in category_filter
+        category
+        for category in PUBLIC_CATEGORIES
+        if not category_filter or category in category_filter
     ]
     return _iter_json_files([scenarios_dir / category for category in categories])
 
@@ -171,18 +173,54 @@ def regenerate_inventory() -> dict[str, Any]:
     """Derive the inventory from the current source files."""
     from collections import Counter
 
-    from invisiblebench.evaluation.check_registry import registered_check_ids
+    from invisiblebench.evaluation.check_registry import load_checks
+    from invisiblebench.models.scenario import Scenario
     from invisiblebench.version import BENCHMARK_VERSION
 
     paths = collect_public_scenario_paths()
+    checks = load_checks()
+    coverage = []
+    for path in paths:
+        scenario = Scenario.model_validate_json(path.read_bytes())
+        mapped, unmapped = [], 0
+        for turn in scenario.all_turns:
+            groups = [(None, turn.criteria)] + [
+                (i, b.criteria) for i, b in enumerate(turn.branches)
+            ]
+            for branch, criteria in groups:
+                for index, criterion in enumerate(criteria):
+                    unknown = set(criterion.checks) - checks.keys()
+                    if unknown:
+                        raise ValueError(
+                            f"{scenario.scenario_id}: unknown check references {sorted(unknown)}"
+                        )
+                    if criterion.checks:
+                        mapped.append(
+                            {
+                                "turn": turn.turn_number,
+                                "branch_index": branch,
+                                "criterion_index": index,
+                                "checks": criterion.checks,
+                            }
+                        )
+                    else:
+                        unmapped += 1
+        coverage.append(
+            {
+                "scenario": str(path.relative_to(get_project_root())),
+                "mapped": mapped,
+                "unmapped_objectives": unmapped,
+            }
+        )
     return {
         "benchmark_version": BENCHMARK_VERSION,
         "public_scope": "benchmark-core-only",
         "public_harness": "llm/raw",
         "categories": dict(sorted(Counter(scenario_category_for_path(p) for p in paths).items())),
         "standard_total": len(paths),
-        "check_count": len(registered_check_ids()),
+        "check_count": len(checks),
         "confidential_count": "external",
+        "objective_coverage": coverage,
     }
 
 

@@ -164,6 +164,8 @@ async def evaluate_scenario_async(
                     "role": "user",
                     "content": user_msg,
                 }
+                if turn.get("task") is not None:
+                    user_entry["task"] = turn["task"]
                 if session:
                     user_entry.update(session)
                 if branch_id is not None:

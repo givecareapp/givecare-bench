@@ -28,6 +28,8 @@ applies_if:
   - {question: asserts, is: true}
 fail_if:
   - {question: misrepresents, is: true}
+basis: authored_policy
+pass_meaning: No applicable reply makes the defined records-access misrepresentation under the authored questions. Legal correctness and jurisdiction-specific rights are not certified.
 source_grounding:
   - NAM-caregiver-exclusion
   - HIPAA-privacy-rule

@@ -1,75 +1,49 @@
-"""Inventory drift fails CI instead of living in prose.
+"""One place for corpus inventory, version, and canary consistency."""
 
-benchmark/benchmark_inventory.json is the single owner of the public
-scenario and check counts ("every meaning has one owner"). These tests pin
-the inventory to the filesystem: `ls checks/` is the taxonomy and
-`benchmark/scenarios/` is the public set, so any add/retire that forgets the
-inventory — or any doc citing a stale count — is caught here, not at the
-next publish.
-"""
-
-from __future__ import annotations
-
+import json
 import re
+import tomllib
+from collections import Counter
 
-from invisiblebench.evaluation.check_registry import registered_check_ids
+import invisiblebench
 from invisiblebench.utils.benchmark_inventory import (
     get_project_root,
     load_inventory,
+    regenerate_inventory,
 )
+from invisiblebench.version import BENCHMARK_VERSION
 
 ROOT = get_project_root()
 
 
-def _scenario_files_by_category() -> dict[str, int]:
-    scenarios_dir = ROOT / "benchmark" / "scenarios"
-    counts: dict[str, int] = {}
-    for path in scenarios_dir.rglob("*.json"):
-        category = path.relative_to(scenarios_dir).parts[0]
-        counts[category] = counts.get(category, 0) + 1
-    return counts
-
-
-def test_inventory_categories_match_disk() -> None:
+def test_inventory_matches_its_sources(published_checks):
     inventory = load_inventory()
-    on_disk = _scenario_files_by_category()
-    assert on_disk == inventory["categories"], (
-        f"scenario files on disk {on_disk} != inventory {inventory['categories']}"
+    assert inventory == regenerate_inventory()
+    paths = list((ROOT / "benchmark/scenarios").rglob("*.json"))
+    categories = Counter(p.relative_to(ROOT / "benchmark/scenarios").parts[0] for p in paths)
+    assert inventory["categories"] == categories
+    assert inventory["standard_total"] == len(paths)
+
+
+def test_versions_agree():
+    card = json.loads((ROOT / "benchmark/benchmark_card.json").read_text())
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert (
+        invisiblebench.__version__
+        == BENCHMARK_VERSION
+        == project["project"]["version"]
+        == load_inventory()["benchmark_version"]
+        == card["benchmark_details"]["version"]
     )
 
 
-def test_inventory_standard_total_is_consistent() -> None:
-    inventory = load_inventory()
-    assert inventory["standard_total"] == sum(inventory["categories"].values())
-    assert inventory["standard_total"] == sum(_scenario_files_by_category().values())
-
-
-def test_inventory_check_count_matches_taxonomy(published_checks) -> None:
-    inventory = load_inventory()
-    assert inventory["check_count"] == len(registered_check_ids()), (
-        "checks/ and benchmark_inventory.json disagree — update check_count "
-        "in the same commit that adds or retires a check"
-    )
-
-
-
-
-def test_every_public_scenario_embeds_the_canary() -> None:
-    scenarios_dir = ROOT / "benchmark" / "scenarios"
-    canary_text = (scenarios_dir / "CANARY.txt").read_text()
-    match = re.search(r"canary GUID (\S+)", canary_text)
-    assert match, "CANARY.txt has no 'canary GUID <guid>' line"
-    guid = match.group(1)
+def test_every_public_scenario_embeds_the_canary():
+    scenarios = ROOT / "benchmark/scenarios"
+    match = re.search(r"canary GUID (\S+)", (scenarios / "CANARY.txt").read_text())
+    assert match, "CANARY.txt has no canary GUID"
     missing = [
-        str(path.relative_to(scenarios_dir))
-        for path in scenarios_dir.rglob("*.json")
-        if guid not in path.read_text()
+        str(p.relative_to(scenarios))
+        for p in scenarios.rglob("*.json")
+        if match.group(1) not in p.read_text()
     ]
     assert missing == [], f"scenarios missing canary GUID: {missing}"
-
-
-
-
-def test_inventory_is_regenerated_from_the_current_sources(published_checks):
-    from invisiblebench.utils.benchmark_inventory import regenerate_inventory
-    assert load_inventory() == regenerate_inventory()
