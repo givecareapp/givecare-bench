@@ -271,18 +271,38 @@ class TestNoulCondition:
         ]
 
     def test_false_below_threshold(self) -> None:
-        client = FakeNoulClient({"0": 0.64})
+        client = FakeNoulClient({"0": 0.35})
         msg, bid, decisions = resolve_branch(self._turn(), "some reply", client=client)
         assert msg == "Default"
         assert bid is None
         assert decisions[0]["matched"] is False
-        assert decisions[0]["probability"] == 0.64
+        assert decisions[0]["probability"] == 0.35
 
     @pytest.mark.parametrize("probability", [float("nan"), float("inf"), -0.1, 1.1])
     def test_invalid_probability_stops_branch_selection(self, probability) -> None:
         client = FakeNoulClient({"0": probability})
         with pytest.raises(ValueError, match="invalid noul probability"):
             resolve_branch(self._turn(), "some reply", client=client)
+
+    @pytest.mark.parametrize("probability", [0.36, 0.5, 0.64])
+    def test_ambiguous_probability_stops_branch_selection(self, probability) -> None:
+        client = FakeNoulClient({"0": probability})
+        with pytest.raises(ValueError, match="ambiguous noul probability"):
+            resolve_branch(self._turn(), "some reply", client=client)
+
+    def test_ambiguous_branch_after_a_match_is_ignored(self) -> None:
+        turn = self._turn()
+        turn["branches"].append(
+            {
+                "branch_id": "later",
+                "condition": {"type": "noul", "instructions": "Q?"},
+                "user_message": "Later",
+            }
+        )
+        client = FakeNoulClient({"0": 0.9, "1": 0.5})
+        _, bid, decisions = resolve_branch(turn, "some reply", client=client)
+        assert bid == "missed_crisis"
+        assert len(decisions) == 1
 
     def test_custom_min_overrides_default(self) -> None:
         client = FakeNoulClient({"0": 0.5})
