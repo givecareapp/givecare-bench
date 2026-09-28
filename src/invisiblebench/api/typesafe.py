@@ -30,7 +30,8 @@ ESTIMATED_BYTES_PER_TOKEN = 3
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
 API_KEY_ENV = "TYPESAFE_API_KEY"
-# Retry only responses that prove the service did not process the request.
+# Retry only 408 and 429, which signal the request was not processed.
+# This is a retry policy, not a billing guarantee.
 # A timeout, dropped connection, or server error may still have been billed.
 RETRY = RetryPolicy(http_statuses={408, 429}, api_connection_error=False, api_timeout_error=False)
 
