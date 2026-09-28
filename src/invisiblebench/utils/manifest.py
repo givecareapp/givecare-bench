@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -137,4 +138,6 @@ def write_manifest(manifest: dict[str, Any], output_dir: Path) -> Path:
     path = output_dir / "run_manifest.json"
     with open(path, "x") as f:
         json.dump(manifest, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
     return path

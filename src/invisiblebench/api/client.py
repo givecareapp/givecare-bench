@@ -1,7 +1,5 @@
 """OpenRouter API client."""
 
-import asyncio
-import json
 import math
 import os
 import threading
@@ -30,10 +28,16 @@ _MODEL_PRICING: dict[str, tuple[float, float]] = {
     "openai/gpt-5-mini": (0.25, 2.00),
 }
 
-# A conservative token estimate for pre-dispatch reservations: real payloads
-# run above four characters per billed token, so dividing by a smaller
-# divisor keeps the reservation an upper bound, not a guess that undershoots.
+# Pre-dispatch token estimate, not a tokenizer-backed billing guarantee.
+# Actual usage can exceed a reservation; settlement must still record it.
 _CHARS_PER_TOKEN_RESERVE_ESTIMATE = 3
+
+
+def _nonnegative_cost(value: float, name: str) -> float:
+    value = float(value)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return value
 
 
 def register_model_pricing(model: str, cost_per_m_input: float, cost_per_m_output: float) -> None:
@@ -43,7 +47,10 @@ def register_model_pricing(model: str, cost_per_m_input: float, cost_per_m_outpu
     only on input tokens) share the one cost tracker's reserve/settle path
     instead of reimplementing it.
     """
-    _MODEL_PRICING[model] = (cost_per_m_input, cost_per_m_output)
+    _MODEL_PRICING[model] = (
+        _nonnegative_cost(cost_per_m_input, "input price"),
+        _nonnegative_cost(cost_per_m_output, "output price"),
+    )
 
 
 def _lookup_model_pricing(model: str) -> tuple[float, float] | None:
@@ -54,14 +61,14 @@ def _lookup_model_pricing(model: str) -> tuple[float, float] | None:
         from invisiblebench.models.config import MODELS_FULL
 
         for m in MODELS_FULL:
-            _MODEL_PRICING[m.id] = (m.cost_per_m_input, m.cost_per_m_output)
+            _MODEL_PRICING.setdefault(m.id, (m.cost_per_m_input, m.cost_per_m_output))
     except ImportError:
         return None
     return _MODEL_PRICING.get(model)
 
 
 def estimate_request_reservation(model: str, messages: list[Any], max_tokens: int) -> float | None:
-    """An upper-bound dollar estimate for a not-yet-dispatched chat request.
+    """A dollar estimate for a not-yet-dispatched chat request.
 
     Returns ``None`` when the model has no known pricing — the caller decides
     whether an unknown-cost dispatch is acceptable.
@@ -71,15 +78,35 @@ def estimate_request_reservation(model: str, messages: list[Any], max_tokens: in
         return None
     prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
     prompt_tokens_estimate = math.ceil(prompt_chars / _CHARS_PER_TOKEN_RESERVE_ESTIMATE)
-    return (prompt_tokens_estimate / 1_000_000) * pricing[0] + (
-        max_tokens / 1_000_000
-    ) * pricing[1]
+    return (prompt_tokens_estimate / 1_000_000) * pricing[0] + (max_tokens / 1_000_000) * pricing[1]
+
+
+def _call_cost(
+    model: str,
+    prompt_tokens: int | None,
+    completion_tokens: int | None,
+    actual_cost: float | None,
+) -> tuple[float | None, str]:
+    if actual_cost is not None:
+        try:
+            return _nonnegative_cost(actual_cost, "reported cost"), "reported"
+        except (TypeError, ValueError):
+            pass
+    pricing = _lookup_model_pricing(model)
+    if pricing is None or prompt_tokens is None or completion_tokens is None:
+        return None, "unknown"
+    if any(
+        not isinstance(n, int) or isinstance(n, bool) or n < 0
+        for n in (prompt_tokens, completion_tokens)
+    ):
+        return None, "unknown"
+    return (prompt_tokens * pricing[0] + completion_tokens * pricing[1]) / 1_000_000, "estimated"
 
 
 class CostTracker:
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total: float = 0.0
         self._reported_total: float = 0.0
         self._estimated_total: float = 0.0
@@ -92,7 +119,7 @@ class CostTracker:
         self._reservations: dict[int, float] = {}
 
     def reserve(self, amount: float | None, *, allow_unknown: bool = False) -> int:
-        """Reserve an upper-bound dollar amount before dispatching a request.
+        """Reserve an estimated dollar amount before dispatching a request.
 
         ``amount`` is ``None`` when the request's cost cannot be estimated in
         advance (no known pricing). Under an active ceiling, an unknown
@@ -109,7 +136,7 @@ class CostTracker:
                     )
                 reserved_amount = 0.0
             else:
-                reserved_amount = max(float(amount), 0.0)
+                reserved_amount = _nonnegative_cost(amount, "reservation")
             if self._max_cost_usd is not None:
                 projected = self._total + self._reserved + reserved_amount
                 if projected > self._max_cost_usd:
@@ -150,48 +177,31 @@ class CostTracker:
         self,
         model: str,
         prompt_tokens: int | None,
-        completion_tokens: int,
+        completion_tokens: int | None,
         *,
         actual_cost: float | None = None,
     ) -> float:
         """Record one completed call. Always counts, even with unknown cost."""
 
-        if actual_cost is not None:
-            try:
-                reported_cost = float(actual_cost)
-            except (TypeError, ValueError):
-                reported_cost = None
-            if reported_cost is not None and (
-                not math.isfinite(reported_cost) or reported_cost < 0
-            ):
-                reported_cost = None
-        else:
-            reported_cost = None
-
-        if reported_cost is not None:
-            return self._apply(model, reported_cost, "reported")
-
-        pricing = _lookup_model_pricing(model)
-        if pricing is None or prompt_tokens is None:
-            return self._apply(model, None, "unknown")
-
-        cost = (prompt_tokens / 1_000_000) * pricing[0] + (
-            completion_tokens / 1_000_000
-        ) * pricing[1]
-        return self._apply(model, cost, "estimated")
+        cost, kind = _call_cost(model, prompt_tokens, completion_tokens, actual_cost)
+        return self._apply(model, cost, kind)
 
     def settle(
         self,
         token: int,
         model: str,
         prompt_tokens: int | None,
-        completion_tokens: int,
+        completion_tokens: int | None,
         *,
         actual_cost: float | None = None,
     ) -> float:
         """Release a reservation and record the call's actual cost in one step."""
-        self.release(token)
-        return self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
+        with self._lock:
+            if token not in self._reservations:
+                raise ValueError("reservation is unknown or already settled")
+            cost = self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
+            self.release(token)
+            return cost
 
     @property
     def total(self) -> float:
@@ -222,6 +232,8 @@ class CostTracker:
             }
 
     def reset(self, *, max_cost_usd: float | None = None) -> None:
+        if max_cost_usd is not None:
+            max_cost_usd = _nonnegative_cost(max_cost_usd, "cost ceiling")
         with self._lock:
             self._total = 0.0
             self._reported_total = 0.0
@@ -263,8 +275,7 @@ MIN_COST_CEILING_HEADROOM_USD = 1.0
 
 def maximum_reasonable_cost_ceiling(planned_cost_usd: float) -> float:
     """Bound live approval so a nominal ceiling remains a meaningful guardrail."""
-    if planned_cost_usd < 0:
-        raise ValueError("planned cost must be non-negative")
+    planned_cost_usd = _nonnegative_cost(planned_cost_usd, "planned cost")
     return max(
         planned_cost_usd * MAX_COST_CEILING_MULTIPLIER,
         planned_cost_usd + MIN_COST_CEILING_HEADROOM_USD,
@@ -287,8 +298,6 @@ class APIConfig:
 
     openrouter_api_key: str | None = None
     timeout: int = 120
-    max_retries: int = 3
-    retry_delay: float = 2.0
 
     @classmethod
     def from_env(cls) -> "APIConfig":
@@ -296,8 +305,6 @@ class APIConfig:
         return cls(
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
             timeout=_env_number("INVISIBLEBENCH_API_TIMEOUT_SECONDS", 120, minimum=0),
-            max_retries=int(_env_number("INVISIBLEBENCH_API_MAX_RETRIES", 3, minimum=1)),
-            retry_delay=_env_number("INVISIBLEBENCH_API_RETRY_DELAY_SECONDS", 2.0, minimum=0),
         )
 
 
@@ -309,7 +316,7 @@ def _env_number(name: str, default: float, *, minimum: float) -> float:
         value = float(raw)
     except ValueError:
         return default
-    if value < minimum:
+    if not math.isfinite(value) or value < minimum:
         return default
     return value
 
@@ -354,28 +361,18 @@ class ModelAPIClient:
         if not api_key:
             raise ValueError("No API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY.")
 
+        self._http: httpx.AsyncClient | None = None
         self.base_url = base_url
         self.headers = {
             "Authorization": f"Bearer {api_key}",
+            "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0",
             **extra_headers,
         }
 
-    @staticmethod
-    def _format_request_error(exc: Exception) -> str:
-        detail = str(exc)
-        response = getattr(exc, "response", None)
-        if response is not None:
-            try:
-                text = getattr(response, "text", None)
-                if text is None and hasattr(response, "read"):
-                    text = response.read()
-                    if isinstance(text, bytes):
-                        text = text.decode("utf-8", errors="ignore")
-                if text:
-                    detail += f" | Response: {text[:500]}"
-            except (OSError, UnicodeDecodeError, AttributeError):
-                pass
-        return detail
+    async def aclose(self) -> None:
+        if self._http is not None:
+            await self._http.aclose()
+            self._http = None
 
     @staticmethod
     def _build_payload(
@@ -411,8 +408,8 @@ class ModelAPIClient:
         finish_reason = data["choices"][0].get("finish_reason")
         usage = data.get("usage") or {}
         tokens_used = usage.get("total_tokens", 0)
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
+        prompt_tokens = usage.get("prompt_tokens")
+        completion_tokens = usage.get("completion_tokens")
         latency_ms = (time.time() - start_time) * 1000
 
         if reservation is None:
@@ -441,6 +438,8 @@ class ModelAPIClient:
             "model": model,
             "raw": data,
             "cost": cost,
+            "cost_known": _call_cost(model, prompt_tokens, completion_tokens, usage.get("cost"))[0]
+            is not None,
         }
 
     async def call_model_async(
@@ -453,61 +452,26 @@ class ModelAPIClient:
         allow_unknown_cost: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
-        """Async variant of call_model. Requires httpx.
+        """Send once. The generation journal owns recovery, not hidden HTTP retries.
 
-        Reserves an upper-bound cost estimate before dispatch so concurrent
-        callers cannot collectively overshoot an active budget ceiling, then
-        settles the reservation to the actual (or estimated/unknown) cost
-        once a response arrives. ``allow_unknown_cost`` opts an unpriced
-        model into dispatch under a ceiling instead of being refused.
+        A transport failure or cancellation can follow a provider charge. Keep its
+        reservation held until the run stops; never free that money for another call.
         """
-
-        start_time = time.time()
-        payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
-        reservation_amount = estimate_request_reservation(model, messages, max_tokens)
-        reservation = cost_tracker.reserve(reservation_amount, allow_unknown=allow_unknown_cost)
-
-        try:
-            async with httpx.AsyncClient(
+        if self._http is None:
+            self._http = httpx.AsyncClient(
                 timeout=httpx.Timeout(self.config.timeout),
                 limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-            ) as client:
-                last_error: Exception | None = None
-                for attempt in range(self.config.max_retries):
-                    try:
-                        response = await client.post(
-                            f"{self.base_url}/chat/completions",
-                            json=payload,
-                            headers=self.headers,
-                        )
-                        response.raise_for_status()
-
-                        data = response.json()
-                        result = self._parse_response(data, model, start_time, reservation)
-                        return result
-
-                    except (
-                        httpx.HTTPStatusError,
-                        httpx.RequestError,
-                        json.JSONDecodeError,
-                    ) as e:
-                        last_error = e
-                        error_detail = self._format_request_error(e)
-                        status_code = getattr(getattr(e, "response", None), "status_code", None)
-                        if status_code == 402:
-                            raise InsufficientCreditsError(
-                                "OpenRouter account has insufficient credits. "
-                                "Add credits at https://openrouter.ai/settings/credits"
-                            ) from e
-                        if attempt < self.config.max_retries - 1:
-                            await asyncio.sleep(self.config.retry_delay * (attempt + 1))
-                            continue
-                        raise RuntimeError(
-                            f"Failed to call model {model} after {self.config.max_retries} "
-                            f"attempts: {error_detail}"
-                        ) from e
-
-                raise RuntimeError(f"Failed to call model {model}") from last_error
-        except BaseException:
-            cost_tracker.release(reservation)
-            raise
+            )
+        start_time = time.time()
+        payload = self._build_payload(model, messages, temperature, max_tokens, **kwargs)
+        reservation = cost_tracker.reserve(
+            estimate_request_reservation(model, messages, max_tokens),
+            allow_unknown=allow_unknown_cost,
+        )
+        response = await self._http.post(
+            f"{self.base_url}/chat/completions", json=payload, headers=self.headers
+        )
+        if response.status_code == 402:
+            raise InsufficientCreditsError("Provider account has insufficient credits")
+        response.raise_for_status()
+        return self._parse_response(response.json(), model, start_time, reservation)

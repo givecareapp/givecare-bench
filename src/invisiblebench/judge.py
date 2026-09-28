@@ -666,6 +666,9 @@ def execute_requests(
     """The sole offline request loop. Hold the lock through the caller's projection."""
     if not math.isfinite(max_cost_usd) or max_cost_usd <= 0:
         raise ValueError("max_cost_usd must be finite and positive")
+    for turns in requests.values():
+        for request in turns.values():
+            check_context(request["state"], request["questions"])
     with (bundle / ANSWERS_FILE).open("a+b") as journal, ExitStack() as clients:
         try:
             fcntl.flock(journal.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

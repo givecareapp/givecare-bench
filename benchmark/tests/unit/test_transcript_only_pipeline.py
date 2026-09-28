@@ -23,6 +23,9 @@ PERSONA = {
 
 
 class _FakeAsyncClient:
+    async def aclose(self):
+        pass
+
     def __init__(self) -> None:
         self.calls: list[list[dict[str, str]]] = []
 
@@ -229,6 +232,7 @@ def test_evaluate_scenario_async_resolves_noul_branch_off_thread(
     branch_entry = next(e for e in transcript if e["turn"] == 2 and e["role"] == "user")
     assert branch_entry["branch_id"] == "noul-branch"
     assert branch_entry["content"] == "Branch taken"
+    assert branch_entry["branch_decisions"][0].pop("judge_response")["usage"]["input_tokens"] == 5
     assert branch_entry["branch_decisions"] == [
         {"branch_id": "noul-branch", "type": "noul", "matched": True, "probability": 0.9}
     ]
@@ -272,6 +276,12 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     assert not (output_dir / "all_results.json").exists()
 
     manifest = json.loads((output_dir / "run_manifest.json").read_text())
+    assert manifest["model_pricing"] == {
+        "test/model": {"input_per_million": 1.0, "output_per_million": 1.0}
+    }
+    from invisiblebench.api.client import estimate_request_reservation
+
+    assert estimate_request_reservation("test/model", [], 1000) == 0.001
     assert manifest["schema"] == "invisiblebench-run-manifest/v3"
     assert manifest["scenario_ids"] == ["context_regulatory_data_privacy_001"]
     assert manifest["transcript_policy"]["system_prompt_hash"]
@@ -302,6 +312,37 @@ def test_run_benchmark_transcript_only_writes_stage_artifact(
     scan, answers, judgments = load_scan(bundle, complete=True)
     assert len(answers) == scan.planned_requests
     assert len(judgments) == len(plan.checks)
+
+
+@pytest.mark.parametrize(
+    "budget,price",
+    [(float("nan"), 1.0), (float("inf"), 1.0), (1.0, float("nan")), (1.0, float("inf"))],
+)
+def test_invalid_money_fails_before_client_or_run_directory(tmp_path, monkeypatch, budget, price):
+    monkeypatch.setattr(
+        "invisiblebench.api.client.ModelAPIClient",
+        lambda: pytest.fail("invalid money reached API initialization"),
+    )
+    output = tmp_path / "run"
+    assert (
+        run_command_mod.run_benchmark(
+            models=[
+                {
+                    "id": "fixture/money",
+                    "name": "Fixture",
+                    "cost_per_m_input": price,
+                    "cost_per_m_output": 1.0,
+                }
+            ],
+            output_dir=output,
+            dry_run=False,
+            auto_confirm=True,
+            max_cost_usd=budget,
+            scenario_filter=["context_regulatory_data_privacy_001"],
+        )
+        == 2
+    )
+    assert not output.exists()
 
 
 def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) -> None:

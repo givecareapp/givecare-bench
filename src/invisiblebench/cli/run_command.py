@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
+import hashlib
 import json
 import logging
+import math
 import os
 import shlex
 import time
@@ -22,6 +25,7 @@ from invisiblebench.api.client import (
     InsufficientCreditsError,
     cost_tracker,
     maximum_reasonable_cost_ceiling,
+    register_model_pricing,
 )
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.cli._console import make_console
@@ -191,19 +195,10 @@ def resolve_models(spec: str, all_models: list[dict[str, Any]]) -> list[int]:
                 if needle in m["name"].lower() or needle in m["id"].lower()
             ]
             if not matched and "/" in part:
-                # Pass-through: any OpenRouter model id ("org/model") can be
-                # benchmarked, not just the published roster. Costs are
-                # estimated with generic pricing; the dry-run shows them.
-                all_models.append(
-                    {
-                        "id": part,
-                        "name": part,
-                        "provider": "openrouter",
-                        "cost_per_m_input": 1.0,
-                        "cost_per_m_output": 3.0,
-                    }
+                raise ValueError(
+                    f"No catalog pricing for '{part}'. Add the model and verified prices "
+                    "to src/invisiblebench/models/config.py before planning a run."
                 )
-                matched = [len(all_models) - 1]
             if not matched:
                 names = [f"  {i+1}. {m['name']}" for i, m in enumerate(all_models)]
                 raise ValueError(
@@ -373,6 +368,20 @@ def run_benchmark(
         console.print("[red]No scenarios match the filters[/red]")
         return 1
 
+    pricing = {}
+    try:
+        for model in models:
+            input_price = float(model["cost_per_m_input"])
+            output_price = float(model["cost_per_m_output"])
+            register_model_pricing(model["id"], input_price, output_price)
+            pricing[model["id"]] = {
+                "input_per_million": input_price,
+                "output_per_million": output_price,
+            }
+    except (KeyError, TypeError, ValueError) as exc:
+        console.print(f"[red]Invalid model pricing: {exc}[/red]")
+        return 2
+
     scenario_parallel = max(1, scenario_parallel)
     total_cost = sum(estimate_cost(s["category"], m) for m in models for s in scenarios)
 
@@ -401,8 +410,8 @@ def run_benchmark(
             "Run with --dry-run first."
         )
         return 2
-    if max_cost_usd < 0:
-        print("ERROR: --max-cost-usd must be non-negative")
+    if not math.isfinite(max_cost_usd) or max_cost_usd < 0:
+        print("ERROR: --max-cost-usd must be finite and non-negative")
         return 2
     if total_cost > max_cost_usd:
         print(
@@ -422,8 +431,8 @@ def run_benchmark(
         print("ERROR: OPENROUTER_API_KEY not set")
         return 1
 
-    if (output_dir / "run_manifest.json").exists() or (output_dir / "scan_plan.json").exists():
-        print(f"ERROR: Run already exists: {output_dir}. Use a new run directory.")
+    if (output_dir / "scan_plan.json").exists():
+        print("ERROR: This run has frozen judging inputs; generation cannot change it.")
         return 2
 
     confirm_or_abort(
@@ -454,15 +463,67 @@ def run_benchmark(
         mode="raw",
         include_confidential=include_confidential,
     )
+    manifest["model_pricing"] = pricing
     manifest["artifact_type"] = "transcript_run/v1"
     manifest["stage"] = "transcripts"
     manifest["scoring"] = "deferred_to_run_scan"
+    manifest["generation_code_sha256"] = hashlib.sha256(
+        b"".join(
+            p.relative_to(root).as_posix().encode() + p.read_bytes()
+            for p in sorted((root / "src" / "invisiblebench").rglob("*.py"))
+        )
+    ).hexdigest()
+    manifest["lockfile_sha256"] = hashlib.sha256((root / "uv.lock").read_bytes()).hexdigest()
+    manifest_path = output_dir / "run_manifest.json"
     try:
-        write_manifest(manifest, output_dir)
-    except FileExistsError:
-        print(f"ERROR: Run already exists: {output_dir}. Use a new run directory.")
+        if not manifest_path.exists():
+            write_manifest(manifest, output_dir)
+        with manifest_path.open("r") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            saved = json.load(lock)
+            identity = {"run_id", "run_date", "git_dirty"}
+            if {k: v for k, v in saved.items() if k not in identity} != {
+                k: v for k, v in manifest.items() if k not in identity
+            }:
+                raise ValueError("Frozen generation contract changed; use a new run directory")
+            from invisiblebench.cli.generation import GenerationJournal
+            from invisiblebench.cli.transcript import generation_contract
+
+            # Validate every journal and scenario before any task can spend money.
+            contracts = [generation_contract(m, s, api_client) for m in models for s in scenarios]
+            journals = [
+                GenerationJournal.inspect(p)
+                for p in sorted((output_dir / "generation").glob("*.jsonl"))
+            ]
+            for journal in journals:
+                if journal["contract"] not in contracts:
+                    raise ValueError("Saved generation inputs differ from the selected run")
+            for journal in journals:
+                for _, response in journal["completed"].values():
+                    if "model" in response:
+                        cost_tracker.record(
+                            response["model"],
+                            response.get("prompt_tokens", 0),
+                            response.get("completion_tokens", 0),
+                            actual_cost=(response.get("raw") or {}).get("usage", {}).get("cost"),
+                        )
+            if cost_tracker.snapshot()["unknown_calls"] or not math.isclose(
+                cost_tracker.total, sum(j["cost"] for j in journals), abs_tol=1e-12
+            ):
+                raise ValueError("Saved generation costs cannot be reproduced")
+            return _generate_transcripts(
+                models, scenarios, api_client, output_dir, saved, parallel, scenario_parallel
+            )
+    except (ValueError, OSError) as exc:
+        print(f"ERROR: Cannot start or resume generation: {exc}")
         return 2
 
+
+def _generate_transcripts(
+    models, scenarios, api_client, output_dir, manifest, parallel, scenario_parallel
+):
+    run_id = manifest["run_id"]
+    console = make_console()
     start_time = time.time()
     passed = 0
     failed = 0
@@ -505,10 +566,11 @@ def run_benchmark(
                     f"[{len(completed)}/{len(tasks)}] {model['name']} - "
                     f"{result.get('scenario', 'unknown')} {status}"
                 )
-        except (InsufficientCreditsError, CostBudgetExceededError):
+        finally:
             for task in tasks:
-                task.cancel()
-            raise
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
         return [result for _, result in sorted(completed, key=lambda item: item[0])]
 
@@ -526,11 +588,29 @@ def run_benchmark(
             async with model_semaphore:
                 return await run_transcript_model(model)
 
-        nested = await asyncio.gather(*(run_model_with_sem(model) for model in models))
-        return [row for model_rows in nested for row in model_rows]
+        tasks = [asyncio.create_task(run_model_with_sem(model)) for model in models]
+        try:
+            nested = await asyncio.gather(*tasks)
+            return [row for model_rows in nested for row in model_rows]
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def execute():
+        from invisiblebench.cli.transcript import close_branch_client
+
+        try:
+            return await run_transcripts()
+        finally:
+            try:
+                await api_client.aclose()
+            finally:
+                await close_branch_client()
 
     try:
-        results = asyncio.run(run_transcripts())
+        results = asyncio.run(execute())
     except CostBudgetExceededError as exc:
         results = transcript_rows
         print(f"\n{exc}. Saving transcript summary for completed scenarios.")
@@ -540,8 +620,9 @@ def run_benchmark(
         print("\nCredits exhausted. Saving transcript summary for completed scenarios.")
         abort_reason = "credits_exhausted"
     except Exception as e:
-        print(f"ERROR: Transcript generation failed: {e}")
-        return 1
+        results = transcript_rows
+        print(f"ERROR: Transcript generation stopped; attempts retained: {e}")
+        abort_reason = "generation_error"
     else:
         abort_reason = None
 

@@ -261,6 +261,7 @@ class TestNoulCondition:
         msg, bid, decisions = resolve_branch(self._turn(), "some reply", client=client)
         assert msg == "Branch taken"
         assert bid == "missed_crisis"
+        assert decisions[0].pop("judge_response")["usage"]["input_tokens"] == 42
         assert decisions == [
             {
                 "branch_id": "missed_crisis",
@@ -361,6 +362,7 @@ class TestNoulCondition:
         # First condition (index 0) fails, second (index 1) matches and wins.
         assert bid == "second"
         assert msg == "Second branch"
+        assert set(decisions[0].pop("judge_response")["answers"]) == {"0", "1"}
         assert decisions == [
             {"branch_id": "first", "type": "noul", "matched": False, "probability": 0.1},
             {"branch_id": "second", "type": "noul", "matched": True, "probability": 0.9},

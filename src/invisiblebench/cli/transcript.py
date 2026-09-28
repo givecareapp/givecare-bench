@@ -1,20 +1,18 @@
-"""Transcript generation and async scenario evaluation helpers."""
+"""Generate transcripts from durable, replayable target attempts."""
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 
-from invisiblebench.api.client import (
-    CostBudgetExceededError,
-    InsufficientCreditsError,
-)
-from invisiblebench.cli.result_helpers import (
-    _make_error_result,
-    _make_transcript_result,
-)
+from invisiblebench.api.typesafe import request_cost
+from invisiblebench.cli.generation import GenerationJournal
+from invisiblebench.cli.result_helpers import _make_error_result, _make_transcript_result
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.scenario import Scenario
 from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
@@ -23,27 +21,15 @@ if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
     from invisiblebench.api.typesafe import SystemOneClient
 
-# Shared judge client for `noul` branch conditions — created lazily, once per
-# process (one CLI run), only when a scenario turn actually needs it. Reused
-# across every concurrent scenario/model task in the run so it truly is one
-# client per run, not one per turn.
 _noul_client: "SystemOneClient | None" = None
 _noul_client_lock = asyncio.Lock()
 
 
 def _turn_has_noul_branch(turn: dict[str, Any]) -> bool:
-    """True when any of this turn's branch conditions is a ``noul`` judgment."""
-    branches = turn.get("branches") or []
-    return any(
-        isinstance(branch, dict)
-        and isinstance(branch.get("condition"), dict)
-        and branch["condition"].get("type") == "noul"
-        for branch in branches
-    )
+    return any(b.get("condition", {}).get("type") == "noul" for b in turn.get("branches", []))
 
 
 async def _ensure_noul_client() -> "SystemOneClient":
-    """Return the shared noul judge client, creating it on first use."""
     global _noul_client
     if _noul_client is None:
         async with _noul_client_lock:
@@ -54,10 +40,13 @@ async def _ensure_noul_client() -> "SystemOneClient":
     return _noul_client
 
 
-# Ceiling for a model's per-turn reply, including provider reasoning tokens.
-# Visible concision is prompt-governed; this ceiling preserves enough headroom
-# to avoid systematically truncating reasoning-model routes. Any reply that
-# still exhausts it is stamped `truncated: True` for annotators/scorers.
+async def close_branch_client() -> None:
+    global _noul_client
+    if _noul_client is not None:
+        _noul_client.close()
+        _noul_client = None
+
+
 MAX_REPLY_TOKENS = 4000
 TRANSCRIPT_TEMPERATURE = 0.7
 EMPTY_RESPONSE_RETRIES = 3
@@ -75,21 +64,25 @@ Remember: You're here to support, not diagnose or treat."""
 
 
 def transcript_policy(api_client: "ModelAPIClient") -> dict[str, Any]:
-    """Return the behavior-affecting raw-harness policy for run provenance."""
     config = getattr(api_client, "config", None)
     base_url = str(getattr(api_client, "base_url", "") or "")
-    backend = "openrouter" if "openrouter" in base_url else "openai-compatible"
     return {
-        "backend": backend,
+        "backend": "openrouter" if "openrouter" in base_url else "openai-compatible",
         "system_prompt_hash": hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest(),
         "temperature": TRANSCRIPT_TEMPERATURE,
         "max_reply_tokens": MAX_REPLY_TOKENS,
         "empty_response_retries": EMPTY_RESPONSE_RETRIES,
         "api_timeout_seconds": getattr(config, "timeout", None),
-        "api_max_retries": getattr(config, "max_retries", None),
-        "api_retry_delay_seconds": getattr(config, "retry_delay", None),
+        "transport_attempts": 1,
         "tools": "none",
     }
+
+
+def generation_contract(model, scenario, api_client):
+    data = Scenario.model_validate_json(Path(scenario["path"]).read_bytes()).model_dump(
+        mode="json", exclude_none=True, exclude_defaults=True
+    )
+    return {"model": model, "scenario": data, "policy": transcript_policy(api_client)}
 
 
 async def evaluate_scenario_async(
@@ -100,182 +93,132 @@ async def evaluate_scenario_async(
     semaphore: asyncio.Semaphore,
     run_id: str | None = None,
 ) -> dict[str, Any]:
-    """Generate one scenario transcript asynchronously."""
     async with semaphore:
-        scenario_path = Path(scenario["path"])
-        scenario_id = scenario_path.stem
-        # Request-scoped, not a diff against the process-global tracker: with
-        # concurrent scenarios, another scenario's spend can land on the
-        # global total between "before" and "after" reads, so a diff would
-        # attribute someone else's cost here. Summing each call's own
-        # returned cost keeps this scenario's figure isolated.
-        scenario_cost = 0.0
-        if not scenario_path.exists():
-            return _make_error_result(
-                model,
-                scenario["name"],
-                scenario_id,
-                scenario["category"],
-                "Scenario file not found",
-            )
-
+        path = Path(scenario["path"])
         try:
-            scenario_data = Scenario.model_validate_json(scenario_path.read_bytes()).model_dump(
-                mode="json", exclude_none=True, exclude_defaults=True
-            )
-        except ValueError as exc:
+            contract = generation_contract(model, scenario, api_client)
+            data = contract["scenario"]
+        except (OSError, ValueError) as exc:
             return _make_error_result(
-                model, scenario["name"], scenario_id, scenario["category"], str(exc)
+                model, scenario["name"], path.stem, scenario["category"], str(exc)
             )
 
-        scenario_id = scenario_data["scenario_id"]
-        transcript_name = f"{model['id'].replace('/', '_')}_{scenario_id}.jsonl"
-        transcript_path = output_dir / "transcripts" / transcript_name
+        scenario_id = data["scenario_id"]
+        name = f"{quote(model['id'], safe='')}_{quote(scenario_id, safe='')}.jsonl"
+        transcript_path = output_dir / "transcripts" / name
+        history = [{"role": "system", "content": SYSTEM_PROMPT}]
+        transcript, scenario_cost, previous = [], 0.0, None
 
-        try:
-            import jsonlines
+        with GenerationJournal(output_dir / "generation" / name, contract) as journal:
+            for turn, session in iter_scenario_turns(data):
+                number = turn["turn_number"]
+                history[0]["content"] = session_system_prompt(SYSTEM_PROMPT, session)
 
-            transcript = []
-            conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
-            errors: list[str] = []
+                async def choose(turn=turn, previous=previous):
+                    client = await _ensure_noul_client() if _turn_has_noul_branch(turn) else None
+                    # A synchronous judge call cannot be cancelled in flight. Drain it
+                    # before closing its client or journal; the attempt stays ambiguous.
+                    task = asyncio.create_task(
+                        asyncio.to_thread(resolve_branch, turn, previous, client=client)
+                    )
+                    try:
+                        user, branch, decisions = await asyncio.shield(task)
+                    except asyncio.CancelledError:
+                        await asyncio.gather(task, return_exceptions=True)
+                        raise
+                    value = {"user": user, "branch": branch, "decisions": decisions, "cost": 0.0}
+                    if decisions and (response := decisions[0].get("judge_response")):
+                        tokens = response["usage"]["input_tokens"]
+                        value.update(
+                            model=response["model"],
+                            prompt_tokens=tokens,
+                            completion_tokens=0,
+                            cost=request_cost(response["model"], tokens),
+                        )
+                    return value
 
-            prev_assistant_msg: str | None = None
-            noul_client: "SystemOneClient | None" = None
-            for turn, session in iter_scenario_turns(scenario_data):
-                turn_num = turn["turn_number"]
-                conversation_history[0]["content"] = session_system_prompt(
-                    SYSTEM_PROMPT,
-                    session,
-                )
-
-                if noul_client is None and _turn_has_noul_branch(turn):
-                    noul_client = await _ensure_noul_client()
-
-                # Resolve conditional branch (adaptive user message). Off-thread:
-                # `resolve_branch` is synchronous and may block on the judge's
-                # HTTP call, which would otherwise serialize every concurrent
-                # scenario task behind it.
-                user_msg, branch_id, branch_decisions = await asyncio.to_thread(
-                    resolve_branch, turn, prev_assistant_msg, client=noul_client
-                )
-
-                user_entry: dict[str, Any] = {
-                    "turn": turn_num,
+                if previous is not None and _turn_has_noul_branch(turn):
+                    choice = await journal.call(
+                        f"{number}/branch", {"turn": turn, "previous": previous}, choose
+                    )
+                else:
+                    user, branch, decisions = resolve_branch(turn, previous)
+                    choice = {"user": user, "branch": branch, "decisions": decisions, "cost": 0.0}
+                scenario_cost += choice["cost"]
+                user_entry = {
+                    "turn": number,
                     "role": "user",
-                    "content": user_msg,
+                    "content": choice["user"],
+                    **(session or {}),
                 }
                 if turn.get("task") is not None:
                     user_entry["task"] = turn["task"]
-                if session:
-                    user_entry.update(session)
-                if branch_id is not None:
-                    user_entry["branch_id"] = branch_id
-                if branch_decisions:
-                    user_entry["branch_decisions"] = branch_decisions
+                if choice["branch"] is not None:
+                    user_entry["branch_id"] = choice["branch"]
+                if choice["decisions"]:
+                    user_entry["branch_decisions"] = choice["decisions"]
                 transcript.append(user_entry)
-                conversation_history.append({"role": "user", "content": user_msg})
+                history.append({"role": "user", "content": choice["user"]})
 
-                try:
-                    # Retry empty responses under the run-manifest policy.
-                    assistant_msg = ""
-                    response = {}
-                    for retry in range(EMPTY_RESPONSE_RETRIES):
-                        response = await api_client.call_model_async(
-                            model=model["id"],
-                            messages=conversation_history,
-                            temperature=TRANSCRIPT_TEMPERATURE,
-                            max_tokens=MAX_REPLY_TOKENS,
-                        )
-                        scenario_cost += response.get("cost") or 0.0
-                        assistant_msg = response["response"] or ""
-                        if assistant_msg.strip():
-                            break
-                        # Empty response - wait and retry
-                        await asyncio.sleep(1.0 * (retry + 1))
-
-                    if not assistant_msg.strip():
-                        raise RuntimeError(
-                            "Model returned empty response after "
-                            f"{EMPTY_RESPONSE_RETRIES} retries"
-                        )
-
-                    assistant_entry: dict[str, Any] = {
-                        "turn": turn_num,
-                        "role": "assistant",
-                        "content": assistant_msg,
+                for retry in range(EMPTY_RESPONSE_RETRIES):
+                    request = {
+                        "model": model["id"],
+                        "messages": [dict(m) for m in history],
+                        "temperature": TRANSCRIPT_TEMPERATURE,
+                        "max_tokens": MAX_REPLY_TOKENS,
                     }
-                    if session:
-                        assistant_entry.update(session)
-                    if response.get("finish_reason") == "length":
-                        assistant_entry["truncated"] = True
-                    raw_response = response.get("raw") or {}
-                    if isinstance(raw_response, dict):
-                        if raw_response.get("model"):
-                            assistant_entry["resolved_model_id"] = raw_response["model"]
-                        if raw_response.get("provider"):
-                            assistant_entry["resolved_provider"] = raw_response["provider"]
-                    if retry:
-                        assistant_entry["empty_response_attempts"] = retry + 1
-                    transcript.append(assistant_entry)
-                    conversation_history.append({"role": "assistant", "content": assistant_msg})
-                    prev_assistant_msg = assistant_msg
-                except (CostBudgetExceededError, InsufficientCreditsError):
-                    raise  # Abort immediately — don't retry or continue
-                except Exception as e:
-                    error_msg = f"Turn {turn_num}: {e}"
-                    errors.append(error_msg)
-                    transcript.append(
-                        {
-                            "turn": turn_num,
-                            "role": "assistant",
-                            "content": f"[ERROR: {e}]",
-                            "error": True,
-                        }
+                    response = await journal.call(
+                        f"{number}/target/{retry}",
+                        request,
+                        lambda request=request: api_client.call_model_async(**request),
                     )
-                    prev_assistant_msg = None
+                    scenario_cost += response.get("cost") or 0.0
+                    message = response["response"] or ""
+                    if message.strip():
+                        break
+                else:
+                    raise RuntimeError(
+                        f"Turn {number}: model returned {EMPTY_RESPONSE_RETRIES} empty responses; attempts saved"
+                    )
 
+                entry = {"turn": number, "role": "assistant", "content": message, **(session or {})}
+                if response.get("finish_reason") == "length":
+                    entry["truncated"] = True
+                raw = response.get("raw") or {}
+                for source, destination in (
+                    ("model", "resolved_model_id"),
+                    ("provider", "resolved_provider"),
+                ):
+                    if raw.get(source):
+                        entry[destination] = raw[source]
+                if retry:
+                    entry["empty_response_attempts"] = retry + 1
+                transcript.append(entry)
+                history.append({"role": "assistant", "content": message})
+                previous = message
+
+            # The transcript is a projection, not the recovery source. Replace it only
+            # after the complete scenario can be reconstructed from saved responses.
             transcript_path.parent.mkdir(parents=True, exist_ok=True)
-            with jsonlines.open(transcript_path, "w") as writer:
-                writer.write_all(transcript)
+            temporary = transcript_path.with_suffix(".tmp")
+            with temporary.open("w") as stream:
+                for entry in transcript:
+                    stream.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary.replace(transcript_path)
 
-            # Fail if any turns had errors
-            if errors:
-                raise RuntimeError(f"Transcript generation had {len(errors)} error(s): {errors[0]}")
-
-        except (CostBudgetExceededError, InsufficientCreditsError):
-            raise  # Abort immediately — propagate to runner
-        except Exception as e:
-            return _make_error_result(
-                model,
-                scenario["name"],
-                scenario_id,
-                scenario["category"],
-                f"Transcript generation failed: {e}",
-                cost=scenario_cost,
-            )
-
-        actual_cost = scenario_cost
         result = _make_transcript_result(
             model=model,
             scenario_name=scenario["name"],
             scenario_id=scenario_id,
             category=scenario["category"],
             transcript_path=transcript_path,
-            cost=actual_cost,
+            cost=scenario_cost,
             run_id=run_id,
         )
-        result["resolved_model_ids"] = sorted(
-            {
-                str(entry["resolved_model_id"])
-                for entry in transcript
-                if entry.get("resolved_model_id")
-            }
-        )
-        result["resolved_providers"] = sorted(
-            {
-                str(entry["resolved_provider"])
-                for entry in transcript
-                if entry.get("resolved_provider")
-            }
-        )
+        for field in ("model_id", "provider"):
+            result[f"resolved_{field}s"] = sorted(
+                {str(e[f"resolved_{field}"]) for e in transcript if e.get(f"resolved_{field}")}
+            )
         return result

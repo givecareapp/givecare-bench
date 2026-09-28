@@ -68,7 +68,7 @@ def resolve_branch(
         return turn["user_message"], None, []
 
     response_lower = prev_assistant_msg.lower()
-    noul_probabilities = _ask_noul_conditions(
+    noul_probabilities, judge_response = _ask_noul_conditions(
         branches, prev_assistant_msg, client=client, model=model
     )
 
@@ -81,9 +81,7 @@ def resolve_branch(
             probability = noul_probabilities[idx]
             matched = probability >= condition.get("min", DEFAULT_NOUL_MIN)
             if not matched and probability > NOUL_MAX_FALSE:
-                raise ValueError(
-                    f"ambiguous noul probability for branch {idx}: {probability}"
-                )
+                raise ValueError(f"ambiguous noul probability for branch {idx}: {probability}")
         else:
             probability = None
             matched = _evaluate_condition(condition, prev_assistant_msg, response_lower)
@@ -97,9 +95,11 @@ def resolve_branch(
             }
         )
         if matched:
-            return branch["user_message"], branch.get("branch_id"), decisions
-
-    # No branch matched — default path.
+            break
+    if judge_response is not None:
+        decisions[0]["judge_response"] = judge_response.model_dump(mode="json")
+    if matched:
+        return branch["user_message"], branch.get("branch_id"), decisions
     return turn["user_message"], None, decisions
 
 
@@ -109,13 +109,13 @@ def _ask_noul_conditions(
     *,
     client: Any | None,
     model: str,
-) -> dict[int, float]:
+) -> tuple[dict[int, float], Any]:
     """Ask every ``noul`` condition on this turn in one fan-out request."""
     noul_indices = [
         idx for idx, branch in enumerate(branches) if branch["condition"]["type"] == "noul"
     ]
     if not noul_indices:
-        return {}
+        return {}, None
     if client is None:
         raise ValueError("a judge client is required for noul branch conditions")
 
@@ -131,7 +131,7 @@ def _ask_noul_conditions(
         if not math.isfinite(probability) or not 0 <= probability <= 1:
             raise ValueError(f"invalid noul probability for branch {idx}: {probability}")
         probabilities[idx] = probability
-    return probabilities
+    return probabilities, result
 
 
 def _evaluate_condition(

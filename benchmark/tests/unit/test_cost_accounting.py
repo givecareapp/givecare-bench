@@ -22,6 +22,66 @@ from invisiblebench.cli.run_command import estimate_cost
 from invisiblebench.cli.transcript import evaluate_scenario_async
 
 
+@pytest.mark.parametrize("amount", [float("nan"), float("inf"), -float("inf"), -1.0])
+def test_invalid_budget_values_are_rejected_without_resetting_spend(amount):
+    tracker = CostTracker()
+    tracker.record("fixture", 0, 0, actual_cost=0.2)
+    with pytest.raises(ValueError):
+        tracker.reset(max_cost_usd=amount)
+    assert tracker.total == 0.2
+    with pytest.raises(ValueError):
+        tracker.reserve(amount)
+    with pytest.raises(ValueError):
+        maximum_reasonable_cost_ceiling(amount)
+
+
+def test_settlement_keeps_the_reservation_until_cost_is_recorded(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    tracker = CostTracker()
+    tracker.reset(max_cost_usd=1.0)
+    token = tracker.reserve(0.6)
+    recording, proceed, attempted, finished = (threading.Event() for _ in range(4))
+    record = tracker.record
+
+    def paused_record(*args, **kwargs):
+        recording.set()
+        assert proceed.wait(2)
+        return record(*args, **kwargs)
+
+    def competing_reservation():
+        attempted.set()
+        try:
+            return tracker.reserve(0.6)
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(tracker, "record", paused_record)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        settled = executor.submit(tracker.settle, token, "fixture", 0, 0, actual_cost=0.6)
+        assert recording.wait(2)
+        competing = executor.submit(competing_reservation)
+        assert attempted.wait(2)
+        try:
+            assert not finished.wait(0.1), "reservation observed an unrecorded settlement"
+        finally:
+            proceed.set()
+        assert settled.result() == 0.6
+        with pytest.raises(CostBudgetExceededError):
+            competing.result()
+    assert tracker.total == 0.6
+
+
+def test_a_reservation_can_only_be_settled_once():
+    tracker = CostTracker()
+    token = tracker.reserve(0.6)
+    tracker.settle(token, "fixture", 0, 0, actual_cost=0.6)
+    with pytest.raises(ValueError, match="reservation"):
+        tracker.settle(token, "fixture", 0, 0, actual_cost=0.6)
+    assert tracker.calls == 1
+    assert tracker.total == 0.6
+
+
 def test_cost_tracker_accepts_provider_reported_cost_for_unknown_model() -> None:
     tracker = CostTracker()
 
@@ -67,7 +127,7 @@ def test_parse_response_prefers_usage_cost(monkeypatch) -> None:
     assert tracker.total == 0.012345
 
 
-def test_async_client_retries_malformed_provider_json(monkeypatch) -> None:
+def test_async_client_does_not_retry_ambiguous_provider_json(monkeypatch) -> None:
     from invisiblebench.api import client as client_module
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
@@ -89,6 +149,8 @@ def test_async_client_retries_malformed_provider_json(monkeypatch) -> None:
         def __init__(self, payload) -> None:
             self.payload = payload
 
+        status_code = 200
+
         def raise_for_status(self) -> None:
             return None
 
@@ -101,10 +163,7 @@ def test_async_client_retries_malformed_provider_json(monkeypatch) -> None:
         def __init__(self, **_kwargs) -> None:
             pass
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *_args) -> None:
+        async def aclose(self) -> None:
             return None
 
         async def post(self, *_args, **_kwargs):
@@ -114,17 +173,19 @@ def test_async_client_retries_malformed_provider_json(monkeypatch) -> None:
             return FakeResponse(payload)
 
     monkeypatch.setattr(client_module.httpx, "AsyncClient", FakeAsyncClient)
-    client = ModelAPIClient(APIConfig(timeout=1, max_retries=2, retry_delay=0))
+    client = ModelAPIClient(APIConfig(timeout=1))
 
-    result = asyncio.run(
-        client.call_model_async(
-            "provider/model",
-            [{"role": "user", "content": "hello"}],
-        )
-    )
+    async def run():
+        try:
+            with pytest.raises(json.JSONDecodeError):
+                await client.call_model_async(
+                    "provider/model", [{"role": "user", "content": "hello"}]
+                )
+        finally:
+            await client.aclose()
 
-    assert result["response"] == "ok"
-    assert calls == 2
+    asyncio.run(run())
+    assert calls == 1
 
 
 def test_transcript_estimate_includes_live_cost_safety_margin() -> None:
@@ -344,10 +405,10 @@ def test_a_call_without_a_token_count_is_counted_as_unknown() -> None:
     assert (snapshot["calls"], snapshot["unknown_calls"], snapshot["total"]) == (1, 1, 0.0)
 
 
-def test_model_client_does_not_borrow_another_clients_identity(monkeypatch) -> None:
+def test_model_client_uses_the_required_user_agent(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-key")
     monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
 
     headers = ModelAPIClient(APIConfig()).headers
 
-    assert "User-Agent" not in headers
+    assert headers["User-Agent"] == "OpenAI File Downloader, XaiImageApiFetch/1.0"

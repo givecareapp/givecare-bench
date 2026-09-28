@@ -9,14 +9,38 @@ key for judging. Plan paid work before running it.
 uv sync --extra dev
 export OPENROUTER_API_KEY=...
 export TYPESAFE_API_KEY=...
-uv run bench -m your-org/your-model --dry-run
-uv run bench -m your-org/your-model -y --max-cost-usd <budget>
+uv run bench -m <catalog-model-id> --dry-run
+uv run bench -m <catalog-model-id> -y --max-cost-usd <budget>
 ```
+
+Select a model from `src/invisiblebench/models/config.py`. Add a new model there
+with verified provider prices before planning it. Unknown IDs are rejected;
+the CLI does not invent prices. The selected prices drive both estimation and
+dispatch accounting and are saved as `model_pricing` in `run_manifest.json`.
+Reservations are estimates, not an absolute billing guarantee. Provider usage
+can exceed them. Cost ceilings and prices must be finite and non-negative.
 
 The transcript run writes to `results/<run-id>/`. The run ID is a UTC timestamp
 in `YYYY-MM-DD_HH-MM-SSZ` form. Model identity stays in the manifest and Jury Card.
 Each new run has its own directory, including repeated runs of the same model.
-The CLI refuses to overwrite an existing run.
+To resume generation, repeat the same command with `--output results/<run-id>`
+and the total approved ceiling, not an additional budget. Saved costs count
+against that ceiling. The model roster, prices, scenario bytes, generation policy,
+source code, and lockfile must match. Runs created before generation journals
+were added cannot resume. A run with a scan plan cannot resume generation.
+
+`generation/*.jsonl` retains each target attempt and response, including empty
+responses and paid branch decisions. Records are flushed and synced before the
+next call. Completed calls are replayed, not purchased again. `transcripts/`
+is derived from those records after each scenario completes.
+
+A timeout, cancellation during dispatch, malformed response, or incomplete record
+stops automatic resume: a missing response does not prove there was no charge.
+A saved response with unknown cost also stops generation and automatic resume.
+Keep the run intact and reconcile with the provider before approving a new run.
+Only a budget refusal before dispatch can retry automatically on resume.
+Target HTTP calls have no hidden retries. Empty responses retain the bounded
+retry policy saved in the manifest.
 Card titles show the model name and a readable UTC date and time.
 
 Create a dry-run scan plan in the same directory, then run it with an explicit
@@ -40,6 +64,7 @@ results/<run-id>/
 ├── judgments.jsonl      # one verdict per conversation and check, derived from answers.jsonl
 ├── run_manifest.json
 ├── transcript_run.json
+├── generation/          # target attempts and responses; generation recovery source
 └── transcripts/
 ```
 
@@ -61,10 +86,14 @@ A comparison measures agreement, not judge accuracy.
 The new bundle retains source files under `inputs/<source-hash>/`. Keep those
 relative paths intact. They are part of the frozen plan.
 
+Every planned request is checked for estimated context limits before dispatch.
+Requests that remain oversized are rejected; evidence is not truncated or summarized.
+Long crisis conversations can exceed these limits. Requests are not split automatically.
+
 Each answer is flushed to `answers.jsonl` before the next request; judgments
 are derived from those answers, not saved separately per request. Repeat the
-run command to resume unfinished work. A technical error is saved and stops
-the scan. Resume retries that unfinished request. Valid `UNCLEAR` decisions
+`bench scan run` command to resume unfinished judging. A technical error is saved
+and stops the scan. Resume retries that unfinished request. Valid `UNCLEAR` decisions
 are complete. Move the entire bundle to retain replay.
 
 Inspect evidence with:

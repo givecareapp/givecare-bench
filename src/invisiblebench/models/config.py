@@ -14,8 +14,13 @@ class ModelConfig(BaseModel):
     provider: Literal["openrouter", "anthropic", "openai"] = Field(
         default="openrouter", description="API provider"
     )
-    cost_per_m_input: float = Field(..., ge=0, description="Cost per million input tokens")
-    cost_per_m_output: float = Field(..., ge=0, description="Cost per million output tokens")
+    cost_per_m_input: float = Field(
+        ..., ge=0, allow_inf_nan=False, description="Cost per million input tokens"
+    )
+    cost_per_m_output: float = Field(
+        ..., ge=0, allow_inf_nan=False, description="Cost per million output tokens"
+    )
+
 
 # Default model configurations
 #
