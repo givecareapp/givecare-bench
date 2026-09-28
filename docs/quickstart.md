@@ -60,6 +60,7 @@ The bundle contains all inputs needed for a scan and replay:
 results/<run-id>/
 ├── jury-card.md         # standard report, written when judging completes
 ├── scan_plan.json       # frozen checks, questions, thresholds, and input hashes
+├── attempts.jsonl       # each judge request, recorded before dispatch
 ├── answers.jsonl        # one saved record per judge request (probabilities, cost)
 ├── judgments.jsonl      # one verdict per conversation and check, derived from answers.jsonl
 ├── run_manifest.json
@@ -90,11 +91,19 @@ Every planned request is checked for estimated context limits before dispatch.
 Requests that remain oversized are rejected; evidence is not truncated or summarized.
 Long crisis conversations can exceed these limits. Requests are not split automatically.
 
-Each answer is flushed to `answers.jsonl` before the next request; judgments
-are derived from those answers, not saved separately per request. Repeat the
-`bench scan run` command to resume unfinished judging. A technical error is saved
-and stops the scan. Resume retries that unfinished request. Valid `UNCLEAR` decisions
-are complete. Move the entire bundle to retain replay.
+Judge requests follow the same recovery contract as target generation. Each
+request is recorded in `attempts.jsonl` before dispatch. Its answer is flushed
+to `answers.jsonl` before the next request. Judgments are derived from those
+answers, not saved separately per request. Repeat the `bench scan run` command
+to resume unfinished judging.
+
+Resume retries a request only when its outcome is known: a budget refusal
+before dispatch, an HTTP 4xx rejection, or an invalid saved answer. An
+interruption, timeout, dropped connection, or server error leaves the outcome
+unknown and stops automatic resume, because a missing answer does not prove
+there was no charge. To continue, judge the saved responses again into a new
+directory with `bench scan rejudge`. Valid `UNCLEAR` decisions are complete.
+Move the entire bundle to retain replay.
 
 Inspect evidence with:
 

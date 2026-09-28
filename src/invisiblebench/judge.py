@@ -1,7 +1,8 @@
 """Plan, save, resume, validate, and replay a portable scan.
 
-A scan keeps two files. `answers.jsonl` is the append-only record of what the
-judge model returned: one row per conversation turn that carries questions.
+A scan keeps three files. `attempts.jsonl` records each judge request before
+dispatch. `answers.jsonl` is the append-only record of what the judge model
+returned: one row per conversation turn that carries questions.
 `judgments.jsonl` is derived: one verdict per conversation and check, a pure
 function of the plan and the saved answers. The derived file is rewritten from
 the answers, never edited, and every load checks that it still matches.
@@ -15,6 +16,7 @@ import json
 import math
 import os
 import shutil
+from collections import Counter
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Any
@@ -33,6 +35,7 @@ from invisiblebench.api.typesafe import (
     SystemOneClient,
     check_context,
     estimated_cost,
+    rejected,
     validate_answers,
     validate_response,
 )
@@ -66,6 +69,7 @@ from invisiblebench.version import ENGINE_VERSION
 
 PLAN_FILE = "scan_plan.json"
 ANSWERS_FILE = "answers.jsonl"
+ATTEMPTS_FILE = "attempts.jsonl"
 LEDGER_FILE = "judgments.jsonl"
 
 Turn = dict[str, Any]
@@ -495,7 +499,10 @@ def _read_answers(
     path = bundle / ANSWERS_FILE
     content = path.read_bytes() if path.exists() else b""
     if content and not content.endswith(b"\n"):
-        raise ValueError("ledger has an unfinished last line; resume the scan to recover it")
+        raise ValueError(
+            "ledger has an unfinished last line; its request outcome is unknown, "
+            "so there is no automatic resume"
+        )
     answers: list[Answer] = []
     settled: set[tuple[str, str, str, int]] = set()
     for line in content.splitlines():
@@ -639,6 +646,8 @@ def _ask(
     except ValueError as exc:
         error, detail = "invalid_judge_output", str(exc)
     except Exception as exc:
+        if not rejected(exc):
+            raise
         error, detail = "judge_api_error", type(exc).__name__
     valid_response = isinstance(result, SystemOneResponse)
     return Answer(
@@ -650,6 +659,42 @@ def _ask(
         error=error,
         error_detail=detail,
     )
+
+
+def _append(journal, row: dict | bytes) -> None:
+    if isinstance(row, dict):
+        row = json.dumps(row, ensure_ascii=False, allow_nan=False).encode()
+    journal.write(row + b"\n")
+    journal.flush()
+    os.fsync(journal.fileno())
+
+
+def _require_settled(attempts, answers: list[Answer]) -> None:
+    """Refuse to resume while any dispatched request lacks a saved outcome.
+
+    A missing answer does not prove the judge did not bill the request, so an
+    unsettled attempt is never asked again automatically.
+    """
+    attempts.seek(0)
+    content = attempts.read()
+    if content and not content.endswith(b"\n"):
+        raise ValueError("attempt journal has an unfinished last line; no automatic resume")
+    open_attempts: Counter[tuple] = Counter()
+    for line in content.splitlines():
+        row = json.loads(line)
+        if row["event"] == "attempt":
+            open_attempts[tuple(row["key"])] += 1
+        elif row["event"] == "refused":
+            open_attempts[tuple(row["key"])] -= 1
+    for answer in answers:
+        open_attempts[answer.key] -= 1
+    unsettled = sorted(key for key, count in open_attempts.items() if count > 0)
+    if unsettled:
+        raise ValueError(
+            f"judge request {unsettled[0]} has no saved outcome and may have been billed; "
+            "no automatic resume. Judge the saved responses again into a new "
+            "--output directory."
+        )
 
 
 @contextmanager
@@ -674,13 +719,9 @@ def execute_requests(
             fcntl.flock(journal.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ValueError("this scan is already running") from exc
-        journal.seek(0)
-        content = journal.read()
-        if content and not content.endswith(b"\n"):
-            journal.truncate(content.rfind(b"\n") + 1)
-            journal.flush()
-            os.fsync(journal.fileno())
         answers = _read_answers(bundle, plan_sha256, requests, model)
+        attempts = clients.enter_context((bundle / ATTEMPTS_FILE).open("a+b"))
+        _require_settled(attempts, answers)
         done = {a.key for a in answers if a.error is None}
         pending = [
             (mid, sid, role, turn, request)
@@ -700,19 +741,32 @@ def execute_requests(
             if client is None:
                 client = clients.enter_context(SystemOneClient())
             for mid, sid, role, turn, request in pending:
-                answer = _ask(
-                    client,
-                    model,
-                    request,
-                    model_id=mid,
-                    scenario_id=sid,
-                    role=role,
-                    turn=turn,
-                    plan_sha256=plan_sha256,
-                )
-                journal.write(answer.model_dump_json().encode() + b"\n")
-                journal.flush()
-                os.fsync(journal.fileno())
+                key = [mid, sid, role, turn]
+                _append(attempts, {"event": "attempt", "key": key})
+                try:
+                    answer = _ask(
+                        client,
+                        model,
+                        request,
+                        model_id=mid,
+                        scenario_id=sid,
+                        role=role,
+                        turn=turn,
+                        plan_sha256=plan_sha256,
+                    )
+                except CostBudgetExceededError:
+                    # The client reserves before dispatch; this proves no call was sent.
+                    _append(attempts, {"event": "refused", "key": key})
+                    raise
+                except BaseException as exc:
+                    _append(attempts, {"event": "unknown", "key": key, "error": type(exc).__name__})
+                    if not isinstance(exc, Exception):
+                        raise
+                    raise RuntimeError(
+                        f"{sid} {role} turn {turn}: judge outcome unknown "
+                        f"({type(exc).__name__}); no automatic resume"
+                    ) from exc
+                _append(journal, answer.model_dump_json().encode())
                 answers.append(answer)
                 if answer.error is not None:
                     raise RuntimeError(

@@ -83,7 +83,8 @@ Each run lives in `results/<run-id>/`, named by its UTC start time in
 of the same model. The card title shows the model and a readable UTC date.
 Historical runs live under `results/archive/`.
 
-Repeat the scan command to resume unfinished judgments. Use `uv run bench jury
+Repeat the scan command to resume unfinished judgments. A request with an
+unknown outcome blocks automatic resume; see the quickstart. Use `uv run bench jury
 <run-id>` to regenerate the card from saved evidence without model calls.
 See the [full quickstart](docs/quickstart.md) to judge saved responses again or
 replay a scan.

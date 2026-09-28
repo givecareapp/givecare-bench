@@ -12,8 +12,11 @@ from typesafe_sdk import (
     Answer,
     ChoiceAnswer,
     NoulAnswer,
+    RetryPolicy,
     ScoreAnswer,
     SystemOneResponse,
+    TypeSafeAPIError,
+    TypeSafeAPIResponseValidationError,
     TypeSafeClient,
 )
 
@@ -29,6 +32,18 @@ ESTIMATED_BYTES_PER_TOKEN = 3
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
 API_KEY_ENV = "TYPESAFE_API_KEY"
+# Retry only responses that prove the service did not process the request.
+# A timeout, dropped connection, or server error may still have been billed.
+RETRY = RetryPolicy(http_statuses={408, 429}, api_connection_error=False, api_timeout_error=False)
+
+
+def rejected(exc: BaseException) -> bool:
+    """True when the service answered that it refused the request, so no call was billed."""
+    return (
+        isinstance(exc, TypeSafeAPIError)
+        and not isinstance(exc, TypeSafeAPIResponseValidationError)
+        and 400 <= exc.status < 500
+    )
 
 # The judge is billed only on input tokens. Registering it with the shared
 # cost tracker's pricing catalog lets `ask()` reserve and settle through the
@@ -125,12 +140,7 @@ class SystemOneClient(TypeSafeClient):
         key = api_key or os.environ.get(API_KEY_ENV)
         if not key:
             raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
-        super().__init__(
-            api_key=key,
-            timeout=timeout,
-            headers={"User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0"},
-            http_client=http_client or httpx2.Client(timeout=timeout),
-        )
+        super().__init__(api_key=key, timeout=timeout, retry=RETRY, http_client=http_client)
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
@@ -143,8 +153,11 @@ class SystemOneClient(TypeSafeClient):
         reservation = cost_tracker.reserve(estimated_cost(model, request_bytes))
         try:
             response = self.system_one(model=model, state=state, questions=questions)
-        except Exception:
-            cost_tracker.release(reservation)
+        except BaseException as exc:
+            if rejected(exc):
+                cost_tracker.release(reservation)
+            else:
+                cost_tracker.settle(reservation, model, None, 0)
             raise
 
         tokens = response.usage.input_tokens

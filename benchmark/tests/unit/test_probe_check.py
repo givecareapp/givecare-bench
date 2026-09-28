@@ -2,7 +2,9 @@
 
 import json
 
+import httpx2
 import pytest
+from typesafe_sdk import TypeSafeAPIError
 
 from benchmark.tests.fixtures.current_scan import TRANSCRIPT, FixtureJudge
 from invisiblebench.cli.archive import get_run_info
@@ -24,7 +26,7 @@ def test_failed_probe_saves_progress_and_resumes(tmp_path):
             self.calls += 1
             if self.calls == 2:
                 assert len((bundle / "answers.jsonl").read_text().splitlines()) == 1
-                raise RuntimeError("offline interruption")
+                raise TypeSafeAPIError(400, {"error": "rejected"}, httpx2.Headers())
             return super().ask(**kwargs)
 
     with pytest.raises(RuntimeError, match="attempt saved"):

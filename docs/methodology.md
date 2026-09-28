@@ -122,13 +122,14 @@ untrusted data; the judge model reads it literally and is not instructed to
 resist an instruction embedded in a reply.
 
 There is one saved request per conversation turn, covering every active check.
-The SDK client retries rate-limit and overload responses with backoff; other
-transport failures are saved as technical errors. A budget stop raises without
-saving a row. There are no
+The SDK client retries only rate-limit (429) and request-timeout (408)
+responses, which prove the request was not processed. A timeout, dropped
+connection, or server error may have been billed. It stops the scan and blocks
+automatic resume. A budget stop raises before dispatch. There are no
 semantic retries, votes, keyword promotions, or forced resolutions. A
-technical error is saved to `answers.jsonl` in place of probabilities and
-stops the scan for that request. An explicit resume retries unfinished
-requests. A saved error does not complete a judgment. Publication requires a
+rejected request or invalid answer is saved to `answers.jsonl` in place of
+probabilities and stops the scan for that request. An explicit resume retries
+those requests. A saved error does not complete a judgment. Publication requires a
 derived judgment for every check. A valid `UNCLEAR` judgment remains
 publishable.
 

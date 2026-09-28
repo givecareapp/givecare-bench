@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
+import httpx2
 import pytest
-from typesafe_sdk import ChoiceAnswer, SystemOneResponse, Usage
+from typesafe_sdk import ChoiceAnswer, SystemOneResponse, TypeSafeAPIError, Usage
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
-from invisiblebench.api.client import cost_tracker
+from invisiblebench.api.client import CostBudgetExceededError, cost_tracker
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.judge import (
     ANSWERS_FILE,
@@ -44,7 +46,8 @@ class Judge(FixtureJudge):
         saved = load_scan(self.bundle, verify_judgments=False)[1]
         assert len(saved) == self.initial_count + self.calls
         if self.calls == self.stop_after:
-            raise KeyboardInterrupt("Simulated interruption; no network")
+            # The transport refuses before dispatch, so this stop proves no call was sent.
+            raise CostBudgetExceededError("Simulated stop before dispatch; no network")
         self.calls += 1
         cost_tracker.record(kwargs["model"], 0, 0, actual_cost=0.001)
         return super().ask(**kwargs)
@@ -54,7 +57,7 @@ def test_resume_keeps_completed_answers_and_cost(tmp_path):
     bundle = tmp_path / "scan"
     plan = plan_scan([source_run(tmp_path)], bundle, judge_model=DEFAULT_JUDGE_MODEL)
     first = Judge(bundle, stop_after=2)
-    with pytest.raises(KeyboardInterrupt):
+    with pytest.raises(CostBudgetExceededError):
         run_scan(bundle, max_cost_usd=BUDGET, client=first)
     saved = (bundle / ANSWERS_FILE).read_bytes()
     assert len(load_scan(bundle)[1]) == 2
@@ -110,17 +113,56 @@ def test_unsupported_engine_stops_before_request_reconstruction(tmp_path, operat
     assert {p: p.read_bytes() for p in bundle.rglob("*") if p.is_file()} == before
 
 
-def test_resume_recovers_only_an_unfinished_last_line(tmp_path):
+def test_an_unfinished_last_line_blocks_resume_and_is_preserved(tmp_path):
     bundle = tmp_path / "scan"
-    plan = plan_scan([source_run(tmp_path)], bundle, judge_model=DEFAULT_JUDGE_MODEL)
-    with pytest.raises(KeyboardInterrupt):
+    plan_scan([source_run(tmp_path)], bundle, judge_model=DEFAULT_JUDGE_MODEL)
+    with pytest.raises(CostBudgetExceededError):
         run_scan(bundle, max_cost_usd=BUDGET, client=Judge(bundle, stop_after=2))
     with (bundle / ANSWERS_FILE).open("ab") as journal:
         journal.write(b'{"incomplete":')
+    saved = (bundle / ANSWERS_FILE).read_bytes()
     with pytest.raises(ValueError, match="unfinished last line"):
         load_scan(bundle)
-    run_scan(bundle, max_cost_usd=BUDGET, client=FixtureJudge())
-    assert len(load_scan(bundle, complete=True)[1]) == plan.planned_requests
+    with pytest.raises(ValueError, match="no automatic resume"):
+        run_scan(bundle, max_cost_usd=BUDGET, client=FixtureJudge())
+    assert (bundle / ANSWERS_FILE).read_bytes() == saved
+
+
+def test_a_call_interrupted_before_its_answer_is_saved_is_never_reissued(tmp_path):
+    bundle = tmp_path / "scan"
+    plan_scan([source_run(tmp_path)], bundle, judge_model=DEFAULT_JUDGE_MODEL)
+    accepted: list[str] = []
+
+    class AcceptThenStop(FixtureJudge):
+        def ask(self, **kwargs):
+            accepted.append(json.dumps(kwargs, sort_keys=True, default=str))
+            if len(accepted) == 2:
+                raise KeyboardInterrupt("accepted by the service; stopped before saving")
+            return super().ask(**kwargs)
+
+    judge = AcceptThenStop()
+    with pytest.raises(KeyboardInterrupt):
+        run_scan(bundle, max_cost_usd=BUDGET, client=judge)
+    saved = (bundle / ANSWERS_FILE).read_bytes()
+    with pytest.raises(ValueError, match="no automatic resume"):
+        run_scan(bundle, max_cost_usd=BUDGET, client=judge)
+    assert len(accepted) == len(set(accepted)) == 2
+    assert (bundle / ANSWERS_FILE).read_bytes() == saved
+
+
+def test_an_unknown_judge_failure_blocks_resume(tmp_path):
+    bundle = tmp_path / "scan"
+    plan = plan_scan([source_run(tmp_path)], bundle)
+
+    class UnreachableJudge:
+        def ask(self, **kwargs):
+            raise RuntimeError("connection dropped after sending")
+
+    with pytest.raises(RuntimeError, match="outcome unknown"):
+        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=UnreachableJudge())
+    assert load_scan(bundle)[1] == []
+    with pytest.raises(ValueError, match="no automatic resume"):
+        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
 
 
 def test_technical_attempt_retains_cost_and_only_unfinished_work_retries(tmp_path):
@@ -146,19 +188,19 @@ def test_technical_attempt_retains_cost_and_only_unfinished_work_retries(tmp_pat
     assert replay_scan(bundle) == []
 
 
-def test_a_judge_api_failure_is_saved_and_retried(tmp_path):
+def test_a_rejected_judge_request_is_saved_and_retried(tmp_path):
     bundle = tmp_path / "scan"
     plan = plan_scan([source_run(tmp_path)], bundle)
 
-    class UnavailableJudge:
+    class RejectingJudge:
         def ask(self, **kwargs):
-            raise RuntimeError("unavailable")
+            raise TypeSafeAPIError(400, {"error": "bad request"}, httpx2.Headers())
 
     with pytest.raises(RuntimeError, match="attempt saved"):
-        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=UnavailableJudge())
+        run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=RejectingJudge())
     attempt = load_scan(bundle)[1][0]
     assert attempt.error == "judge_api_error" and attempt.answers is None
-    assert attempt.error_detail == "RuntimeError"
+    assert attempt.error_detail == "TypeSafeAPIError"
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
     assert load_scan(bundle, complete=True)[2]
 

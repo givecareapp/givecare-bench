@@ -4,7 +4,13 @@ import json
 
 import httpx2
 import pytest
-from typesafe_sdk import ChoiceAnswer, NoulAnswer, SystemOneResponse
+from typesafe_sdk import (
+    ChoiceAnswer,
+    NoulAnswer,
+    SystemOneResponse,
+    TypeSafeAPIConnectionError,
+    TypeSafeAPIError,
+)
 
 from invisiblebench.api import typesafe
 from invisiblebench.api.client import CostBudgetExceededError, CostTracker
@@ -139,3 +145,59 @@ def test_many_questions_past_the_request_budget_are_refused():
     typesafe.check_context("Short state", {"0": question})
     with pytest.raises(ValueError, match="whole request"):
         typesafe.check_context("Short state", questions)
+
+
+def _client(handle):
+    return typesafe.SystemOneClient(
+        api_key="offline-test-key",
+        http_client=httpx2.Client(transport=httpx2.MockTransport(handle)),
+    )
+
+
+def test_the_judge_sends_its_own_identity(api):
+    client, requests, _, _ = api
+    client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
+    assert requests[0].headers["User-Agent"].startswith("typesafe")
+
+
+def test_an_unknown_outcome_is_sent_once_and_counted(monkeypatch):
+    sent = []
+
+    def handle(request):
+        sent.append(request)
+        raise httpx2.ReadTimeout("no response", request=request)
+
+    tracker = CostTracker()
+    monkeypatch.setattr(typesafe, "cost_tracker", tracker)
+    with _client(handle) as client, pytest.raises(TypeSafeAPIConnectionError):
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
+    assert len(sent) == 1
+    assert (tracker.calls, tracker.snapshot()["unknown_calls"]) == (1, 1)
+
+
+def test_a_rejected_request_is_not_counted_as_a_call(monkeypatch):
+    def handle(request):
+        return httpx2.Response(400, json={"error": "bad request"})
+
+    tracker = CostTracker()
+    monkeypatch.setattr(typesafe, "cost_tracker", tracker)
+    with _client(handle) as client, pytest.raises(TypeSafeAPIError) as caught:
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
+    assert typesafe.rejected(caught.value)
+    assert tracker.calls == 0
+
+
+def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
+    sent = []
+
+    def handle(request):
+        sent.append(request)
+        return httpx2.Response(503, json={"error": "unavailable"})
+
+    tracker = CostTracker()
+    monkeypatch.setattr(typesafe, "cost_tracker", tracker)
+    with _client(handle) as client, pytest.raises(TypeSafeAPIError) as caught:
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
+    assert not typesafe.rejected(caught.value)
+    assert len(sent) == 1
+    assert tracker.snapshot()["unknown_calls"] == 1

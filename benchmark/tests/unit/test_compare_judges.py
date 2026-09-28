@@ -6,6 +6,7 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
 from invisiblebench.api import typesafe
+from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.cli.compare import compare_ledgers
 from invisiblebench.judge import (
     ANSWERS_FILE,
@@ -33,10 +34,10 @@ def test_rejudge_retains_progress_and_compares_native_scans(tmp_path, monkeypatc
         def ask(self, **kwargs):
             self.calls += 1
             if self.calls == 2:
-                raise KeyboardInterrupt
+                raise CostBudgetExceededError("stopped before dispatch")
             return super().ask(**kwargs)
 
-    with pytest.raises(KeyboardInterrupt):
+    with pytest.raises(CostBudgetExceededError):
         run_scan(new, max_cost_usd=1, client=Interrupted())
     retained = (new / ANSWERS_FILE).read_bytes()
     assert len(retained.splitlines()) == 1

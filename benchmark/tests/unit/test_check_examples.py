@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from benchmark.tests.fixtures.current_scan import ScriptedJudge
+from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.judge import ANSWERS_FILE
 from invisiblebench.models.scan import Thresholds
@@ -67,10 +68,10 @@ def test_interruption_retains_answers_before_projection(tmp_path):
         def ask(self, **kwargs):
             self.calls += 1
             if self.calls == 2:
-                raise KeyboardInterrupt
+                raise CostBudgetExceededError("stopped before dispatch")
             return super().ask(**kwargs)
 
-    with pytest.raises(KeyboardInterrupt):
+    with pytest.raises(CostBudgetExceededError):
         check_examples.refresh(
             root, checks, bundle, max_cost_usd=1, client=Interrupted({"cue": 0.9})
         )

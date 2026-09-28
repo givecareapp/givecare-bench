@@ -365,7 +365,6 @@ class ModelAPIClient:
         self.base_url = base_url
         self.headers = {
             "Authorization": f"Bearer {api_key}",
-            "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0",
             **extra_headers,
         }
 
