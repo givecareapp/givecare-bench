@@ -65,9 +65,8 @@ Remember: You're here to support, not diagnose or treat."""
 
 def transcript_policy(api_client: "ModelAPIClient") -> dict[str, Any]:
     config = getattr(api_client, "config", None)
-    base_url = str(getattr(api_client, "base_url", "") or "")
     return {
-        "backend": "openrouter" if "openrouter" in base_url else "openai-compatible",
+        "backend": "openrouter",
         "system_prompt_hash": hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest(),
         "temperature": TRANSCRIPT_TEMPERATURE,
         "max_reply_tokens": MAX_REPLY_TOKENS,

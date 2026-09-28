@@ -25,9 +25,9 @@ from invisiblebench.cli import runner as runner_mod
 
 @pytest.mark.parametrize(
     ("key", "expected"),
-    [("ANTHROPIC_API_KEY", 1), ("OPENROUTER_API_KEY", 0), ("OPENAI_API_KEY", 0)],
+    [("ANTHROPIC_API_KEY", 1), ("OPENROUTER_API_KEY", 0), ("OPENAI_API_KEY", 1)],
 )
-def test_doctor_requires_a_supported_api_key(monkeypatch, tmp_path, capsys, key, expected):
+def test_doctor_requires_the_openrouter_key(monkeypatch, tmp_path, capsys, key, expected):
     from invisiblebench.cli import agent_commands
 
     for name in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "INVISIBLEBENCH_API_BACKEND"):

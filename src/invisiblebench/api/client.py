@@ -289,21 +289,16 @@ OPENROUTER_HEADERS = {
 }
 
 
-OPENAI_BASE_URL = "https://api.openai.com/v1"
-
-
 @dataclass
 class APIConfig:
     """Configuration for API clients."""
 
-    openrouter_api_key: str | None = None
     timeout: int = 120
 
     @classmethod
     def from_env(cls) -> "APIConfig":
         """Load configuration from environment variables."""
         return cls(
-            openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
             timeout=_env_number("INVISIBLEBENCH_API_TIMEOUT_SECONDS", 120, minimum=0),
         )
 
@@ -321,34 +316,8 @@ def _env_number(name: str, default: float, *, minimum: float) -> float:
     return value
 
 
-def _resolve_api_backend() -> tuple[str | None, str | None, dict[str, str]]:
-    """Resolve API key and base URL from available env vars.
-
-    Priority: INVISIBLEBENCH_API_BACKEND (explicit) > OPENROUTER_API_KEY > OPENAI_API_KEY.
-    Set INVISIBLEBENCH_API_BACKEND=openai to force OpenAI even when OpenRouter key exists.
-    Returns (api_key, base_url, extra_headers).
-    """
-    forced = os.getenv("INVISIBLEBENCH_API_BACKEND", "").strip().lower()
-
-    if forced == "openai":
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key and not openai_key.startswith("your_"):
-            return openai_key, OPENAI_BASE_URL, {}
-
-    if forced != "openai":
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if openrouter_key and not openrouter_key.startswith("your_"):
-            return openrouter_key, OPENROUTER_BASE_URL, OPENROUTER_HEADERS
-
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if openai_key and not openai_key.startswith("your_"):
-        return openai_key, OPENAI_BASE_URL, {}
-
-    return None, None, {}
-
-
 class ModelAPIClient:
-    """Client for calling AI models via OpenRouter or OpenAI-compatible APIs."""
+    """Client for calling target models through OpenRouter."""
 
     def __init__(self, config: APIConfig | None = None):
         disable_llm = os.getenv("INVISIBLEBENCH_DISABLE_LLM", "").strip().lower()
@@ -357,16 +326,13 @@ class ModelAPIClient:
 
         self.config = config or APIConfig.from_env()
 
-        api_key, base_url, extra_headers = _resolve_api_backend()
-        if not api_key:
-            raise ValueError("No API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY.")
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key or api_key.startswith("your_"):
+            raise ValueError("OPENROUTER_API_KEY is required for target models")
 
         self._http: httpx.AsyncClient | None = None
-        self.base_url = base_url
-        self.headers = {
-            "Authorization": f"Bearer {api_key}",
-            **extra_headers,
-        }
+        self.base_url = OPENROUTER_BASE_URL
+        self.headers = {"Authorization": f"Bearer {api_key}", **OPENROUTER_HEADERS}
 
     async def aclose(self) -> None:
         if self._http is not None:

@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
-from invisiblebench.api.client import _resolve_api_backend
 from invisiblebench.utils.io import leaderboard_rows
 
 
@@ -22,8 +22,9 @@ def _run_doctor(json_output: bool = False) -> int:
     """Validate env vars + runs dir for the bench CLI."""
     runs_dir = _runs_dir()
 
-    def _any_llm_key() -> bool:
-        return _resolve_api_backend()[0] is not None
+    def _openrouter_key() -> bool:
+        key = os.getenv("OPENROUTER_API_KEY", "")
+        return bool(key) and not key.startswith("your_")
 
     def _runs_dir_writable() -> bool:
         try:
@@ -37,9 +38,9 @@ def _run_doctor(json_output: bool = False) -> int:
 
     checks = [
         DoctorCheck(
-            name="LLM API key (OPENROUTER_API_KEY | OPENAI_API_KEY)",
-            check=_any_llm_key,
-            hint="set OPENROUTER_API_KEY or OPENAI_API_KEY for the selected backend",
+            name="Target API key (OPENROUTER_API_KEY)",
+            check=_openrouter_key,
+            hint="set OPENROUTER_API_KEY",
         ),
         DoctorCheck(
             name=f"runs_dir exists ({runs_dir})",

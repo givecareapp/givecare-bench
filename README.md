@@ -51,11 +51,14 @@ export OPENROUTER_API_KEY=...
 export TYPESAFE_API_KEY=...
 ```
 
-Generate transcripts. Review the dry-run estimate before setting a cost ceiling:
+Generate transcripts. Pick a catalog model from
+`src/invisiblebench/models/config.py`; unknown IDs are rejected because the
+CLI does not invent prices. Review the dry-run estimate before setting a cost
+ceiling:
 
 ```bash
-uv run bench -m your-org/your-model --dry-run
-uv run bench -m your-org/your-model -y --max-cost-usd <budget>
+uv run bench -m <catalog-model-id> --dry-run
+uv run bench -m <catalog-model-id> -y --max-cost-usd <budget>
 ```
 
 Find the run ID with `uv run bench runs`. Replace `<run-id>` below with that
@@ -74,7 +77,7 @@ Completion writes `results/<run-id>/jury-card.md`. Inspect the run and its evide
 
 ```bash
 uv run bench get <run-id>
-uv run bench explain your-org/your-model <scenario-id> \
+uv run bench explain <catalog-model-id> <scenario-id> \
   --failures --scan results/<run-id>
 ```
 
@@ -84,7 +87,9 @@ of the same model. The card title shows the model and a readable UTC date.
 Historical runs live under `results/archive/`.
 
 Repeat the scan command to resume unfinished judgments. A request with an
-unknown outcome blocks automatic resume; see the quickstart. Use `uv run bench jury
+unknown outcome blocks automatic resume. The
+[full quickstart](docs/quickstart.md) explains recovery for both generation
+and judging. Use `uv run bench jury
 <run-id>` to regenerate the card from saved evidence without model calls.
 See the [full quickstart](docs/quickstart.md) to judge saved responses again or
 replay a scan.
