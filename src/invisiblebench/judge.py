@@ -31,6 +31,7 @@ from invisiblebench.api.typesafe import (
     DEFAULT_JUDGE_MODEL,
     InvalidJudgeOutput,
     SystemOneClient,
+    check_context,
     estimated_cost,
     validate_answers,
     validate_response,
@@ -279,6 +280,7 @@ def plan_scan(
         for source in sources:
             for _ref, transcript, memory in _source_conversations(bundle, source):
                 for request in _requests(checks, transcript, memory).values():
+                    check_context(request["state"], request["questions"])
                     envelope += len(json.dumps(request, ensure_ascii=False).encode())
                     planned += 1
         root = get_project_root()
@@ -703,6 +705,8 @@ def plan_questions(
     model: str = DEFAULT_JUDGE_MODEL,
     sources: dict[str, Path] | None = None,
 ) -> QuestionPlan:
+    for task in tasks:
+        check_context(task.request["state"], task.request["questions"])
     envelope = sum(len(json.dumps(t.request, ensure_ascii=False).encode()) for t in tasks)
     plan = QuestionPlan(
         judge=JudgeSettings(model=model),

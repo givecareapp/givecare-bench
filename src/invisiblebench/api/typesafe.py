@@ -23,8 +23,12 @@ DEFAULT_JUDGE_MODEL = "jev-1.13.0"
 JUDGE_PRICE_PER_MTOK_INPUT = 0.042
 JUDGE_PRICING: dict[str, float] = {DEFAULT_JUDGE_MODEL: JUDGE_PRICE_PER_MTOK_INPUT}
 ESTIMATED_BYTES_PER_TOKEN = 3
+# Jev's context: 64k tokens per request, and 32k for state plus the longest
+# question (docs.typesafe.ai/models). Bytes / ESTIMATED_BYTES_PER_TOKEN
+# overstates English tokens, so a request that passes fits.
+MAX_REQUEST_TOKENS = 64_000
+MAX_STATE_AND_QUESTION_TOKENS = 32_000
 API_KEY_ENV = "TYPESAFE_API_KEY"
-USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0"
 
 # The judge is billed only on input tokens. Registering it with the shared
 # cost tracker's pricing catalog lets `ask()` reserve and settle through the
@@ -32,6 +36,22 @@ USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0"
 # implementation.
 for _model, _price in JUDGE_PRICING.items():
     register_model_pricing(_model, _price, 0.0)
+
+
+def _tokens(value: Any) -> float:
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode()) / ESTIMATED_BYTES_PER_TOKEN
+
+
+def check_context(state: Any, questions: dict[str, Any]) -> None:
+    """Refuse a request that may not fit Jev's context. Evidence is never truncated."""
+    state_tokens = _tokens(state)
+    longest = max((_tokens(question) for question in questions.values()), default=0.0)
+    if state_tokens + longest > MAX_STATE_AND_QUESTION_TOKENS:
+        raise ValueError(
+            f"state plus the longest question may exceed {MAX_STATE_AND_QUESTION_TOKENS} tokens"
+        )
+    if _tokens({"state": state, "questions": questions}) > MAX_REQUEST_TOKENS:
+        raise ValueError(f"the whole request may exceed {MAX_REQUEST_TOKENS} tokens")
 
 
 def estimated_cost(model: str, request_bytes: int) -> float | None:
@@ -101,19 +121,16 @@ class SystemOneClient(TypeSafeClient):
         key = api_key or os.environ.get(API_KEY_ENV)
         if not key:
             raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
-        transport = http_client or httpx2.Client(timeout=timeout)
-
-        def user_agent(request: httpx2.Request) -> None:
-            request.headers["User-Agent"] = USER_AGENT
-
-        transport.event_hooks["request"].append(user_agent)
-        super().__init__(api_key=key, timeout=timeout, http_client=transport)
+        super().__init__(
+            api_key=key, timeout=timeout, http_client=http_client or httpx2.Client(timeout=timeout)
+        )
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
         # paid scan must never dispatch against a model this process cannot
         # price, ceiling or no ceiling.
         request_cost(model, 0)
+        check_context(state, questions)
 
         request_bytes = len(json.dumps({"state": state, "questions": questions}, default=str))
         reservation = cost_tracker.reserve(estimated_cost(model, request_bytes))

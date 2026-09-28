@@ -62,7 +62,8 @@ def test_native_answers_survive_the_transport(api):
     assert isinstance(result.answers["check"], ChoiceAnswer)
     assert result.answers["check"].probabilities == {"match": 0.1, "no_match": 0.9}
     assert len(requests) == 1
-    assert requests[0].headers["user-agent"] == "OpenAI File Downloader, XaiImageApiFetch/1.0"
+    # The SDK names itself; the benchmark never borrows another client's identity.
+    assert requests[0].headers["user-agent"].startswith("typesafe")
     assert json.loads(requests[0].content)["questions"] == QUESTIONS
     assert tracker.calls == 1
     assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
@@ -110,3 +111,22 @@ def test_selected_choice_must_be_a_most_likely_option(api):
     answers["check"]["choice"] = "match"
     with pytest.raises(ValueError, match="largest probability"):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="case", questions=QUESTIONS)
+
+
+def test_a_request_past_the_state_budget_is_refused_before_dispatch(api):
+    client, requests, _, tracker = api
+    state = "x" * (typesafe.MAX_STATE_AND_QUESTION_TOKENS * typesafe.ESTIMATED_BYTES_PER_TOKEN)
+
+    with pytest.raises(ValueError, match="state plus the longest question"):
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state=state, questions=QUESTIONS)
+
+    assert requests == [] and tracker.calls == 0
+
+
+def test_many_questions_past_the_request_budget_are_refused():
+    question = {"type": "noul", "instructions": "y" * 20_000}
+    questions = {str(index): question for index in range(12)}
+
+    typesafe.check_context("Short state", {"0": question})
+    with pytest.raises(ValueError, match="whole request"):
+        typesafe.check_context("Short state", questions)
