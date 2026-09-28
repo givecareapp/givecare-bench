@@ -15,8 +15,6 @@ from typesafe_sdk import (
     RetryPolicy,
     ScoreAnswer,
     SystemOneResponse,
-    TypeSafeAPIError,
-    TypeSafeAPIResponseValidationError,
     TypeSafeClient,
 )
 
@@ -36,14 +34,6 @@ API_KEY_ENV = "TYPESAFE_API_KEY"
 # A timeout, dropped connection, or server error may still have been billed.
 RETRY = RetryPolicy(http_statuses={408, 429}, api_connection_error=False, api_timeout_error=False)
 
-
-def rejected(exc: BaseException) -> bool:
-    """True when the service answered that it refused the request, so no call was billed."""
-    return (
-        isinstance(exc, TypeSafeAPIError)
-        and not isinstance(exc, TypeSafeAPIResponseValidationError)
-        and 400 <= exc.status < 500
-    )
 
 # The judge is billed only on input tokens. Registering it with the shared
 # cost tracker's pricing catalog lets `ask()` reserve and settle through the
@@ -115,12 +105,20 @@ def validate_answers(answers: dict[str, Answer], questions: dict[str, Any]) -> N
             raise ValueError(f"{key}: probabilities must lie in [0, 1]")
 
 
+class UnknownJudgeCost(RuntimeError):
+    """The judge answered without valid input usage, so its cost is unknown."""
+
+    def __init__(self, response: SystemOneResponse):
+        super().__init__("judge did not report valid non-negative input usage")
+        self.response = response
+
+
 def validate_response(response: SystemOneResponse, model: str, questions: dict[str, Any]) -> None:
+    if response.usage.input_tokens is None or response.usage.input_tokens < 0:
+        raise UnknownJudgeCost(response)
     validate_answers(response.answers, questions)
     if response.model != model:
         raise ValueError("returned judge differs from the requested model")
-    if response.usage.input_tokens is None or response.usage.input_tokens < 0:
-        raise ValueError("judge did not report valid non-negative input usage")
 
 
 class InvalidJudgeOutput(ValueError):
@@ -153,11 +151,9 @@ class SystemOneClient(TypeSafeClient):
         reservation = cost_tracker.reserve(estimated_cost(model, request_bytes))
         try:
             response = self.system_one(model=model, state=state, questions=questions)
-        except BaseException as exc:
-            if rejected(exc):
-                cost_tracker.release(reservation)
-            else:
-                cost_tracker.settle(reservation, model, None, 0)
+        except BaseException:
+            # No documented contract says a failed request is unbilled.
+            cost_tracker.settle(reservation, model, None, 0)
             raise
 
         tokens = response.usage.input_tokens

@@ -175,16 +175,37 @@ def test_an_unknown_outcome_is_sent_once_and_counted(monkeypatch):
     assert (tracker.calls, tracker.snapshot()["unknown_calls"]) == (1, 1)
 
 
-def test_a_rejected_request_is_not_counted_as_a_call(monkeypatch):
+def test_a_rejected_request_counts_as_a_call_of_unknown_cost(monkeypatch):
     def handle(request):
         return httpx2.Response(400, json={"error": "bad request"})
 
     tracker = CostTracker()
     monkeypatch.setattr(typesafe, "cost_tracker", tracker)
-    with _client(handle) as client, pytest.raises(TypeSafeAPIError) as caught:
+    with _client(handle) as client, pytest.raises(TypeSafeAPIError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert typesafe.rejected(caught.value)
-    assert tracker.calls == 0
+    assert (tracker.calls, tracker.snapshot()["unknown_calls"]) == (1, 1)
+
+
+def test_missing_usage_is_unknown_cost_not_an_invalid_answer(monkeypatch):
+    def handle(request):
+        names = json.loads(request.content)["questions"]
+        return httpx2.Response(
+            200,
+            json={
+                "model": typesafe.DEFAULT_JUDGE_MODEL,
+                "usage": {"input_tokens": None, "output_tokens": 0},
+                "answers": {key: {"type": "noul", "noul": 0.2} for key in names},
+            },
+        )
+
+    tracker = CostTracker()
+    monkeypatch.setattr(typesafe, "cost_tracker", tracker)
+    questions = {"signal": QUESTIONS["signal"]}
+    with _client(handle) as client, pytest.raises(typesafe.UnknownJudgeCost) as caught:
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=questions)
+    assert not isinstance(caught.value, ValueError)
+    assert caught.value.response.usage.input_tokens is None
+    assert tracker.snapshot()["unknown_calls"] == 1
 
 
 def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
@@ -196,8 +217,7 @@ def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
 
     tracker = CostTracker()
     monkeypatch.setattr(typesafe, "cost_tracker", tracker)
-    with _client(handle) as client, pytest.raises(TypeSafeAPIError) as caught:
+    with _client(handle) as client, pytest.raises(TypeSafeAPIError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert not typesafe.rejected(caught.value)
     assert len(sent) == 1
     assert tracker.snapshot()["unknown_calls"] == 1

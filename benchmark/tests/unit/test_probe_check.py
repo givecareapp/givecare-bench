@@ -2,9 +2,7 @@
 
 import json
 
-import httpx2
 import pytest
-from typesafe_sdk import TypeSafeAPIError
 
 from benchmark.tests.fixtures.current_scan import TRANSCRIPT, FixtureJudge
 from invisiblebench.cli.archive import get_run_info
@@ -26,13 +24,14 @@ def test_failed_probe_saves_progress_and_resumes(tmp_path):
             self.calls += 1
             if self.calls == 2:
                 assert len((bundle / "answers.jsonl").read_text().splitlines()) == 1
-                raise TypeSafeAPIError(400, {"error": "rejected"}, httpx2.Headers())
+                # Billed with known usage, but missing its answers: retryable.
+                return super().ask(**kwargs).model_copy(update={"answers": {}})
             return super().ask(**kwargs)
 
     with pytest.raises(RuntimeError, match="attempt saved"):
         run_probe(bundle, max_cost_usd=1, client=Interrupted())
     rows = [json.loads(line) for line in (bundle / "answers.jsonl").read_text().splitlines()]
-    assert rows[0]["error"] is None and rows[1]["error"] == "judge_api_error"
+    assert rows[0]["error"] is None and rows[1]["error"] == "invalid_judge_output"
     source.write_text("The external source is no longer available")
     assert run_probe(bundle, max_cost_usd=1, client=FixtureJudge())[0].verdict.value == "PASS"
     assert len((bundle / "answers.jsonl").read_text().splitlines()) == 3
@@ -58,7 +57,7 @@ def test_changed_probe_snapshot_is_rejected_before_inference(tmp_path):
 
 
 @pytest.mark.parametrize("tokens", [None, -1])
-def test_invalid_usage_is_a_saved_failure(tmp_path, tokens):
+def test_invalid_usage_is_unknown_cost_and_blocks_resume(tmp_path, tokens):
     source = tmp_path / "conversation.jsonl"
     source.write_text(TRANSCRIPT)
     bundle = tmp_path / "probe"
@@ -71,9 +70,12 @@ def test_invalid_usage_is_a_saved_failure(tmp_path, tokens):
                 update={"usage": response.usage.model_copy(update={"input_tokens": tokens})}
             )
 
-    with pytest.raises(RuntimeError, match="attempt saved"):
+    with pytest.raises(RuntimeError, match="outcome unknown"):
         run_probe(bundle, max_cost_usd=1, client=BadUsage())
-    saved = load_questions(bundle)[1]
-    assert len(saved) == 1 and saved[0].error == "invalid_judge_output"
-    assert saved[0].input_tokens == 0
-    assert "non-negative input usage" in saved[0].error_detail
+    assert load_questions(bundle)[1] == []
+    unknown = json.loads((bundle / "attempts.jsonl").read_text().splitlines()[-1])
+    assert unknown["event"] == "unknown"
+    assert "non-negative input usage" in unknown["detail"]
+    assert unknown["response"]["usage"]["input_tokens"] == tokens
+    with pytest.raises(ValueError, match="no automatic resume"):
+        run_probe(bundle, max_cost_usd=1, client=FixtureJudge())

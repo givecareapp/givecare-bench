@@ -35,7 +35,6 @@ from invisiblebench.api.typesafe import (
     SystemOneClient,
     check_context,
     estimated_cost,
-    rejected,
     validate_answers,
     validate_response,
 )
@@ -645,10 +644,6 @@ def _ask(
         result, error, detail = exc.response, "invalid_judge_output", str(exc)
     except ValueError as exc:
         error, detail = "invalid_judge_output", str(exc)
-    except Exception as exc:
-        if not rejected(exc):
-            raise
-        error, detail = "judge_api_error", type(exc).__name__
     valid_response = isinstance(result, SystemOneResponse)
     return Answer(
         **identity,
@@ -670,10 +665,11 @@ def _append(journal, row: dict | bytes) -> None:
 
 
 def _require_settled(attempts, answers: list[Answer]) -> None:
-    """Refuse to resume while any dispatched request lacks a saved outcome.
+    """Refuse to dispatch unless every attempt and saved answer match one to one.
 
     A missing answer does not prove the judge did not bill the request, so an
-    unsettled attempt is never asked again automatically.
+    unsettled attempt is never asked again automatically. An answer without an
+    attempt has no execution provenance, so it cannot settle a later attempt.
     """
     attempts.seek(0)
     content = attempts.read()
@@ -688,12 +684,18 @@ def _require_settled(attempts, answers: list[Answer]) -> None:
             open_attempts[tuple(row["key"])] -= 1
     for answer in answers:
         open_attempts[answer.key] -= 1
+    replan = "Plan a new scan from the retained transcript run with --output."
+    unmatched = sorted(key for key, count in open_attempts.items() if count < 0)
+    if unmatched:
+        raise ValueError(
+            f"judge answer {unmatched[0]} was saved without a recorded attempt; "
+            f"no automatic resume. {replan}"
+        )
     unsettled = sorted(key for key, count in open_attempts.items() if count > 0)
     if unsettled:
         raise ValueError(
             f"judge request {unsettled[0]} has no saved outcome and may have been billed; "
-            "no automatic resume. Judge the saved responses again into a new "
-            "--output directory."
+            f"no automatic resume. {replan}"
         )
 
 
@@ -721,7 +723,6 @@ def execute_requests(
             raise ValueError("this scan is already running") from exc
         answers = _read_answers(bundle, plan_sha256, requests, model)
         attempts = clients.enter_context((bundle / ATTEMPTS_FILE).open("a+b"))
-        _require_settled(attempts, answers)
         done = {a.key for a in answers if a.error is None}
         pending = [
             (mid, sid, role, turn, request)
@@ -730,6 +731,7 @@ def execute_requests(
             if (mid, sid, role, turn) not in done
         ]
         if pending:
+            _require_settled(attempts, answers)
             if estimate is None or max_cost_usd < estimate:
                 raise ValueError("unknown pricing or the dry-run estimate exceeds max_cost_usd")
             if max_cost_usd > maximum_reasonable_cost_ceiling(estimate):
@@ -759,7 +761,19 @@ def execute_requests(
                     _append(attempts, {"event": "refused", "key": key})
                     raise
                 except BaseException as exc:
-                    _append(attempts, {"event": "unknown", "key": key, "error": type(exc).__name__})
+                    response = getattr(exc, "response", None)
+                    _append(
+                        attempts,
+                        {
+                            "event": "unknown",
+                            "key": key,
+                            "error": type(exc).__name__,
+                            "detail": str(exc),
+                            "response": response.model_dump(mode="json")
+                            if isinstance(response, SystemOneResponse)
+                            else None,
+                        },
+                    )
                     if not isinstance(exc, Exception):
                         raise
                     raise RuntimeError(
