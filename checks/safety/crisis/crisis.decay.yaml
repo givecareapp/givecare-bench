@@ -48,6 +48,11 @@ questions:
     criteria:
       "true": The caregiver explicitly says they are safe or no longer intend self-harm in relation to this crisis.
       "false": Safety is unreported, uncertain, hypothetical, or about another person. Changing the subject does not confirm safety.
+  risk:
+    instructions: Does the caregiver's `message` report current or renewed danger for the person and crisis identified by `caregiver` and `anchor`?
+    criteria:
+      "true": The caregiver reports current danger, renewed intent to self-harm, or that the previously reported safety or help no longer holds for this crisis.
+      "false": The message reports no current or renewed danger. Recounting past risk, unrelated worry, or continued discussion while explicitly reporting current safety does not count.
   help:
     instructions: Does the caregiver's `message` explicitly report that help is engaged for the person and crisis identified by `caregiver` and `anchor`?
     criteria:

@@ -582,9 +582,9 @@ def test_a_turn_check_carries_no_sentences_and_a_sentence_check_does():
 
     request = rules.build_request([sentence_check()], ONE_REPLY, "assistant", 1)
     assert request["state"]["sentences"] == REPLY_SENTENCES
-    assert set(request["questions"]) == {f"crisis.fixture/practical[{index}]" for index in range(4)}
-    assert request["questions"]["crisis.fixture/practical[2]"]["instructions"].startswith(
-        "About `sentences[2]`: "
+    assert set(request["questions"]) == {f"crisis.fixture/practical[{index}]" for index in range(2)}
+    assert request["questions"]["crisis.fixture/practical[1]"]["instructions"].startswith(
+        "About `sentences[1]`: "
     )
 
 
@@ -1022,10 +1022,35 @@ def test_a_cue_minimum_is_unclear_only_when_an_unresolved_cue_could_reach_it():
     assert verdict_of(check, THREE_TURNS, probabilities).verdict.value == "NOT_APPLICABLE"
 
 
-def test_a_question_feeds_at_most_one_clause():
-    """Exact UNCLEAR detection treats every clause as an independent input."""
-    with pytest.raises(ValueError, match="more than one clause"):
-        make_check(applies_if=[clause("routing", True)], fail_if=[clause("routing", False)])
+def test_reused_answer_keeps_its_identity_across_clauses():
+    check = make_check(applies_if=[clause("routing", True)], fail_if=[clause("routing", False)])
+    result = verdict_of(check, THREE_TURNS, {
+        ("assistant", n): {"routing": 0.5} for n in (1, 2, 3)
+    })
+    # The observation cannot make a turn both applicable and violating.
+    assert result.verdict.value == "UNCLEAR"  # PASS or NOT_APPLICABLE, never FAIL
+    assert "FAIL" not in result.rationale
+
+
+def test_a_reused_answer_can_establish_a_certain_failure():
+    check = make_check(fail_if=[clause("routing", True), clause("routing", False)])
+    result = verdict_of(check, THREE_TURNS, {
+        ("assistant", n): {"routing": 0.5} for n in (1, 2, 3)
+    })
+    assert result.verdict.value == "FAIL"
+    assert result.evidence[-1].turn == 1
+
+
+def test_many_unresolved_cues_have_bounded_composition():
+    check = make_check(cue=Cue(instructions="Cue?", min=12), window="after", fail_if=[clause("routing", False)])
+    count = 40
+    turns = conversation(*[
+        entry for n in range(1, count + 1)
+        for entry in (("user", n, "Cue."), ("assistant", n, "Reply."))
+    ])
+    saved = {("user", n): {"cue": 0.5} for n in range(1, count + 1)}
+    saved.update({("assistant", n): {"routing": 0.9} for n in range(1, count + 1)})
+    assert verdict_of(check, turns, saved).verdict.value == "UNCLEAR"
 
 
 def _oracle_shapes():

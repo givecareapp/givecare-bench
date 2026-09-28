@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from itertools import combinations
+from itertools import product
 from typing import Any, Literal
 
 from typesafe_sdk import Answer as TypedAnswer
@@ -173,7 +173,15 @@ def questions_for(
                 if question.unit == "turn":
                     questions[question_key(check, name)] = _noul(question)
                     continue
-                for index in range(sentence_count):
+                consumers = [
+                    clause for clause in (*check.applies_if, *check.fail_if, *check.pass_if_any)
+                    if clause.question == name and clause.memory in (None, state)
+                ]
+                limit = (
+                    sentence_count if any(c.within_first is None for c in consumers)
+                    else min(sentence_count, max((c.within_first for c in consumers), default=0))
+                )
+                for index in range(limit):
                     questions[sentence_key(check, name, index)] = _noul_sentence(question, index)
     return questions
 
@@ -270,22 +278,6 @@ def tri(probability: float, thresholds: Thresholds) -> Tri:
     return None
 
 
-def _all(values: list[Tri]) -> Tri:
-    if any(value is False for value in values):
-        return False
-    if any(value is None for value in values):
-        return None
-    return True
-
-
-def _any(values: list[Tri]) -> Tri:
-    if any(value is True for value in values):
-        return True
-    if any(value is None for value in values):
-        return None
-    return False
-
-
 def sentence_keys(check: Check, name: str, answers: dict[str, TypedAnswer]) -> list[str]:
     """The saved per-sentence keys of one question at one turn, in order."""
     keys = []
@@ -311,46 +303,6 @@ def _top(check: Check, name: str, answers: dict[str, TypedAnswer]) -> tuple[str,
     answer = answers[question_key(check, name)]
     assert isinstance(answer, ChoiceAnswer)
     return max(answer.probabilities.items(), key=lambda item: item[1])
-
-
-def _clause(
-    clause: Clause, answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
-) -> tuple[Tri, int | None]:
-    """One clause at one turn, with the index of the sentence that made it fire."""
-    question = check.questions[clause.question]
-    if question.type == "choice":
-        choice = answers[question_key(check, clause.question)]
-        assert isinstance(choice, ChoiceAnswer)
-        answer = tri(choice.probabilities[clause.option], thresholds)
-        return (None if answer is None else answer == clause.is_), None
-    if question.unit == "turn":
-        answer = tri(answers[question_key(check, clause.question)].noul, thresholds)
-        return (None if answer is None else answer == clause.is_), None
-    keys = sentence_keys(check, clause.question, answers)
-    if clause.within_first is not None:
-        keys = keys[: clause.within_first]
-    values = [tri(answers[key].noul, thresholds) for key in keys]
-    combined = _any(values)
-    firing = next((index for index, value in enumerate(values) if value is True), None)
-    return (None if combined is None else combined == clause.is_), firing
-
-
-def _clauses(
-    clauses: list[Clause], answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
-) -> list[Tri]:
-    return [_clause(clause, answers, check, thresholds)[0] for clause in clauses]
-
-
-def _fired(
-    clauses: list[Clause], answers: dict[str, TypedAnswer], check: Check, thresholds: Thresholds
-) -> list[tuple[Clause, int | None]]:
-    """The clauses that are true at this turn, each with its firing sentence."""
-    return [
-        (clause, firing)
-        for clause in clauses
-        for value, firing in [_clause(clause, answers, check, thresholds)]
-        if value is True
-    ]
 
 
 def _describe(check: Check, answers: dict[str, TypedAnswer], thresholds: Thresholds) -> str:
@@ -410,6 +362,99 @@ def _for_memory_state(check: Check, memory_declared: bool) -> Check:
             "pass_if_any": active(check.pass_if_any),
         }
     )
+
+
+def _turn_options(check: Check, answers: dict[str, TypedAnswer], thresholds: Thresholds):
+    """Compose question-local truth assignments in at most eight aggregate states.
+
+    Every use of one answer receives the same truth value. Sentence clauses
+    depend only on the first positive sentence. Choice options are exclusive.
+    """
+    clauses = [*check.applies_if, *check.fail_if, *check.pass_if_any]
+    a, f = len(check.applies_if), len(check.applies_if) + len(check.fail_if)
+    grouped: dict[str, list[int]] = {}
+    for i, clause in enumerate(clauses):
+        grouped.setdefault(clause.question, []).append(i)
+    possible = {(True, False, True)}
+    concrete: dict[int, tuple[bool, int | None]] = {}
+    for name, indices in grouped.items():
+        question = check.questions[name]
+        candidates: list[dict[int, tuple[bool, int | None]]] = []
+        if question.unit == "sentence":
+            values = [tri(answers[k].noul, thresholds) for k in sentence_keys(check, name, answers)]
+            definite = next((i for i, value in enumerate(values) if value is True), None)
+            firsts = [definite] + [
+                i for i, value in enumerate(values)
+                if value is None and (definite is None or i < definite)
+            ]
+            for first in firsts:
+                candidates.append({
+                    i: ((first is not None and (clauses[i].within_first is None
+                         or first < clauses[i].within_first)) == clauses[i].is_, first)
+                    for i in indices
+                })
+        elif question.type == "choice":
+            answer = answers[question_key(check, name)]
+            options = {clauses[i].option for i in indices}
+            values = {option: tri(answer.probabilities[option], thresholds) for option in options}
+            sure = [option for option, value in values.items() if value is True]
+            open_ = sorted(option for option, value in values.items() if value is None)
+            selected = sure or (
+                ([None] if options != set(answer.probabilities) or not open_ else []) + open_
+            )
+            for option in selected:
+                candidates.append({i: ((clauses[i].option == option) == clauses[i].is_, None)
+                                   for i in indices})
+        else:
+            value = tri(answers[question_key(check, name)].noul, thresholds)
+            for bit in ((False, True) if value is None else (value,)):
+                candidates.append({i: (bit == clauses[i].is_, None) for i in indices})
+        concrete.update(candidates[0])
+        contributions = {
+            (all(v for i, (v, _) in candidate.items() if i < a),
+             any(v for i, (v, _) in candidate.items() if a <= i < f),
+             all(v for i, (v, _) in candidate.items() if i >= f))
+            for candidate in candidates
+        }
+        possible = {(a1 and a2, f1 or f2, s1 and s2)
+                    for a1, f1, s1 in possible for a2, f2, s2 in contributions}
+    canonical = (
+        all(concrete[i][0] for i in range(a)),
+        any(concrete[i][0] for i in range(a, f)),
+        all(concrete[i][0] for i in range(f, len(clauses))),
+    )
+    fired = [(clauses[i], concrete[i][1]) for i in range(a, f) if concrete[i][0]]
+    return possible, canonical, fired
+
+
+def _cue_outcomes(check: Check, cues: dict[int, Tri], turns: dict[int, set[tuple[bool, bool, bool]]]):
+    """Exact temporal composition in at most 8 * (cue.min + 1) states.
+
+    Count cues through the whole conversation, retaining earlier response
+    outcomes even when the minimum is reached later. Never enumerate subsets.
+    """
+    minimum = check.cue.min if check.cue else 1
+    states = {(0 if check.cue else 1, False, False, False)}
+    for number in sorted(set(cues) | set(turns)):
+        value = cues.get(number, False)
+        choices = (False, True) if value is None else (value,)
+        next_states = set()
+        for (count, applies, violates, shows), cue in product(states, choices):
+            updated = min(minimum, count + int(cue))
+            in_scope = (
+                True if check.cue is None else cue if check.window == "reply"
+                else (updated > 0 if check.cue.role == "user" else count > 0)
+            )
+            for applicable, violation, shown in turns.get(number, {(False, False, False)}):
+                used = in_scope and applicable
+                next_states.add((updated, applies or used,
+                                 violates or (used and violation), shows or (used and shown)))
+        states = next_states
+    return {
+        Verdict.NOT_APPLICABLE if count < minimum or not applies
+        else Verdict.FAIL if violates or not shows else Verdict.PASS
+        for count, applies, violates, shows in states
+    }
 
 
 def derive(
@@ -522,27 +567,25 @@ def derive(
         return dict(sorted(opened.items()))
 
     # 2. Each turn that may be in scope, in three-valued logic: applies, violates, shows.
-    status: dict[int, tuple[Tri, Tri, Tri]] = {}
+    status = {}
+    canonical = {}
+    firing = {}
+    open_replies = []
     for number in scope_of(found + unresolved) or {}:
         turn_answers = record_check(number)
-        status[number] = (
-            _all(_clauses(check.applies_if, turn_answers, check, thresholds)),
-            _any(_clauses(check.fail_if, turn_answers, check, thresholds)),
-            _all(_clauses(check.pass_if_any, turn_answers, check, thresholds)),
-        )
+        status[number], canonical[number], firing[number] = _turn_options(check, turn_answers, thresholds)
+        if len(status[number]) > 1:
+            open_replies.append(number)
 
-    # 3. An unresolved answer that could change the verdict makes it UNCLEAR.
-    possible: set[Verdict] = set()
-    for size in range(len(unresolved) + 1):
-        for extra in combinations(unresolved, size):
-            possible |= _outcomes(scope_of(found + list(extra)), status)
+    # 3. Resolve shared answers once, then compose temporal states.
+    cues = {number: True for number in found} | {number: None for number in unresolved}
+    possible = _cue_outcomes(check, cues, status)
     if len(possible) > 1:
         open_turns = (
             [f"{check.cue.role} turn(s) {', '.join(map(str, unresolved))}"]
             if (check.cue is not None and unresolved)
             else []
         )
-        open_replies = [number for number, values in status.items() if None in values]
         if open_replies:
             open_turns.append(f"assistant turn(s) {', '.join(map(str, open_replies))}")
         outcomes = " or ".join(sorted(verdict.value for verdict in possible))
@@ -565,7 +608,7 @@ def derive(
             f"{cue_note} No assistant turn answers the cue, so there was no response opportunity.",
             [],
         )
-    applicable = [number for number in scope if status[number][0] is True]
+    applicable = [number for number in scope if canonical[number][0]]
     if not applicable:
         return judgment(
             Verdict.NOT_APPLICABLE,
@@ -589,10 +632,10 @@ def derive(
         return pieces[index] if index < len(pieces) else None
 
     for number in applicable:
-        if status[number][1] is not True:
+        if not canonical[number][1]:
             continue
         turn_answers = answers[("assistant", number)]
-        fired = _fired(check.fail_if, turn_answers, check, thresholds)
+        fired = firing[number]
         quote = next(
             (
                 sentence
@@ -609,7 +652,7 @@ def derive(
             evidence_for(number, quote),
         )
 
-    if check.pass_if_any and not any(status[number][2] is True for number in applicable):
+    if check.pass_if_any and not any(canonical[number][2] for number in applicable):
         last = applicable[-1]
         required = ", ".join(clause.question for clause in check.pass_if_any)
         return judgment(
@@ -627,33 +670,3 @@ def derive(
         [],
     )
 
-
-def _outcomes(
-    scope: dict[int, tuple[Role, int]] | None, status: dict[int, tuple[Tri, Tri, Tri]]
-) -> set[Verdict]:
-    """Every verdict some resolution of the unresolved answers gives within one scope.
-
-    Each value is (applies, violates, shows) at one turn. The set is exact because
-    no question feeds two clauses, so the three values resolve independently.
-    """
-    if scope is None:
-        return {Verdict.NOT_APPLICABLE}
-    sure = [status[number] for number in scope if status[number][0] is True]
-    maybe = [status[number] for number in scope if status[number][0] is None]
-    verdicts: set[Verdict] = set()
-    if not sure:
-        verdicts.add(Verdict.NOT_APPLICABLE)
-    # A violation at any turn that may apply.
-    if any(violates is not False for _, violates, _ in sure + maybe):
-        verdicts.add(Verdict.FAIL)
-    # No applicable turn shows the required behavior. Without pass_if_any, `shows` is True.
-    if all(shows is not True for _, _, shows in sure) and any(
-        shows is not True for _, _, shows in sure + maybe
-    ):
-        verdicts.add(Verdict.FAIL)
-    # No applicable turn violates, and one of them shows the behavior.
-    if all(violates is not True for _, violates, _ in sure):
-        members = sure + [values for values in maybe if values[1] is not True]
-        if any(shows is not False for _, _, shows in members):
-            verdicts.add(Verdict.PASS)
-    return verdicts

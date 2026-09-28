@@ -123,6 +123,15 @@ def test_a_request_past_the_state_budget_is_refused_before_dispatch(api):
     assert requests == [] and tracker.calls == 0
 
 
+@pytest.mark.parametrize("character", ["漢", "🫂", "\u0000"])
+def test_context_estimate_counts_utf8_and_json_escapes_without_dispatch(api, character):
+    client, requests, _, tracker = api
+    state = character * (typesafe.MAX_STATE_AND_QUESTION_TOKENS + 1)
+    with pytest.raises(ValueError, match="state plus the longest question"):
+        client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state=state, questions=QUESTIONS)
+    assert not requests and tracker.calls == 0
+
+
 def test_many_questions_past_the_request_budget_are_refused():
     question = {"type": "noul", "instructions": "y" * 20_000}
     questions = {str(index): question for index in range(12)}

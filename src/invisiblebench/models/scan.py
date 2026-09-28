@@ -170,10 +170,6 @@ class CheckDefinition(Record):
         if not self.fail_if and not self.pass_if_any:
             raise ValueError("a check needs fail_if or pass_if_any")
         clauses = [*self.applies_if, *self.fail_if, *self.pass_if_any]
-        named = [clause.question for clause in clauses]
-        if repeated := sorted({name for name in named if named.count(name) > 1}):
-            # The rule engine resolves each clause independently; a shared question couples them.
-            raise ValueError(f"a question feeds more than one clause: {', '.join(repeated)}")
         for clause in clauses:
             if clause.question not in self.questions:
                 raise ValueError(f"clause names an unknown question: {clause.question}")
