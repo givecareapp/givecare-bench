@@ -17,7 +17,10 @@ based on a preceding response. A branch condition is either a keyword rule or
 a yes/no question put to the judge model; every branch decision and, for
 judged conditions, the answered probability are recorded in the transcript
 metadata. Each branch probability must be finite and between 0 and 1, inclusive.
-An invalid probability stops branch selection.
+An invalid probability stops branch selection. A judged branch matches at or
+above its `min` probability. Below `min`, a probability above the default scan
+`low` threshold is ambiguous and stops branch selection with a technical error.
+Only a probability at or below `low` lets selection continue to the next branch.
 Session labels give time context. They do not establish that a
 deployed product has working memory, tools, or persistent state.
 
@@ -198,7 +201,11 @@ cases. Those labels must not be inferred from either judge or the exemplars.
 Such research remains separate from runtime verdicts and publication QA.
 
 Mechanical QA checks source bytes, complete scenario and check coverage, valid
-quotes, judge settings, and exact score recomputation. These checks prove the
+quotes, judge settings, and exact score recomputation. Public projection also
+checks each transcript against the authored scenario: ordered user/reply pairs,
+scripted user text or a declared branch, and nonblank replies without error or
+truncation markers. An opening-turn branch is invalid. Any recorded resolved
+model ID must match the source model. These checks prove the
 artifact contract. They do not establish the semantic correctness of a verdict.
 
 Public cases can enter model training or retrieval. A canary does not prove that
