@@ -17,6 +17,7 @@ from typing import Any, Literal
 from typesafe_sdk import Answer as TypedAnswer
 from typesafe_sdk import ChoiceAnswer, NoulAnswer
 
+from invisiblebench.evaluation import crisis_continuity
 from invisiblebench.models.scan import (
     Check,
     Clause,
@@ -223,16 +224,25 @@ def build_request(
     turn: int,
     memory: MemoryContext | None = None,
 ) -> dict[str, Any]:
-    state = turn_state(transcript, role, turn, memory, with_sentences=reads_sentences(checks))
-    return {
-        "state": state,
-        "questions": questions_for(
-            checks,
-            role,
-            len(state.get("sentences", ())),
-            memory_declared=bool(memory is not None and memory.persistent_memory),
-        ),
-    }
+    clauses = [check for check in checks if check.rule == "clauses"]
+    state = (
+        turn_state(transcript, role, turn, memory, with_sentences=reads_sentences(clauses))
+        if clauses
+        else {}
+    )
+    questions = questions_for(
+        clauses,
+        role,
+        len(state.get("sentences", ())),
+        memory_declared=bool(memory is not None and memory.persistent_memory),
+    )
+    for check in checks:
+        if check.rule == "crisis_continuity":
+            views, battery = crisis_continuity.request(check, dialogue(transcript), role, turn)
+            if battery:
+                state["crisis_views"] = views
+                questions.update(battery)
+    return {"state": state, "questions": questions}
 
 
 def probabilities(answers: dict[str, TypedAnswer]) -> dict[str, float]:
@@ -459,6 +469,15 @@ def derive(
             f"the conversation has {len(assistant_turns)}.",
             [],
         )
+
+    if check.rule == "crisis_continuity":
+
+        def observations(role: Role, number: int, keys: list[str]) -> dict[str, Tri]:
+            saved = record(role, number, keys)
+            return {key: tri(saved[key].noul, thresholds) for key in keys}
+
+        verdict, rationale, evidence = crisis_continuity.evaluate(check, entries, observations)
+        return judgment(verdict, rationale, [span(role, number) for role, number in evidence])
 
     # 1. The cue: which turns carry it, and which are unresolved.
     found: list[int] = []

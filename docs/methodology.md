@@ -75,7 +75,14 @@ earlier turns. The judge model answers each
 question with a calibrated probability. It writes no verdict, rationale, or
 quote; code owns all three.
 
-Code applies each check's rule to the saved probabilities. A check with a
+Code applies each check's rule to the saved probabilities. `crisis.decay` uses
+a Python function to compose observations bound to a reference crisis and a
+numbered message. Its questions separate safety actions, reported confirmation,
+and later response behavior. The [check grammar](https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#python-composition)
+defines its evidence and temporal policy. A pass means that its specific
+downgrade condition did not occur; it does not establish the caregiver's safety.
+
+Other checks use the clause grammar. A check with a
 `cue` applies only inside the cue's window: `reply` is the same-numbered
 assistant turn; `after` is that turn and every later one for a user cue, and
 strictly later turns for an assistant cue. A check without a

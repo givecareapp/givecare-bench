@@ -22,7 +22,13 @@ def test_the_published_directory_holds_every_check():
         assert check_id == check.id
         assert check.dimension in DIMENSIONS[check.layer]
         assert check.id.startswith(check.dimension + ".")
-        assert check.fail_if or check.pass_if_any
+        if check.rule == "clauses":
+            assert check.fail_if or check.pass_if_any
+        else:
+            from invisiblebench.evaluation.crisis_continuity import validate
+
+            validate(check)
+            assert not (check.cue or check.fail_if or check.pass_if_any or check.applies_if)
 
 
 def test_a_check_id_must_equal_its_file_name(tmp_path):
