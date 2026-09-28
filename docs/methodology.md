@@ -177,8 +177,11 @@ estimate uses request payload size. It is approximate and can understate cost.
 Recorded cost uses the API's reported input tokens and the pinned judge price.
 `judgments.jsonl` is derived from `answers.jsonl` by the rule engine. Replay
 means deriving judgments again from the frozen plan and the saved answers,
-not calling the judge model again. Resuming a paid scan and publishing a
-result still require the current benchmark contract. All input paths are
+not calling the judge model again. Replay requires the installed engine version
+to match the frozen plan. An engine change can alter request text or sentence
+boundaries, so saved answers cannot be reused under that new engine. Preserve
+the original bundle and plan a separate scan from its retained source runs.
+Resuming a paid scan and publishing a result also require the current benchmark contract. All input paths are
 relative to the bundle.
 
 Calibration is a property of the judge model, measured across groups of

@@ -339,10 +339,19 @@ def plan_rejudge(frozen: Path, bundle: Path, *, model: str = DEFAULT_JUDGE_MODEL
     return candidate
 
 
+def _supported_engine(plan: ScanPlan) -> None:
+    if plan.engine_version != ENGINE_VERSION:
+        raise ValueError(
+            f"unsupported scan engine {plan.engine_version!r}; installed engine is {ENGINE_VERSION!r}. "
+            "Keep the original bundle unchanged; plan a new scan and obtain cost approval "
+            "before judging again."
+        )
+
+
 def _current_plan(plan: ScanPlan) -> None:
+    _supported_engine(plan)
     if (
         plan.benchmark_version != get_benchmark_version()
-        or plan.engine_version != ENGINE_VERSION
         or plan.scenario_corpus_sha256 != scenario_corpus_hash(get_project_root())
         or plan.checks != list(load_checks().values())
         or plan.judge != JudgeSettings(model=plan.judge.model)
@@ -556,6 +565,7 @@ def load_scan(
     bundle = Path(bundle)
     plan_bytes = (bundle / PLAN_FILE).read_bytes()
     plan = ScanPlan.model_validate_json(plan_bytes)
+    _supported_engine(plan)
     plan_sha = sha256(plan_bytes)
     conversations = _conversations(bundle, plan)
     requests = _planned_requests(plan, conversations)

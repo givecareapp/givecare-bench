@@ -87,6 +87,29 @@ def test_bundle_moves_without_original_sources_and_replays(tmp_path):
     assert str(tmp_path) not in (moved / LEDGER_FILE).read_text()
 
 
+@pytest.mark.parametrize("operation", ["load", "replay", "resume"])
+def test_unsupported_engine_stops_before_request_reconstruction(tmp_path, operation):
+    import json
+
+    bundle = tmp_path / "scan"
+    plan_scan([source_run(tmp_path)], bundle)
+    path = bundle / "scan_plan.json"
+    payload = json.loads(path.read_bytes())
+    payload["engine_version"] = "unsupported-engine"
+    path.write_text(json.dumps(payload))
+    # An incompatible engine must be diagnosed before any source or answer is read.
+    (bundle / payload["sources"][0]["manifest"]["path"]).unlink()
+    before = {p: p.read_bytes() for p in bundle.rglob("*") if p.is_file()}
+    with pytest.raises(ValueError, match="unsupported scan engine.*unsupported-engine"):
+        if operation == "load":
+            load_scan(bundle)
+        elif operation == "replay":
+            replay_scan(bundle)
+        else:
+            run_scan(bundle, max_cost_usd=BUDGET, client=FixtureJudge())
+    assert {p: p.read_bytes() for p in bundle.rglob("*") if p.is_file()} == before
+
+
 def test_resume_recovers_only_an_unfinished_last_line(tmp_path):
     bundle = tmp_path / "scan"
     plan = plan_scan([source_run(tmp_path)], bundle, judge_model=DEFAULT_JUDGE_MODEL)
