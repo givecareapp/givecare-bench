@@ -33,6 +33,7 @@ def test_doctor_requires_the_openrouter_key(monkeypatch, tmp_path, capsys, key, 
     for name in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "INVISIBLEBENCH_API_BACKEND"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(key, "test-key")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.setattr(agent_commands, "_runs_dir", lambda: tmp_path)
 
     assert agent_commands._run_doctor(json_output=True) == expected
@@ -581,6 +582,7 @@ def test_doctor_json_emits_standard_envelope(monkeypatch, tmp_path, capsys) -> N
     runs_dir.mkdir()
     monkeypatch.setattr(agent_commands, "_runs_dir", lambda: runs_dir)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
 
     rc = runner_mod.main(["--json", "doctor"])
 
@@ -591,7 +593,7 @@ def test_doctor_json_emits_standard_envelope(monkeypatch, tmp_path, capsys) -> N
     assert envelope["status"] == "ok"
     assert envelope["command"] == "doctor"
     assert envelope["data"]["failures"] == 0
-    assert len(envelope["data"]["checks"]) == 3
+    assert len(envelope["data"]["checks"]) == 4
 
 
 def test_doctor_json_reports_failures(monkeypatch, tmp_path, capsys) -> None:
@@ -603,6 +605,7 @@ def test_doctor_json_reports_failures(monkeypatch, tmp_path, capsys) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
 
     rc = runner_mod.main(["--json", "doctor"])
 
@@ -695,3 +698,44 @@ def test_leaderboard_status_out_without_json_writes_file(
     envelope = json.loads(capsys.readouterr().out.strip())
     assert envelope["command"] == "leaderboard"
     assert envelope["data"]["path"] == str(out_path.resolve())
+
+
+def test_doctor_requires_the_judge_key(monkeypatch, tmp_path, capsys) -> None:
+    from invisiblebench.cli import agent_commands
+
+    monkeypatch.setattr(agent_commands, "_runs_dir", lambda: tmp_path)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+
+    assert agent_commands._run_doctor(json_output=True) == 1
+    failed = [c for c in json.loads(capsys.readouterr().out)["data"]["checks"] if not c["passed"]]
+    assert [c["name"] for c in failed] == ["Judge API key (TYPESAFE_API_KEY)"]
+
+
+def test_a_judge_branched_scenario_needs_the_judge_key_before_generation(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """Branch decisions call the judge mid-conversation; fail before any target call."""
+    output_dir = tmp_path / "unbranchable_should_not_exist"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+
+    rc = run_command_mod.run_benchmark(
+        models=[
+            {
+                "id": "test/model",
+                "name": "Test Model",
+                "cost_per_m_input": 1.0,
+                "cost_per_m_output": 1.0,
+            }
+        ],
+        output_dir=output_dir,
+        dry_run=False,
+        auto_confirm=True,
+        max_cost_usd=1.0,
+        scenario_filter=["tier1_crisis_cssrs_passive_001"],
+    )
+
+    assert rc == 1
+    assert "TYPESAFE_API_KEY" in capsys.readouterr().out
+    assert not output_dir.exists()

@@ -29,6 +29,14 @@ def _turn_has_noul_branch(turn: dict[str, Any]) -> bool:
     return any(b.get("condition", {}).get("type") == "noul" for b in turn.get("branches", []))
 
 
+def uses_judge(scenario: dict[str, Any]) -> bool:
+    """Whether generating this scenario asks the judge to choose a branch."""
+    data = Scenario.model_validate_json(Path(scenario["path"]).read_bytes()).model_dump(
+        mode="json", exclude_none=True, exclude_defaults=True
+    )
+    return any(_turn_has_noul_branch(turn) for turn, _session in iter_scenario_turns(data))
+
+
 async def _ensure_noul_client() -> "SystemOneClient":
     global _noul_client
     if _noul_client is None:

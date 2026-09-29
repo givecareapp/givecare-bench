@@ -3,7 +3,10 @@
 Type: how-to.
 
 Install the project with uv. Set the provider key for transcripts and the TypeSafe
-key for judging. Plan paid work before running it.
+key for judging. Scenarios with judge-decided branches also call TypeSafe during
+generation, so a live run needs both keys and both hosts (`openrouter.ai` and
+`api.typesafe.ai`); generation refuses to start without the judge key. Plan paid
+work before running it.
 
 ```bash
 uv sync --extra dev

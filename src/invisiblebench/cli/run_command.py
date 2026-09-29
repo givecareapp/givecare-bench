@@ -33,6 +33,7 @@ from invisiblebench.cli.display import print_banner
 from invisiblebench.cli.transcript import (
     evaluate_scenario_async,
     transcript_policy,
+    uses_judge,
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.results_io import write_json
@@ -429,6 +430,9 @@ def run_benchmark(
 
     if not os.getenv("OPENROUTER_API_KEY"):
         print("ERROR: OPENROUTER_API_KEY not set")
+        return 1
+    if not os.getenv("TYPESAFE_API_KEY") and any(uses_judge(s) for s in scenarios):
+        print("ERROR: TYPESAFE_API_KEY not set; judge-branched scenarios need it")
         return 1
 
     if (output_dir / "scan_plan.json").exists():

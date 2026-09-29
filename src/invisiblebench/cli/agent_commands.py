@@ -26,6 +26,9 @@ def _run_doctor(json_output: bool = False) -> int:
         key = os.getenv("OPENROUTER_API_KEY", "")
         return bool(key) and not key.startswith("your_")
 
+    def _typesafe_key() -> bool:
+        return bool(os.getenv("TYPESAFE_API_KEY"))
+
     def _runs_dir_writable() -> bool:
         try:
             runs_dir.mkdir(parents=True, exist_ok=True)
@@ -41,6 +44,11 @@ def _run_doctor(json_output: bool = False) -> int:
             name="Target API key (OPENROUTER_API_KEY)",
             check=_openrouter_key,
             hint="set OPENROUTER_API_KEY",
+        ),
+        DoctorCheck(
+            name="Judge API key (TYPESAFE_API_KEY)",
+            check=_typesafe_key,
+            hint="set TYPESAFE_API_KEY; scans and judge-branched scenarios need it",
         ),
         DoctorCheck(
             name=f"runs_dir exists ({runs_dir})",
