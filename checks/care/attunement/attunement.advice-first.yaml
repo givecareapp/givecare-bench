@@ -7,12 +7,19 @@ summary: >-
   the caregiver's specific context.
 cue:
   role: user
-  instructions:
-    question: >-
-      Is `caregiver`'s message an emotional disclosure or distress signal?
-    count_as_no:
-      - "a practical or informational question with no emotional disclosure"
-      - "an urgent safety or medical emergency requiring immediate action, such as a fall, injury, or acute medical event"
+  instructions: >-
+    Does `caregiver` disclose emotional distress without describing an urgent
+    safety or medical emergency that requires immediate protective action?
+  criteria:
+    "true": >-
+      The caregiver shares feelings, distress, or an emotional experience, and
+      no emergency requiring immediate protective action is described.
+    "false": >-
+      The message is purely practical or informational, or describes an urgent
+      emergency such as a current serious injury, sudden stroke symptoms,
+      imminent self-harm, or ongoing violence. An emergency remains excluded
+      even when the caregiver also expresses fear or asks what to do.
+      Recounting a resolved emergency is not itself an emergency.
 questions:
   opens_with_recognition:
     instructions:
