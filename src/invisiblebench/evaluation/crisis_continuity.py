@@ -42,19 +42,18 @@ def key(check: Check, anchor: int, name: str) -> str:
     return f"{check.id}/{subject}/{name}"
 
 
-def request(
-    check: Check, entries: list[Entry], role: Role, turn: int
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def requests(check: Check, entries: list[Entry], role: Role, turn: int) -> list[dict[str, Any]]:
     validate(check)
     content = {(r, n): {"role": r, "turn": n, "content": text} for r, n, text in entries}
-    views, questions = {}, {}
+    result = []
     if not any(r == "assistant" and n >= turn for r, n, _ in entries):
-        return views, questions
+        return result
     for anchor in anchors(entries):
         if anchor > turn or (anchor == turn and role == "user"):
             continue
         names = CUE_NAMES if anchor == turn else USER_NAMES if role == "user" else REPLY_NAMES
-        views[str(anchor)] = {
+        questions = {}
+        view = {
             "caregiver": content.get(("user", anchor)),
             "anchor": content["assistant", anchor],
             "message": content[role, turn],
@@ -75,9 +74,9 @@ def request(
             questions[key(check, anchor, name)] = question.model_dump(
                 mode="json", exclude_none=True
             )
-    state = {"crisis_views": views} if questions else {}
+        result.append({"state": {"crisis_views": {str(anchor): view}}, "questions": questions})
     if role == "assistant" and any(anchor < turn for anchor in anchors(entries)):
-        state["message"] = content[role, turn]
+        questions = {}
         definition = check.questions["practical"]
         questions[key(check, 0, "practical")] = definition.to_jev(
             instructions={
@@ -85,7 +84,8 @@ def request(
                 "evidence": "Use only `message.content`.",
             },
         ).model_dump(mode="json", exclude_none=True)
-    return state, questions
+        result.append({"state": {"message": content[role, turn]}, "questions": questions})
+    return result
 
 
 def _assignments(observations: dict[str, Tri]):

@@ -71,10 +71,10 @@ The generated inventory identifies mapped positions and counts unmapped objectiv
 
 ## One decision per check
 
-The runtime sends one request per conversation turn. A request carries every
-active check's questions for that turn, the turn's own content, and the
-earlier turns. The judge model answers each
-question with a calibrated probability. It writes no verdict, rationale, or
+For each conversation turn, the runtime groups questions by identical
+evidence and splits groups to meet request-size limits. Evidence is never
+truncated. An observation sees the same evidence in an exemplar, probe, or
+full scan. The judge model answers each question with a calibrated probability. It writes no verdict, rationale, or
 quote; code owns all three.
 
 Code applies each check's rule to the saved probabilities. `crisis.decay` uses
@@ -121,7 +121,8 @@ and task evidence selected from the caregiver's visible message. It never carrie
 untrusted data; the judge model reads it literally and is not instructed to
 resist an instruction embedded in a reply.
 
-There is one saved request per conversation turn, covering every active check.
+Each request is saved separately. The engine combines disjoint answers for a
+turn before applying the checks. A duplicate observation is an error.
 The SDK client retries only rate-limit (429) and request-timeout (408)
 responses, which signal that the request was not processed. This is a retry
 policy, not a billing guarantee. Any other error after dispatch, or an answer
@@ -184,7 +185,8 @@ separate aggregate projection; the card contains private quoted evidence.
 
 The scan plan freezes source manifests, transcripts, check definitions,
 questions, thresholds, the judge model ID, and engine version in one portable
-bundle. Each request is hashed per turn. `answers.jsonl` holds the saved
+bundle. Request identity includes the conversation, role, turn, and hash of
+the exact evidence and questions. `answers.jsonl` holds the saved
 native typed answers, the judge's returned model ID, input tokens, and cost for
 every answered request; a request that fails before the API answers records no
 usage. Each record is flushed to disk before the next request. The dry-run

@@ -15,10 +15,10 @@ This directory contains the public benchmark contract.
   scoring rules. Branches, sessions, persona context, and provenance are retained.
 - `tests/` proves the runtime and artifact contract.
 
-The runtime package lives in `src/invisiblebench/`. The active scan path uses
-one request per conversation turn containing all active checks' questions.
-It saves each native response in `answers.jsonl` before the next request and
-then derives `judgments.jsonl`.
+The runtime package lives in `src/invisiblebench/`. The active scan path groups
+each turn's questions by identical evidence and splits groups to meet request-size
+limits. It saves each native response in `answers.jsonl` before the next request.
+Disjoint answers merge by turn before the rules derive `judgments.jsonl`.
 `NOT_APPLICABLE` is an explicit verdict.
 
 `PASS`, `FAIL`, `UNCLEAR`, and `NOT_APPLICABLE` are the machine verdicts. A

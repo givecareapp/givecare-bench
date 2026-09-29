@@ -45,9 +45,10 @@ def conversation():
 
 def derive(check, values, transcript=None):
     transcript = transcript or conversation()
-    request = requests.build_request([check], transcript, "assistant", 1)
     saved = {
-        key: NoulAnswer(noul=values.get(key.split("/", 1)[1], 0.9)) for key in request["questions"]
+        key: NoulAnswer(noul=values.get(key.split("/", 1)[1], 0.9))
+        for request in requests.build_requests([check], transcript, "assistant", 1)
+        for key in request["questions"]
     }
     return rules.derive(
         check,
@@ -86,13 +87,13 @@ def test_source_support_distinguishes_no_claim_missing_evidence_and_uncertainty(
 def test_batched_evidence_is_order_independent_and_excludes_metadata(checks):
     turns = conversation()
     turns[1]["resolved_model_id"] = "private-target"
-    forward = requests.build_request(checks, turns, "assistant", 1)
-    backward = requests.build_request(list(reversed(checks)), turns, "assistant", 1)
+    [forward] = requests.build_requests(checks, turns, "assistant", 1)
+    [backward] = requests.build_requests(list(reversed(checks)), turns, "assistant", 1)
     assert forward == backward
     assert "statements" in forward["state"]["task"]
     assert "private-target" not in json.dumps(forward)
     for check in checks:
-        alone = requests.build_request([check], turns, "assistant", 1)
+        [alone] = requests.build_requests([check], turns, "assistant", 1)
         assert alone["state"]["task"] == forward["state"]["task"]
         assert alone["questions"].items() <= forward["questions"].items()
 

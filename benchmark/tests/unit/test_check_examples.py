@@ -57,6 +57,34 @@ def test_plan_refresh_and_verify(tmp_path):
     assert check_examples.plan_refresh(root, checks, tmp_path / "unchanged") is None
 
 
+def test_refresh_keeps_disjoint_same_turn_answers_and_retires_changed_groups(tmp_path):
+    import yaml
+
+    root, checks = examples(tmp_path)
+    initial = tmp_path / "initial"
+    check_examples.plan_refresh(root, checks, initial)
+    check_examples.refresh(
+        root, checks, initial, max_cost_usd=1, client=ScriptedJudge({"cue": 0.9})
+    )
+    path = next(root.rglob("crisis.fixture-cue.yaml"))
+    definition = yaml.safe_load(path.read_text())
+    for field in ("caregiver", "assistant"):
+        definition["questions"]["observation"] = {
+            "instructions": "Is this distress?",
+            "inputs": [field],
+        }
+        path.write_text(yaml.safe_dump(definition))
+        checks = load_checks(root)
+        bundle = tmp_path / field
+        plan = check_examples.plan_refresh(root, checks, bundle)
+        assert len(plan.tasks) == 2  # the existing cue and routing answers stay valid
+        check_examples.refresh(root, checks, bundle, max_cost_usd=1, client=ScriptedJudge({}))
+        rows = check_examples._read_jsonl(path.parent / check_examples.ANSWERS)
+        assert len(rows) == 6
+        assert check_examples.verify(root, checks, Thresholds())[1]["stale"] == 0
+        assert check_examples.plan_refresh(root, checks, tmp_path / f"unchanged-{field}") is None
+
+
 def test_interruption_retains_answers_before_projection(tmp_path):
     root, checks = examples(tmp_path)
     bundle = tmp_path / "requests"

@@ -46,6 +46,50 @@ def test_failed_probe_saves_progress_and_resumes(tmp_path):
         load_questions(bundle)
 
 
+@pytest.mark.parametrize("unknown", [False, True])
+def test_multiple_requests_in_one_turn_resume_by_exact_identity(
+    tmp_path, published_checks, unknown
+):
+    from invisiblebench.api.client import CostBudgetExceededError, cost_tracker
+
+    source = tmp_path / "conversation.jsonl"
+    source.write_text(TRANSCRIPT)
+    bundle = tmp_path / "probe"
+    plan = plan_probe("attunement.advice-first", [source], bundle)
+    assert plan.tasks[1].role == plan.tasks[2].role == "assistant"
+    assert plan.tasks[1].turn == plan.tasks[2].turn
+
+    class Interrupted(FixtureJudge):
+        calls = 0
+
+        def ask(self, **kwargs):
+            self.calls += 1
+            if self.calls == 3:
+                if unknown:
+                    raise KeyboardInterrupt("sent but no outcome")
+                raise CostBudgetExceededError("refused before dispatch")
+            cost_tracker.record(kwargs["model"], 0, 0, actual_cost=0.00001)
+            return super().ask(**kwargs)
+
+    first = Interrupted()
+    with pytest.raises(KeyboardInterrupt if unknown else CostBudgetExceededError):
+        run_probe(bundle, max_cost_usd=1, client=first)
+    retained = (bundle / "answers.jsonl").read_bytes()
+    _, saved = load_questions(bundle)
+    assert len(saved) == 2
+    assert len({answer.key for answer in saved}) == 2
+    if unknown:
+        with pytest.raises(ValueError, match="no automatic resume"):
+            run_probe(bundle, max_cost_usd=1, client=first)
+        assert first.calls == 3
+    else:
+        run_probe(bundle, max_cost_usd=1, client=FixtureJudge())
+        _, saved = load_questions(bundle)
+        assert len(saved) == len(plan.tasks)
+        assert sum(a.cost_usd for a in saved) == pytest.approx(0.00002)
+    assert (bundle / "answers.jsonl").read_bytes().startswith(retained)
+
+
 def test_changed_probe_snapshot_is_rejected_before_inference(tmp_path):
     source = tmp_path / "conversation.jsonl"
     source.write_text(TRANSCRIPT)

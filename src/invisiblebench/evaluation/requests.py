@@ -1,4 +1,4 @@
-"""Bind transcript evidence to native Jev questions, batched once per turn.
+"""Bind transcript evidence to native Jev questions, grouped by exact evidence.
 
 This module owns request construction and identity. Verdicts belong in rules.
 """
@@ -114,29 +114,41 @@ def _memory_state(memory_declared: bool) -> str:
 def questions_for(
     checks: list[Check],
     role: Role,
-    sentence_count: int = 0,
+    evidence: dict[str, Any],
     memory_declared: bool = False,
-) -> dict[str, dict[str, Any]]:
-    """Every question asked about a turn of `role`, keyed for the answer ledger.
-
-    A sentence question becomes one question per sentence of this reply. All of
-    them ride in the same request, so a turn still costs one judge call. A
-    question with `memory` is asked only in that memory state.
-    """
+):
+    """Yield each observation with exactly the evidence its definition allows."""
     state = _memory_state(memory_declared)
-    questions: dict[str, dict[str, Any]] = {}
+    sentence_count = len(evidence.get("sentences", ()))
+
+    def bind(question, key, spec):
+        fields = question.inputs
+        if fields is not None:
+            missing = set(fields) - evidence.keys()
+            if missing:
+                raise ValueError(f"{key}: unavailable evidence fields: {sorted(missing)}")
+        else:
+            fields = [
+                name for name in evidence if question.unit == "sentence" or name != "sentences"
+            ]
+        return {"state": {name: evidence[name] for name in fields}, "questions": {key: spec}}
+
     for check in checks:
         if check.cue is not None and check.cue.role == role:
-            questions[cue_key(check)] = check.cue.to_jev().model_dump(
-                mode="json", exclude_none=True
+            yield bind(
+                check.cue,
+                cue_key(check),
+                check.cue.to_jev().model_dump(mode="json", exclude_none=True),
             )
         if role == "assistant":
             for name, question in check.questions.items():
                 if question.memory not in (None, state):
                     continue
                 if question.unit == "turn":
-                    questions[question_key(check, name)] = question.to_jev().model_dump(
-                        mode="json", exclude_none=True
+                    yield bind(
+                        question,
+                        question_key(check, name),
+                        question.to_jev().model_dump(mode="json", exclude_none=True),
                     )
                     continue
                 consumers = [
@@ -150,8 +162,9 @@ def questions_for(
                     else min(sentence_count, max((c.within_first for c in consumers), default=0))
                 )
                 for index in range(limit):
-                    questions[sentence_key(check, name, index)] = _noul_sentence(question, index)
-    return questions
+                    yield bind(
+                        question, sentence_key(check, name, index), _noul_sentence(question, index)
+                    )
 
 
 def turn_state(
@@ -193,36 +206,85 @@ def request_turns(transcript: list[Turn]) -> list[tuple[Role, int]]:
     return [(role, number) for role, number, _ in dialogue(transcript)]
 
 
-def build_request(
+def build_requests(
     checks: list[Check],
     transcript: list[Turn],
     role: Role,
     turn: int,
     memory: MemoryContext | None = None,
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
+    from invisiblebench.api.typesafe import check_context
+
     clauses = [check for check in checks if check.rule == "clauses"]
     state = (
         turn_state(transcript, role, turn, memory, with_sentences=reads_sentences(clauses))
         if clauses
         else {}
     )
-    questions = questions_for(
-        clauses,
-        role,
-        len(state.get("sentences", ())),
-        memory_declared=bool(memory is not None and memory.persistent_memory),
+    observations = list(
+        questions_for(
+            clauses,
+            role,
+            state,
+            memory_declared=bool(memory is not None and memory.persistent_memory),
+        )
     )
     for check in checks:
         if check.rule == "crisis_continuity":
-            context, battery = crisis_continuity.request(check, dialogue(transcript), role, turn)
-            if battery:
-                state.update(context)
-                questions.update(battery)
+            observations.extend(crisis_continuity.requests(check, dialogue(transcript), role, turn))
         elif check.rule in {"task_completion", "source_support"}:
             context, battery = tasks.request(check, transcript, role, turn, sentences)
-            state.update(context)
-            questions.update(battery)
-    return {"state": state, "questions": questions}
+            if battery:
+                observations.append({"state": context, "questions": battery})
+    groups = {}
+    seen = set()
+    for observation in observations:
+        context = observation["state"]
+        group = groups.setdefault(
+            json.dumps(context, sort_keys=True, ensure_ascii=False),
+            {"state": context, "questions": {}},
+        )
+        for key, question in observation["questions"].items():
+            if key in seen:
+                raise ValueError(f"duplicate observation: {key}")
+            seen.add(key)
+            group["questions"][key] = question
+    result = []
+    for group_key in sorted(groups):
+        group = groups[group_key]
+        chunk = {}
+        for key, question in sorted(group["questions"].items()):
+            # A single observation must fit intact; splitting never truncates evidence.
+            check_context(group["state"], {key: question})
+            candidate = {**chunk, key: question}
+            try:
+                check_context(group["state"], candidate)
+            except ValueError:
+                result.append({"state": group["state"], "questions": chunk})
+                chunk = {key: question}
+            else:
+                chunk = candidate
+        if chunk:
+            result.append({"state": group["state"], "questions": chunk})
+    return result
+
+
+def conversation_requests(checks, transcript, memory=None):
+    """The sole request inventory for scans, probes, and exemplar tools."""
+    return {
+        (role, turn, input_hash(request)): request
+        for role, turn in request_turns(transcript)
+        for request in build_requests(checks, transcript, role, turn, memory)
+    }
+
+
+def merge_answers(saved, role, turn, answers):
+    """Fold disjoint request answers into the rule's per-turn observations."""
+    observations = saved.setdefault((role, turn), {})
+    overlap = observations.keys() & answers.keys()
+    if overlap:
+        raise ValueError(f"duplicate saved observations: {sorted(overlap)}")
+    observations.update(answers)
 
 
 def input_hash(request: dict[str, Any]) -> str:

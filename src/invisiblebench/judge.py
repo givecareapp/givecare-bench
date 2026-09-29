@@ -40,10 +40,10 @@ from invisiblebench.api.typesafe import (
 )
 from invisiblebench.evaluation import rules
 from invisiblebench.evaluation.check_registry import load_checks
-from invisiblebench.evaluation.requests import build_request, input_hash, request_turns
+from invisiblebench.evaluation.requests import conversation_requests as _requests
+from invisiblebench.evaluation.requests import input_hash, merge_answers
 from invisiblebench.models.scan import (
     Answer,
-    Check,
     FileRef,
     JudgeObservation,
     JudgeSettings,
@@ -173,21 +173,9 @@ def _conversations(bundle: Path, plan: ScanPlan) -> dict[tuple[str, str], Conver
     }
 
 
-def _requests(
-    checks: list[Check], transcript: list[Turn], memory: MemoryContext
-) -> dict[tuple[Role, int], Request]:
-    """Every judge request for one conversation: a turn with at least one question."""
-    requests = {}
-    for role, turn in request_turns(transcript):
-        request = build_request(checks, transcript, role, turn, memory)
-        if request["questions"]:
-            requests[role, turn] = request
-    return requests
-
-
 def _planned_requests(
     plan: ScanPlan, conversations: dict[tuple[str, str], Conversation]
-) -> dict[tuple[str, str], dict[tuple[Role, int], Request]]:
+) -> dict[tuple[str, str], dict[tuple[Role, int, str], Request]]:
     return {
         pair: _requests(plan.checks, transcript, memory)
         for pair, (transcript, memory) in conversations.items()
@@ -492,7 +480,7 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
 def _read_answers(
     bundle: Path,
     plan_sha256: str,
-    requests: dict[tuple[str, str], dict[tuple[Role, int], Request]],
+    requests: dict[tuple[str, str], dict[tuple[Role, int, str], Request]],
     model: str,
 ) -> list[Answer]:
     path = bundle / ANSWERS_FILE
@@ -503,11 +491,11 @@ def _read_answers(
             "so there is no automatic resume"
         )
     answers: list[Answer] = []
-    settled: set[tuple[str, str, str, int]] = set()
+    settled: set[tuple[str, str, str, int, str]] = set()
     for line in content.splitlines():
         answer = Answer.model_validate_json(line)
         request = requests.get((answer.model_id, answer.scenario_id), {}).get(
-            (answer.role, answer.turn)
+            (answer.role, answer.turn, answer.input_sha256)
         )
         if request is None or answer.key in settled:
             raise ValueError("duplicate or unplanned answer")
@@ -534,10 +522,13 @@ def derive_all(
     """Apply every check's rule to the saved answers. One judgment per pair and check."""
     saved: dict[tuple[str, str], dict[tuple[Role, int], dict[str, TypedAnswer]]] = {}
     for answer in answers:
-        if answer.answers is not None:
-            saved.setdefault((answer.model_id, answer.scenario_id), {})[
-                answer.role, answer.turn
-            ] = answer.answers
+        if answer.error is None and answer.answers is not None:
+            merge_answers(
+                saved.setdefault((answer.model_id, answer.scenario_id), {}),
+                answer.role,
+                answer.turn,
+                answer.answers,
+            )
     judgments = []
     for ref in plan.transcripts:
         pair = (ref.model_id, ref.scenario_id)
@@ -727,8 +718,8 @@ def execute_requests(
         pending = [
             (mid, sid, role, turn, request)
             for (mid, sid), turns in requests.items()
-            for (role, turn), request in turns.items()
-            if (mid, sid, role, turn) not in done
+            for (role, turn, digest), request in turns.items()
+            if (mid, sid, role, turn, digest) not in done
         ]
         if pending:
             _require_settled(attempts, answers)
@@ -743,7 +734,7 @@ def execute_requests(
             if client is None:
                 client = clients.enter_context(SystemOneClient())
             for mid, sid, role, turn, request in pending:
-                key = [mid, sid, role, turn]
+                key = [mid, sid, role, turn, input_hash(request)]
                 _append(attempts, {"event": "attempt", "key": key})
                 try:
                     answer = _ask(
@@ -769,9 +760,11 @@ def execute_requests(
                             "key": key,
                             "error": type(exc).__name__,
                             "detail": str(exc),
-                            "response": response.model_dump(mode="json")
-                            if isinstance(response, SystemOneResponse)
-                            else None,
+                            "response": (
+                                response.model_dump(mode="json")
+                                if isinstance(response, SystemOneResponse)
+                                else None
+                            ),
                         },
                     )
                     if not isinstance(exc, Exception):
@@ -824,7 +817,7 @@ def question_requests(plan: QuestionPlan) -> dict:
     requests: dict = {}
     for task in plan.tasks:
         requests.setdefault((task.model_id, task.scenario_id), {})[
-            task.role, task.turn
+            task.role, task.turn, input_hash(task.request)
         ] = task.request
     return requests
 
