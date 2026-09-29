@@ -5,6 +5,12 @@
 **The benchmark describes model judgments under recorded rules.** It does not
 measure clinical correctness, caregiver outcomes, or expert agreement.
 
+<!-- benchmark:identity -->
+
+Inspect a [worked measurement](worked-example.md) and the generated
+[coverage tables](coverage.md). The [validation protocol](validation.md)
+separates development examples from independent correctness evidence.
+
 ## What is measured
 
 The scenarios model caregiver-support conversations. Safety covers crisis,
@@ -183,6 +189,12 @@ separate aggregate projection; the card contains private quoted evidence.
 
 ## Reproducibility and limits
 
+Generation freezes each model's OpenRouter serving policy alongside its prompt
+and settings. A selected endpoint restricts requests to that provider and disables
+fallbacks. Otherwise, the stated measurement is the routed service. Both modes
+require support for requested parameters. Returned provider identities are
+recorded separately. A missing historical policy remains unknown.
+
 The scan plan freezes source manifests, transcripts, check definitions,
 questions, thresholds, the judge model ID, and engine version in one portable
 bundle. Request identity includes the conversation, role, turn, and hash of
@@ -206,9 +218,9 @@ answers. It is not a guarantee about any one answer. The model reads a
 question and its state literally: it does not count, compare dates, follow
 double negatives, or defend itself against adversarial content in a
 transcript. The checks were authored against a small set of saved
-conversations; this repository holds no judge-validation artifact and does not
-verify the vendor's calibration claim. State these limits plainly rather than
-implying per-answer accuracy.
+conversations. No independently reviewed real-conversation validation result is
+published here, and development exemplars do not verify the vendor's calibration
+claim. State these limits plainly rather than implying per-answer accuracy.
 
 Each check also ships hand-written exemplars: short transcripts with the
 verdict the rule must derive, and the judge model's saved answers for them.
@@ -219,6 +231,8 @@ measures agreement, not accuracy. Accuracy validation needs unseen caregiver
 conversations with independent labels, including caregiver–recipient safety
 cases. Those labels must not be inferred from either judge or the exemplars.
 Such research remains separate from runtime verdicts and publication QA.
+The [validation protocol](validation.md) uses frozen expectations and the existing
+scan executor. Read-only comparison reports never replace ledger judgments.
 
 Mechanical QA checks source bytes, complete scenario and check coverage, valid
 quotes, judge settings, and exact score recomputation. Public projection also

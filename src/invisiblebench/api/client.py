@@ -286,6 +286,7 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_HEADERS = {
     "HTTP-Referer": "https://github.com/givecare/invisiblebench",
     "X-Title": "InvisibleBench",
+    "User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0",
 }
 
 
@@ -293,7 +294,7 @@ OPENROUTER_HEADERS = {
 class APIConfig:
     """Configuration for API clients."""
 
-    timeout: int = 120
+    timeout: float = 120
 
     @classmethod
     def from_env(cls) -> "APIConfig":
@@ -346,7 +347,7 @@ class ModelAPIClient:
         temperature: float,
         max_tokens: int,
         stream: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         payload = {
             "model": model,
@@ -415,7 +416,7 @@ class ModelAPIClient:
         max_tokens: int = 2000,
         *,
         allow_unknown_cost: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Send once. The generation journal owns recovery, not hidden HTTP retries.
 

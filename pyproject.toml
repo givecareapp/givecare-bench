@@ -139,12 +139,13 @@ module = [
 ]
 ignore_errors = true
 
-# Scoring / evaluator core: treat as load-bearing and actually type-check it.
-# The review caller can rely on these modules being internally consistent even
-# if the rest of the package is still being migrated to strict typing.
+# Explicit type-check scope. The evaluator still has tracked annotation debt;
+# budget accounting and generation recovery are checked without error suppression.
 [[tool.mypy.overrides]]
 module = [
     "invisiblebench.evaluation.*",
+    "invisiblebench.api.client",
+    "invisiblebench.cli.generation",
 ]
 ignore_errors = false
 check_untyped_defs = true

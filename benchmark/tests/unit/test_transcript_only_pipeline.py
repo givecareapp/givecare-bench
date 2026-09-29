@@ -36,6 +36,7 @@ class _FakeAsyncClient:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
+        provider: dict[str, Any],
     ) -> dict[str, Any]:
         self.calls.append([dict(message) for message in messages])
         return {
