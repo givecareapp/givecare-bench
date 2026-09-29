@@ -5,95 +5,17 @@ from __future__ import annotations
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from invisiblebench.evaluation.rules import probabilities, tri
-from invisiblebench.judge import _conversations, _read_ref, json_bytes, load_scan, sha256
-from invisiblebench.models.scan import Digest, Record, Text, Verdict
-
-
-class Expectation(Record):
-    """Research labels bind to evidence and a requirement; runtime never reads them."""
-
-    model_id: Text
-    scenario_id: Text
-    check_id: Text
-    transcript_sha256: Digest
-    evidence_context_sha256: Digest
-    check_sha256: Digest
-    expected: Verdict
-    basis: Literal["controlled_fixture", "source_evidence", "independent_review"]
-    source: Text
-    author: Text
-    reason: Text
-
-    @property
-    def key(self):
-        return self.model_id, self.scenario_id, self.check_id
-
-
-def evidence_context_hashes(bundle, plan):
-    """Bind research labels to the same conversation context used by the judge."""
-    conversations = _conversations(bundle, plan)
-    return {
-        (ref.model_id, ref.scenario_id): sha256(
-            json_bytes(
-                {
-                    "transcript_sha256": ref.sha256,
-                    "memory": conversations[ref.model_id, ref.scenario_id][1].model_dump(
-                        mode="json"
-                    ),
-                }
-            )
-        )
-        for ref in plan.transcripts
-    }
-
-
-def expectation_agreement(plan, judgments, labels, contexts):
-    refs = {(ref.model_id, ref.scenario_id): ref.sha256 for ref in plan.transcripts}
-    definitions = {c.id: sha256(json_bytes(c.model_dump(mode="json"))) for c in plan.checks}
-    recorded = {j.key: j.verdict.value for j in judgments}
-    matched, excluded = [], []
-    for label in labels:
-        if (
-            label.key not in recorded
-            or refs.get(label.key[:2]) != label.transcript_sha256
-            or contexts.get(label.key[:2]) != label.evidence_context_sha256
-            or definitions.get(label.check_id) != label.check_sha256
-        ):
-            excluded.append(
-                [
-                    *label.key,
-                    label.transcript_sha256,
-                    label.evidence_context_sha256,
-                    label.check_sha256,
-                ]
-            )
-            continue
-        matched.append(
-            {
-                "model_id": label.model_id,
-                "scenario_id": label.scenario_id,
-                "check_id": label.check_id,
-                "expected": label.expected.value,
-                "observed": recorded[label.key],
-                "basis": label.basis,
-                "source": label.source,
-                "author": label.author,
-                "reason": label.reason,
-            }
-        )
-    return {
-        "labeled_judgments": len(matched),
-        "unlabeled_judgments": len(judgments) - len(matched),
-        "unbound_expectations": excluded,
-        "transitions": dict(Counter(f"{r['expected']}->{r['observed']}" for r in matched)),
-        "false_pass": sum(r["expected"] == "FAIL" and r["observed"] == "PASS" for r in matched),
-        "false_fail": sum(r["expected"] == "PASS" and r["observed"] == "FAIL" for r in matched),
-        "unresolved": sum(r["observed"] == "UNCLEAR" for r in matched),
-        "rows": matched,
-    }
+from invisiblebench.judge import _read_ref, load_scan
+from invisiblebench.models.scan import Verdict
+from invisiblebench.validation import (
+    evidence_context_hashes,
+    expectation_agreement,
+    frozen_expectations,
+    load_expectations,
+)
 
 
 def scan_summary(bundle, plan, answers, judgments):
@@ -188,18 +110,12 @@ def compare_ledgers(
     old_contexts = evidence_context_hashes(old_bundle, old_plan)
     new_contexts = evidence_context_hashes(new_bundle, new_plan)
     agreement = None
-    if expectations is not None:
-        labels = [
-            Expectation.model_validate_json(line)
-            for line in expectations.read_bytes().splitlines()
-            if line.strip()
-        ]
-        identities = [
-            (label.key, label.transcript_sha256, label.evidence_context_sha256, label.check_sha256)
-            for label in labels
-        ]
-        if len(identities) != len(set(identities)):
-            raise ValueError("duplicate expectation")
+    labels = (
+        load_expectations(expectations)
+        if expectations is not None
+        else frozen_expectations(new_bundle, new_plan)
+    )
+    if labels or expectations is not None:
         agreement = {
             "old": expectation_agreement(old_plan, old_judgments, labels, old_contexts),
             "new": expectation_agreement(new_plan, new_judgments, labels, new_contexts),

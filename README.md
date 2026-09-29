@@ -23,7 +23,8 @@ current method. Use [CITATION.cff](CITATION.cff) to cite the paper.
 A **Jury Card** complements a model card with evidence from a specific run.
 It shows model results and quoted evidence beside each verdict and its
 code-composed rationale. It also records judge settings, costs, technical
-errors, and attributed commentary.
+errors, and attributed commentary. Frozen validation expectations add case-level
+agreement, errors, and untested coverage. Human review remains optional.
 
 Each run has two parts in one private directory:
 
@@ -93,6 +94,18 @@ and judging. Use `uv run bench jury
 <run-id>` to regenerate the card from saved evidence without model calls.
 See the [full quickstart](docs/quickstart.md) to judge saved responses again or
 replay a scan.
+
+## Validate the evaluator
+
+Prepare constructed controls without model calls:
+
+```bash
+uv run python scripts/plan_validation.py --output results/<new-run-id>
+```
+
+Use the ordinary budgeted scan command above to judge the saved plan. The Jury
+Card reports expected and observed outcomes. The [validation guide](docs/validation.md)
+defines each tested boundary and the limits of the resulting evidence.
 
 ## Repository map
 

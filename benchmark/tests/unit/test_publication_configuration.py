@@ -122,6 +122,19 @@ def test_different_models_can_have_different_serving_restrictions(tmp_path):
     ]
 
 
+@pytest.mark.parametrize("commit", [None, "unknown", "abc123", "g" * 40, 123])
+def test_publication_rejects_unverified_source_commit(tmp_path, commit):
+    path = source(tmp_path / "a")
+    manifest_path = path / "run_manifest.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    manifest["git_sha"] = commit
+    manifest_path.write_text(json.dumps(manifest))
+    bundle = tmp_path / "scan"
+    plan = plan_scan([path], bundle)
+    with pytest.raises(ValueError, match="complete, comparable"):
+        _publication_sources(bundle, plan)
+
+
 def test_missing_coverage_still_refuses_publication(tmp_path):
     bundle = tmp_path / "scan"
     plan = plan_scan([source(tmp_path / "a", part="first")], bundle)

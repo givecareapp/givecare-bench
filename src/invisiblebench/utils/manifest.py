@@ -39,30 +39,37 @@ def run_timestamp(run_path: Path, manifests: list[dict[str, Any]]) -> datetime |
         return min(dates) if dates else None
 
 
-def _git_sha() -> str:
+def is_git_commit(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 40
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _git_state(project_root: Path) -> tuple[str | None, bool | None]:
+    """Unknown provenance is not a clean tree; inspect the owning checkout."""
     try:
-        result = subprocess.run(
+        commit = subprocess.run(
             ["git", "rev-parse", "HEAD"],
+            cwd=project_root,
             capture_output=True,
             text=True,
             timeout=5,
         )
-        return result.stdout.strip() if result.returncode == 0 else "unknown"
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
-
-
-def _git_dirty() -> bool:
-    try:
-        result = subprocess.run(
+        status = subprocess.run(
             ["git", "status", "--porcelain"],
+            cwd=project_root,
             capture_output=True,
             text=True,
             timeout=5,
         )
-        return bool(result.stdout.strip()) if result.returncode == 0 else False
+        sha = commit.stdout.strip()
+        if commit.returncode or status.returncode or not is_git_commit(sha):
+            return None, None
+        return sha, bool(status.stdout.strip())
     except (OSError, subprocess.SubprocessError):
-        return False
+        return None, None
 
 
 def _file_hash(path: Path) -> str:
@@ -110,11 +117,12 @@ def generate_manifest(
 
     extra_scenario_files = collect_confidential_scenario_paths(project_root) if include_confidential else []
 
+    git_sha, git_dirty = _git_state(project_root)
     manifest = {
         "schema": "invisiblebench-run-manifest/v3",
         "run_id": run_id,
-        "git_sha": _git_sha(),
-        "git_dirty": _git_dirty(),
+        "git_sha": git_sha,
+        "git_dirty": git_dirty,
         "scenario_hash": _scenario_hash(scenarios_dir, extra_files=extra_scenario_files),
         "scenario_ids": sorted(set(scenario_ids or [])),
         "model_ids": model_ids,

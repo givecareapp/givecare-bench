@@ -46,12 +46,35 @@ class TestGenerateManifest:
     def test_git_sha_format(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
         sha = manifest["git_sha"]
-        # Either a valid 40-char hex string or 'unknown' (if not in git repo)
-        assert sha == "unknown" or re.fullmatch(r"[0-9a-f]{40}", sha)
+        # A source archive has no Git provenance.
+        assert sha is None or re.fullmatch(r"[0-9a-f]{40}", sha)
 
-    def test_git_dirty_is_bool(self, project_root: Path):
+    def test_git_dirty_is_bool_or_unknown(self, project_root: Path):
         manifest = generate_manifest(project_root, model_ids=[])
-        assert isinstance(manifest["git_dirty"], bool)
+        assert manifest["git_dirty"] is None or isinstance(manifest["git_dirty"], bool)
+
+    @pytest.mark.parametrize("failure", ["sha", "status", "exception", "malformed"])
+    def test_git_inspection_failure_stays_unknown(self, project_root, monkeypatch, failure):
+        from types import SimpleNamespace
+
+        import invisiblebench.utils.manifest as manifests
+
+        seen = []
+
+        def inspect(args, **kwargs):
+            seen.append(kwargs.get("cwd"))
+            if failure == "exception":
+                raise OSError("git unavailable")
+            sha_call = "rev-parse" in args
+            failed = (failure == "sha" and sha_call) or (failure == "status" and not sha_call)
+            value = "unknown" if failure == "malformed" else "a" * 40
+            return SimpleNamespace(returncode=int(failed), stdout=value if sha_call else "")
+
+        monkeypatch.setattr(manifests.subprocess, "run", inspect)
+        manifest = generate_manifest(project_root, model_ids=[])
+        assert manifest["git_sha"] is None
+        assert manifest["git_dirty"] is None
+        assert seen and all(root == project_root for root in seen)
 
     def test_model_ids_preserved(self, project_root: Path):
         ids = ["openai/gpt-5.2", "anthropic/claude-opus-4.5"]

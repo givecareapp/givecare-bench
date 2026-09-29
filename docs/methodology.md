@@ -9,7 +9,7 @@ measure clinical correctness, caregiver outcomes, or expert agreement.
 
 Inspect a [worked measurement](worked-example.md) and the generated
 [coverage tables](coverage.md). The [validation protocol](validation.md)
-separates development examples from independent correctness evidence.
+separates development examples, constructed controls, and independent review.
 
 ## What is measured
 
@@ -80,8 +80,8 @@ The generated inventory identifies mapped positions and counts unmapped objectiv
 For each conversation turn, the runtime groups questions by identical
 evidence and splits groups to meet request-size limits. Evidence is never
 truncated. An observation sees the same evidence in an exemplar, probe, or
-full scan. The judge model answers each question with a calibrated probability. It writes no verdict, rationale, or
-quote; code owns all three.
+full scan. The judge model answers each question with probabilities. Benchmark-specific
+calibration is not established. Code derives the verdict, rationale, and quote.
 
 Code applies each check's rule to the saved probabilities. `crisis.decay` uses
 a Python function to compose observations bound to a reference crisis and a
@@ -178,6 +178,11 @@ Its title identifies the model and the UTC run date and time.
 It shows separate Safety and Care results, recorded failure modes, unresolved
 judgments, model evidence, and the derived rationale. It also records the judge,
 versions, execution errors, source-run costs, and source-run elapsed time.
+When a source summary carries frozen research expectations, the card reports
+expected and observed outcomes, their stated evidence basis, errors, unresolved
+cases, and unlabeled coverage. These annotations never enter judge requests or
+verdict rules. A rejected research attachment stays visible without blocking
+completion. See the [validation protocol](validation.md) for the constructed controls.
 
 `jury-card.md` is generated from the retained bundle without another model call.
 It replaces separate per-run reports and scorecard exports. The card's marked
@@ -203,6 +208,10 @@ and allowlisted generation settings. Missing observations remain explicit; the
 projection never substitutes a run-wide provider list or a requested restriction.
 Generation settings expose the prompt hash, not the prompt text. Private manifests,
 transcripts, and memory receipts do not cross this boundary.
+
+Generation records the owning checkout's full Git commit and clean/dirty state.
+If either Git inspection fails, both fields remain unknown. Publication rejects
+unknown or malformed commits and any state other than a confirmed clean tree.
 
 Publication compares common generation settings and code across source runs.
 Model-specific serving policies may differ between models, but not within one
@@ -240,10 +249,11 @@ verdict the rule must derive, and the judge model's saved answers for them.
 The pre-commit gate derives every exemplar from those committed answers and
 fails on a mismatch or a stale answer. This pins what a check means; it does
 not measure accuracy on real conversations. Comparing two judge runs also
-measures agreement, not accuracy. Accuracy validation needs unseen caregiver
-conversations with independent labels, including caregiver–recipient safety
-cases. Those labels must not be inferred from either judge or the exemplars.
-Such research remains separate from runtime verdicts and publication QA.
+measures agreement. Constructed controls test declared boundaries and invariances;
+they do not estimate accuracy on real caregiver conversations. Such accuracy claims
+need unseen caregiver conversations with independent labels, including caregiver–recipient
+safety cases. Those labels must not be inferred from either judge or the exemplars.
+Independent review remains optional and cannot block a scan or publication.
 The [validation protocol](validation.md) uses frozen expectations and the existing
 scan executor. Read-only comparison reports never replace ledger judgments.
 

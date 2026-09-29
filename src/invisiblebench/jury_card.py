@@ -9,9 +9,10 @@ from pathlib import Path
 from urllib.parse import quote
 
 from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, load_scan, sha256
-from invisiblebench.models.scan import Verdict
+from invisiblebench.models.scan import Judgment, ScanPlan, Verdict
 from invisiblebench.scoring import build_scorecard
 from invisiblebench.utils.manifest import run_timestamp
+from invisiblebench.validation import validation_agreement
 
 CARD_FILE = "jury-card.md"
 COMMENTARY_MARKER = "<!-- jury-card:commentary -->"
@@ -23,6 +24,60 @@ def _cell(value: object) -> str:
 
 def _link(label: str, path: str) -> str:
     return f"[{_cell(label)}]({quote(path, safe='/#')})"
+
+
+def _validation_lines(bundle: Path, plan: ScanPlan, records: list[Judgment]) -> list[str]:
+    lines = [
+        "## Validation evidence",
+        "",
+        "Replay shows how a verdict arose. Correctness needs separate evidence. "
+        "Agreement with controlled fixtures tests the declared requirements. "
+        "These cases do not measure population accuracy or clinical safety.",
+        "",
+    ]
+    try:
+        report = validation_agreement(bundle, plan, records)
+    except ValueError as exc:
+        return lines + [
+            f"**Validation evidence rejected:** {_cell(exc)}. Verdicts are unchanged.", ""
+        ]
+    if report is None:
+        return lines + [
+            "No frozen research expectations are attached. "
+            "Correctness is not measured by this card.", ""
+        ]
+    bases = Counter(row["basis"] for row in report["rows"])
+    lines.extend(
+        [
+            "Expectations are frozen in the source summaries bound by this plan. "
+            "They are excluded from judge requests and verdict rules. "
+            "Authorship is reported; independence is not authenticated.",
+            "",
+            f"- Labeled judgments: {report['labeled_judgments']}; "
+            f"unlabeled judgments: {report['unlabeled_judgments']}.",
+            f"- Labeled checks: {len(report['labeled_checks'])}/{len(plan.checks)}.",
+            f"- Differences from expectation: {report['mismatches']}/{report['labeled_judgments']} "
+            "labeled judgments, including UNCLEAR and applicability differences.",
+            f"- Evidence basis: "
+            f"{_cell('; '.join(f'{key}: {count}' for key, count in sorted(bases.items())))}.",
+            f"- False passes: {report['false_pass']} (expected FAIL, observed PASS).",
+            f"- False failures: {report['false_fail']} (expected PASS, observed FAIL).",
+            f"- Unresolved labeled judgments: {report['unresolved']} (observed UNCLEAR).",
+            "- Applicability errors and all other differences remain visible in the case table. "
+            "Unlabeled checks have no correctness claim.",
+            "",
+            "| Case / check | Expected | Observed | Basis and reason |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for row in report["rows"]:
+        lines.append(
+            f"| {_cell(row['model_id'])} / {_cell(row['scenario_id'])}<br>{_cell(row['check_id'])} "
+            f"| {row['expected']} | {row['observed']} "
+            f"| {_cell(row['basis'])}<br>{_cell(row['reason'])}<br>"
+            f"Author: {_cell(row['author'])}; source: {_cell(row['source'])} |"
+        )
+    return lines + [""]
 
 
 def write_jury_card(bundle: Path) -> Path:
@@ -93,6 +148,7 @@ def write_jury_card(bundle: Path) -> Path:
         "- Source hashes, quote provenance, decision binding, and complete coverage of the plan "
         "were checked when this card was generated.", "",
     ]
+    lines.extend(_validation_lines(bundle, plan, records))
     checks = {check.id: check for check in plan.checks}
     refs = {(ref.model_id, ref.scenario_id): ref for ref in plan.transcripts}
     row_numbers = {record.key: i for i, record in enumerate(records, 1)}
@@ -128,6 +184,7 @@ def write_jury_card(bundle: Path) -> Path:
                 f"#### {_cell(check_id)}", "",
                 f"{check.layer.title()} / {_cell(check.dimension)} · {check.severity}. "
                 f"{_cell(check.summary)} {_link('Frozen check', PLAN_FILE)}: `{_cell(check_id)}`.", "",
+                f"Requirement basis: `{_cell(check.basis)}`. PASS means: {_cell(check.pass_meaning)}", "",
                 "| Model evidence | Rule outcome |", "| --- | --- |",
             ])
             for record in flagged:

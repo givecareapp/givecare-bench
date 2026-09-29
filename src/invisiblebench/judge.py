@@ -64,7 +64,7 @@ from invisiblebench.utils.benchmark_inventory import (
     get_benchmark_version,
     get_project_root,
 )
-from invisiblebench.utils.manifest import scenario_corpus_hash
+from invisiblebench.utils.manifest import is_git_commit, scenario_corpus_hash
 from invisiblebench.version import ENGINE_VERSION
 
 PLAN_FILE = "scan_plan.json"
@@ -471,7 +471,7 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
             or manifest.get("benchmark_version") != plan.benchmark_version
             or manifest.get("scenario_hash") != plan.scenario_corpus_sha256
             or manifest.get("git_dirty") is not False
-            or not manifest.get("git_sha")
+            or not is_git_commit(manifest.get("git_sha"))
             or not manifest.get("transcript_policy")
             or manifest.get("harness") != "llm"
             or manifest.get("mode") != "raw"
