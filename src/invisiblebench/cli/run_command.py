@@ -36,6 +36,7 @@ from invisiblebench.cli.transcript import (
     uses_judge,
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
+from invisiblebench.models.config import serving_policy
 from invisiblebench.results_io import write_json
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
@@ -372,6 +373,7 @@ def run_benchmark(
     pricing = {}
     try:
         for model in models:
+            serving_policy(model)
             input_price = float(model["cost_per_m_input"])
             output_price = float(model["cost_per_m_output"])
             register_model_pricing(model["id"], input_price, output_price)
@@ -399,6 +401,7 @@ def run_benchmark(
         for model in models:
             cost = sum(estimate_cost(s["category"], model) for s in scenarios)
             console.print(f"  {model['name']:<24} [magenta]~${cost:.2f}[/magenta]")
+            console.print(f"    Serving: {json.dumps(serving_policy(model), sort_keys=True)}")
         print(
             "Maximum accepted runtime ceiling: "
             f"${maximum_reasonable_cost_ceiling(total_cost):.2f}"
@@ -461,7 +464,7 @@ def run_benchmark(
         project_root=root,
         model_ids=[m["id"] for m in models],
         scenario_ids=[str(scenario["scenario_id"]) for scenario in scenarios],
-        transcript_policy=transcript_policy(api_client),
+        transcript_policy=transcript_policy(api_client, models),
         run_id=run_id,
         harness="llm",
         mode="raw",

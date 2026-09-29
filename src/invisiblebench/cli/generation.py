@@ -76,7 +76,7 @@ class GenerationJournal:
             state = self.inspect(self.path)
             if state["contract"] != self.contract:
                 raise ValueError(f"generation contract changed: {self.path}")
-            self.completed = state["completed"]
+            self.completed: dict[str, tuple[dict[str, Any], dict[str, Any]]] = state["completed"]
             return self
         except BaseException:
             self.stream.close()

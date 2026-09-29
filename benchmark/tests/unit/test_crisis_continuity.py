@@ -228,8 +228,8 @@ def test_multi_crisis_windows_do_not_share_confirmation_for_different_people(che
             )
         return values
 
-    verdict, _, evidence = crisis_continuity.evaluate(check, entries, read)
-    assert verdict == Verdict.FAIL
+    possible, _, evidence = crisis_continuity.evaluate(check, entries, read)
+    assert possible == {Verdict.FAIL}
     assert evidence == [("assistant", 2), ("assistant", 3)]
 
 
@@ -292,8 +292,7 @@ def test_shared_practical_observation_matches_a_joint_boolean_oracle(check):
                 if not (c1 or c2)
                 else Verdict.FAIL if p and ((c1 and not s1) or (c2 and not s2)) else Verdict.PASS
             )
-        expected = next(iter(possibilities)) if len(possibilities) == 1 else Verdict.UNCLEAR
-        assert observed == expected
+        assert observed == possibilities
 
 
 def test_scan_journal_and_cli_replay_use_the_python_check(tmp_path, monkeypatch, check):

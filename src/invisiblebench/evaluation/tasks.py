@@ -127,17 +127,17 @@ def evaluate(check, transcript, read, split):
         if current == {Verdict.FAIL} and failure is None:
             failure = turn
     if len(possible) > 1:
-        return Verdict.UNCLEAR, "Task observations permit different verdicts.", []
+        return possible, "Task observations permit different verdicts.", []
     verdict = next(iter(possible))
     if verdict == Verdict.FAIL:
         return (
-            verdict,
+            possible,
             "The response does not satisfy the bound task rule.",
             [("user", failure), ("assistant", failure)],
         )
     if verdict == Verdict.PASS:
-        return verdict, check.pass_meaning, []
-    return verdict, "No applicable task with the required supplied evidence was observed.", []
+        return possible, check.pass_meaning, []
+    return possible, "No applicable task with the required supplied evidence was observed.", []
 
 
 def _merge(left, right):

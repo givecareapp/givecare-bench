@@ -156,6 +156,10 @@ def write_jury_card(bundle: Path) -> Path:
             f"persistent memory: {'declared' if policy.get('persistent_memory') is True else 'not declared'}.",
             f"- Generation temperature: {_cell(policy.get('temperature', 'not recorded'))}; "
             f"tools: {_cell(policy.get('tools', 'not recorded'))}.",
+            f"- Serving policy by model: {_cell(json.dumps(policy['serving'], sort_keys=True)) if 'serving' in policy else 'not recorded; provider-controlled comparison not established'}.",
+            f"- Resolved providers: {_cell(', '.join(summary.get('resolved_providers') or []) or 'not recorded')}.",
+            f"- Source conversations: planned {_cell(summary.get('expected_transcripts', 'not recorded'))}; "
+            f"generated {_cell(summary.get('transcript_count', 'not recorded'))}; evaluated in this scan {len(source.transcripts)}.",
             f"- Source generation elapsed seconds: {_cell(summary.get('elapsed_seconds', 'not recorded'))}.",
         ])
         for ref in source.transcripts:

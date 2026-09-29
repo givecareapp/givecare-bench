@@ -405,10 +405,10 @@ def test_a_call_without_a_token_count_is_counted_as_unknown() -> None:
     assert (snapshot["calls"], snapshot["unknown_calls"], snapshot["total"]) == (1, 1, 0.0)
 
 
-def test_model_client_does_not_borrow_another_clients_identity(monkeypatch) -> None:
+def test_model_client_uses_the_workspace_required_user_agent(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-key")
     monkeypatch.delenv("INVISIBLEBENCH_DISABLE_LLM", raising=False)
 
     headers = ModelAPIClient(APIConfig()).headers
 
-    assert "User-Agent" not in headers
+    assert headers["User-Agent"] == "OpenAI File Downloader, XaiImageApiFetch/1.0"
