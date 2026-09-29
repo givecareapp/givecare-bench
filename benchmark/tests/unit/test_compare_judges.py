@@ -50,9 +50,30 @@ def test_rejudge_retains_progress_and_compares_native_scans(tmp_path, monkeypatc
     assert report["new_judge"] == "candidate"
     assert report["verdict_flips"]
     assert report["accuracy_claim"] is False
+    assert report["old"]["judgments"] == report["new"]["judgments"] == 3
+    assert report["old"]["applicable"] == 3
+    assert report["new"]["applicable"] == 1
+    assert report["new"]["counts"]["NOT_APPLICABLE"] == 2
+    assert report["old"]["judge_cost_usd"] == sum(a.cost_usd for a in load_scan(old)[1])
+    assert report["old"]["judge_requests"] == len(load_scan(old)[1])
+    assert report["correctness"] == "not measured: no independent expectations supplied"
+    assert report["same_transcripts"] is True
     assert json.loads((new / PLAN_FILE).read_bytes())["judge"]["model"] == "candidate"
     for answer in load_scan(new)[1]:
         assert answer.plan_sha256 != load_scan(old)[1][0].plan_sha256
+
+
+def test_comparison_rejects_changed_transcripts(tmp_path):
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
+    old, new = tmp_path / "old", tmp_path / "new"
+    plan_scan([source], old)
+    run_scan(old, max_cost_usd=1, client=FixtureJudge())
+    transcript = next((source / "transcripts").glob("*.jsonl"))
+    transcript.write_text(transcript.read_text().replace("I can help.", "Different response."))
+    plan_scan([source], new)
+    run_scan(new, max_cost_usd=1, client=FixtureJudge())
+    with pytest.raises(ValueError, match="transcript"):
+        compare_ledgers(old, new)
 
 
 def test_rejudge_cannot_write_into_or_over_its_source(tmp_path):

@@ -117,6 +117,25 @@ def test_questions_command_reports_an_incomplete_scan(tmp_path, capsys):
     assert payload["data"]  # still reports rows from the answers saved before the failure
 
 
+def test_questions_reports_decisive_uncertainty_and_exact_turns(tmp_path, capsys):
+    source = write_source_run(tmp_path, roster=[("case", "context")])
+    bundle = tmp_path / "scan"
+    plan_scan([source], bundle)
+    run_scan(bundle, max_cost_usd=1.0, client=ScriptedJudge({"cue": 0.5, "claim": 0.5, "routing": 1.0, "acknowledges": 1.0}))
+    assert questions_command(args(run_id=str(bundle))) == 0
+    rows = {r["question"]: r for r in json.loads(capsys.readouterr().out)["data"]}
+    claim = rows["identity.fixture-prohibition/claim"]
+    assert claim["affected_judgments"] == 1  # two observations, one judgment
+    assert claim["effects"][0]["possible_verdicts"] == ["FAIL", "PASS"]
+    cue = rows["crisis.fixture-cue/cue"]
+    assert cue["effects"][0]["possible_verdicts"] == ["NOT_APPLICABLE", "PASS"]
+    assert cue["effects"][0]["scenario_id"] == "case"
+    assert cue["effects"][0]["role"] == "user"
+    assert cue["effects"][0]["turn"] == 1
+    assert cue["effects"][0]["observation"] == "crisis.fixture-cue/cue"
+    assert rows["crisis.fixture-cue/routing"]["affected_judgments"] == 0
+
+
 def test_questions_command_unknown_run_is_an_error(capsys):
     assert questions_command(args(run_id="no-such-run-id")) == 1
     payload = json.loads(capsys.readouterr().out)

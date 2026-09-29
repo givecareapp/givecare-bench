@@ -275,7 +275,24 @@ def derive(
     plan_sha256: str,
     memory_declared: bool = False,
 ) -> Judgment:
-    """Apply one check's rule to the saved answers for one conversation.
+    return analyze(
+        check, transcript, answers, thresholds, model_id=model_id, scenario_id=scenario_id,
+        plan_sha256=plan_sha256, memory_declared=memory_declared,
+    )[0]
+
+
+def analyze(
+    check: Check,
+    transcript: list[Turn],
+    answers: dict[tuple[Role, int], dict[str, TypedAnswer]],
+    thresholds: Thresholds,
+    *,
+    model_id: str,
+    scenario_id: str,
+    plan_sha256: str,
+    memory_declared: bool = False,
+) -> tuple[Judgment, set[Verdict]]:
+    """Apply one check's rule and expose its exact possible verdicts.
 
     A question or clause with `memory: declared` counts only when the source run
     declares persistent memory; `memory: undeclared` only when it does not. Code
@@ -293,7 +310,10 @@ def derive(
             used[f"{role}:{number}/{key}"] = turn_answers[key]
         return turn_answers
 
-    def judgment(verdict: Verdict, rationale: str, evidence: list[EvidenceSpan]) -> Judgment:
+    def judgment(
+        verdict: Verdict, rationale: str, evidence: list[EvidenceSpan],
+        possible: set[Verdict] | None = None,
+    ) -> tuple[Judgment, set[Verdict]]:
         return Judgment(
             model_id=model_id,
             scenario_id=scenario_id,
@@ -303,7 +323,7 @@ def derive(
             rationale=rationale,
             evidence=evidence,
             answers=used,
-        )
+        ), possible if possible is not None else {verdict}
 
     def span(role: Role, number: int, quote: str | None = None) -> EvidenceSpan:
         return EvidenceSpan(
@@ -328,12 +348,13 @@ def derive(
 
     if check.rule != "clauses":
         if check.rule == "crisis_continuity":
-            verdict, rationale, evidence = crisis_continuity.evaluate(check, entries, observations)
+            possible, rationale, evidence = crisis_continuity.evaluate(check, entries, observations)
         else:
-            verdict, rationale, evidence = tasks.evaluate(
+            possible, rationale, evidence = tasks.evaluate(
                 check, transcript, observations, sentences
             )
-        return judgment(verdict, rationale, [span(role, number) for role, number in evidence])
+        verdict = next(iter(possible)) if len(possible) == 1 else Verdict.UNCLEAR
+        return judgment(verdict, rationale, [span(role, number) for role, number in evidence], possible)
 
     # 1. The cue: which turns carry it, and which are unresolved.
     found: list[int] = []
@@ -406,7 +427,7 @@ def derive(
             Verdict.UNCLEAR,
             f"{cue_note} The rule is unresolved at {'; '.join(open_turns)}: "
             f"the verdict could be {outcomes}.",
-            [],
+            [], possible,
         )
 
     # 4. The verdict is settled. Read it where every unresolved answer is no.

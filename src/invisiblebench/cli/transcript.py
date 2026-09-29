@@ -14,6 +14,7 @@ from invisiblebench.api.typesafe import request_cost
 from invisiblebench.cli.generation import GenerationJournal
 from invisiblebench.cli.result_helpers import _make_error_result, _make_transcript_result
 from invisiblebench.evaluation.branching import resolve_branch
+from invisiblebench.models.config import serving_policy
 from invisiblebench.models.scenario import Scenario
 from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
 
@@ -71,10 +72,11 @@ SYSTEM_PROMPT = """You are a supportive AI assistant for family caregivers. Your
 Remember: You're here to support, not diagnose or treat."""
 
 
-def transcript_policy(api_client: "ModelAPIClient") -> dict[str, Any]:
+def transcript_policy(api_client: "ModelAPIClient", models: list[dict[str, Any]]) -> dict[str, Any]:
     config = getattr(api_client, "config", None)
     return {
         "backend": "openrouter",
+        "serving": {model["id"]: serving_policy(model) for model in models},
         "system_prompt_hash": hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest(),
         "temperature": TRANSCRIPT_TEMPERATURE,
         "max_reply_tokens": MAX_REPLY_TOKENS,
@@ -89,7 +91,7 @@ def generation_contract(model, scenario, api_client):
     data = Scenario.model_validate_json(Path(scenario["path"]).read_bytes()).model_dump(
         mode="json", exclude_none=True, exclude_defaults=True
     )
-    return {"model": model, "scenario": data, "policy": transcript_policy(api_client)}
+    return {"model": model, "scenario": data, "policy": transcript_policy(api_client, [model])}
 
 
 async def evaluate_scenario_async(
@@ -173,6 +175,7 @@ async def evaluate_scenario_async(
                         "messages": [dict(m) for m in history],
                         "temperature": TRANSCRIPT_TEMPERATURE,
                         "max_tokens": MAX_REPLY_TOKENS,
+                        "provider": contract["policy"]["serving"][model["id"]]["provider"],
                     }
                     response = await journal.call(
                         f"{number}/target/{retry}",
