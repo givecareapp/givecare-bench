@@ -77,6 +77,14 @@ def test_expectations_are_bound_and_never_overwrite_verdicts(tmp_path):
         "scenario_id": "fixture",
         "check_id": check.id,
         "transcript_sha256": plan.transcripts[0].sha256,
+        "evidence_context_sha256": sha256(
+            json_bytes(
+                {
+                    "transcript_sha256": plan.transcripts[0].sha256,
+                    "memory": {"persistent_memory": False, "evidence": []},
+                }
+            )
+        ),
         "check_sha256": sha256(json_bytes(check.model_dump(mode="json"))),
         "expected": "FAIL",
         "basis": "controlled_fixture",
@@ -91,6 +99,11 @@ def test_expectations_are_bound_and_never_overwrite_verdicts(tmp_path):
     assert report["expectation_agreement"]["new"]["labeled_judgments"] == 1
     assert report["accuracy_claim"] is False
     assert (bundle / "judgments.jsonl").read_bytes() == before
+    path.write_text(
+        json.dumps({k: v for k, v in label.items() if k != "evidence_context_sha256"}) + "\n"
+    )
+    with pytest.raises(ValueError, match="evidence_context_sha256"):
+        compare_ledgers(bundle, bundle, expectations=path)
     path.write_text(json.dumps(label) + "\n" + json.dumps(label) + "\n")
     with pytest.raises(ValueError, match="duplicate"):
         compare_ledgers(bundle, bundle, expectations=path)
@@ -111,6 +124,104 @@ def test_comparison_rejects_changed_transcripts(tmp_path):
     run_scan(new, max_cost_usd=1, client=FixtureJudge())
     with pytest.raises(ValueError, match="transcript"):
         compare_ledgers(old, new)
+
+
+@pytest.mark.parametrize("extra_na", [0, 10])
+def test_uncertainty_rates_name_both_denominators(tmp_path, extra_na):
+    from invisiblebench.cli.compare import scan_summary
+    from invisiblebench.models.scan import Verdict
+
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
+    bundle = tmp_path / "scan"
+    plan_scan([source], bundle)
+    run_scan(bundle, max_cost_usd=1, client=FixtureJudge())
+    plan, answers, judgments = load_scan(bundle)
+    records = [
+        judgments[0].model_copy(update={"verdict": Verdict(verdict)})
+        for verdict in ["UNCLEAR"] * 2 + ["PASS"] * 2 + ["NOT_APPLICABLE"] * (6 + extra_na)
+    ]
+    report = scan_summary(bundle, plan, answers, records)
+    assert "unclear_rate" not in report
+    assert report["unclear_rate_all"] == {
+        "numerator": 2,
+        "denominator": 10 + extra_na,
+        "rate": 2 / (10 + extra_na),
+    }
+    assert report["unclear_rate_applicable"] == {"numerator": 2, "denominator": 4, "rate": 0.5}
+    for rows in ([], records[4:]):
+        empty = scan_summary(bundle, plan, answers, rows)
+        assert empty["unclear_rate_applicable"] == {"numerator": 0, "denominator": 0, "rate": None}
+
+
+@pytest.mark.parametrize("change", ["declaration", "receipt"])
+def test_expectations_bind_native_memory_context(tmp_path, change):
+    from invisiblebench.judge import json_bytes, sha256
+
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
+    manifest_path = source / "run_manifest.json"
+    summary_path = source / "transcript_run.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    manifest.update(harness="product", mode="committed")
+    memory = {"persistent_memory": change == "receipt", "evidence": []}
+    if change == "receipt":
+        memory["evidence"] = [
+            {
+                "turn": 1,
+                "operation": "remember",
+                "status": "succeeded",
+                "memory_id": "memory-1",
+                "text": "Original fact",
+            }
+        ]
+    summary = json.loads(summary_path.read_bytes())
+
+    def save_context():
+        manifest["transcript_policy"]["persistent_memory"] = memory["persistent_memory"]
+        summary["transcripts"][0]["memory_evidence"] = memory["evidence"]
+        manifest_path.write_text(json.dumps(manifest))
+        summary_path.write_text(json.dumps(summary))
+
+    save_context()
+    old, new = tmp_path / "old", tmp_path / "new"
+    plan = plan_scan([source], old)
+    run_scan(old, max_cost_usd=1, client=FixtureJudge())
+    check = plan.checks[0]
+    label = {
+        "model_id": "fixture/model",
+        "scenario_id": "fixture",
+        "check_id": check.id,
+        "transcript_sha256": plan.transcripts[0].sha256,
+        "evidence_context_sha256": sha256(
+            json_bytes(
+                {
+                    "transcript_sha256": plan.transcripts[0].sha256,
+                    "memory": memory,
+                }
+            )
+        ),
+        "check_sha256": sha256(json_bytes(check.model_dump(mode="json"))),
+        "expected": "PASS",
+        "basis": "controlled_fixture",
+        "source": "binding fixture",
+        "author": "test author",
+        "reason": "Test evidence binding, not semantic accuracy.",
+    }
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text(json.dumps(label) + "\n")
+    if change == "receipt":
+        memory["evidence"][0]["text"] = "Changed fact"
+    else:
+        memory["persistent_memory"] = True
+    save_context()
+    plan_scan([source], new)
+    run_scan(new, max_cost_usd=1, client=FixtureJudge())
+    report = compare_ledgers(old, new, expectations=labels)
+    assert report["same_transcripts"] is True
+    assert report["same_evidence_context"] is False
+    assert report["expectation_agreement"]["old"]["labeled_judgments"] == 1
+    assert report["expectation_agreement"]["new"]["labeled_judgments"] == 0
+    with pytest.raises(ValueError, match="bind"):
+        compare_ledgers(new, new, expectations=labels)
 
 
 def test_rejudge_cannot_write_into_or_over_its_source(tmp_path):

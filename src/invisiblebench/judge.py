@@ -42,6 +42,7 @@ from invisiblebench.evaluation import rules
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.evaluation.requests import conversation_requests as _requests
 from invisiblebench.evaluation.requests import input_hash, merge_answers
+from invisiblebench.models.config import serving_policy
 from invisiblebench.models.scan import (
     Answer,
     FileRef,
@@ -411,7 +412,52 @@ def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) 
                 raise ValueError(f"transcript turn {turn.turn_number} resolved a different model")
 
 
+def source_policies(manifest: dict[str, Any]) -> tuple[dict, dict]:
+    """Separate shared generation settings from model-specific serving identity."""
+    policy = manifest.get("transcript_policy", {})
+    if not isinstance(policy, dict):
+        raise ValueError("transcript_policy must be an object")
+    common = {key: value for key, value in policy.items() if key != "serving"}
+    if "serving" not in policy:
+        return common, {}
+    serving = policy["serving"]
+    if not isinstance(serving, dict) or set(serving) != set(manifest["model_ids"]):
+        raise ValueError("serving policy must name every source model exactly once")
+    for model_id, recorded in serving.items():
+        if not isinstance(recorded, dict) or not isinstance(recorded.get("provider"), dict):
+            raise ValueError(f"invalid serving policy for {model_id}")
+        only = recorded["provider"].get("only")
+        if only is not None and (not isinstance(only, list) or len(only) != 1):
+            raise ValueError(f"invalid serving policy restriction for {model_id}")
+        expected = serving_policy({"endpoint": only[0] if only else None})
+        if json_bytes(recorded) != json_bytes(expected):
+            raise ValueError(f"invalid serving policy for {model_id}")
+    return common, serving
+
+
+def generation_policies(bundle: Path, plan: ScanPlan) -> dict[str, dict]:
+    policies = {}
+    for source in plan.sources:
+        manifest = json.loads(_read_ref(bundle, source.manifest))
+        common, serving = source_policies(manifest)
+        for model_id in {ref.model_id for ref in source.transcripts}:
+            policy = {**common, "serving": serving.get(model_id)}
+            if model_id in policies and json_bytes(policies[model_id]) != json_bytes(policy):
+                kind = (
+                    "serving policy"
+                    if policies[model_id]["serving"] != policy["serving"]
+                    else "common generation settings"
+                )
+                raise ValueError(f"inconsistent {kind} for {model_id}")
+            policies[model_id] = policy
+    return policies
+
+
 def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
+    policies = generation_policies(bundle, plan)
+    for model_id, policy in policies.items():
+        if policy["serving"] is None:
+            raise ValueError(f"publication requires a recorded serving policy for {model_id}")
     expected = set(collect_public_scenario_ids())
     public_scenarios = _public_scenarios()
     by_model: dict[str, set[str]] = {}
@@ -441,15 +487,17 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
             != set(manifest.get("scenario_ids") or [])
         ):
             raise ValueError("publication requires complete, comparable source runs")
+        common, _ = source_policies(manifest)
         contracts.add(
-            json.dumps(
+            json_bytes(
                 {
-                    key: manifest.get(key)
-                    for key in ("git_sha", "harness", "mode", "transcript_policy")
-                },
-                sort_keys=True,
+                    **{key: manifest.get(key) for key in ("git_sha", "harness", "mode")},
+                    "transcript_policy": common,
+                }
             )
         )
+        if len(contracts) != 1:
+            raise ValueError("publication requires matching common generation settings and code")
         by_pair = {(item["model_id"], item["scenario_id"]): item for item in entries}
         if len(by_pair) != len(entries):
             raise ValueError("source summary has duplicate model/scenario pairs")
@@ -471,7 +519,7 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
                     _transcript(_read_ref(bundle, transcript)), scenario, transcript.model_id
                 )
             by_model.setdefault(transcript.model_id, set()).add(transcript.scenario_id)
-    if len(contracts) != 1 or any(scenarios != expected for scenarios in by_model.values()):
+    if any(scenarios != expected for scenarios in by_model.values()):
         raise ValueError(
             "publication requires the complete current scenario roster for every model"
         )

@@ -21,8 +21,8 @@
           },
           "accepts": ["gc-bench.web-benchmark-release.input/v3"],
           "emits": [
-            "safety-care/v3",
-            "gc-bench.web-benchmark-release/v3",
+            "safety-care/v4",
+            "gc-bench.web-benchmark-release/v4",
             "givecare.artifact-ref/v1"
           ]
         }

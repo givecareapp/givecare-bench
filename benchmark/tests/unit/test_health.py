@@ -12,9 +12,9 @@ def test_historical_scores_are_not_current():
 
 
 def test_current_shape_does_not_need_composite_or_human_validation():
-    analysis = analyze_leaderboard({"schema": "safety-care/v3",
+    analysis = analyze_leaderboard({"schema": "safety-care/v4",
         "scan_metadata": {"benchmark_version": BENCHMARK_VERSION}, "models": [{"model": "New"}]})
-    assert analysis == {"current": True, "schema": "safety-care/v3", "model_count": 1, "errors": []}
+    assert analysis == {"current": True, "schema": "safety-care/v4", "model_count": 1, "errors": []}
 
 
 def test_missing_archive_is_reported_without_writes(tmp_path):

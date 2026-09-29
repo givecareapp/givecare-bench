@@ -9,6 +9,7 @@ from typing import Any
 from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.cli.transcript import transcript_policy
 from invisiblebench.judge import plan_scan, run_scan
 from invisiblebench.models.scenario import Scenario
 from invisiblebench.scoring import generate_leaderboard
@@ -43,6 +44,7 @@ def _scripted_transcript(scenario: Scenario) -> str:
                     "role": "assistant",
                     "turn": turn.turn_number,
                     "content": "Standard support response.",
+                    "resolved_provider": "fixture",
                 }
             )
         )
@@ -122,7 +124,7 @@ def write_source_run(
         get_project_root(),
         list(model_ids),
         [ident for ident, _ in roster],
-        transcript_policy={"temperature": 0.7},
+        transcript_policy=transcript_policy(None, [{"id": model} for model in model_ids]),
         run_id="synthetic-fixture",
         harness="llm",
         mode="raw",

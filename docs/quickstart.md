@@ -39,8 +39,10 @@ Both modes require support for the supplied generation parameters. The dry run
 prints the policy. The manifest freezes it per model under
 `transcript_policy.serving`, and the same provider object enters each journaled
 request. Actual returned providers remain in transcript metadata and the summary.
-Verify endpoint availability and prices before selecting one. Never infer a
-single-provider comparison from a model name.
+Verify endpoint availability and prices before selecting one. A base provider
+slug can match multiple variants or regions. For an endpoint-specific study,
+verify and select the full endpoint slug. A restriction alone does not establish
+an immutable endpoint. Never infer a single-provider comparison from a model name.
 
 Reservations are estimates, not an absolute billing guarantee. Provider usage
 can exceed them. Cost ceilings and prices must be finite and non-negative.
@@ -173,6 +175,11 @@ the packaged `invisiblebench.projection` module, a plain script. It writes only
 `data/leaderboard/leaderboard.json` and the web release archive.
 Projection needs no provider key or private workspace adapter.
 
+Separate model runs may share a publication when their code and common generation
+settings match. Each model must have one recorded, consistent serving policy.
+Different policies for the same model are rejected, not merged into one row.
+Missing scenario coverage remains a separate publication error.
+
 Generate and check a candidate from a complete current-contract scan:
 
 ```bash
@@ -214,6 +221,9 @@ consumer reads them by exact commit. This command does not push or deploy.
 
 A contract update does not turn retained historical artifacts into results
 under the current method. A consumer must check the release schema and version.
+The current schemas are `safety-care/v4` and `gc-bench.web-benchmark-release/v4`.
+Deploy the owner documentation before the matching website consumer. Do not sync
+new releases into a consumer that still accepts the previous schema.
 
 ## Verify
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from invisiblebench.evaluation.rules import probabilities, tri
-from invisiblebench.judge import _read_ref, json_bytes, load_scan, sha256
+from invisiblebench.judge import _conversations, _read_ref, json_bytes, load_scan, sha256
 from invisiblebench.models.scan import Digest, Record, Text, Verdict
 
 
@@ -19,6 +19,7 @@ class Expectation(Record):
     scenario_id: Text
     check_id: Text
     transcript_sha256: Digest
+    evidence_context_sha256: Digest
     check_sha256: Digest
     expected: Verdict
     basis: Literal["controlled_fixture", "source_evidence", "independent_review"]
@@ -31,7 +32,25 @@ class Expectation(Record):
         return self.model_id, self.scenario_id, self.check_id
 
 
-def expectation_agreement(plan, judgments, labels):
+def evidence_context_hashes(bundle, plan):
+    """Bind research labels to the same conversation context used by the judge."""
+    conversations = _conversations(bundle, plan)
+    return {
+        (ref.model_id, ref.scenario_id): sha256(
+            json_bytes(
+                {
+                    "transcript_sha256": ref.sha256,
+                    "memory": conversations[ref.model_id, ref.scenario_id][1].model_dump(
+                        mode="json"
+                    ),
+                }
+            )
+        )
+        for ref in plan.transcripts
+    }
+
+
+def expectation_agreement(plan, judgments, labels, contexts):
     refs = {(ref.model_id, ref.scenario_id): ref.sha256 for ref in plan.transcripts}
     definitions = {c.id: sha256(json_bytes(c.model_dump(mode="json"))) for c in plan.checks}
     recorded = {j.key: j.verdict.value for j in judgments}
@@ -40,9 +59,17 @@ def expectation_agreement(plan, judgments, labels):
         if (
             label.key not in recorded
             or refs.get(label.key[:2]) != label.transcript_sha256
+            or contexts.get(label.key[:2]) != label.evidence_context_sha256
             or definitions.get(label.check_id) != label.check_sha256
         ):
-            excluded.append([*label.key, label.transcript_sha256, label.check_sha256])
+            excluded.append(
+                [
+                    *label.key,
+                    label.transcript_sha256,
+                    label.evidence_context_sha256,
+                    label.check_sha256,
+                ]
+            )
             continue
         matched.append(
             {
@@ -71,6 +98,7 @@ def expectation_agreement(plan, judgments, labels):
 
 def scan_summary(bundle, plan, answers, judgments):
     counts = {v.value: sum(j.verdict == v for j in judgments) for v in Verdict}
+    applicable = len(judgments) - counts["NOT_APPLICABLE"]
     sources = []
     for source in plan.sources:
         manifest = json.loads(_read_ref(bundle, source.manifest))
@@ -95,8 +123,17 @@ def scan_summary(bundle, plan, answers, judgments):
         "checks": len(plan.checks),
         "judgments": len(judgments),
         "counts": counts,
-        "applicable": len(judgments) - counts["NOT_APPLICABLE"],
-        "unclear_rate": counts["UNCLEAR"] / len(judgments) if judgments else None,
+        "applicable": applicable,
+        "unclear_rate_all": {
+            "numerator": counts["UNCLEAR"],
+            "denominator": len(judgments),
+            "rate": counts["UNCLEAR"] / len(judgments) if judgments else None,
+        },
+        "unclear_rate_applicable": {
+            "numerator": counts["UNCLEAR"],
+            "denominator": applicable,
+            "rate": counts["UNCLEAR"] / applicable if applicable else None,
+        },
         "judge_cost_usd": sum(answer.cost_usd for answer in answers),
         "judge_requests": len(answers),
         "judge_errors": sum(answer.error is not None for answer in answers),
@@ -148,6 +185,8 @@ def compare_ledgers(
                     != tri(previous[key], old_plan.judge.thresholds),
                 }
             )
+    old_contexts = evidence_context_hashes(old_bundle, old_plan)
+    new_contexts = evidence_context_hashes(new_bundle, new_plan)
     agreement = None
     if expectations is not None:
         labels = [
@@ -155,25 +194,29 @@ def compare_ledgers(
             for line in expectations.read_bytes().splitlines()
             if line.strip()
         ]
-        identities = [(label.key, label.transcript_sha256, label.check_sha256) for label in labels]
+        identities = [
+            (label.key, label.transcript_sha256, label.evidence_context_sha256, label.check_sha256)
+            for label in labels
+        ]
         if len(identities) != len(set(identities)):
             raise ValueError("duplicate expectation")
         agreement = {
-            "old": expectation_agreement(old_plan, old_judgments, labels),
-            "new": expectation_agreement(new_plan, new_judgments, labels),
+            "old": expectation_agreement(old_plan, old_judgments, labels, old_contexts),
+            "new": expectation_agreement(new_plan, new_judgments, labels, new_contexts),
         }
         unbound = set(map(tuple, agreement["old"]["unbound_expectations"])) & set(
             map(tuple, agreement["new"]["unbound_expectations"])
         )
         if unbound or not labels:
             raise ValueError(
-                "expectations must bind to a transcript and check in at least one scan"
+                "expectations must bind to transcript, evidence context, and check in at least one scan"
             )
     return {
         "expectation_agreement": agreement,
         "old": scan_summary(old_bundle, old_plan, old_answers, old_judgments),
         "new": scan_summary(new_bundle, new_plan, new_answers, new_judgments),
         "same_transcripts": old_transcripts == new_transcripts,
+        "same_evidence_context": old_contexts == new_contexts,
         "changed_checks": sorted(
             check.id
             for check in new_plan.checks

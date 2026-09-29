@@ -52,7 +52,7 @@
       "deterministic owner projection"
     ],
     "contract": "src/invisiblebench/models/scan.py",
-    "projection_schema": "safety-care/v3",
+    "projection_schema": "safety-care/v4",
     "composite": "none",
     "evaluation_modes": ["raw_model_eval"],
     "optional_critique": "Metadata only. It cannot change a verdict or block a scan or projection.",

@@ -7,20 +7,37 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from pydantic import Field, StrictInt
+
 from invisiblebench.judge import (
     ANSWERS_FILE,
     LEDGER_FILE,
     PLAN_FILE,
+    _conversations,
+    generation_policies,
     json_bytes,
     load_scan,
     sha256,
 )
-from invisiblebench.models.scan import DIMENSIONS, Judgment, Verdict
+from invisiblebench.models.scan import DIMENSIONS, Digest, Judgment, Record, Text, Verdict
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.io import artifact_reference
 
-SCHEMA_VERSION = "safety-care/v3"
-RELEASE_SCHEMA = "gc-bench.web-benchmark-release/v3"
+SCHEMA_VERSION = "safety-care/v4"
+RELEASE_SCHEMA = "gc-bench.web-benchmark-release/v4"
+
+
+class PublicGenerationSettings(Record):
+    """Only these generation facts may cross the public projection boundary."""
+
+    backend: Text | None
+    system_prompt_hash: Digest | None
+    temperature: float | None = Field(ge=0, allow_inf_nan=False, strict=True)
+    max_reply_tokens: StrictInt | None = Field(ge=1)
+    tools: Text | None
+    empty_response_retries: StrictInt | None = Field(ge=0)
+    api_timeout_seconds: float | None = Field(gt=0, allow_inf_nan=False, strict=True)
+    transport_attempts: StrictInt | None = Field(ge=1)
 
 
 def _counts(records: list[Judgment]) -> dict[str, int]:
@@ -52,6 +69,8 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
     bundle = Path(bundle)
     plan, answers, records = load_scan(bundle, complete=True, current=publication)
     checks = {check.id: check for check in plan.checks}
+    policies = generation_policies(bundle, plan)
+    conversations = _conversations(bundle, plan)
     models = []
     for model_id in sorted({ref.model_id for ref in plan.transcripts}):
         sources = [ref for ref in plan.transcripts if ref.model_id == model_id]
@@ -59,7 +78,36 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
         if len(names) != 1:
             raise ValueError(f"model {model_id} has inconsistent display names")
         model_records = [record for record in records if record.model_id == model_id]
-        entry = {"model_id": model_id, "model": names.pop(), "scenario_count": len(sources)}
+        policy = policies[model_id]
+        generation = PublicGenerationSettings.model_validate(
+            {key: policy.get(key) for key in PublicGenerationSettings.model_fields}
+        )
+        responses = [
+            turn
+            for ref in sources
+            for turn in conversations[model_id, ref.scenario_id][0]
+            if turn.get("role") == "assistant"
+        ]
+        providers = {
+            turn["resolved_provider"]
+            for turn in responses
+            if isinstance(turn.get("resolved_provider"), str) and turn["resolved_provider"].strip()
+        }
+        entry = {
+            "model_id": model_id,
+            "model": names.pop(),
+            "scenario_count": len(sources),
+            "evaluation_configuration": {
+                "serving": policy["serving"],
+                "generation": generation.model_dump(mode="json"),
+                "observed_providers": sorted(providers),
+                "provider_observation_complete": all(
+                    isinstance(turn.get("resolved_provider"), str)
+                    and bool(turn["resolved_provider"].strip())
+                    for turn in responses
+                ),
+            },
+        }
         for layer, dimensions in DIMENSIONS.items():
             entry[layer] = {
                 dimension: _observation(

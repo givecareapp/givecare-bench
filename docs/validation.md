@@ -68,6 +68,7 @@ object per independently specified judgment. Required fields are:
 | --- | --- |
 | `model_id`, `scenario_id`, `check_id` | Exact identities in the frozen scan. |
 | `transcript_sha256` | Digest from that transcript's frozen `TranscriptSource`. |
+| `evidence_context_sha256` | Digest from `invisiblebench.cli.compare.evidence_context_hashes(bundle, plan)[model_id, scenario_id]`. |
 | `check_sha256` | `sha256(json_bytes(check.model_dump(mode="json")))`, using `invisiblebench.judge`. |
 | `expected` | PASS, FAIL, UNCLEAR, or NOT_APPLICABLE. |
 | `basis` | `controlled_fixture`, `source_evidence`, or `independent_review`. |
@@ -76,9 +77,15 @@ object per independently specified judgment. Required fields are:
 
 Store private expectations in the existing `internal/calibration/labels/` location.
 Do not move them into public projections. Duplicate expectations are rejected.
-Each label must bind to exact transcript and check bytes in at least one compared
-scan. Labels for a changed definition are excluded from the other scan and listed
-explicitly. The report retains provenance; it cannot authenticate independence.
+Each label must bind to exact transcript, evidence context, and check bytes in at
+least one compared scan. The context digest binds the transcript digest and the
+normalized `MemoryContext` loaded by the judge, including declaration and receipts.
+Changed memory evidence invalidates the binding even when transcript bytes match.
+Labels without a context digest are rejected; retained historical labels stay
+unchanged. Freeze new labels under the current contract before new validation.
+
+Labels for changed definitions or evidence are excluded from the other scan and
+listed explicitly. The report retains provenance; it cannot authenticate independence.
 
 To inspect one scan against its expectations, pass that bundle as both inputs:
 
@@ -100,6 +107,10 @@ uv run bench --json questions <new-scan>
 The comparison reports four-verdict transitions, applicability, uncertainty,
 coverage, saved request cost, and source execution settings. It refuses a judge
 comparison when shared conversation identities have different transcript bytes.
+`same_evidence_context` separately reports whether memory context also matches.
+`unclear_rate_all` divides UNCLEAR by all judgments. `unclear_rate_applicable`
+excludes NOT_APPLICABLE from its denominator. Each contains `numerator`,
+`denominator`, and `rate`; an empty denominator produces a null rate.
 Expectations add a confusion table, false passes, false failures, and unresolved
 counts. Keep unlabeled cases visible. Report counts and denominators for each
 check; small constructed sets do not support population accuracy estimates.

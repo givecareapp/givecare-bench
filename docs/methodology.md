@@ -193,7 +193,20 @@ Generation freezes each model's OpenRouter serving policy alongside its prompt
 and settings. A selected endpoint restricts requests to that provider and disables
 fallbacks. Otherwise, the stated measurement is the routed service. Both modes
 require support for requested parameters. Returned provider identities are
-recorded separately. A missing historical policy remains unknown.
+recorded separately. A missing historical policy remains unknown and cannot
+support a new public release. A base provider slug may cover multiple variants
+or regions; a restriction is not proof of one immutable endpoint.
+
+Each public model row includes an `evaluation_configuration`. It contains the
+requested serving policy, observed provider identifiers from that model's replies,
+and allowlisted generation settings. Missing observations remain explicit; the
+projection never substitutes a run-wide provider list or a requested restriction.
+Generation settings expose the prompt hash, not the prompt text. Private manifests,
+transcripts, and memory receipts do not cross this boundary.
+
+Publication compares common generation settings and code across source runs.
+Model-specific serving policies may differ between models, but not within one
+model row. Safety and Care calculations remain separate and unchanged.
 
 The scan plan freezes source manifests, transcripts, check definitions,
 questions, thresholds, the judge model ID, and engine version in one portable
