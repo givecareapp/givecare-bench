@@ -90,15 +90,22 @@ A comparison measures agreement, not judge accuracy.
 The new bundle retains source files under `inputs/<source-hash>/`. Keep those
 relative paths intact. They are part of the frozen plan.
 
-Every planned request is checked for estimated context limits before dispatch.
-Requests that remain oversized are rejected; evidence is not truncated or summarized.
-Long crisis conversations can exceed these limits. Requests are not split automatically.
+Planning groups questions by identical evidence and splits groups against the
+judge's estimated context limits. Every resulting request is checked again before
+dispatch. A single observation whose evidence exceeds the limit is rejected;
+evidence is never truncated or summarized. Long conversations can still exceed
+that single-observation limit.
 
 Judge requests follow the same recovery contract as target generation. Each
 request is recorded in `attempts.jsonl` before dispatch. Its answer is flushed
 to `answers.jsonl` before the next request. Judgments are derived from those
 answers, not saved separately per request. Repeat the `bench scan run` command
-to resume unfinished judging.
+to resume unfinished judging. Request identity includes the conversation, role,
+turn, and exact input hash, so completed requests within a turn are retained.
+
+Use a source checkout with the engine version recorded in a historical scan
+plan to replay that scan. Keep its bundle unchanged. New judging requires a new
+plan and cost approval; old plans are not migrated to the current request format.
 
 Resume retries a request only when its outcome and cost are known: a budget
 refusal before dispatch, or an invalid answer with reported usage. Any error

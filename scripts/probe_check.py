@@ -31,14 +31,12 @@ def plan_probe(check_id: str, transcripts: list[Path], output: Path, *, model=DE
         scenario = f"{index}-{path.stem}"
         sources[f"inputs/transcripts/{scenario}.jsonl"] = path
         transcript = _transcript(path.read_bytes())
-        for role, turn in requests.request_turns(transcript):
-            request = requests.build_request([check], transcript, role, turn)
-            if request["questions"]:
-                tasks.append(
-                    RequestTask(
-                        model_id=check.id, scenario_id=scenario, role=role, turn=turn, **request
-                    )
+        for (role, turn, _), request in requests.conversation_requests([check], transcript).items():
+            tasks.append(
+                RequestTask(
+                    model_id=check.id, scenario_id=scenario, role=role, turn=turn, **request
                 )
+            )
     return plan_questions(output, tasks, model=model, sources=sources)
 
 
@@ -54,21 +52,18 @@ def run_probe(bundle: Path, *, max_cost_usd: float, client=None):
         if ref.path.endswith(".jsonl")
     }
     for task in plan.tasks:
-        if task.model_id != check.id or task.request != requests.build_request(
-            [check],
-            transcripts[task.scenario_id],
-            task.role,
-            task.turn,
+        planned = requests.conversation_requests([check], transcripts[task.scenario_id])
+        if task.model_id != check.id or task.request != planned.get(
+            (task.role, task.turn, requests.input_hash(task.request))
         ):
             raise ValueError("probe inputs differ from the frozen requests")
     with run_questions(bundle, max_cost_usd=max_cost_usd, client=client) as answers:
         judgments = []
         for scenario, transcript in transcripts.items():
-            saved = {
-                (a.role, a.turn): a.answers
-                for a in answers
-                if a.scenario_id == scenario and a.error is None
-            }
+            saved = {}
+            for answer in answers:
+                if answer.scenario_id == scenario and answer.error is None:
+                    requests.merge_answers(saved, answer.role, answer.turn, answer.answers)
             judgments.append(
                 rules.derive(
                     check,

@@ -57,18 +57,18 @@ def lint_tasks(loaded, checks):
             for t in item.scenario.all_turns
         ]
         selected = [checks[i] for i in sorted(queries[item.scenario_id])]
-        for turn in transcript:
-            request = requests.build_request(selected, transcript, "user", turn["turn"])
-            if request["questions"]:
-                tasks.append(
-                    RequestTask(
-                        model_id="semantic-lint",
-                        scenario_id=item.scenario_id,
-                        role="user",
-                        turn=turn["turn"],
-                        **request,
-                    )
+        for (role, turn, _), request in requests.conversation_requests(
+            selected, transcript
+        ).items():
+            tasks.append(
+                RequestTask(
+                    model_id="semantic-lint",
+                    scenario_id=item.scenario_id,
+                    role=role,
+                    turn=turn,
+                    **request,
                 )
+            )
     return tasks
 
 
@@ -94,14 +94,19 @@ class ScenarioResult:
 
 def build_scenario_results(loaded, checks, answers):
     own, queries = query_checks(loaded, checks)
-    saved = {(a.scenario_id, a.turn): a.answers for a in answers if a.error is None}
+    saved = {}
+    for answer in answers:
+        if answer.error is None:
+            requests.merge_answers(
+                saved.setdefault(answer.scenario_id, {}), answer.role, answer.turn, answer.answers
+            )
     return [
         ScenarioResult(
             item,
             own[item.scenario_id],
             {
                 cid: {
-                    t.turn_number: saved[item.scenario_id, t.turn_number][
+                    t.turn_number: saved[item.scenario_id]["user", t.turn_number][
                         requests.cue_key(checks[cid])
                     ].noul
                     for t in item.scenario.all_turns

@@ -1,9 +1,10 @@
 """The scan contract: frozen inputs, saved model answers, and derived judgments.
 
 A check is a set of yes/no questions and a rule. The judge model answers the
-questions with calibrated probabilities, one request per conversation turn.
-Code applies the rule. A judgment is therefore a pure function of the plan and
-the saved answers, and every FAIL cites the turn the rule fired on.
+questions with calibrated probabilities in evidence-scoped requests.
+Code merges disjoint answers for each turn and applies the rule. A judgment is
+a pure function of the plan and the saved answers. Every FAIL cites the turn
+the rule fired on.
 """
 
 from __future__ import annotations
@@ -74,9 +75,24 @@ class Question(Record):
     unit: Literal["turn", "sentence"] = "turn"
     type: Literal["noul", "choice"] = "noul"
     memory: Literal["declared", "undeclared"] | None = None
+    inputs: (
+        list[
+            Literal[
+                "caregiver",
+                "assistant",
+                "earlier_caregiver",
+                "earlier_assistant",
+                "sentences",
+                "memory_context",
+            ]
+        ]
+        | None
+    ) = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def one_kind_of_question(self):
+        if self.unit == "sentence" and self.inputs is not None and "sentences" not in self.inputs:
+            raise ValueError("sentence inputs must include sentences")
         if self.type == "choice":
             if not isinstance(self.criteria, dict) or not 2 <= len(self.criteria) <= 255:
                 raise ValueError("a choice question needs 2..255 criteria")
@@ -98,7 +114,7 @@ class Question(Record):
     def written_form(self, handler):
         """Omit absent execution context from the frozen definition."""
         data = handler(self)
-        for option in ("memory",):
+        for option in ("memory", "inputs"):
             if data.get(option) is None:
                 data.pop(option, None)
         return data
@@ -356,7 +372,7 @@ class RequestTask(Record):
 class QuestionPlan(Record):
     """Frozen authoring requests. Replaces tool-local caches and transient requests."""
 
-    schema_version: Literal["invisiblebench-questions/v1"] = "invisiblebench-questions/v1"
+    schema_version: Literal["invisiblebench-questions/v2"] = "invisiblebench-questions/v2"
     judge: JudgeSettings
     tasks: list[RequestTask] = Field(min_length=1)
     inputs: list[FileRef] = Field(default_factory=list)
@@ -364,14 +380,18 @@ class QuestionPlan(Record):
 
     @model_validator(mode="after")
     def unique_requests(self):
-        keys = [(t.model_id, t.scenario_id, t.role, t.turn) for t in self.tasks]
-        if len(keys) != len(set(keys)):
-            raise ValueError("duplicate question task")
+        seen = set()
+        for task in self.tasks:
+            for question in task.questions:
+                key = (task.model_id, task.scenario_id, task.role, task.turn, question)
+                if key in seen:
+                    raise ValueError("duplicate question task")
+                seen.add(key)
         return self
 
 
 class Answer(Record):
-    """One saved judge request: every question for one conversation turn."""
+    """One saved, evidence-scoped request within a conversation turn."""
 
     model_id: Text
     scenario_id: Text
@@ -393,8 +413,8 @@ class Answer(Record):
         return self
 
     @property
-    def key(self) -> tuple[str, str, str, int]:
-        return self.model_id, self.scenario_id, self.role, self.turn
+    def key(self) -> tuple[str, str, str, int, str]:
+        return self.model_id, self.scenario_id, self.role, self.turn, self.input_sha256
 
 
 class Judgment(Record):

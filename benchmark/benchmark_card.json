@@ -1,7 +1,7 @@
 {
   "benchmark_details": {
     "name": "Invisible Bench",
-    "version": "5.3.0",
+    "version": "5.4.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI behavior benchmark",
     "overview": "Evaluates caregiver-support conversations with batched, bound Jev observations, code-owned check rules, and a separate Safety/Care projection.",
