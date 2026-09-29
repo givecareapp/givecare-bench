@@ -36,7 +36,13 @@ nav:
   - Home: index.md
   - Run and inspect: quickstart.md
   - Method: methodology.md
+  - Worked measurement: worked-example.md
+  - Coverage: coverage.md
+  - Evaluator validation: validation.md
   - Poster (NCCR 2026): nccr.md
+
+hooks:
+  - scripts/render_docs.py
 
 plugins:
   - search

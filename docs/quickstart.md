@@ -6,7 +6,19 @@ Install the project with uv. Set the provider key for transcripts and the TypeSa
 key for judging. Scenarios with judge-decided branches also call TypeSafe during
 generation, so a live run needs both keys and both hosts (`openrouter.ai` and
 `api.typesafe.ai`); generation refuses to start without the judge key. Plan paid
-work before running it.
+work before running it. Credential presence does not prove network access.
+From the same execution environment, check DNS/TLS/HTTP reachability to both
+hosts before requesting pilot approval:
+
+```bash
+curl -A 'OpenAI File Downloader, XaiImageApiFetch/1.0' --head --max-time 20 https://openrouter.ai/
+curl -A 'OpenAI File Downloader, XaiImageApiFetch/1.0' --head --max-time 20 https://api.typesafe.ai/
+```
+
+An HTTP response proves only that this endpoint responded. A 401, 403, or proxy
+failure still needs investigation. A successful root request does not prove that
+authenticated inference will work. Establish that with the approved small pilot,
+then inspect its saved responses before a broader run.
 
 ```bash
 uv sync --extra dev
@@ -20,6 +32,16 @@ Select a model from `src/invisiblebench/models/config.py`. Add a new model there
 with verified provider prices before planning it. Unknown IDs are rejected;
 the CLI does not invent prices. The selected prices drive both estimation and
 dispatch accounting and are saved as `model_pricing` in `run_manifest.json`.
+Each model also owns an optional `endpoint`: the exact OpenRouter provider slug.
+A named endpoint sends `only: [endpoint]` with `allow_fallbacks: false`. An absent
+endpoint explicitly measures the **routed service**, with fallbacks allowed.
+Both modes require support for the supplied generation parameters. The dry run
+prints the policy. The manifest freezes it per model under
+`transcript_policy.serving`, and the same provider object enters each journaled
+request. Actual returned providers remain in transcript metadata and the summary.
+Verify endpoint availability and prices before selecting one. Never infer a
+single-provider comparison from a model name.
+
 Reservations are estimates, not an absolute billing guarantee. Provider usage
 can exceed them. Cost ceilings and prices must be finite and non-negative.
 
@@ -84,9 +106,14 @@ uv run bench scan rejudge results/<run-id> --output results/<new-run-id> \
 ```
 
 Review the estimate, then execute with `bench scan run`. `bench questions
-<run-id>` orders questions by unresolved rate. `bench compare --old <run-id>
---new <new-run-id>` compares two current-format scans without model calls.
-A comparison measures agreement, not judge accuracy.
+<run-id>` orders observation families by affected unresolved judgments, then raw
+unresolved rate. Use `bench --json questions <run-id>` for exact conversation,
+turn, bound observation, and possible-verdict references.
+`bench compare --old <run-id> --new <new-run-id>` reports transitions,
+applicability, coverage, uncertainty, and cost on unchanged transcript bytes.
+Add `--expectations <file.jsonl>` to report agreement with frozen expectations.
+Follow [Evaluator validation](validation.md) before interpreting that agreement
+as accuracy.
 The new bundle retains source files under `inputs/<source-hash>/`. Keep those
 relative paths intact. They are part of the frozen plan.
 

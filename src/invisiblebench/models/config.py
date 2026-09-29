@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,12 +14,31 @@ class ModelConfig(BaseModel):
     provider: Literal["openrouter", "anthropic", "openai"] = Field(
         default="openrouter", description="API provider"
     )
+    endpoint: str | None = Field(
+        default=None, min_length=1,
+        description="Exact OpenRouter provider slug; absent means the routed service is measured",
+    )
     cost_per_m_input: float = Field(
         ..., ge=0, allow_inf_nan=False, description="Cost per million input tokens"
     )
     cost_per_m_output: float = Field(
         ..., ge=0, allow_inf_nan=False, description="Cost per million output tokens"
     )
+
+
+def serving_policy(model: dict[str, Any]) -> dict[str, Any]:
+    """One policy supplies both the frozen contract and the OpenRouter payload."""
+    endpoint = model.get("endpoint")
+    if endpoint is not None and (not isinstance(endpoint, str) or not endpoint.strip()):
+        raise ValueError("endpoint must be a nonempty OpenRouter provider slug")
+    return {
+        "measurement": "pinned_provider" if endpoint else "routed_service",
+        "provider": {
+            "allow_fallbacks": endpoint is None,
+            "require_parameters": True,
+            **({"only": [endpoint]} if endpoint else {}),
+        },
+    }
 
 
 # Default model configurations

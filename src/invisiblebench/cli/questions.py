@@ -13,8 +13,76 @@ from pathlib import Path
 from typing import Any
 
 from invisiblebench.evaluation import requests, rules
-from invisiblebench.judge import load_scan
-from invisiblebench.models.scan import Answer, ScanPlan
+from typesafe_sdk import NoulAnswer
+
+from invisiblebench.judge import _conversations, load_scan
+from invisiblebench.models.scan import Answer, Judgment, ScanPlan, Verdict
+
+
+def observation_family(key: str) -> str:
+    if key.endswith("]") and "[" in key:
+        return key[:key.rindex("[")]
+    return "/".join(part for part in key.split("/") if not part.isdigit())
+
+
+def judgment_effects(bundle: Path, plan: ScanPlan, judgments: list[Judgment]) -> dict[str, list[dict[str, Any]]]:
+    """Resolve one consumed observation at a time through the original rule engine.
+
+    Effects mean narrowing possible verdicts, not independent correctness. Other
+    unresolved observations stay unresolved; no exponential assignment search.
+    """
+    effects: dict[str, list[dict[str, Any]]] = {}
+    conversations = _conversations(bundle, plan)
+    checks = {check.id: check for check in plan.checks}
+    for judgment in judgments:
+        if judgment.verdict != Verdict.UNCLEAR:
+            continue
+        transcript, memory = conversations[judgment.model_id, judgment.scenario_id]
+        saved = {}
+        for key, answer in judgment.answers.items():
+            location, observation = key.split("/", 1)
+            role, number = location.split(":")
+            saved.setdefault((role, int(number)), {})[observation] = answer
+        check = checks[judgment.check_id]
+
+        def outcomes(check=check, transcript=transcript, saved=saved, judgment=judgment, memory=memory):
+            return sorted(v.value for v in rules.analyze(
+                check, transcript, saved, plan.judge.thresholds,
+                model_id=judgment.model_id, scenario_id=judgment.scenario_id,
+                plan_sha256=judgment.plan_sha256, memory_declared=memory.persistent_memory,
+            )[1])
+
+        possible = outcomes()
+        for (role, number), observations in saved.items():
+            for key, answer in list(observations.items()):
+                if isinstance(answer, NoulAnswer):
+                    if rules.tri(answer.noul, plan.judge.thresholds) is not None:
+                        continue
+                    resolutions = {"no": NoulAnswer(noul=0.0), "yes": NoulAnswer(noul=1.0)}
+                else:
+                    if max(answer.probabilities.values()) >= plan.judge.thresholds.high:
+                        continue
+                    resolutions = {
+                        option: answer.model_copy(update={"choice": option, "probabilities": {
+                            name: float(name == option) for name in answer.probabilities
+                        }}) for option, p in answer.probabilities.items() if p > 0
+                    }
+                resolved = {}
+                for label, value in resolutions.items():
+                    observations[key] = value
+                    resolved[label] = outcomes()
+                observations[key] = answer
+                if all(value == possible for value in resolved.values()):
+                    continue
+                keys = [key] if isinstance(answer, NoulAnswer) else [f"{key}={option}" for option in resolutions]
+                for reported_key in keys:
+                    effects.setdefault(observation_family(reported_key), []).append({
+                        "model_id": judgment.model_id, "scenario_id": judgment.scenario_id,
+                        "check_id": check.id, "role": role, "turn": number,
+                        "observation": key, "possible_verdicts": possible,
+                        "when_resolved": resolved,
+                    })
+    return effects
 
 
 def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any]]:
@@ -47,7 +115,7 @@ def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any
             else:
                 # A bound observation (crisis reference, task detail, source claim)
                 # carries instance indexes; report it as one observation family.
-                key = "/".join(part for part in key.split("/") if not part.isdigit())
+                key = observation_family(key)
                 check_id, kind = key.split("/", 1)[0], "bound"
                 if check_id not in check_ids:
                     raise KeyError(key)
@@ -106,8 +174,17 @@ def questions_command(args: Any) -> int:
         if run is None:
             raise ValueError(f"run not found: {args.run_id}")
         bundle = Path(run["path"])
-        plan, answers, _judgments = load_scan(bundle)
+        plan, answers, judgments = load_scan(bundle)
         data = question_report(plan, answers)
+        effects = judgment_effects(bundle, plan, judgments)
+        for row in data:
+            row["effects"] = effects.get(row["question"], [])
+            row["affected_judgments"] = len({
+                (effect["model_id"], effect["scenario_id"], effect["check_id"])
+                for effect in row["effects"]
+            })
+            row["judgment_analysis"] = "complete" if judgments else "unavailable: partial scan"
+        data.sort(key=lambda row: (-row["affected_judgments"], -row["unresolved_rate"], row["question"]))
         limit = getattr(args, "limit", None)
         if limit is not None:
             data = data[:limit]
@@ -123,10 +200,11 @@ def questions_command(args: Any) -> int:
     if not data:
         print("No questions.")
         return 0
-    print(f"{'question':<48} {'answers':>7} {'unresolved':>10} {'rate':>7} {'mean':>7}")
+    print("Affected = judgments whose possible verdicts can narrow when one answer resolves.")
+    print(f"{'question':<48} {'answers':>7} {'unresolved':>10} {'rate':>7} {'affected':>8}")
     for row in data:
         print(
             f"{row['question']:<48} {row['answers']:>7} {row['unresolved']:>10} "
-            f"{row['unresolved_rate']:>7.4f} {row['mean']:>7.4f}"
+            f"{row['unresolved_rate']:>7.4f} {row['affected_judgments']:>8}"
         )
     return 0

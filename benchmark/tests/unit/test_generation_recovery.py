@@ -157,6 +157,38 @@ def test_http_pool_is_reused_and_closed_and_permanent_errors_are_not_retried(mon
     assert made[0].is_closed
 
 
+@pytest.mark.parametrize("endpoint", [None, "test-provider"])
+def test_serving_policy_is_frozen_and_sent(tmp_path, endpoint):
+    from benchmark.tests.unit.test_transcript_only_pipeline import _FakeAsyncClient, _write_scenario
+    from invisiblebench.cli.transcript import evaluate_scenario_async, generation_contract
+
+    path = tmp_path / "scenario.json"
+    _write_scenario(path)
+    model = {"id": "fixture/model", "name": "Fixture", "endpoint": endpoint}
+    scenario = {"path": str(path), "name": "Fixture", "category": "context"}
+    sent = []
+
+    class Client(_FakeAsyncClient):
+        async def call_model_async(self, **kwargs):
+            sent.append(kwargs)
+            return await super().call_model_async(**kwargs)
+
+    client = Client()
+    contract = generation_contract(model, scenario, client)
+    policy = contract["policy"]["serving"][model["id"]]
+    assert policy["measurement"] == ("pinned_provider" if endpoint else "routed_service")
+    assert policy["provider"]["allow_fallbacks"] is (endpoint is None)
+    assert policy["provider"]["require_parameters"] is True
+    if endpoint:
+        assert policy["provider"]["only"] == [endpoint]
+    asyncio.run(evaluate_scenario_async(model, scenario, client, tmp_path / "run", asyncio.Semaphore(1)))
+    assert sent[0]["provider"] == policy["provider"]
+    changed = dict(model, endpoint="another-provider")
+    with pytest.raises(ValueError, match="contract"):
+        asyncio.run(evaluate_scenario_async(changed, scenario, client, tmp_path / "run", asyncio.Semaphore(1)))
+    assert len(sent) == 1
+
+
 def test_scan_preflights_later_requests_before_any_dispatch(tmp_path):
     from invisiblebench.judge import execute_requests
 

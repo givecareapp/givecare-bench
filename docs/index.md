@@ -1,5 +1,9 @@
 # Invisible Bench
 
+Type: explanation.
+
+<!-- benchmark:identity -->
+
 **Invisible Bench evaluates caregiver-support conversations and produces a Jury
 Card for each completed scan.** One judge path evaluates each active check:
 yes/no questions answered as probabilities, and a code-owned rule that
@@ -28,6 +32,9 @@ response does not erase an earlier violation.
 
 - [Run and inspect](quickstart.md): generate conversations, plan a scan, and read its Jury Card.
 - [Method](methodology.md): understand the rules, rates, uncertainty, and limits.
+- [Worked measurement](worked-example.md): inspect a public synthetic response, retained probabilities, and derived verdict.
+- [Coverage](coverage.md): inspect development controls and scenario mappings.
+- [Evaluator validation](validation.md): freeze independent expectations before measuring correctness.
 
 Versions and counts come from the benchmark inventory. Check definitions live
 in `checks/`, with their grammar in `checks/README.md`. The scan contract

@@ -11,7 +11,7 @@ from invisiblebench.api.client import CostBudgetExceededError
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.judge import ANSWERS_FILE
 from invisiblebench.models.scan import Thresholds
-from scripts import check_examples
+from invisiblebench import examples as check_examples
 
 FIXTURE_CHECKS = Path(__file__).resolve().parents[1] / "fixtures" / "checks"
 
