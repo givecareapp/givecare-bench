@@ -169,3 +169,43 @@ def test_a_choice_question_reports_one_row_per_option(tmp_path, monkeypatch, cap
     assert anger["check_id"] == "attunement.fixture-choice"
     assert anger["answers"] == 2  # one scenario x two assistant turns
     assert anger["mean"] == pytest.approx(1 / 3, abs=1e-4)
+
+
+def test_bound_observation_keys_report_as_one_family(fixture_bundle):
+    """Crisis-reference and task instance keys fold into one row per observation family."""
+    plan, answers, _judgments = load_scan(fixture_bundle)
+    native = next(iter(answers[0].answers.values()))
+    bound = [
+        "crisis.decay/1/recognizes",
+        "crisis.decay/3/recognizes",
+        "crisis.decay/reply/practical",
+        "advocacy.request-completion/includes/required_details/0",
+        "advocacy.request-completion/includes/required_details/1",
+        "advocacy.request-completion/includes/excluded_details/0",
+        "scope.source-support/supported/0",
+    ]
+    answer = answers[0].model_copy(update={"answers": dict.fromkeys(bound, native)})
+    checks = [
+        SimpleNamespace(id=check_id, cue=None, questions={})
+        for check_id in ("crisis.decay", "advocacy.request-completion", "scope.source-support")
+    ]
+    bound_plan = SimpleNamespace(checks=checks, judge=plan.judge)
+
+    rows = {row["question"]: row for row in question_report(bound_plan, [answer])}
+
+    assert rows["crisis.decay/recognizes"]["answers"] == 2
+    assert rows["crisis.decay/recognizes"]["check_id"] == "crisis.decay"
+    assert rows["crisis.decay/reply/practical"]["answers"] == 1
+    assert rows["advocacy.request-completion/includes/required_details"]["answers"] == 2
+    assert rows["advocacy.request-completion/includes/excluded_details"]["answers"] == 1
+    assert rows["scope.source-support/supported"]["check_id"] == "scope.source-support"
+    assert {row["kind"] for row in rows.values()} == {"bound"}
+
+
+def test_an_observation_from_an_unplanned_check_is_rejected(fixture_bundle):
+    plan, answers, _judgments = load_scan(fixture_bundle)
+    native = next(iter(answers[0].answers.values()))
+    answer = answers[0].model_copy(update={"answers": {"unplanned.check/1/x": native}})
+
+    with pytest.raises(KeyError):
+        question_report(plan, [answer])

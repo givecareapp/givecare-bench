@@ -31,6 +31,7 @@ def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any
                 continue
             key_info[requests.question_key(check, name)] = (check.id, "question")
 
+    check_ids = {check.id for check in plan.checks}
     thresholds = plan.judge.thresholds
     stats: dict[str, dict[str, Any]] = {}
     for answer in answers:
@@ -41,8 +42,15 @@ def question_report(plan: ScanPlan, answers: list[Answer]) -> list[dict[str, Any
             if key.endswith("]") and "[" in key:
                 key = key[: key.rindex("[")]
                 check_id, kind = key_info[key][0], "sentence"
-            else:
+            elif key in key_info:
                 check_id, kind = key_info[key]
+            else:
+                # A bound observation (crisis reference, task detail, source claim)
+                # carries instance indexes; report it as one observation family.
+                key = "/".join(part for part in key.split("/") if not part.isdigit())
+                check_id, kind = key.split("/", 1)[0], "bound"
+                if check_id not in check_ids:
+                    raise KeyError(key)
             row = stats.setdefault(
                 key,
                 {
