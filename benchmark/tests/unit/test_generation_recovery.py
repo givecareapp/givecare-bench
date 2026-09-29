@@ -304,20 +304,18 @@ def test_runner_drains_sibling_tasks_before_closing_client(tmp_path, monkeypatch
 
 
 def test_oversized_crisis_evidence_is_rejected_not_truncated(published_checks):
-    from invisiblebench.api.typesafe import check_context
     from invisiblebench.evaluation.check_registry import load_checks
-    from invisiblebench.evaluation.requests import build_request
+    from invisiblebench.evaluation.requests import build_requests
 
     turns = [
         entry
         for n in range(1, 19)
         for entry in (
             {"role": "user", "turn": n, "content": f"Caregiver {n}: I need help."},
-            {"role": "assistant", "turn": n, "content": f"Reply-{n:02d} " + "support " * 400},
+            {"role": "assistant", "turn": n, "content": f"Reply-{n:02d} " + "support " * 2000},
         )
     ]
-    request = build_request(list(load_checks().values()), turns, "assistant", 18)
-    frozen = json.dumps(request, sort_keys=True)
+    frozen = json.dumps(turns, sort_keys=True)
     with pytest.raises(ValueError, match="longest question"):
-        check_context(**request)
-    assert json.dumps(request, sort_keys=True) == frozen
+        build_requests(list(load_checks().values()), turns, "assistant", 18)
+    assert json.dumps(turns, sort_keys=True) == frozen

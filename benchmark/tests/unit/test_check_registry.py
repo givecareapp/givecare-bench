@@ -7,11 +7,10 @@ from pathlib import Path
 import pytest
 
 from invisiblebench.evaluation.check_registry import load_check, load_checks
-from invisiblebench.evaluation.requests import build_request
+from invisiblebench.evaluation.requests import build_requests
 from invisiblebench.models.scan import DIMENSIONS, Question
 
 CHECKS_DIR = Path(__file__).resolve().parents[3] / "checks"
-
 
 
 def test_the_published_directory_holds_every_check():
@@ -32,7 +31,10 @@ def test_the_published_directory_holds_every_check():
             owner = crisis_continuity if check.rule == "crisis_continuity" else tasks
             owner.validate(check)
             assert not (check.cue or check.fail_if or check.pass_if_any or check.applies_if)
-        assert check.pass_meaning != "The encoded rule is satisfied; no broader outcome is established."
+        assert (
+            check.pass_meaning
+            != "The encoded rule is satisfied; no broader outcome is established."
+        )
 
 
 def test_a_check_id_must_equal_its_file_name(tmp_path):
@@ -87,6 +89,6 @@ def test_native_noul_criteria_reach_the_request(unit):
             "content": "I can help in this session. What do you need?",
         },
     ]
-    request = build_request([check], transcript, "assistant", 1)
+    [request] = build_requests([check], transcript, "assistant", 1)
     assert len(request["questions"]) == (1 if unit == "turn" else 2)
     assert all(spec["criteria"] == criteria for spec in request["questions"].values())

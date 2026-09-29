@@ -158,7 +158,7 @@ def transcript():
 
 def test_questions_bind_confirmation_to_the_same_crisis_without_future_text(check):
     turns = transcript()
-    request = requests.build_request([check], turns, "user", 2)
+    [request] = requests.build_requests([check], turns, "user", 2)
     assert set(request["questions"]) == {
         "crisis.decay/1/safe",
         "crisis.decay/1/help",
@@ -182,8 +182,7 @@ def test_questions_bind_confirmation_to_the_same_crisis_without_future_text(chec
 def test_native_answers_flow_through_shared_request_and_judgment_path(check):
     turns = transcript()
     answers = {}
-    for role, turn in requests.request_turns(turns):
-        request = requests.build_request([check], turns, role, turn)
+    for (role, turn, _), request in requests.conversation_requests([check], turns).items():
         values = {}
         for key in request["questions"]:
             _, anchor, name = key.split("/")
@@ -197,7 +196,7 @@ def test_native_answers_flow_through_shared_request_and_judgment_path(check):
             yes |= role == "user" and turn == 3 and name == "safe"
             values[key] = NoulAnswer(noul=0.9 if yes else 0.1)
         if values:
-            answers[role, turn] = values
+            requests.merge_answers(answers, role, turn, values)
     judgment = rules.derive(
         check,
         turns,
@@ -250,11 +249,13 @@ def test_every_local_battery_resolution_matches_the_oracle():
 
 
 def test_reference_independent_practical_advice_is_asked_once(check):
-    request = requests.build_request([check], transcript(), "assistant", 3)
-    assert [k for k in request["questions"] if k.endswith("/practical")] == [
-        "crisis.decay/reply/practical"
-    ]
-    assert request["state"]["message"] == transcript()[-1]
+    batches = requests.build_requests([check], transcript(), "assistant", 3)
+    practical = [r for r in batches if "crisis.decay/reply/practical" in r["questions"]]
+    assert len(practical) == 1
+    assert practical[0]["state"] == {"message": transcript()[-1]}
+    for request in batches:
+        if "crisis_views" in request["state"]:
+            assert len(request["state"]["crisis_views"]) == 1
 
 
 def test_shared_practical_observation_matches_a_joint_boolean_oracle(check):
@@ -314,7 +315,7 @@ def test_scan_journal_and_cli_replay_use_the_python_check(tmp_path, monkeypatch,
     plan = plan_scan([source_run], bundle)
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
     _, saved, judgments = load_scan(bundle, complete=True)
-    assert len(saved) == 3  # anchor reply, later caregiver message, later reply
+    assert len(saved) == 4  # the later reply has separate crisis and practical evidence
     assert judgments[0].verdict == Verdict.NOT_APPLICABLE
     proof = subprocess.run(
         [sys.executable, "scripts/rescore_diff.py", "--frozen", str(bundle)],

@@ -3,7 +3,7 @@
 Type: reference
 
 A check is a set of yes/no questions and a rule. The judge model answers each
-question with a calibrated probability, one request per conversation turn.
+question with a calibrated probability in an evidence-scoped request.
 Code applies the rule and cites the turn it fired on. The model never writes
 a verdict, a rationale, or a quote.
 
@@ -29,6 +29,7 @@ questions:                             # questions asked about every assistant t
     unit: turn                         # turn (default) | sentence (see below)
     type: noul                         # noul (default, yes/no) | choice (see below)
     memory: declared                   # optional; ask only in that memory state
+    inputs: [caregiver, assistant]      # optional; exact state fields allowed for this question
 applies_if: [{question: q, is: true}]  # optional; a turn counts only when all clauses hold
 fail_if:    [{question: q, is: false}] # any clause true at any applicable turn -> FAIL
             # a sentence question also takes `within_first: 2` (the opening two sentences)
@@ -44,7 +45,7 @@ Each definition records `basis` and `pass_meaning`. The basis distinguishes an
 `authored_policy`, `caregiver_request`, `product_contract`, or `supplied_evidence`.
 The pass meaning states the narrow result, not a claim of overall quality.
 
-`evaluation/requests.py` owns evidence binding and per-turn batching.
+`evaluation/requests.py` owns evidence binding, grouping, and request-size splitting.
 `Question.to_jev()` constructs native SDK primitives. `evaluation/rules.py`
 composes saved answers; `judge.py` owns plans, budgets, journals, and replay.
 These paths share the same requests for scans, probes, and exemplars.
@@ -59,10 +60,10 @@ window, or clauses; code owns those decisions.
 
 Each assistant reply with a later response opportunity is a candidate crisis
 reference. Its caregiver message and assistant reply identify the person and
-crisis. For each reference, the request carries a `crisis_views` entry containing
-that exchange and the current numbered message. Questions point to their own
-entry. Only observed text reaches Jev; future messages and model identities are
-excluded. The existing per-turn request batches these questions with other checks.
+crisis. Each reference's request carries exactly one `crisis_views` entry
+containing that exchange and the current numbered message. Questions point
+to that entry. Other references, future messages, and model identities are
+excluded. Practical advice uses a separate request with only the current message.
 
 The rule composes these observations:
 
@@ -98,6 +99,19 @@ reference and later reply, the verdict is `NOT_APPLICABLE`.
 ## State the questions can see
 
 Every question is evaluated against one turn. Refer to fields with backticks.
+A clause question can declare `inputs` to select exact fields from the table
+below. The request builder omits all other fields and rejects a missing
+selected field before inference. Without `inputs`, it supplies the listed
+fields available for that role, with `sentences` only for sentence questions.
+Python-owned rules construct their own bound evidence.
+
+Questions share a request only when their evidence is identical. Groups and
+question keys are sorted for deterministic splitting against the judge's
+existing size estimates. A single oversized observation fails closed. Each
+request is identified by conversation, role, turn, and input hash. Disjoint
+answers merge by turn for rule evaluation; duplicates are rejected.
+This replaces the one-request-per-turn contract. No question can acquire
+extra evidence merely because another check is active.
 
 | Request | Fields |
 | --- | --- |
@@ -156,7 +170,7 @@ sentences" becomes code, not wording.
 
 - The request asks only the sentence indices consumed by active clauses, keyed
   `<check-id>/<question>[<index>]`, index from 0. Multiple consumers share their
-  required prefix. The questions ride in one request per turn.
+  required prefix. Questions with identical evidence share a size-bounded request.
 - Each question's instructions name the sentence it is about: an object gains
   `inspect: \`sentences[i]\``, plain text gets the same pointer as a prefix.
 - `is: true` requires the property in at least one sentence in the window.

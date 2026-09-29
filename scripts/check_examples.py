@@ -63,19 +63,15 @@ def load_examples(root: Path, checks: dict[str, Check]) -> dict[Path, list[dict[
     return found
 
 
-def requests_for(check: Check, exemplar: dict[str, Any]) -> dict[tuple[str, int], dict[str, Any]]:
+def requests_for(
+    check: Check, exemplar: dict[str, Any]
+) -> dict[tuple[str, int, str], dict[str, Any]]:
     memory = MemoryContext(persistent_memory=bool(exemplar.get("memory_declared", False)))
-    return {
-        (role, turn): request
-        for role, turn in requests.request_turns(exemplar["transcript"])
-        if (request := requests.build_request([check], exemplar["transcript"], role, turn, memory))[
-            "questions"
-        ]
-    }
+    return requests.conversation_requests([check], exemplar["transcript"], memory)
 
 
-def _answer_index(rows: list[dict[str, Any]]) -> dict[tuple[str, str, int], dict[str, Any]]:
-    index = {(row["id"], row["role"], row["turn"]): row for row in rows}
+def _answer_index(rows: list[dict[str, Any]]) -> dict[tuple[str, str, int, str], dict[str, Any]]:
+    index = {(row["id"], row["role"], row["turn"], row["input_sha256"]): row for row in rows}
     if len(index) != len(rows):
         raise ValueError("duplicate exemplar answer")
     return index
@@ -97,8 +93,8 @@ def verify(
             totals["exemplars"] += 1
             check = checks[exemplar["check_id"]]
             saved = {}
-            for (role, turn), request in requests_for(check, exemplar).items():
-                row = answers.get((exemplar["id"], role, turn))
+            for (role, turn, digest), request in requests_for(check, exemplar).items():
+                row = answers.get((exemplar["id"], role, turn, digest))
                 if (
                     row is None
                     or "answers" not in row
@@ -110,7 +106,7 @@ def verify(
                     break
                 typed = ANSWER_MAP.validate_python(row["answers"])
                 validate_answers(typed, request["questions"])
-                saved[role, turn] = typed
+                requests.merge_answers(saved, role, turn, typed)
             else:
                 judgment = rules.derive(
                     check,
@@ -158,8 +154,8 @@ def plan_refresh(
             check = checks[exemplar["check_id"]]
             if only is not None and check.id != only:
                 continue
-            for (role, turn), request in requests_for(check, exemplar).items():
-                row = existing.get((exemplar["id"], role, turn))
+            for (role, turn, digest), request in requests_for(check, exemplar).items():
+                row = existing.get((exemplar["id"], role, turn, digest))
                 if (
                     row is not None
                     and "answers" in row
@@ -189,7 +185,9 @@ def refresh(
         if task.scenario_id not in current:
             raise ValueError("planned exemplar no longer exists")
         _, exemplar = current[task.scenario_id]
-        request = requests_for(checks[exemplar["check_id"]], exemplar).get((task.role, task.turn))
+        request = requests_for(checks[exemplar["check_id"]], exemplar).get(
+            (task.role, task.turn, requests.input_hash(task.request))
+        )
         if task.model_id != exemplar["check_id"] or request != task.request:
             raise ValueError("exemplar changed since planning")
     with run_questions(bundle, max_cost_usd=max_cost_usd, client=client) as answers:
@@ -201,7 +199,9 @@ def refresh(
         for answer in answers:
             if answer.error is None:
                 directory, _ = current[answer.scenario_id]
-                by_directory[directory][answer.scenario_id, answer.role, answer.turn] = {
+                by_directory[directory][
+                    answer.scenario_id, answer.role, answer.turn, answer.input_sha256
+                ] = {
                     "id": answer.scenario_id,
                     "role": answer.role,
                     "turn": answer.turn,
@@ -211,7 +211,20 @@ def refresh(
                         key: value.model_dump(mode="json") for key, value in answer.answers.items()
                     },
                 }
+        refreshed = {a.scenario_id for a in answers if a.error is None}
+        active = {
+            (exemplar_id, *key)
+            for exemplar_id in refreshed
+            for key in requests_for(
+                checks[current[exemplar_id][1]["check_id"]], current[exemplar_id][1]
+            )
+        }
         for directory, rows in by_directory.items():
+            rows = {
+                key: value
+                for key, value in rows.items()
+                if key[0] not in refreshed or key in active
+            }
             if not rows:
                 continue
             path = directory / ANSWERS
