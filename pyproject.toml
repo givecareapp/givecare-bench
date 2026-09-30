@@ -37,7 +37,6 @@ docs = [
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
-    "black>=23.0.0",
     "mypy>=1.5.0",
     "ruff>=0.1.0",
 ]
@@ -71,24 +70,6 @@ markers = [
     "v2: v2 gate+quality contract tests (run by default)",
     "slow: tests requiring network or long computation",
 ]
-
-[tool.black]
-line-length = 100
-target-version = ["py312", "py313"]
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
 
 [tool.mypy]
 python_version = "3.12"
@@ -165,7 +146,7 @@ select = [
     "C4", # flake8-comprehensions
 ]
 ignore = [
-    "E501",  # line too long (handled by black)
+    "E501",  # line too long
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
 ]
