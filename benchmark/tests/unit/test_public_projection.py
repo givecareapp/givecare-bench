@@ -21,16 +21,14 @@ def sha(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def test_public_contract_declares_only_projection() -> None:
+def test_contract_declares_the_web_release_projection() -> None:
     declaration = json.loads((ROOT / ".givecare/module.json").read_text())
-    assert [module["id"] for module in declaration["modules"]] == ["bench.publish"]
-    (capability,) = declaration["modules"][0]["capabilities"]
-    assert capability["name"] == "benchmark.web-release.project"
-    assert capability["adapter"] == {
-        "kind": "script",
-        "ref": "src/invisiblebench/projection.py",
-    }
-    assert capability["effect"] == "write" and capability["gate"] == "none"
+    release = next(
+        item for item in declaration["produces"]
+        if item["id"] == "gc-bench.web-benchmark-release/v4"
+    )
+    assert release["path"] == "data/releases/web-bench-release.tar.gz"
+    assert release["for"] == ["gc-web"]
 
 
 def test_cli_rejects_a_bundle_that_is_not_bound_and_complete(tmp_path) -> None:

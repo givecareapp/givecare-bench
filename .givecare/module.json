@@ -1,32 +1,14 @@
 {
-  "schema_version": "givecare.module/v1",
+  "schema_version": "givecare.module/v2",
   "repository": "gc-bench",
-  "modules": [
-    {
-      "id": "bench.publish",
-      "authority": {"kind": "git", "ref": "src/invisiblebench/scoring.py"},
-      "truth": [
-        {"kind": "leaderboard", "ref": "data/leaderboard/leaderboard.json"},
-        {"kind": "projection", "ref": "data/releases/web-bench-release.tar.gz"}
-      ],
-      "verifiers": ["uv run pytest benchmark/tests/unit/test_public_projection.py -q"],
-      "capabilities": [
-        {
-          "name": "benchmark.web-release.project",
-          "effect": "write",
-          "gate": "none",
-          "adapter": {
-            "kind": "script",
-            "ref": "src/invisiblebench/projection.py"
-          },
-          "accepts": ["gc-bench.web-benchmark-release.input/v3"],
-          "emits": [
-            "safety-care/v4",
-            "gc-bench.web-benchmark-release/v4",
-            "givecare.artifact-ref/v1"
-          ]
-        }
-      ]
-    }
+  "owns": "InvisibleBench: checks, scenarios, the scan engine, and the leaderboard",
+  "check": "scripts/check.sh",
+  "produces": [
+    {"id": "gc-bench.web-benchmark-release/v4", "path": "data/releases/web-bench-release.tar.gz", "for": ["gc-web"]},
+    {"id": "gc-bench.run-record/v1", "path": "results", "for": ["gc-research"]}
+  ],
+  "consumes": [
+    {"id": "gc-evals.gold-case/v1", "from": "gc-evals", "pin": "data/imports/evals/materialization.json"},
+    {"id": "givecare.protocol", "from": "."}
   ]
 }

@@ -170,8 +170,8 @@ private. Archive complete run directories under `results/archive/`.
 
 ## Prepare a public projection
 
-The public contract is `.givecare/module.json`. Its single capability points at
-the packaged `invisiblebench.projection` module, a plain script. It writes only
+The public contract is `.givecare/module.json`: it produces the web release
+archive that `invisiblebench.projection`, a plain script, writes. It writes only
 `data/leaderboard/leaderboard.json` and the web release archive.
 Projection needs no provider key or private workspace adapter.
 
