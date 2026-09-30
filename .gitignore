@@ -53,6 +53,8 @@ adapters/givecare-orchestrator/dist/
 
 # Environment / Local config
 .env
+.env.*
+!.env.example
 .claude/
 .codex/
 .mcp.json
