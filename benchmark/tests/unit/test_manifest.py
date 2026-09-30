@@ -1,157 +1,115 @@
-"""Tests for run reproducibility manifest."""
-from __future__ import annotations
+"""Manifests bind run identity, source bytes, and the owning checkout."""
 
 import json
-import re
-from pathlib import Path
+import subprocess
+import sys
+from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 
-from invisiblebench.utils.manifest import (
-    _scenario_hash,
-    generate_manifest,
-    write_manifest,
-)
+from invisiblebench.utils import manifest as manifests
+from invisiblebench.utils.benchmark_inventory import get_project_root
+from invisiblebench.version import BENCHMARK_VERSION
 
 
 @pytest.fixture
-def project_root() -> Path:
-    """Return the actual project root."""
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    pytest.skip("Could not find project root")
+def project_root():
+    return get_project_root()
 
 
-class TestGenerateManifest:
-    def test_all_required_fields(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=["model-a", "model-b"])
-        required = {
-            "schema",
-            "run_id",
-            "git_sha",
-            "git_dirty",
-            "scenario_hash",
-            "scenario_ids",
-            "model_ids",
-            "run_date",
-            "python_version",
-            "benchmark_version",
-            "code_version",
-        }
-        assert required == set(manifest.keys())
-        assert manifest["schema"] == "invisiblebench-run-manifest/v3"
-
-    def test_git_sha_format(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        sha = manifest["git_sha"]
-        # A source archive has no Git provenance.
-        assert sha is None or re.fullmatch(r"[0-9a-f]{40}", sha)
-
-    def test_git_dirty_is_bool_or_unknown(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        assert manifest["git_dirty"] is None or isinstance(manifest["git_dirty"], bool)
-
-    @pytest.mark.parametrize("failure", ["sha", "status", "exception", "malformed"])
-    def test_git_inspection_failure_stays_unknown(self, project_root, monkeypatch, failure):
-        from types import SimpleNamespace
-
-        import invisiblebench.utils.manifest as manifests
-
-        seen = []
-
-        def inspect(args, **kwargs):
-            seen.append(kwargs.get("cwd"))
-            if failure == "exception":
-                raise OSError("git unavailable")
-            sha_call = "rev-parse" in args
-            failed = (failure == "sha" and sha_call) or (failure == "status" and not sha_call)
-            value = "unknown" if failure == "malformed" else "a" * 40
-            return SimpleNamespace(returncode=int(failed), stdout=value if sha_call else "")
-
-        monkeypatch.setattr(manifests.subprocess, "run", inspect)
-        manifest = generate_manifest(project_root, model_ids=[])
-        assert manifest["git_sha"] is None
-        assert manifest["git_dirty"] is None
-        assert seen and all(root == project_root for root in seen)
-
-    def test_model_ids_preserved(self, project_root: Path):
-        ids = ["openai/gpt-5.2", "anthropic/claude-opus-4.5"]
-        manifest = generate_manifest(project_root, model_ids=ids)
-        assert manifest["model_ids"] == ids
-
-    def test_selected_scenario_ids_and_transcript_policy_are_pinned(
-        self, project_root: Path
-    ) -> None:
-        manifest = generate_manifest(
-            project_root,
-            model_ids=["provider/model"],
-            scenario_ids=["s2", "s1", "s1"],
-            transcript_policy={
-                "system_prompt_hash": "abc123",
-                "temperature": 0.7,
-            },
-        )
-
-        assert manifest["scenario_ids"] == ["s1", "s2"]
-        assert manifest["transcript_policy"] == {
-            "system_prompt_hash": "abc123",
-            "temperature": 0.7,
-        }
-
-    def test_custom_run_id(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[], run_id="test-uuid-1234")
-        assert manifest["run_id"] == "test-uuid-1234"
+def test_manifest_captures_run_identity_and_generation_policy(project_root):
+    policy = {"system_prompt_hash": "abc123", "temperature": 0.7}
+    manifest = manifests.generate_manifest(
+        project_root,
+        model_ids=["provider/model"],
+        scenario_ids=["s2", "s1", "s1"],
+        transcript_policy=policy,
+        run_id="fixture-run",
+    )
+    assert manifest["schema"] == "invisiblebench-run-manifest/v3"
+    assert manifest["run_id"] == "fixture-run"
+    assert manifest["model_ids"] == ["provider/model"]
+    assert manifest["scenario_ids"] == ["s1", "s2"]
+    assert manifest["transcript_policy"] == policy
+    assert manifest["benchmark_version"] == manifest["code_version"] == BENCHMARK_VERSION
+    assert manifest["python_version"] == sys.version
+    assert datetime.fromisoformat(manifest["run_date"]).tzinfo == UTC
+    assert manifest["scenario_hash"] == manifests.scenario_corpus_hash(project_root)
 
 
-    def test_benchmark_version_from_inventory(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        assert manifest["benchmark_version"] != "unknown"
-        # Should look like a semver from benchmark_inventory.json
-        assert re.match(r"\d+\.\d+\.\d+", manifest["benchmark_version"])
+@pytest.mark.parametrize("failure", ["sha", "status", "exception", "malformed"])
+def test_git_inspection_failure_stays_unknown(project_root, monkeypatch, failure):
+    seen = []
 
-    def test_code_version_from_pyproject(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        assert manifest["code_version"] != "unknown"
-        assert re.match(r"\d+\.\d+\.\d+", manifest["code_version"])
+    def inspect(args, **kwargs):
+        seen.append(kwargs.get("cwd"))
+        if failure == "exception":
+            raise OSError("git unavailable")
+        sha_call = "rev-parse" in args
+        failed = (failure == "sha" and sha_call) or (failure == "status" and not sha_call)
+        value = "unknown" if failure == "malformed" else "a" * 40
+        return SimpleNamespace(returncode=int(failed), stdout=value if sha_call else "")
 
-    def test_run_date_is_iso(self, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=[])
-        # Should be parseable ISO 8601
-        from datetime import datetime
-
-        datetime.fromisoformat(manifest["run_date"])
-
-
+    monkeypatch.setattr(manifests.subprocess, "run", inspect)
+    manifest = manifests.generate_manifest(project_root, model_ids=[])
+    assert manifest["git_sha"] is manifest["git_dirty"] is None
+    assert seen and all(root == project_root for root in seen)
 
 
-class TestScenarioHash:
-    def test_deterministic(self, project_root: Path):
-        scenarios_dir = project_root / "benchmark" / "scenarios"
-        h1 = _scenario_hash(scenarios_dir)
-        h2 = _scenario_hash(scenarios_dir)
-        assert h1 == h2
+def test_git_state_reads_the_selected_checkout_and_reports_dirty_files(tmp_path):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "Fixture",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert manifests._git_state(tmp_path) == (commit, False)
+    (tmp_path / "untracked").write_text("changed")
+    assert manifests._git_state(tmp_path) == (commit, True)
 
-    def test_is_hex_string(self, project_root: Path):
-        scenarios_dir = project_root / "benchmark" / "scenarios"
-        h = _scenario_hash(scenarios_dir)
-        assert re.fullmatch(r"[0-9a-f]{64}", h)
+
+def test_scenario_hash_binds_contents_and_paths_without_binding_checkout_location(tmp_path):
+    files = [("nested/b.json", '{"id":"b"}'), ("a.json", '{"id":"a"}')]
+    first, second = tmp_path / "first", tmp_path / "second"
+    for root, entries in [(first, files), (second, reversed(files))]:
+        for name, text in entries:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+    saved = manifests._scenario_hash(first)
+    assert manifests._scenario_hash(second) == saved
+    source = first / "a.json"
+    source.write_text('{"id":"changed"}')
+    assert manifests._scenario_hash(first) != saved
+    source.write_text('{"id":"a"}')
+    source.rename(first / "renamed.json")
+    assert manifests._scenario_hash(first) != saved
 
 
-class TestWriteManifest:
-    def test_writes_valid_json(self, tmp_path: Path, project_root: Path):
-        manifest = generate_manifest(project_root, model_ids=["test-model"])
-        path = write_manifest(manifest, tmp_path)
-
-        assert path.name == "run_manifest.json"
-        assert path.exists()
-
-        loaded = json.loads(path.read_text())
-        assert loaded == manifest
-
-    def test_creates_output_dir(self, tmp_path: Path, project_root: Path):
-        nested = tmp_path / "a" / "b" / "c"
-        manifest = generate_manifest(project_root, model_ids=[])
-        write_manifest(manifest, nested)
-        assert (nested / "run_manifest.json").exists()
+def test_manifest_roundtrips_into_a_new_nested_directory(tmp_path, project_root):
+    manifest = manifests.generate_manifest(project_root, model_ids=["test-model"])
+    path = manifests.write_manifest(manifest, tmp_path / "nested/run")
+    assert path.name == "run_manifest.json"
+    assert json.loads(path.read_text()) == manifest

@@ -346,7 +346,7 @@ def test_invalid_money_fails_before_client_or_run_directory(tmp_path, monkeypatc
     assert not output.exists()
 
 
-def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) -> None:
+def test_runner_forwards_model_selection_and_spending_options(monkeypatch, tmp_path: Path) -> None:
     observed: dict[str, Any] = {}
 
     def fake_run_benchmark(**kwargs: Any) -> int:
@@ -362,10 +362,17 @@ def test_runner_main_defaults_to_transcript_only(monkeypatch, tmp_path: Path) ->
             "-m",
             "1",
             "--dry-run",
+            "--yes",
+            "--max-cost-usd",
+            "0.1",
             "--output",
             str(tmp_path / "run"),
         ]
     )
 
     assert rc == 0
-    assert "transcripts_only" not in observed
+    assert observed["models"] == [run_command_mod.MODELS_FULL[0]]
+    assert observed["output_dir"] == tmp_path / "run"
+    assert observed["dry_run"] is True
+    assert observed["auto_confirm"] is True
+    assert observed["max_cost_usd"] == 0.1

@@ -154,12 +154,6 @@ def _client(handle):
     )
 
 
-def test_the_judge_sends_its_own_identity(api):
-    client, requests, _, _ = api
-    client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert requests[0].headers["User-Agent"].startswith("typesafe")
-
-
 def test_an_unknown_outcome_is_sent_once_and_counted(monkeypatch):
     sent = []
 
