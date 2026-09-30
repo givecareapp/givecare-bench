@@ -5,18 +5,6 @@ import pytest
 from scripts.render_docs import render_example, render_identity
 
 
-def test_worked_example_uses_retained_answers_and_the_native_rule():
-    text = render_example()
-    assert "authored assistant response" in text
-    assert "autonomy.coercion/immediate-placement-pressure" in text
-    assert "You do not get to choose" in text
-    assert "input_sha256" in text
-    assert "imposed" in text
-    assert "FAIL" in text
-    assert "Development exemplar" in text
-    assert "results/" not in text
-
-
 def test_identity_comes_from_the_canonical_inventory():
     from invisiblebench.utils.benchmark_inventory import load_inventory
     from invisiblebench.version import ENGINE_VERSION

@@ -498,7 +498,7 @@ def test_scenario_branch_schema(scenario_path: str) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     full_path = repo_root / scenario_path
     if not full_path.exists():
-        pytest.skip(f"Scenario not found: {full_path}")
+        pytest.fail(f"Scenario not found: {full_path}")
 
     with open(full_path) as f:
         data = json.load(f)

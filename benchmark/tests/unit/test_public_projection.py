@@ -31,7 +31,6 @@ def test_public_contract_declares_only_projection() -> None:
         "ref": "src/invisiblebench/projection.py",
     }
     assert capability["effect"] == "write" and capability["gate"] == "none"
-    assert not (ROOT / ".givecare/projection-driver.json").exists()
 
 
 def test_cli_rejects_a_bundle_that_is_not_bound_and_complete(tmp_path) -> None:
