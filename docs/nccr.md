@@ -5,8 +5,8 @@
 **Poster 25 · 4th Biennial National Conference on Caregiving Research · Salt Lake City · September 23, 2026**
 Ali Madad, GiveCare
 
-[Download the poster (PDF, 48 × 36 in)](assets/nccr/poster.pdf){ .md-button .md-button--primary }
-[Add Ali to your contacts (vCard)](assets/nccr/ali-madad.vcf){ .md-button }
+[Download the poster (PDF, 48 × 36 in)](https://givecareapp.com/nccr/poster.pdf){ .md-button .md-button--primary }
+[Add Ali to your contacts (vCard)](https://givecareapp.com/nccr/ali-madad.vcf){ .md-button }
 
 !!! note "This page is the technical record"
     The poster QR points at [givecareapp.com/nccr](https://givecareapp.com/nccr),
