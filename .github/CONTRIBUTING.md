@@ -67,10 +67,7 @@ change the result.
 
 ## Pull request checklist
 
-- [ ] `uv run ruff check .` passes.
-- [ ] `uv run python scripts/check_examples.py verify` passes.
-- [ ] `uv run pytest benchmark/tests -q` passes.
-- [ ] `uv run python scripts/lint_turn_indices.py --strict` passes.
+- [ ] Every command under [Proof](#proof) passes.
 - [ ] The change updates machine-readable inventory or contract files when
       behavior or version changes.
 - [ ] New behavior has a focused test when the test proves a required contract.
