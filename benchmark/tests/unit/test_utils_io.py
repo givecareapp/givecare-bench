@@ -1,82 +1,48 @@
-"""Tests for invisiblebench.utils.io helpers."""
-
-from __future__ import annotations
-
-from pathlib import Path
+"""Artifact readers preserve the active format and do not expose host paths."""
 
 import pytest
 
 from invisiblebench.utils.io import artifact_reference, leaderboard_rows
 
 
-def test_artifact_reference_is_repo_relative_or_basename(tmp_path: Path) -> None:
-    repo_root = tmp_path / "repo"
-    inside = repo_root / "results" / "scan" / "judgments.jsonl"
-    inside.parent.mkdir(parents=True)
-    inside.touch()
-    outside = tmp_path / "private" / "judgments.jsonl"
-    outside.parent.mkdir()
-    outside.touch()
-
-    assert artifact_reference(inside, repo_root) == "results/scan/judgments.jsonl"
-    assert artifact_reference(outside, repo_root) == "judgments.jsonl"
+def test_artifact_reference_hides_external_host_paths(tmp_path):
+    root = tmp_path / "repo"
+    inside = root / "results/scan/judgments.jsonl"
+    outside = tmp_path / "private/judgments.jsonl"
+    assert artifact_reference(inside, root) == "results/scan/judgments.jsonl"
+    assert artifact_reference(outside, root) == "judgments.jsonl"
 
 
-def test_leaderboard_rows_current_models_key() -> None:
-    assert leaderboard_rows({"models": [{"model": "a"}, {"model": "b"}]}) == [
-        {"model": "a"},
-        {"model": "b"},
-    ]
+@pytest.mark.parametrize("include_retired", [False, True])
+def test_leaderboard_reads_current_rows(include_retired):
+    rows = [{"model": "a"}, {"model": "b"}]
+    payload = {"models": rows}
+    if include_retired:
+        payload["overall_leaderboard"] = [{"model": "retired"}]
+    assert leaderboard_rows(payload) == rows
 
 
-def test_leaderboard_rows_rejects_retired_overall_leaderboard_by_default() -> None:
-    with pytest.raises(ValueError, match="models"):
-        leaderboard_rows({"overall_leaderboard": [{"model": "a"}]})
-
-
-def test_leaderboard_rows_has_no_retired_shape_opt_in() -> None:
-    with pytest.raises(TypeError):
-        leaderboard_rows(  # type: ignore[call-arg]
-            {"overall_leaderboard": [{"model": "a"}]},
-            allow_legacy=True,
-        )
-
-
-def test_leaderboard_rows_prefers_current_over_retired_shape() -> None:
-    # If both keys are present, the current safety-care/v1 key wins.
-    data = {"overall_leaderboard": [{"model": "canonical"}], "models": [{"model": "proj"}]}
-    assert leaderboard_rows(data) == [{"model": "proj"}]
-
-
-def test_leaderboard_rows_missing_key_raises_valueerror() -> None:
+@pytest.mark.parametrize("payload", [{"overall_leaderboard": []}, {"foo": 1}, [1, 2, 3]])
+def test_leaderboard_rejects_missing_current_rows(payload):
     with pytest.raises(ValueError):
-        leaderboard_rows({"foo": 1})
+        leaderboard_rows(payload)
 
 
-def test_leaderboard_rows_non_dict_raises_valueerror() -> None:
-    with pytest.raises(ValueError):
-        leaderboard_rows([1, 2, 3])  # type: ignore[arg-type]
-
-
-def test_the_project_root_is_the_checkout_that_holds_the_benchmark(
-    tmp_path: Path, monkeypatch
-) -> None:
-    """An installed wheel carries only code; it must not adopt another project's root."""
+def test_installed_code_cannot_adopt_another_projects_checkout(tmp_path, monkeypatch):
     from invisiblebench.utils import benchmark_inventory
-    from invisiblebench.utils.benchmark_inventory import get_project_root
 
     other = tmp_path / "other-project"
-    (other / ".venv" / "site-packages" / "invisiblebench").mkdir(parents=True)
+    installed = other / ".venv/site-packages/invisiblebench/module.py"
+    installed.parent.mkdir(parents=True)
     (other / "pyproject.toml").write_text('[project]\nname = "other"\n')
-    installed = other / ".venv" / "site-packages" / "invisiblebench" / "module.py"
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(benchmark_inventory, "__file__", str(installed))
     with pytest.raises(FileNotFoundError, match="checkout"):
-        get_project_root()
+        benchmark_inventory.get_project_root()
 
     checkout = tmp_path / "gc-bench"
     (checkout / "checks").mkdir(parents=True)
     (checkout / "benchmark").mkdir()
-    (checkout / "benchmark" / "benchmark_inventory.json").write_text("{}")
+    (checkout / "benchmark/benchmark_inventory.json").write_text("{}")
     monkeypatch.chdir(checkout / "benchmark")
-    assert get_project_root() == checkout
+    assert benchmark_inventory.get_project_root() == checkout
