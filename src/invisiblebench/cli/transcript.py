@@ -6,21 +6,106 @@ import asyncio
 import hashlib
 import json
 import os
+from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 from invisiblebench.api.typesafe import request_cost
 from invisiblebench.cli.generation import GenerationJournal
-from invisiblebench.cli.result_helpers import _make_error_result, _make_transcript_result
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import serving_policy
 from invisiblebench.models.scenario import Scenario
-from invisiblebench.utils.scenario_sessions import iter_scenario_turns, session_system_prompt
 
 if TYPE_CHECKING:
     from invisiblebench.api.client import ModelAPIClient
     from invisiblebench.api.typesafe import SystemOneClient
+
+def iter_scenario_turns(
+    scenario: dict[str, Any],
+) -> Iterator[tuple[dict[str, Any], dict[str, Any] | None]]:
+    """Yield each turn with its session metadata, when present."""
+    sessions = scenario.get("sessions")
+    if not sessions:
+        for turn in scenario.get("turns", []):
+            yield turn, None
+        return
+
+    for session in sessions:
+        metadata = {
+            key: session[key]
+            for key in ("session_number", "time_elapsed", "session_context")
+            if session.get(key) is not None
+        }
+        for turn in session.get("turns", []):
+            yield turn, metadata
+
+
+def session_system_prompt(base_prompt: str, session: dict[str, Any] | None) -> str:
+    """Add an explicit authored session boundary to the model instructions."""
+    if not session:
+        return base_prompt
+    details = [
+        f"Session {session.get('session_number', '?')}",
+        str(session.get("time_elapsed") or "elapsed time unspecified"),
+    ]
+    if session.get("session_context"):
+        details.append(str(session["session_context"]))
+    return f"{base_prompt}\n\nCurrent scripted session: {' — '.join(details)}"
+
+
+def _make_transcript_result(
+    *,
+    model: dict[str, Any],
+    scenario_name: str,
+    scenario_id: str,
+    category: str,
+    transcript_path: Path,
+    cost: float,
+    run_id: str | None = None,
+) -> dict[str, Any]:
+    """Build a stage-one result row for transcript-only benchmark runs."""
+    return {
+        "artifact_type": "transcript_result/v1",
+        "model": model["name"],
+        "model_id": model["id"],
+        "scenario": scenario_name,
+        "scenario_id": scenario_id,
+        "category": category,
+        "transcript_path": str(transcript_path),
+        "cost": cost,
+        "status": "transcript_ready",
+        "success": True,
+        "run_id": run_id,
+    }
+
+
+def _make_error_result(
+    model: dict[str, Any],
+    scenario_name: str,
+    scenario_id: str,
+    category: str,
+    reason: str,
+    cost: float | None = None,
+) -> dict[str, Any]:
+    """Build a transcript-stage error row.
+
+    This row records a harness failure. It is not a model judgment and must
+    not use score or hard-fail fields.
+    """
+    return {
+        "artifact_type": "transcript_result/v1",
+        "model": model["name"],
+        "model_id": model["id"],
+        "scenario": scenario_name,
+        "scenario_id": scenario_id,
+        "category": category,
+        "cost": cost if cost is not None else 0.0,
+        "status": "error",
+        "error": reason,
+        "success": False,
+    }
+
 
 _noul_client: "SystemOneClient | None" = None
 _noul_client_lock = asyncio.Lock()

@@ -183,9 +183,9 @@ Missing scenario coverage remains a separate publication error.
 Generate and check a candidate from a complete current-contract scan:
 
 ```bash
-uv run python scripts/generate_leaderboard.py --scan results/<run-id>
-uv run python scripts/qa_leaderboard.py --scan results/<run-id> \
-  --leaderboard results/<run-id>/leaderboard.candidate.json
+uv run bench leaderboard generate --scan results/<run-id>
+uv run bench leaderboard qa --scan results/<run-id> \
+  --candidate results/<run-id>/leaderboard.candidate.json
 ```
 
 Compute the projection first with `--dry-run` to inspect what would change:

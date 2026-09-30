@@ -118,8 +118,10 @@ def build_parser():
         type=Path,
         help="Frozen research expectations JSONL; read-only agreement report",
     )
-    leaderboard = sub.add_parser("leaderboard", help="Read leaderboard status")
-    leaderboard.add_argument("action", choices=["status"])
+    leaderboard = sub.add_parser("leaderboard", help="Leaderboard status, candidate generation, QA")
+    leaderboard.add_argument("action", choices=["status", "generate", "qa"])
+    leaderboard.add_argument("--scan", type=Path, help="Scan bundle directory (generate, qa)")
+    leaderboard.add_argument("--candidate", type=Path, help="Candidate path (qa required; generate output)")
     leaderboard.add_argument("--verbose", "-v", action="store_true")
     leaderboard.add_argument("--out")
     scan.configure(sub.add_parser("scan", help="Plan, execute, or rejudge a frozen scan"))
@@ -186,11 +188,30 @@ def main(argv=None):
 
         return run_health(verbose=args.verbose, json_output=json_output)
     if args.command == "leaderboard":
+        if args.action in {"generate", "qa"}:
+            from invisiblebench.scoring import generate_leaderboard, validate_leaderboard
+
+            if args.scan is None or (args.action == "qa" and args.candidate is None):
+                print("leaderboard generate|qa needs --scan (qa also --candidate)", file=sys.stderr)
+                return 2
+            if args.action == "generate":
+                try:
+                    print(generate_leaderboard(args.scan, args.candidate))
+                except (OSError, ValueError) as exc:
+                    print(str(exc), file=sys.stderr)
+                    return 1
+                return 0
+            errors = validate_leaderboard(args.scan, args.candidate)
+            for error in errors:
+                print(error, file=sys.stderr)
+            if not errors:
+                print("QA passed")
+            return int(bool(errors))
         if json_output or args.out:
             return agent_commands._run_leaderboard_status_json(out_path=args.out)
-        from invisiblebench.cli.leaderboard import run_leaderboard
+        from invisiblebench.cli.health import run_health
 
-        return run_leaderboard(action=args.action, verbose=args.verbose)
+        return run_health(verbose=args.verbose)
     if args.command == "archive":
         from invisiblebench.cli.archive import run_archive
 

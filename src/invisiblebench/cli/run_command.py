@@ -37,7 +37,6 @@ from invisiblebench.cli.transcript import (
 )
 from invisiblebench.models.config import MODELS_FULL as CONFIG_MODELS_FULL
 from invisiblebench.models.config import serving_policy
-from invisiblebench.results_io import write_json
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
     get_private_confidential_dir,
@@ -47,6 +46,13 @@ from invisiblebench.utils.benchmark_inventory import (
 from invisiblebench.utils.manifest import generate_manifest, write_manifest
 
 logger = logging.getLogger(__name__)
+
+
+def write_json(path: Path, data: Any) -> Path:
+    """Write JSON and create its parent directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return path
 
 load_dotenv()
 

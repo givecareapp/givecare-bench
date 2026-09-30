@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from invisiblebench import _agent_cli
-from invisiblebench.cli import agent_commands, archive, leaderboard, runner
+from invisiblebench.cli import agent_commands, archive, runner
 from invisiblebench.cli.run_command import run_benchmark
 
 
@@ -288,8 +288,11 @@ def test_health_reports_missing_or_historical_results(tmp_path, monkeypatch, cap
 @pytest.mark.parametrize("export", [False, True])
 def test_leaderboard_read_never_prompts(tmp_path, monkeypatch, capsys, noninteractive, export):
     payload = {"schema": "safety-care/v1", "models": []}
-    (tmp_path / "leaderboard.json").write_text(json.dumps(payload))
-    monkeypatch.setattr(leaderboard, "_leaderboard_output", lambda: tmp_path)
+    (tmp_path / "data/leaderboard").mkdir(parents=True)
+    (tmp_path / "data/leaderboard/leaderboard.json").write_text(json.dumps(payload))
+    monkeypatch.setattr(
+        "invisiblebench.utils.benchmark_inventory.get_project_root", lambda: tmp_path
+    )
 
     def refuse_prompt(prompt):
         pytest.fail("read command prompted for consent")

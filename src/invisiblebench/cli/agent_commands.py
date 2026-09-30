@@ -194,9 +194,9 @@ def _run_get(run_id: str, *, json_output: bool, out_path: str | None = None) -> 
 
 def _run_leaderboard_status_json(out_path: str | None = None) -> int:
     """Emit the leaderboard.json contents as a JSON envelope."""
-    from invisiblebench.cli.leaderboard import _leaderboard_output
+    from invisiblebench.utils.benchmark_inventory import get_project_root
 
-    lb_path = _leaderboard_output() / "leaderboard.json"
+    lb_path = get_project_root() / "data" / "leaderboard" / "leaderboard.json"
     if not lb_path.exists():
         emit_json(
             status="error",
