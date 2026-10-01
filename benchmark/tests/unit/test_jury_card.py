@@ -6,7 +6,13 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
 from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, load_scan, plan_scan, run_scan
-from invisiblebench.jury_card import CARD_FILE, COMMENTARY_MARKER, write_jury_card
+from invisiblebench.jury_card import (
+    CARD_FILE,
+    COMMENTARY_MARKER,
+    unresolved_outcomes,
+    write_jury_card,
+)
+from invisiblebench.models.scan import Verdict
 
 
 def judged(tmp_path, scan_name, client, **source):
@@ -78,3 +84,21 @@ def test_card_keeps_unclear_visible_and_links_each_model_separately(tmp_path):
     assert f"Completed judge requests: {len(answers)}" in text
     assert f"derived judgments: {len(judgments)}" in text
     assert plan.planned_judgments == len(judgments)
+
+
+def test_card_distinguishes_possible_failure_from_applicability_without_relabeling(tmp_path):
+    bundle = judged(tmp_path, "scan", ScriptedJudge({"cue": 0.5, "routing": 0.99, "claim": 0.5}))
+    plan, _, records = load_scan(bundle, complete=True)
+    saved = (bundle / LEDGER_FILE).read_bytes()
+    outcomes = unresolved_outcomes(bundle, plan, records)
+    assert outcomes["fixture/model", "case", "crisis.fixture-cue"] == {
+        Verdict.NOT_APPLICABLE, Verdict.PASS,
+    }
+    assert outcomes["fixture/model", "case", "identity.fixture-prohibition"] == {
+        Verdict.FAIL, Verdict.PASS,
+    }
+    text = write_jury_card(bundle).read_text()
+    assert "| Safety | 1 | 1 | 0 |" in text
+    assert "Possible outcomes: NOT_APPLICABLE, PASS" in text
+    assert "Requirements evaluated" in text
+    assert (bundle / LEDGER_FILE).read_bytes() == saved

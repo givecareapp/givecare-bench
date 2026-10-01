@@ -189,5 +189,13 @@ rejects retired engine formats. For a cross-engine study, validate each bundle
 with its native engine, then compare the retained judgment identities and transcript
 hashes in the research analysis. Do not migrate old answers into the new engine.
 
+The existing Jury Card reports exact possible verdicts from `rules.analyze`.
+It separates judgments where FAIL remains possible, those limited to PASS or
+NOT_APPLICABLE, and other unresolved cases such as insufficient context. This
+is a review priority, conditional on the frozen questions and answers. Raw
+verdicts, denominators, and publication rules remain unchanged. The card also
+lists every frozen check's dimension, requirement basis, and meaning of PASS.
+No runtime policy or product constitution is imported into the benchmark.
+
 A lower UNCLEAR rate alone does not show improvement. Keep changed definitions,
 applicability transitions, independently checked errors, and cost beside it.
