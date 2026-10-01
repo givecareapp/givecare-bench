@@ -2,18 +2,30 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://givecareapp.github.io/givecare-bench/</loc>
-         <lastmod>2026-09-19</lastmod>
+         <lastmod>2026-10-01</lastmod>
+    </url>
+    <url>
+         <loc>https://givecareapp.github.io/givecare-bench/coverage/</loc>
+         <lastmod>2026-10-01</lastmod>
     </url>
     <url>
          <loc>https://givecareapp.github.io/givecare-bench/methodology/</loc>
-         <lastmod>2026-09-19</lastmod>
+         <lastmod>2026-10-01</lastmod>
     </url>
     <url>
          <loc>https://givecareapp.github.io/givecare-bench/nccr/</loc>
-         <lastmod>2026-09-19</lastmod>
+         <lastmod>2026-10-01</lastmod>
     </url>
     <url>
          <loc>https://givecareapp.github.io/givecare-bench/quickstart/</loc>
-         <lastmod>2026-09-19</lastmod>
+         <lastmod>2026-10-01</lastmod>
+    </url>
+    <url>
+         <loc>https://givecareapp.github.io/givecare-bench/validation/</loc>
+         <lastmod>2026-10-01</lastmod>
+    </url>
+    <url>
+         <loc>https://givecareapp.github.io/givecare-bench/worked-example/</loc>
+         <lastmod>2026-10-01</lastmod>
     </url>
 </urlset>

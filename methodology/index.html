@@ -18,7 +18,7 @@
         <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../nccr/">
+        <link rel="next" href="../worked-example/">
       
       
         
@@ -473,6 +473,87 @@
   
   
     <li class="md-nav__item">
+      <a href="../worked-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked measurement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluator validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../nccr/" class="md-nav__link">
         
   
@@ -627,6 +708,11 @@
 
 <p><strong>The benchmark describes model judgments under recorded rules.</strong> It does not
 measure clinical correctness, caregiver outcomes, or expert agreement.</p>
+<p><strong>Benchmark 5.4.0 · engine v3.4</strong><br />
+64 public scenarios · 51 checks. Protocol identity describes the implementation; it is not a result release.</p>
+<p>Inspect a <a href="../worked-example/">worked measurement</a> and the generated
+<a href="../coverage/">coverage tables</a>. The <a href="../validation/">validation protocol</a>
+separates development examples, constructed controls, and independent review.</p>
 <h2 id="what-is-measured">What is measured<a class="headerlink" href="#what-is-measured" title="Permanent link">&para;</a></h2>
 <p>The scenarios model caregiver-support conversations. Safety covers crisis,
 scope, identity, and autonomy. Care covers belonging, attunement, relational
@@ -637,7 +723,10 @@ based on a preceding response. A branch condition is either a keyword rule or
 a yes/no question put to the judge model; every branch decision and, for
 judged conditions, the answered probability are recorded in the transcript
 metadata. Each branch probability must be finite and between 0 and 1, inclusive.
-An invalid probability stops branch selection.
+An invalid probability stops branch selection. A judged branch matches at or
+above its <code>min</code> probability. Below <code>min</code>, a probability above the default scan
+<code>low</code> threshold is ambiguous and stops branch selection with a technical error.
+Only a probability at or below <code>low</code> lets selection continue to the next branch.
 Session labels give time context. They do not establish that a
 deployed product has working memory, tools, or persistent state.</p>
 <p>Private scans can also evaluate committed product conversations. The public
@@ -675,15 +764,27 @@ cover is unsupported and fails; the product owns supplying its receipts. Later
 evidence cannot justify an earlier claim.
 The scan verifies the retained bytes and record shape; it does not independently
 authenticate a product's database. Keep sensitive memory evidence private.</p>
-<p>Check YAML holds the canonical questions and rule. Scenario rubrics and expected
-behaviors are authoring notes. They are not a second scored rubric.</p>
+<p>Check YAML holds the canonical questions, requirement basis, rule, and narrow
+pass meaning. Scenario <code>criteria</code> are authoring notes, not a second scored rubric.
+Their optional check-ID links document coverage without forcing a verdict.
+The generated inventory identifies mapped positions and counts unmapped objectives.</p>
 <h2 id="one-decision-per-check">One decision per check<a class="headerlink" href="#one-decision-per-check" title="Permanent link">&para;</a></h2>
-<p>The runtime sends one request per conversation turn. A request carries every
-active check's questions for that turn, the turn's own content, and the
-earlier turns. The judge model answers each
-question with a calibrated probability. It writes no verdict, rationale, or
-quote; code owns all three.</p>
-<p>Code applies each check's rule to the saved probabilities. A check with a
+<p>For each conversation turn, the runtime groups questions by identical
+evidence and splits groups to meet request-size limits. Evidence is never
+truncated. An observation sees the same evidence in an exemplar, probe, or
+full scan. The judge model answers each question with probabilities. Benchmark-specific
+calibration is not established. Code derives the verdict, rationale, and quote.</p>
+<p>Code applies each check's rule to the saved probabilities. <code>crisis.decay</code> uses
+a Python function to compose observations bound to a reference crisis and a
+numbered message. Its questions separate safety actions, reported confirmation,
+and later response behavior. The <a href="https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#python-composition">check grammar</a>
+defines its evidence and temporal policy. A pass means that its specific
+downgrade condition did not occur; it does not establish the caregiver's safety.</p>
+<p>Bound task checks assess a produced draft against the caregiver's visible
+requirements, or factual statements against a supplied excerpt. They do not
+verify source authenticity, live availability, or action completion. Missing task
+evidence does not earn a pass. See the <a href="https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#bound-task-checks">check grammar</a>.</p>
+<p>Clause checks use the following grammar. A check with a
 <code>cue</code> applies only inside the cue's window: <code>reply</code> is the same-numbered
 assistant turn; <code>after</code> is that turn and every later one for a user cue, and
 strictly later turns for an assistant cue. A check without a
@@ -713,7 +814,7 @@ quote metadata.</p>
 </tr>
 <tr>
 <td><code>UNCLEAR</code></td>
-<td>A probability that would have decided the verdict fell inside the frozen threshold band, including a turn that may be in scope and may violate the rule.</td>
+<td>Answers inside the frozen threshold band could resolve to different verdicts. The engine resolves each unresolved answer both ways; if the verdicts differ, the judgment is <code>UNCLEAR</code>.</td>
 </tr>
 <tr>
 <td><code>NOT_APPLICABLE</code></td>
@@ -726,18 +827,20 @@ Evidence names the role and turn. A <code>FAIL</code> cites the assistant turn t
 fired on, plus its cue turn or the same-numbered user turn when one exists.
 A <code>pass_if_any</code> failure cites the last applicable turn, where the required
 behavior was still absent.</p>
-<p>The request built for the judge carries only turn content and, when declared,
-memory evidence. It never carries a target-model name. Transcript content is
+<p>The request built for the judge carries turn content, declared memory evidence,
+and task evidence selected from the caregiver's visible message. It never carries a target-model name. Transcript content is
 untrusted data; the judge model reads it literally and is not instructed to
 resist an instruction embedded in a reply.</p>
-<p>There is one saved request per conversation turn, covering every active check.
-The SDK client retries rate-limit and overload responses with backoff; other
-transport failures are saved as technical errors. A budget stop raises without
-saving a row. There are no
-semantic retries, votes, keyword promotions, or forced resolutions. A
-technical error is saved to <code>answers.jsonl</code> in place of probabilities and
-stops the scan for that request. An explicit resume retries unfinished
-requests. A saved error does not complete a judgment. Publication requires a
+<p>Each request is saved separately. The engine combines disjoint answers for a
+turn before applying the checks. A duplicate observation is an error.
+The SDK client retries only rate-limit (429) and request-timeout (408)
+responses, which signal that the request was not processed. This is a retry
+policy, not a billing guarantee. Any other error after dispatch, or an answer
+without reported usage, may have been billed. It stops the scan and blocks automatic resume. A budget stop raises
+before dispatch. There are no semantic retries, votes, keyword promotions, or
+forced resolutions. An invalid answer with reported usage is saved to
+<code>answers.jsonl</code> in place of probabilities and stops the scan for that request.
+An explicit resume retries those requests. A saved error does not complete a judgment. Publication requires a
 derived judgment for every check. A valid <code>UNCLEAR</code> judgment remains
 publishable.</p>
 <h2 id="how-to-read-the-rates">How to read the rates<a class="headerlink" href="#how-to-read-the-rates" title="Permanent link">&para;</a></h2>
@@ -769,7 +872,12 @@ model card by describing observed behavior under recorded test conditions.
 Its title identifies the model and the UTC run date and time.
 It shows separate Safety and Care results, recorded failure modes, unresolved
 judgments, model evidence, and the derived rationale. It also records the judge,
-versions, execution errors, source-run costs, and source-run elapsed time.</p>
+versions, execution errors, source-run costs, and source-run elapsed time.
+When a source summary carries frozen research expectations, the card reports
+expected and observed outcomes, their stated evidence basis, errors, unresolved
+cases, and unlabeled coverage. These annotations never enter judge requests or
+verdict rules. A rejected research attachment stays visible without blocking
+completion. See the <a href="../validation/">validation protocol</a> for the constructed controls.</p>
 <p><code>jury-card.md</code> is generated from the retained bundle without another model call.
 It replaces separate per-run reports and scorecard exports. The card's marked
 commentary section holds attributed observations and disputed interpretations.
@@ -778,34 +886,68 @@ over different evidence is refused rather than silently merged.
 Commentary remains outside the ledger. The public leaderboard remains a
 separate aggregate projection; the card contains private quoted evidence.</p>
 <h2 id="reproducibility-and-limits">Reproducibility and limits<a class="headerlink" href="#reproducibility-and-limits" title="Permanent link">&para;</a></h2>
+<p>Generation freezes each model's OpenRouter serving policy alongside its prompt
+and settings. A selected endpoint restricts requests to that provider and disables
+fallbacks. Otherwise, the stated measurement is the routed service. Both modes
+require support for requested parameters. Returned provider identities are
+recorded separately. A missing historical policy remains unknown and cannot
+support a new public release. A base provider slug may cover multiple variants
+or regions; a restriction is not proof of one immutable endpoint.</p>
+<p>Each public model row includes an <code>evaluation_configuration</code>. It contains the
+requested serving policy, observed provider identifiers from that model's replies,
+and allowlisted generation settings. Missing observations remain explicit; the
+projection never substitutes a run-wide provider list or a requested restriction.
+Generation settings expose the prompt hash, not the prompt text. Private manifests,
+transcripts, and memory receipts do not cross this boundary.</p>
+<p>Generation records the owning checkout's full Git commit and clean/dirty state.
+If either Git inspection fails, both fields remain unknown. Publication rejects
+unknown or malformed commits and any state other than a confirmed clean tree.</p>
+<p>Publication compares common generation settings and code across source runs.
+Model-specific serving policies may differ between models, but not within one
+model row. Safety and Care calculations remain separate and unchanged.</p>
 <p>The scan plan freezes source manifests, transcripts, check definitions,
 questions, thresholds, the judge model ID, and engine version in one portable
-bundle. Each request is hashed per turn. <code>answers.jsonl</code> holds the saved
-probabilities, the judge's returned model ID, input tokens, and cost for
+bundle. Request identity includes the conversation, role, turn, and hash of
+the exact evidence and questions. <code>answers.jsonl</code> holds the saved
+native typed answers, the judge's returned model ID, input tokens, and cost for
 every answered request; a request that fails before the API answers records no
 usage. Each record is flushed to disk before the next request. The dry-run
-estimate prices the request payload size conservatively; the recorded cost is
-the billed figure.
+estimate uses request payload size. It is approximate and can understate cost.
+Recorded cost uses the API's reported input tokens and the pinned judge price.
 <code>judgments.jsonl</code> is derived from <code>answers.jsonl</code> by the rule engine. Replay
 means deriving judgments again from the frozen plan and the saved answers,
-not calling the judge model again. Resuming a paid scan and publishing a
-result still require the current benchmark contract. All input paths are
+not calling the judge model again. Replay requires the installed engine version
+to match the frozen plan. An engine change can alter request text or sentence
+boundaries, so saved answers cannot be reused under that new engine. Preserve
+the original bundle and plan a separate scan from its retained source runs.
+Resuming a paid scan and publishing a result also require the current benchmark contract. All input paths are
 relative to the bundle.</p>
 <p>Calibration is a property of the judge model, measured across groups of
 answers. It is not a guarantee about any one answer. The model reads a
 question and its state literally: it does not count, compare dates, follow
 double negatives, or defend itself against adversarial content in a
 transcript. The checks were authored against a small set of saved
-conversations; this repository holds no judge-validation artifact and does not
-verify the vendor's calibration claim. State these limits plainly rather than
-implying per-answer accuracy.</p>
+conversations. No independently reviewed real-conversation validation result is
+published here, and development exemplars do not verify the vendor's calibration
+claim. State these limits plainly rather than implying per-answer accuracy.</p>
 <p>Each check also ships hand-written exemplars: short transcripts with the
 verdict the rule must derive, and the judge model's saved answers for them.
 The pre-commit gate derives every exemplar from those committed answers and
 fails on a mismatch or a stale answer. This pins what a check means; it does
-not measure accuracy on real conversations.</p>
+not measure accuracy on real conversations. Comparing two judge runs also
+measures agreement. Constructed controls test declared boundaries and invariances;
+they do not estimate accuracy on real caregiver conversations. Such accuracy claims
+need unseen caregiver conversations with independent labels, including caregiver–recipient
+safety cases. Those labels must not be inferred from either judge or the exemplars.
+Independent review remains optional and cannot block a scan or publication.
+The <a href="../validation/">validation protocol</a> uses frozen expectations and the existing
+scan executor. Read-only comparison reports never replace ledger judgments.</p>
 <p>Mechanical QA checks source bytes, complete scenario and check coverage, valid
-quotes, judge settings, and exact score recomputation. These checks prove the
+quotes, judge settings, and exact score recomputation. Public projection also
+checks each transcript against the authored scenario: ordered user/reply pairs,
+scripted user text or a declared branch, and nonblank replies without error or
+truncation markers. An opening-turn branch is invalid. Any recorded resolved
+model ID must match the source model. These checks prove the
 artifact contract. They do not establish the semantic correctness of a verdict.</p>
 <p>Public cases can enter model training or retrieval. A canary does not prove that
 a model has never seen a case. Private cases must remain private. This cleanup

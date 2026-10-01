@@ -12,29 +12,31 @@
         <meta name="author" content="Ali Madad">
       
       
-        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/">
+        <link rel="canonical" href="https://givecareapp.github.io/givecare-bench/coverage/">
       
       
+        <link rel="prev" href="../worked-example/">
       
-        <link rel="next" href="quickstart/">
+      
+        <link rel="next" href="../validation/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Invisible Bench</title>
+        <title>Coverage - Invisible Bench</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,7 +55,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#invisible-bench" class="md-skip">
+        <a href="#coverage" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Invisible Bench" class="md-header__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
+    <a href=".." title="Invisible Bench" class="md-header__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Coverage
             
           </span>
         </div>
@@ -230,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Invisible Bench" class="md-nav__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
+    <a href=".." title="Invisible Bench" class="md-nav__button md-logo" aria-label="Invisible Bench" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -257,19 +259,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -285,7 +278,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -297,7 +289,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -324,7 +316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="methodology/" class="md-nav__link">
+      <a href="../methodology/" class="md-nav__link">
         
   
   
@@ -351,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="worked-example/" class="md-nav__link">
+      <a href="../worked-example/" class="md-nav__link">
         
   
   
@@ -375,10 +367,19 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="coverage/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -394,6 +395,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -405,7 +407,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validation/" class="md-nav__link">
+      <a href="../validation/" class="md-nav__link">
         
   
   
@@ -432,7 +434,7 @@
   
   
     <li class="md-nav__item">
-      <a href="nccr/" class="md-nav__link">
+      <a href="../nccr/" class="md-nav__link">
         
   
   
@@ -490,46 +492,366 @@
   
 
 
-<h1 id="invisible-bench">Invisible Bench<a class="headerlink" href="#invisible-bench" title="Permanent link">&para;</a></h1>
-<p>Type: explanation.</p>
+<h1 id="coverage">Coverage<a class="headerlink" href="#coverage" title="Permanent link">&para;</a></h1>
+<p>Type: reference.</p>
 <p><strong>Benchmark 5.4.0 · engine v3.4</strong><br />
 64 public scenarios · 51 checks. Protocol identity describes the implementation; it is not a result release.</p>
-<p><strong>Invisible Bench evaluates caregiver-support conversations and produces a Jury
-Card for each completed scan.</strong> One judge path evaluates each active check:
-yes/no questions answered as probabilities, and a code-owned rule that
-derives the verdict. Safety and Care stay separate. There is no composite
-score or model rank.</p>
-<p>Read Ali Madad's paper,
-<a href="https://arxiv.org/abs/2511.20733"><em>InvisibleBench: A Deployment Gate for Caregiving Relationship AI</em></a>.
-It describes the original benchmark. This site documents the current method.</p>
-<p>A <strong>Jury Card</strong> complements a model card with evidence from a specific run.
-It shows quoted model evidence beside each verdict and its code-composed
-rationale. It also records judge settings, costs, technical errors, and
-attributed commentary. The card reports model judgments. It does not
-establish judge accuracy or clinical outcomes. Care remains directional.</p>
-<p>Each run keeps its <code>jury-card.md</code> and saved evidence in one private
-<code>results/&lt;run-id&gt;/</code> directory. New runs get distinct UTC timestamps, including
-runs of the same model. The saved plan, answers, and transcripts support
-inspection and replay; judgments are derived from them.</p>
-<p>The useful unit is a decision: <strong>criterion → evidence → rationale → verdict</strong>.
-The conversation includes both the caregiver and the care recipient's needs.
-A check's cue and window decide which later turns it applies to; a later good
-response does not erase an earlier violation.</p>
-<ul>
-<li><a href="quickstart/">Run and inspect</a>: generate conversations, plan a scan, and read its Jury Card.</li>
-<li><a href="methodology/">Method</a>: understand the rules, rates, uncertainty, and limits.</li>
-<li><a href="worked-example/">Worked measurement</a>: inspect a public synthetic response, retained probabilities, and derived verdict.</li>
-<li><a href="coverage/">Coverage</a>: inspect development controls and scenario mappings.</li>
-<li><a href="validation/">Evaluator validation</a>: freeze independent expectations before measuring correctness.</li>
-</ul>
-<p>Versions and counts come from the benchmark inventory. Check definitions live
-in <code>checks/</code>, with their grammar in <code>checks/README.md</code>. The scan contract
-lives in <code>src/invisiblebench/models/scan.py</code>, and the rule engine that derives
-judgments lives in <code>src/invisiblebench/evaluation/rules.py</code>.
-<code>src/invisiblebench/scoring.py</code> derives the public projection. These files are
-the sources of truth in the repository.</p>
-<p>Historical releases keep their original bytes and version labels. They are
-not results from the current method. The new method needs new judge runs.</p>
+<p>The inventory owns scenario counts and criterion links. Check definitions own
+requirements and their pass meanings. These tables are generated during the docs
+build; they contain no model results.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th style="text-align: right;">Public scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>context</td>
+<td style="text-align: right;">12</td>
+</tr>
+<tr>
+<td>continuity</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>empathy</td>
+<td style="text-align: right;">19</td>
+</tr>
+<tr>
+<td>safety</td>
+<td style="text-align: right;">29</td>
+</tr>
+</tbody>
+</table>
+<p>The following table counts authored development controls. A FAIL control exercises a prohibited behavior; PASS and NOT_APPLICABLE controls preserve allowed behavior or test applicability. Counts do not establish coverage adequacy or judge accuracy.</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th style="text-align: right;">FAIL controls</th>
+<th style="text-align: right;">PASS controls</th>
+<th style="text-align: right;">NOT_APPLICABLE controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>advocacy.institution-allegiance</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>advocacy.request-completion</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>attunement.advice-first</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td><code>attunement.clinical-openers</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>attunement.face-value</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><code>attunement.generic-warmth</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>attunement.guilt-loop</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><code>attunement.infodump</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><code>attunement.minimizing</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>attunement.presence-gap</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>autonomy.closed-options</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>autonomy.coercion</code></td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>autonomy.override</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>autonomy.threats</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>belonging.hero-framing</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>belonging.othering</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>belonging.recognition-gap</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>belonging.self-diminishment</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>belonging.self-sacrifice</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.abuse-neglect</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.acute-medical</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.decay</code></td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><code>crisis.direct-ideation</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.disengagement</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.exploitation</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.false-reassurance</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.harm-intent</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.passive-ideation</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>crisis.recipient-aggression</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>identity.availability</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.body-claim</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.capability-overclaim</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.dependency</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.exclusivity</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.feelings-claim</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.human-claim</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>identity.memory-claim</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>relational.blindness</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.ai-disclosure</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.dementia-reorientation</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.diagnosis</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>scope.enabling-sud</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.false-credential</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>scope.false-records</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>scope.forced-nutrition</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.hipaa</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>scope.prescribing</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>scope.record-access</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>scope.retraction</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td><code>scope.source-support</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><code>scope.willful-misattribution</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<p>Scenario objectives: 4 mapped positions; 3480 unmapped objectives. These authoring links cannot force a verdict.</p>
+<p>Review a check's requirement basis before treating it as a safety standard.
+A caregiver instruction, a supplied source, and an authored conversational
+preference carry different authority. Development controls exercise the authored
+boundary. Independent validation must test whether the evaluator recognizes it
+on unseen evidence.</p>
+<p>Read the <a href="https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md">check grammar</a>
+and the <a href="../validation/">validation protocol</a>.</p>
 
 
 
@@ -585,10 +907,10 @@ not results from the current method. The new method needs new judge runs.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "toc.follow", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "toc.follow", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
