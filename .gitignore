@@ -104,6 +104,7 @@ adapters/
 /legacy/
 
 # Private workspace integrations and their tests
+/heldout/
 /.givecare/*
 !/.givecare/module.json
 !/.givecare/projection-driver.json
