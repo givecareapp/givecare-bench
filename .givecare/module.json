@@ -8,7 +8,7 @@
     {"id": "gc-bench.run-record/v1", "path": "results", "for": ["gc-research"]}
   ],
   "consumes": [
-    {"id": "gc-evals.gold-case/v1", "from": "gc-evals", "pin": "data/imports/evals/materialization.json"},
+    {"id": "gc-evals.gold-case/v1", "from": "gc-evals", "pin": "private/data/imports/evals/materialization.json"},
     {"id": "givecare.protocol", "from": "."}
   ]
 }

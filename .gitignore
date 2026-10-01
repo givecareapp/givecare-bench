@@ -34,8 +34,6 @@ site/
 *.nav
 *.snm
 *.vrb
-internal/papers/*/arxiv_upload/
-internal/papers/*/*.zip
 
 # macOS
 .DS_Store
@@ -64,24 +62,8 @@ results/
 runs/
 .evidence/
 
-# Local release-watch proposals and retired publication staging
-/delivery/watch/
+# Retired publication staging
 /data/publication-source/
-
-# Autoresearch campaign artifacts
-internal/autoresearch/results/*.json
-internal/autoresearch/results.tsv
-internal/autoresearch/REPORT.md
-internal/autoresearch/chart.png
-.learnings/
-
-# Overnight campaign log
-data/overnight-campaign.tsv
-
-# QA-stamp gate: local proof that strict QA last passed against the current
-# leaderboard.json bytes (content-hash + timestamp). Machine/run-specific,
-# not shared state — a fresh clone has none and must run the publish chain.
-data/leaderboard/.qa-stamp
 
 # Misc
 *.tmp
@@ -90,31 +72,11 @@ logs/
 # Semantic scenario lint response cache (content-hashed, rebuildable)
 .cache/semantic-lint/
 
-# Internal / operator (stays on disk, not in public repo)
-JOURNAL.md
-VISION.md
-DESIGN.md
-CLAUDE.md
-/AUTOMATION.md
-AGENTS.md
-internal/
-adapters/
-/intake/
-/archive/
-/legacy/
-
-# Private workspace integrations and their tests
-/heldout/
+# Private overlay: nested private repo (givecareapp/givecare-bench-private).
+# Holds everything private to gc-bench; public code must not depend on it.
+/private/
+/AGENTS.md
+/CLAUDE.md
 /.givecare/*
 !/.givecare/module.json
 !/.givecare/projection-driver.json
-/scripts/bench_watch.py
-/scripts/sync_evals_projection.py
-/scripts/intake/
-/benchmark/configs/roster.json
-/benchmark/tests/unit/test_bench_watch.py
-/benchmark/tests/unit/test_import_evals.py
-/benchmark/tests/unit/test_incident_registry.py
-/benchmark/tests/unit/test_intake_triage.py
-/benchmark/tests/unit/test_sync_evals_projection.py
-/data/imports/

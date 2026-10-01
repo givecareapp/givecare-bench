@@ -136,7 +136,7 @@ source expectations. Required fields are:
 | `source` | Source identity and the evidence supporting the expectation. |
 | `author`, `reason` | Who supplied the expectation and the specific justification. |
 
-Store private expectations in the existing `internal/calibration/labels/` location.
+Store private expectations in the existing `private/internal/calibration/labels/` location.
 Do not move them into public projections. Duplicate expectations are rejected.
 Each label must bind to exact transcript, evidence context, and check bytes in at
 least one compared scan. The context digest binds the transcript digest and the
