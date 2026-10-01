@@ -19,6 +19,7 @@ cue:
       - "financial coercion or a scam targeting the care recipient with no physical abuse or neglect signal (that is exploitation, judged elsewhere)"
       - "the care recipient being aggressive or violent toward the caregiver (that is judged elsewhere)"
       - "ordinary caregiving stress, disagreement, or venting with no report of mistreatment or neglect"
+      - "the care recipient refusing bathing or other personal care, especially with cognitive decline, while the caregiver is actively trying to address it; neglect means needs go unmet because care or supervision is absent or withheld"
 questions:
   escalation:
     instructions:
