@@ -8,7 +8,8 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import quote
 
-from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, load_scan, sha256
+from invisiblebench.evaluation import rules
+from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, _conversations, load_scan, sha256
 from invisiblebench.models.scan import Judgment, ScanPlan, Verdict
 from invisiblebench.scoring import build_scorecard
 from invisiblebench.utils.manifest import run_timestamp
@@ -78,6 +79,30 @@ def _validation_lines(bundle: Path, plan: ScanPlan, records: list[Judgment]) -> 
             f"Author: {_cell(row['author'])}; source: {_cell(row['source'])} |"
         )
     return lines + [""]
+
+
+def unresolved_outcomes(
+    bundle: Path, plan: ScanPlan, records: list[Judgment]
+) -> dict[tuple[str, str, str], set[Verdict]]:
+    """Read exact outcome sets from the frozen rule; never infer them from prose."""
+    conversations = _conversations(bundle, plan)
+    checks = {check.id: check for check in plan.checks}
+    outcomes = {}
+    for record in records:
+        if record.verdict != Verdict.UNCLEAR:
+            continue
+        transcript, memory = conversations[record.model_id, record.scenario_id]
+        saved = {}
+        for key, answer in record.answers.items():
+            location, observation = key.split("/", 1)
+            role, number = location.split(":")
+            saved.setdefault((role, int(number)), {})[observation] = answer
+        outcomes[record.key] = rules.analyze(
+            checks[record.check_id], transcript, saved, plan.judge.thresholds,
+            model_id=record.model_id, scenario_id=record.scenario_id,
+            plan_sha256=record.plan_sha256, memory_declared=memory.persistent_memory,
+        )[1]
+    return outcomes
 
 
 def write_jury_card(bundle: Path) -> Path:
@@ -150,6 +175,7 @@ def write_jury_card(bundle: Path) -> Path:
     ]
     lines.extend(_validation_lines(bundle, plan, records))
     checks = {check.id: check for check in plan.checks}
+    outcomes = unresolved_outcomes(bundle, plan, records)
     refs = {(ref.model_id, ref.scenario_id): ref for ref in plan.transcripts}
     row_numbers = {record.key: i for i, record in enumerate(records, 1)}
     for model in scorecard["models"]:
@@ -172,6 +198,23 @@ def write_jury_card(bundle: Path) -> Path:
             "", "Safety uses conversations; Care uses checks. Verdict counts use checks. "
             "UNCLEAR is unresolved and remains in applicable denominators. "
             "Zero observed failures is not evidence that unresolved cases passed.", "",
+            "| Unresolved judgments | FAIL remains possible | PASS / NOT_APPLICABLE only | Other unresolved |",
+            "| --- | ---: | ---: | ---: |",
+        ])
+        for layer in ("safety", "care"):
+            groups = Counter(
+                "failure" if Verdict.FAIL in possible else
+                "applicability" if possible <= {Verdict.PASS, Verdict.NOT_APPLICABLE} else "other"
+                for key, possible in outcomes.items()
+                if key[0] == model["model_id"] and checks[key[2]].layer == layer
+            )
+            lines.append(
+                f"| {layer.title()} | {groups['failure']} | {groups['applicability']} | {groups['other']} |"
+            )
+        lines.extend([
+            "", "These possibilities are conditional on the frozen checks and saved answers. "
+            "They prioritize review; they do not establish correctness, change a verdict, "
+            "or remove UNCLEAR from any denominator. Other unresolved includes insufficient context.", "",
             "### Recorded failure modes and unresolved judgments", "",
         ])
         flagged = [record for record in records if record.model_id == model["model_id"]
@@ -198,10 +241,26 @@ def write_jury_card(bundle: Path) -> Path:
                 right = f"**{record.verdict.value}** — {_cell(record.rationale)}<br>" + _link(
                     f"Ledger row {row_numbers[record.key]}", f"{LEDGER_FILE}#L{row_numbers[record.key]}",
                 )
+                if record.key in outcomes:
+                    right += "<br>Possible outcomes: " + ", ".join(
+                        sorted(value.value for value in outcomes[record.key])
+                    )
                 lines.append(f"| {left} | {right} |")
             lines.append("")
 
-    lines.extend(["## Source records", ""])
+    lines.extend([
+        "## Requirements evaluated", "",
+        "Every frozen check retains its own requirement and evidence basis. "
+        "Dimensions can overlap; these are evaluation lenses, not live routing categories.", "",
+        "| Check | Layer / dimension | Requirement basis | Meaning of PASS |",
+        "| --- | --- | --- | --- |",
+    ])
+    for check in plan.checks:
+        lines.append(
+            f"| {_cell(check.id)} | {_cell(check.layer)} / {_cell(check.dimension)} "
+            f"| {_cell(check.basis)} | {_cell(check.pass_meaning)} |"
+        )
+    lines.extend(["", "## Source records", ""])
     for source, manifest, summary in sources:
         policy = manifest.get("transcript_policy") or {}
         lines.extend([
