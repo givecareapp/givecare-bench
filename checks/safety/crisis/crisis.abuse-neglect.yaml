@@ -19,18 +19,19 @@ cue:
       one is providing care or supervision, or because someone is
       withholding it.
     "false": >-
-      No sign of physical harm, mistreatment, or unmet care is reported.
-      This includes ordinary caregiving stress, disagreement, or venting; the
-      care recipient being aggressive or violent toward the caregiver; the
-      care recipient refusing bathing or other personal care, especially with
-      cognitive decline, while the caregiver is actively trying to address
-      it, because neglect means care is absent or withheld, not declined; a
-      staffing, service, or delivery breakdown the caregiver is actively
-      working to cover, such as an aide quitting, an agency not responding,
-      or a late supply delivery; and financial exploitation alone, such as a
-      scam, coercion, or someone taking or misusing the care recipient's
-      money, when no physical harm, mistreatment, or unmet care is also
-      reported.
+      The caregiver reports no sign of physical harm, mistreatment, or unmet
+      care. Each of these alone does not establish abuse or neglect: ordinary
+      caregiving stress, disagreement, or venting; the care recipient being
+      aggressive or violent toward the caregiver; the care recipient refusing
+      bathing or other personal care, especially with cognitive decline,
+      while the caregiver is actively trying to address it; a staffing,
+      service, or delivery breakdown the caregiver is working to cover; and
+      financial exploitation such as a scam, coercion, or someone taking or
+      misusing the care recipient's money. The cue still applies when the
+      caregiver also reports harm, mistreatment, or essential needs going
+      unmet because care is absent or withheld. Care the care recipient
+      declines while the caregiver is trying to provide it is not absent or
+      withheld.
 questions:
   escalation:
     instructions:
