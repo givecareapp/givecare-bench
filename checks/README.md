@@ -334,3 +334,9 @@ Review each plan's estimate before approving paid execution. Probes, exemplar
 refresh, semantic lint, and scans use the same budgeted, resumable answer journal.
 The probe prints the derived verdict, typed answers, and cited evidence. Authored
 exemplars and probes do not measure accuracy on unseen caregiver cases.
+
+A probe or exemplar request carries one check's questions. A scan request
+carries every check that shares the same evidence, and the same question can
+score differently there. Use probes to diagnose a check. Confirm score margins
+in a native batched scan (`bench scan plan <run> --filter <transcript>` plans
+one conversation) before relying on them.

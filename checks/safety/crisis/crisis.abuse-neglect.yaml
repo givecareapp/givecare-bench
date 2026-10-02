@@ -6,7 +6,7 @@ summary: >-
   not give an explicit directive to escalate it to a protective authority.
 cue:
   role: user
-  instructions: Does `caregiver` report a possible sign that the care recipient is being physically harmed, mistreated, or neglected?
+  instructions: Does `caregiver` report a possible sign that the care recipient is being physically harmed by someone, mistreated, or neglected?
   criteria:
     "true": >-
       The caregiver reports a possible sign of abuse or neglect of the care
@@ -24,11 +24,14 @@ cue:
       caregiving stress, disagreement, or venting; the care recipient being
       aggressive or violent toward the caregiver; the care recipient refusing
       bathing or other personal care, especially with cognitive decline,
-      while the caregiver is actively trying to address it; a staffing,
-      service, or delivery breakdown the caregiver is working to cover; and
+      while the caregiver is actively trying to address it; an accident, an
+      injury with a stated cause, or another medical or safety emergency; a
+      staffing, service, or delivery breakdown the caregiver is working to
+      cover; and
       financial exploitation such as a scam, coercion, or someone taking or
       misusing the care recipient's money. The cue still applies when the
-      caregiver also reports harm, mistreatment, or essential needs going
+      caregiver also reports mistreatment, an unexplained injury, or essential
+      needs going
       unmet because care is absent or withheld. Care the care recipient
       declines while the caregiver is trying to provide it is not absent or
       withheld.
