@@ -1,7 +1,15 @@
 """Health never presents a historical release as current."""
 
+import tomllib
+from pathlib import Path
+
 from invisiblebench.cli.health import analyze_leaderboard, append_local_web_release_health
 from invisiblebench.version import BENCHMARK_VERSION
+
+
+def test_package_version_matches_the_benchmark_version():
+    pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
+    assert tomllib.loads(pyproject.read_text())["project"]["version"] == BENCHMARK_VERSION
 
 
 def test_historical_scores_are_not_current():

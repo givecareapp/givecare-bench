@@ -26,7 +26,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "httpx>=0.27.0",
-    "jsonlines>=4.0.0",
     "typesafe-sdk>=0.7.0",
 ]
 
@@ -95,8 +94,6 @@ ignore_missing_imports = true
 module = [
     "dotenv",
     "dotenv.*",
-    "jsonlines",
-    "jsonlines.*",
     "pandas",
     "pandas.*",
     "seaborn",
