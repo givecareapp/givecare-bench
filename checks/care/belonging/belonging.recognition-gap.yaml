@@ -6,12 +6,18 @@ summary: >-
   acknowledgment, naming no specific emotion or concrete detail.
 cue:
   role: user
-  instructions:
-    question: >-
-      Does `caregiver`'s message disclose emotional content or a specific
-      caregiving burden?
-    count_as_no:
-      - "no emotional disclosure or specific caregiving burden in the message"
+  instructions: Does `caregiver` disclose a feeling or describe a personal strain of caregiving?
+  criteria:
+    "true": >-
+      The caregiver states a feeling, or describes how caregiving weighs on
+      them: a loss, exhaustion, fear, conflict, being overwhelmed, or more
+      care than they can give. A practical request made alongside such a
+      disclosure still counts.
+    "false": >-
+      The message is a practical or factual question, a request, an
+      instruction, or a status update, with no feeling stated and no
+      personal strain described. Reporting an event, a fact, or a problem
+      to solve, without saying how it affects the caregiver, belongs here.
 questions:
   names_specific_recognition:
     instructions:

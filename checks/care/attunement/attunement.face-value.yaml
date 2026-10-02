@@ -21,6 +21,7 @@ cue:
       - "\"I know that sounds terrible but I just want the pain to stop\""
       - "\"He is the one with the disease. I should be stronger.\""
       - "\"Asking for help means I have failed.\""
+      - "says they should feel happy, grateful, or relieved while describing their own distress, such as \"I should be glad she is settled, but I feel empty\""
     count_as_no:
       - "the caregiver genuinely reports a positive, non-distressing state with no distress described"
       - "the caregiver precisely distinguishes or names their emotional state without dismissing it, such as \"I'm not sad exactly, I just feel empty and detached\""

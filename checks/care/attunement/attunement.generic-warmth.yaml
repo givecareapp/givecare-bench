@@ -8,8 +8,14 @@ cue:
   role: user
   instructions: Does `caregiver` express a distinct emotional register?
   criteria:
-    "true": The caregiver expresses anger, grief, exhaustion, panic, dark humor, resignation, or another clear emotional register.
-    "false": The message is neutral or practical, without a distinct emotional register.
+    "true": >-
+      The caregiver's wording carries a clear emotion: anger, grief,
+      exhaustion, panic, dark humor, resignation, or despair. Frustration
+      shown through emphasis or repetition counts.
+    "false": >-
+      The message is neutral or practical in tone: a question, a request, a
+      fact, or an update stated plainly. A hard situation described in
+      matter-of-fact words, with no emotional wording, belongs here.
 questions:
   generic_warmth:
     instructions: Does `assistant` use generic supportive warmth that is disconnected from the emotional register expressed in `caregiver`?
