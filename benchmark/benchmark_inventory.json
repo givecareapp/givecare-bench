@@ -6,9 +6,9 @@
     "context": 12,
     "continuity": 4,
     "empathy": 19,
-    "safety": 29
+    "safety": 39
   },
-  "standard_total": 64,
+  "standard_total": 74,
   "check_count": 50,
   "confidential_count": "external",
   "objective_coverage": [
@@ -236,6 +236,11 @@
       "unmapped_objectives": 82
     },
     {
+      "scenario": "benchmark/scenarios/safety/adversarial/leftover_sedative_pushback.json",
+      "mapped": [],
+      "unmapped_objectives": 42
+    },
+    {
       "scenario": "benchmark/scenarios/safety/boundaries/attachment_boundary_test.json",
       "mapped": [],
       "unmapped_objectives": 56
@@ -256,14 +261,29 @@
       "unmapped_objectives": 49
     },
     {
+      "scenario": "benchmark/scenarios/safety/boundaries/dementia_driving_covert_disable.json",
+      "mapped": [],
+      "unmapped_objectives": 46
+    },
+    {
       "scenario": "benchmark/scenarios/safety/boundaries/emotionally_abusive_parent.json",
       "mapped": [],
       "unmapped_objectives": 80
     },
     {
+      "scenario": "benchmark/scenarios/safety/boundaries/end_of_life_feeding_pressure.json",
+      "mapped": [],
+      "unmapped_objectives": 46
+    },
+    {
       "scenario": "benchmark/scenarios/safety/boundaries/medical_boundary_violation.json",
       "mapped": [],
       "unmapped_objectives": 60
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/boundaries/placement_only_option.json",
+      "mapped": [],
+      "unmapped_objectives": 42
     },
     {
       "scenario": "benchmark/scenarios/safety/boundaries/professional_aide_burnout.json",
@@ -284,6 +304,11 @@
       "scenario": "benchmark/scenarios/safety/crisis/acute_medical_fall.json",
       "mapped": [],
       "unmapped_objectives": 42
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/caregiver_harm_fear_dementia.json",
+      "mapped": [],
+      "unmapped_objectives": 39
     },
     {
       "scenario": "benchmark/scenarios/safety/crisis/caregiver_withdrawal.json",
@@ -316,6 +341,11 @@
       "unmapped_objectives": 87
     },
     {
+      "scenario": "benchmark/scenarios/safety/crisis/facility_neglect_pressure_sore.json",
+      "mapped": [],
+      "unmapped_objectives": 37
+    },
+    {
       "scenario": "benchmark/scenarios/safety/crisis/financial_exploitation_elder.json",
       "mapped": [],
       "unmapped_objectives": 42
@@ -324,6 +354,26 @@
       "scenario": "benchmark/scenarios/safety/crisis/indirect_crisis_bridge.json",
       "mapped": [],
       "unmapped_objectives": 59
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/sibling_house_pressure.json",
+      "mapped": [],
+      "unmapped_objectives": 35
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/spouse_night_aggression_lbd.json",
+      "mapped": [],
+      "unmapped_objectives": 35
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/stroke_signs_scheduling.json",
+      "mapped": [],
+      "unmapped_objectives": 35
+    },
+    {
+      "scenario": "benchmark/scenarios/safety/crisis/sudden_fine_after_despair.json",
+      "mapped": [],
+      "unmapped_objectives": 34
     },
     {
       "scenario": "benchmark/scenarios/safety/crisis/uk_teen_caregiver_crisis.json",
