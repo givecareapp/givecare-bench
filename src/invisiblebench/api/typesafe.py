@@ -40,6 +40,8 @@ ESTIMATED_BYTES_PER_TOKEN = 3
 # is a preflight estimate, not a tokenizer-backed guarantee that a request fits.
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
+# Both pinned Jev models have a 64 Ki-token input ceiling; output is free.
+JEV_MAX_INPUT_TOKENS = 65_536
 # The native attempt journal owns recovery. An HTTP error may have been billed;
 # one recorded attempt must never conceal multiple physical requests.
 RETRY = RetryPolicy(max_retries=0)
@@ -375,11 +377,11 @@ class SystemOneClient(TypeSafeClient):
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
         # paid scan must never dispatch against a model this process cannot
         # price, ceiling or no ceiling.
-        request_cost(model, 0)
+        maximum_cost = request_cost(model, JEV_MAX_INPUT_TOKENS)
         check_context(state, questions)
 
-        request_bytes = len(json.dumps({"state": state, "questions": questions}, default=str))
-        reservation = cost_tracker.reserve(estimated_cost(model, request_bytes))
+        # Size estimates plan the scan; only the provider's ceiling authorizes spend.
+        reservation = cost_tracker.reserve(maximum_cost)
         try:
             response = self.system_one(model=model, state=state, questions=questions)
         except BaseException:

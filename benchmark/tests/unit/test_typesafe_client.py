@@ -92,6 +92,33 @@ def test_missing_answer_is_billed_and_rejected(api):
     assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
 
+def test_budget_reserves_the_provider_input_ceiling_before_dispatch(monkeypatch):
+    sent = []
+
+    def handle(request):
+        sent.append(request)
+        return httpx2.Response(
+            200,
+            json={
+                "model": typesafe.DEFAULT_JUDGE_MODEL,
+                "usage": {"input_tokens": 65_536, "output_tokens": 0},
+                "answers": {"signal": {"type": "noul", "noul": 0.2}},
+            },
+        )
+
+    tracker = CostTracker()
+    tracker.reset(max_cost_usd=typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 65_535))
+    monkeypatch.setattr(typesafe, "cost_tracker", tracker)
+    with _client(handle) as client, pytest.raises(CostBudgetExceededError):
+        client.ask(
+            model=typesafe.DEFAULT_JUDGE_MODEL,
+            state="Authored case",
+            questions={"signal": QUESTIONS["signal"]},
+        )
+    assert sent == []
+    assert tracker.total == 0
+
+
 def test_exhausted_budget_blocks_request(api):
     client, requests, _, tracker = api
     tracker.reset(max_cost_usd=0)

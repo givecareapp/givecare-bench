@@ -132,8 +132,9 @@ turn before applying the checks. A duplicate observation is an error.
 The SDK client does not retry. The native attempt journal owns recovery, so
 one saved attempt represents one physical request. An HTTP error after dispatch,
 or an answer without reported usage, may have been billed. It stops the scan and
-blocks automatic resume. A budget stop raises
-before dispatch. There are no semantic retries, votes, keyword promotions, or
+blocks automatic resume. Each dispatch reserves the cost of the pinned Jev
+model's full 65,536-token input ceiling, then settles to reported usage. The
+byte-based estimate is for planning only. A budget stop raises before dispatch. There are no semantic retries, votes, keyword promotions, or
 forced resolutions. An invalid answer with reported usage is saved to
 `answers.jsonl` in place of probabilities and stops the scan for that request.
 An explicit resume retries those requests. A saved error does not complete a judgment. Publication requires a
