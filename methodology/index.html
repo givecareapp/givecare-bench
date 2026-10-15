@@ -709,7 +709,7 @@
 <p><strong>The benchmark describes model judgments under recorded rules.</strong> It does not
 measure clinical correctness, caregiver outcomes, or expert agreement.</p>
 <p><strong>Benchmark 5.4.0 · engine v3.4</strong><br />
-64 public scenarios · 51 checks. Protocol identity describes the implementation; it is not a result release.</p>
+74 public scenarios · 49 checks. Protocol identity describes the implementation; it is not a result release.</p>
 <p>Inspect a <a href="../worked-example/">worked measurement</a> and the generated
 <a href="../coverage/">coverage tables</a>. The <a href="../validation/">validation protocol</a>
 separates development examples, constructed controls, and independent review.</p>
@@ -718,7 +718,7 @@ separates development examples, constructed controls, and independent review.</p
 scope, identity, and autonomy. Care covers belonging, attunement, relational
 behavior, and advocacy. The distinctive concern is the relationship between
 the caregiver and the care recipient across a conversation.</p>
-<p>The harness generates responses to scripted user turns. Some user turns branch
+<p>Inspect generates responses to scripted user turns. Some user turns branch
 based on a preceding response. A branch condition is either a keyword rule or
 a yes/no question put to the judge model; every branch decision and, for
 judged conditions, the answered probability are recorded in the transcript
@@ -844,10 +844,12 @@ An explicit resume retries those requests. A saved error does not complete a jud
 derived judgment for every check. A valid <code>UNCLEAR</code> judgment remains
 publishable.</p>
 <h2 id="how-to-read-the-rates">How to read the rates<a class="headerlink" href="#how-to-read-the-rates" title="Permanent link">&para;</a></h2>
-<p>Safety reports an observed failure rate for each dimension: conversations with
-at least one <code>FAIL</code>, divided by conversations with an applicable check in that
-dimension. A conversation with only <code>UNCLEAR</code> decisions remains in that denominator.
-This is an observed failure count, not a probability that the model is safe.</p>
+<p>Safety reports an observed failure rate for each check: <code>FAIL</code> decisions divided
+by applicable decisions. <code>UNCLEAR</code> stays in the denominator. A dimension's rate is
+the mean of its check rates, so each check weighs equally and a dimension with more
+checks does not report a higher rate. The projection also lists each check rate and
+counts the conversations with at least one <code>FAIL</code>. These are observed failure
+counts, not a probability that the model is safe.</p>
 <p>Care reports a pass rate for each quality: <code>PASS</code> decisions divided by applicable
 decisions. The denominator includes <code>UNCLEAR</code>. Care remains directional.</p>
 <p>Both layers show the four verdict counts and their denominators. <code>NOT_APPLICABLE</code>
@@ -879,8 +881,7 @@ cases, and unlabeled coverage. These annotations never enter judge requests or
 verdict rules. A rejected research attachment stays visible without blocking
 completion. See the <a href="../validation/">validation protocol</a> for the constructed controls.</p>
 <p><code>jury-card.md</code> is generated from the retained bundle without another model call.
-It replaces separate per-run reports and scorecard exports. The card's marked
-commentary section holds attributed observations and disputed interpretations.
+The card's marked commentary section holds attributed observations and disputed interpretations.
 The card is bound to the plan, answers, and judgments hashes; regeneration
 over different evidence is refused rather than silently merged.
 Commentary remains outside the ledger. The public leaderboard remains a
@@ -950,8 +951,8 @@ truncation markers. An opening-turn branch is invalid. Any recorded resolved
 model ID must match the source model. These checks prove the
 artifact contract. They do not establish the semantic correctness of a verdict.</p>
 <p>Public cases can enter model training or retrieval. A canary does not prove that
-a model has never seen a case. Private cases must remain private. This cleanup
-does not claim that an independent held-out validation set exists.</p>
+a model has never seen a case. Private cases must remain private. No independent
+held-out validation set is claimed.</p>
 <h2 id="research-basis">Research basis<a class="headerlink" href="#research-basis" title="Permanent link">&para;</a></h2>
 <p>Ali Madad introduced the benchmark in
 <a href="https://arxiv.org/abs/2511.20733"><em>InvisibleBench: A Deployment Gate for Caregiving Relationship AI</em></a>.
@@ -962,10 +963,11 @@ precedents. HealthBench uses model grading over detailed health-conversation
 rubrics. Its physician-built criteria and separate validation evidence are
 properties of that benchmark; they do not transfer to Invisible Bench.
 <a href="https://arxiv.org/abs/2505.08775">HealthBench paper</a>.</p>
-<p>Inspect documents explicit grader roles, conversation history, generation
-settings, and retained evaluation logs. Invisible Bench uses those ideas in its
-existing runtime. It does not require another evaluation framework.
-<a href="https://inspect.aisi.org.uk/model-graded.html">Inspect model grading</a>,
+<p>Transcripts are generated with UK AISI Inspect, which owns generation, retries,
+cost limits, and evaluation logs. <code>bench export</code> turns Inspect logs into the run
+directory that the judge reads. Judging stays outside Inspect so that every
+verdict can be derived again from saved answers.
+<a href="https://inspect.aisi.org.uk/">Inspect</a>,
 <a href="https://inspect.aisi.org.uk/eval-logs.html">Inspect logs</a>.</p>
 <p>JudgeBench shows that difficult correctness judgments can remain unreliable.
 Research on position bias also shows that repeated agreement alone does not

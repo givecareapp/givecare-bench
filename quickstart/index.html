@@ -349,10 +349,99 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prepare-a-public-projection" class="md-nav__link">
+  <a href="#install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prepare a public projection
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-transcripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate transcripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Generate transcripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#judge-the-transcripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Judge the transcripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Judge the transcripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resume-a-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resume a scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#judge-again-or-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Judge again or compare
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-the-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read the evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-a-projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publish a projection
       
     </span>
   </a>
@@ -540,10 +629,99 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prepare-a-public-projection" class="md-nav__link">
+  <a href="#install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prepare a public projection
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-transcripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate transcripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Generate transcripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#judge-the-transcripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Judge the transcripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Judge the transcripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resume-a-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resume a scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#judge-again-or-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Judge again or compare
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-the-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read the evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-a-projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publish a projection
       
     </span>
   </a>
@@ -583,195 +761,162 @@
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
 <p>Type: how-to.</p>
-<p>Install the project with uv. Set the provider key for transcripts and the TypeSafe
-key for judging. Scenarios with judge-decided branches also call TypeSafe during
-generation, so a live run needs both keys and both hosts (<code>openrouter.ai</code> and
-<code>api.typesafe.ai</code>); generation refuses to start without the judge key. Plan paid
-work before running it. Credential presence does not prove network access.
-From the same execution environment, check DNS/TLS/HTTP reachability to both
-hosts before requesting pilot approval:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-A<span class="w"> </span><span class="s1">&#39;OpenAI File Downloader, XaiImageApiFetch/1.0&#39;</span><span class="w"> </span>--head<span class="w"> </span>--max-time<span class="w"> </span><span class="m">20</span><span class="w"> </span>https://openrouter.ai/
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>curl<span class="w"> </span>-A<span class="w"> </span><span class="s1">&#39;OpenAI File Downloader, XaiImageApiFetch/1.0&#39;</span><span class="w"> </span>--head<span class="w"> </span>--max-time<span class="w"> </span><span class="m">20</span><span class="w"> </span>https://api.typesafe.ai/
+<p>Generate transcripts with Inspect, judge them with a planned and budgeted scan,
+then read the evidence. Generation and judging each have their own cost ceiling.</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span>...
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TYPESAFE_API_KEY</span><span class="o">=</span>...
 </code></pre></div>
-<p>An HTTP response proves only that this endpoint responded. A 401, 403, or proxy
-failure still needs investigation. A successful root request does not prove that
-authenticated inference will work. Establish that with the approved small pilot,
-then inspect its saved responses before a broader run.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span>...
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TYPESAFE_API_KEY</span><span class="o">=</span>...
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>-m<span class="w"> </span>&lt;catalog-model-id&gt;<span class="w"> </span>--dry-run
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>-m<span class="w"> </span>&lt;catalog-model-id&gt;<span class="w"> </span>-y<span class="w"> </span>--max-cost-usd<span class="w"> </span>&lt;budget&gt;
+<p>A live run needs both keys and both hosts. OpenRouter serves the target models.
+TypeSafe serves the judge, and it also decides branches in scenarios that branch
+during generation. A key does not prove network access, so check that both hosts
+answer from the machine that will run the scan:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>--head<span class="w"> </span>--max-time<span class="w"> </span><span class="m">20</span><span class="w"> </span>https://openrouter.ai/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>curl<span class="w"> </span>--head<span class="w"> </span>--max-time<span class="w"> </span><span class="m">20</span><span class="w"> </span>https://api.typesafe.ai/
 </code></pre></div>
-<p>Select a model from <code>src/invisiblebench/models/config.py</code>. Add a new model there
-with verified provider prices before planning it. Unknown IDs are rejected;
-the CLI does not invent prices. The selected prices drive both estimation and
-dispatch accounting and are saved as <code>model_pricing</code> in <code>run_manifest.json</code>.
-Each model also owns an optional <code>endpoint</code>: the exact OpenRouter provider slug.
-A named endpoint sends <code>only: [endpoint]</code> with <code>allow_fallbacks: false</code>. An absent
-endpoint explicitly measures the <strong>routed service</strong>, with fallbacks allowed.
-Both modes require support for the supplied generation parameters. The dry run
-prints the policy. The manifest freezes it per model under
-<code>transcript_policy.serving</code>, and the same provider object enters each journaled
-request. Actual returned providers remain in transcript metadata and the summary.
-Verify endpoint availability and prices before selecting one. A base provider
-slug can match multiple variants or regions. For an endpoint-specific study,
-verify and select the full endpoint slug. A restriction alone does not establish
-an immutable endpoint. Never infer a single-provider comparison from a model name.</p>
-<p>Reservations are estimates, not an absolute billing guarantee. Provider usage
-can exceed them. Cost ceilings and prices must be finite and non-negative.</p>
-<p>The transcript run writes to <code>results/&lt;run-id&gt;/</code>. The run ID is a UTC timestamp
-in <code>YYYY-MM-DD_HH-MM-SSZ</code> form. Model identity stays in the manifest and Jury Card.
-Each new run has its own directory, including repeated runs of the same model.
-To resume generation, repeat the same command with <code>--output results/&lt;run-id&gt;</code>
-and the total approved ceiling, not an additional budget. Saved costs count
-against that ceiling. The model roster, prices, scenario bytes, generation policy,
-source code, and lockfile must match. Runs created before generation journals
-were added cannot resume. A run with a scan plan cannot resume generation.</p>
-<p><code>generation/*.jsonl</code> retains each target attempt and response, including empty
-responses and paid branch decisions. Records are flushed and synced before the
-next call. Completed calls are replayed, not purchased again. <code>transcripts/</code>
-is derived from those records after each scenario completes.</p>
-<p>A timeout, cancellation during dispatch, malformed response, or incomplete record
-stops automatic resume: a missing response does not prove there was no charge.
-A saved response with unknown cost also stops generation and automatic resume.
-Keep the run intact and reconcile with the provider before approving a new run.
-Only a budget refusal before dispatch can retry automatically on resume.
-Target HTTP calls have no hidden retries. Empty responses retain the bounded
-retry policy saved in the manifest.
-Card titles show the model name and a readable UTC date and time.</p>
-<p>Create a dry-run scan plan in the same directory, then run it with an explicit
-ceiling. <code>--llm-model</code> defaults to the pinned judge model in
-<code>src/invisiblebench/api/typesafe.py</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>plan<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--llm-model<span class="w"> </span>&lt;judge&gt;
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--plan<span class="w"> </span>results/&lt;run-id&gt;/scan_plan.json<span class="w"> </span>--max-cost-usd<span class="w"> </span>&lt;budget&gt;
+<p>An HTTP response proves only that the host answered. A 401, 403, or proxy error
+still needs investigation. Only a small pilot run proves that inference works.
+Run one first and read its saved responses before a broader run.</p>
+<p><code>uv run bench doctor</code> checks credentials and run storage.</p>
+<h2 id="generate-transcripts">Generate transcripts<a class="headerlink" href="#generate-transcripts" title="Permanent link">&para;</a></h2>
+<p>Generation runs through UK AISI Inspect (<code>inspect_ai</code>). Pick a model from
+<code>src/invisiblebench/models/config.py</code>. To add a model, add it there with verified
+provider prices. Loading the task registers those prices with Inspect, so
+<code>--cost-limit</code> works for every roster model.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>inspect<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>invisiblebench/safety_care<span class="w"> </span>--model<span class="w"> </span>openrouter/&lt;catalog-model-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-M<span class="w"> </span><span class="s1">&#39;provider={&quot;allow_fallbacks&quot;: true, &quot;require_parameters&quot;: true}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--cost-limit<span class="w"> </span>&lt;usd-per-conversation&gt;<span class="w"> </span>--log-dir<span class="w"> </span>results/&lt;run-id&gt;/inspect
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span><span class="nb">export</span><span class="w"> </span>results/&lt;run-id&gt;/inspect/*.eval<span class="w"> </span>--output<span class="w"> </span>results/&lt;run-id&gt;
 </code></pre></div>
-<p>The bundle contains all inputs needed for a scan and replay:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>results/&lt;run-id&gt;/
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── jury-card.md         # standard report, written when judging completes
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── scan_plan.json       # frozen checks, questions, thresholds, and input hashes
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── attempts.jsonl       # each judge request, recorded before dispatch
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── answers.jsonl        # one saved record per judge request (probabilities, cost)
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>├── judgments.jsonl      # one verdict per conversation and check, derived from answers.jsonl
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── run_manifest.json
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── transcript_run.json
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>├── generation/          # target attempts and responses; generation recovery source
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>└── transcripts/
+<ul>
+<li>Task options use <code>-T</code>: <code>category=</code>, <code>scenario=</code>, and <code>confidential=true</code>.</li>
+<li>Concurrency uses Inspect's <code>--max-samples</code> and <code>--max-connections</code>.</li>
+<li><code>inspect view</code> browses runs.</li>
+<li><code>--cost-limit</code> bounds each conversation. The worst case is the number of
+  conversations times the limit.</li>
+<li>To resume a failed generation, run <code>inspect eval-retry &lt;log&gt;</code>, then repeat
+  <code>bench export</code>. Inspect owns retries, timeouts, and transport.</li>
+</ul>
+<p><code>bench export</code> writes <code>results/&lt;run-id&gt;/</code>. The run ID is a UTC timestamp in
+<code>YYYY-MM-DD_HH-MM-SSZ</code> form, and each run gets its own directory. Model identity
+lives in the manifest and the Jury Card, not in the directory name.</p>
+<h3 id="provider-routing">Provider routing<a class="headerlink" href="#provider-routing" title="Permanent link">&para;</a></h3>
+<p>A model can set an optional <code>endpoint</code>: an exact OpenRouter provider slug.</p>
+<ul>
+<li>With fallbacks allowed, the run measures the <strong>routed service</strong>.</li>
+<li>To pin one provider, pass <code>"only": ["&lt;slug&gt;"], "allow_fallbacks": false</code> in the
+  <code>-M provider=</code> object.</li>
+</ul>
+<p>Both modes require providers that support the supplied generation parameters.
+<code>bench export</code> checks the generation settings against the roster policy and
+records the policy per model under <code>transcript_policy.serving</code>. The providers
+that actually served each reply stay in the transcript metadata.</p>
+<p>Verify an endpoint's availability and prices before you pin it. A base slug can
+match several variants or regions, so an endpoint-specific study needs the full
+slug. Never infer a single-provider comparison from a model name.</p>
+<h2 id="judge-the-transcripts">Judge the transcripts<a class="headerlink" href="#judge-the-transcripts" title="Permanent link">&para;</a></h2>
+<p>Plan the scan first. Planning makes no paid calls and prints an estimate. Then
+run the plan with an explicit ceiling. <code>--llm-model</code> defaults to the judge model
+pinned in <code>src/invisiblebench/api/typesafe.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>plan<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span>--llm-model<span class="w"> </span>&lt;judge&gt;
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>run<span class="w"> </span>--plan<span class="w"> </span>results/&lt;run-id&gt;/scan_plan.json<span class="w"> </span>--max-cost-usd<span class="w"> </span>&lt;budget&gt;
 </code></pre></div>
-<p>The Jury Card and evidence bundle are the two logical artifacts. There is no
-separate per-run narrative report or scorecard export. The public leaderboard
-is a shared projection across runs.</p>
-<p>To plan a different judge against the exact frozen evidence, use:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>rejudge<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span>--output<span class="w"> </span>results/&lt;new-run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--llm-model<span class="w"> </span>&lt;judge&gt;
+<p>The run directory then holds everything needed to replay the scan:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>results/&lt;run-id&gt;/
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── jury-card.md         # standard report, written when judging completes
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>├── scan_plan.json       # frozen checks, questions, thresholds, and input hashes
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>├── attempts.jsonl       # each judge request, recorded before dispatch
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>├── answers.jsonl        # one saved record per judge request (probabilities, cost)
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>├── judgments.jsonl      # one verdict per conversation and check, derived from answers.jsonl
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>├── run_manifest.json
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>├── transcript_run.json
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>└── transcripts/
 </code></pre></div>
-<p>Review the estimate, then execute with <code>bench scan run</code>. <code>bench questions
-&lt;run-id&gt;</code> orders observation families by affected unresolved judgments, then raw
-unresolved rate. Use <code>bench --json questions &lt;run-id&gt;</code> for exact conversation,
-turn, bound observation, and possible-verdict references.
-<code>bench compare --old &lt;run-id&gt; --new &lt;new-run-id&gt;</code> reports transitions,
-applicability, coverage, uncertainty, and cost on unchanged transcript bytes.
-Add <code>--expectations &lt;file.jsonl&gt;</code> to report agreement with frozen expectations.
-Follow <a href="../validation/">Evaluator validation</a> before interpreting that agreement
-as accuracy.
-The new bundle retains source files under <code>inputs/&lt;source-hash&gt;/</code>. Keep those
-relative paths intact. They are part of the frozen plan.</p>
-<p>Planning groups questions by identical evidence and splits groups against the
-judge's estimated context limits. Every resulting request is checked again before
-dispatch. A single observation whose evidence exceeds the limit is rejected;
-evidence is never truncated or summarized. Long conversations can still exceed
-that single-observation limit.</p>
-<p>Judge requests follow the same recovery contract as target generation. Each
-request is recorded in <code>attempts.jsonl</code> before dispatch. Its answer is flushed
-to <code>answers.jsonl</code> before the next request. Judgments are derived from those
-answers, not saved separately per request. Repeat the <code>bench scan run</code> command
-to resume unfinished judging. Request identity includes the conversation, role,
-turn, and exact input hash, so completed requests within a turn are retained.</p>
-<p>Use a source checkout with the engine version recorded in a historical scan
-plan to replay that scan. Keep its bundle unchanged. New judging requires a new
-plan and cost approval; old plans are not migrated to the current request format.</p>
+<p>The Jury Card and this evidence bundle are the two outputs of a run. The public
+leaderboard is a separate projection across runs.</p>
+<p>Planning groups questions that share identical evidence and splits groups to fit
+the judge's context limit. Each request is checked again before dispatch. Evidence
+is never truncated or summarized, so an observation too long for the limit is
+rejected.</p>
+<h3 id="resume-a-scan">Resume a scan<a class="headerlink" href="#resume-a-scan" title="Permanent link">&para;</a></h3>
+<p>Each request is written to <code>attempts.jsonl</code> before dispatch, and its answer is
+written to <code>answers.jsonl</code> before the next request. To resume, repeat the same
+<code>bench scan run</code> command. Completed requests are kept.</p>
 <p>Resume retries a request only when its outcome and cost are known: a budget
-refusal before dispatch, or an invalid answer with reported usage. Any error
-after dispatch leaves the outcome unknown: an interruption, timeout, dropped
-connection, HTTP error, or an answer without reported usage. It stops automatic
-resume, because a missing answer does not prove there was no charge. A partial
-scan without an attempt journal also cannot resume. Keep the blocked bundle
-for inspection. To continue, plan a new scan from the retained transcript run:</p>
+refusal before dispatch, or an invalid answer with reported usage. Any other
+error after dispatch leaves the outcome unknown, because a missing answer does
+not prove there was no charge. That includes interruptions, timeouts, dropped
+connections, HTTP errors, and answers without reported usage. It stops automatic
+resume. Keep the blocked bundle for inspection, and plan a new scan from the same
+transcripts:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>plan<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span>--output<span class="w"> </span>results/&lt;new-run-id&gt;
 </code></pre></div>
-<p>Planning makes no paid calls. Review the estimate before <code>bench scan run</code>.
-Valid <code>UNCLEAR</code> decisions are complete.
-Move the entire bundle to retain replay.</p>
-<p>Inspect evidence with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>explain<span class="w"> </span>your-org/your-model<span class="w"> </span>&lt;scenario-id&gt;<span class="w"> </span>--failures<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--scan<span class="w"> </span>results/&lt;run-id&gt;
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>runs
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>get<span class="w"> </span>&lt;run-id&gt;
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>jury<span class="w"> </span>&lt;run-id&gt;
+<p><code>UNCLEAR</code> verdicts are complete results, not failures to resume.</p>
+<h3 id="judge-again-or-compare">Judge again or compare<a class="headerlink" href="#judge-again-or-compare" title="Permanent link">&para;</a></h3>
+<p>To judge the same frozen evidence with a different judge:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>scan<span class="w"> </span>rejudge<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span>--output<span class="w"> </span>results/&lt;new-run-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--llm-model<span class="w"> </span>&lt;judge&gt;
 </code></pre></div>
-<p><code>bench jury</code> regenerates the card without model calls. It preserves the marked
-commentary section when the plan and ledger hashes still match. Put the author,
-date, observation, and check or transcript-turn references in that section.
-Notes do not change the judge's verdicts. The card and its quoted evidence stay
-private. Archive complete run directories under <code>results/archive/</code>.</p>
-<h2 id="prepare-a-public-projection">Prepare a public projection<a class="headerlink" href="#prepare-a-public-projection" title="Permanent link">&para;</a></h2>
-<p>The public contract is <code>.givecare/module.json</code>: it produces the web release
-archive that <code>invisiblebench.projection</code>, a plain script, writes. It writes only
-<code>data/leaderboard/leaderboard.json</code> and the web release archive.
-Projection needs no provider key or private workspace adapter.</p>
-<p>Separate model runs may share a publication when their code and common generation
-settings match. Each model must have one recorded, consistent serving policy.
-Different policies for the same model are rejected, not merged into one row.
-Missing scenario coverage remains a separate publication error.</p>
-<p>Generate and check a candidate from a complete current-contract scan:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>leaderboard<span class="w"> </span>generate<span class="w"> </span>--scan<span class="w"> </span>results/&lt;run-id&gt;
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>leaderboard<span class="w"> </span>qa<span class="w"> </span>--scan<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--candidate<span class="w"> </span>results/&lt;run-id&gt;/leaderboard.candidate.json
+<p>Review the estimate, then run it with <code>bench scan run</code>. The new bundle keeps its
+source files under <code>inputs/&lt;source-hash&gt;/</code>. Keep those relative paths intact,
+because the frozen plan refers to them.</p>
+<ul>
+<li><code>bench compare --old &lt;run-id&gt; --new &lt;new-run-id&gt;</code> reports verdict changes,
+  applicability, coverage, uncertainty, and cost on unchanged transcripts. Add
+  <code>--expectations &lt;file.jsonl&gt;</code> to report agreement with frozen expectations.
+  Read <a href="../validation/">Evaluator validation</a> before treating that agreement as
+  accuracy.</li>
+<li><code>bench questions &lt;run-id&gt;</code> ranks observation families by how many unresolved
+  verdicts they affect. <code>bench --json questions &lt;run-id&gt;</code> gives exact
+  conversation, turn, and observation references.</li>
+</ul>
+<p>To replay a historical scan, use a source checkout at the engine version
+recorded in its plan, and keep its bundle unchanged. New judging needs a new
+plan; old plans are not migrated.</p>
+<h2 id="read-the-evidence">Read the evidence<a class="headerlink" href="#read-the-evidence" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>explain<span class="w"> </span>&lt;model-id&gt;<span class="w"> </span>&lt;scenario-id&gt;<span class="w"> </span>--failures<span class="w"> </span>--scan<span class="w"> </span>results/&lt;run-id&gt;
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>runs
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>get<span class="w"> </span>&lt;run-id&gt;
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>uv<span class="w"> </span>run<span class="w"> </span>bench<span class="w"> </span>jury<span class="w"> </span>&lt;run-id&gt;
 </code></pre></div>
-<p>Compute the projection first with <code>--dry-run</code> to inspect what would change:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>invisiblebench.projection<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--bundle<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--leaderboard<span class="w"> </span>results/&lt;run-id&gt;/leaderboard.candidate.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--dry-run
+<p><code>bench jury</code> regenerates the Jury Card without model calls. It keeps the card's
+marked commentary section when the plan and ledger hashes still match. Put the
+author, date, observation, and check or turn references there. Commentary never
+changes a verdict. The card quotes conversations, so keep it private.</p>
+<p>To archive a run, move its whole directory into <code>results/archive/</code> with <code>mv</code>.</p>
+<h2 id="publish-a-projection">Publish a projection<a class="headerlink" href="#publish-a-projection" title="Permanent link">&para;</a></h2>
+<p>Publication is one step from a complete, current scan. The projection script
+recomputes the scorecard, runs strict publication checks, and writes
+<code>data/leaderboard/leaderboard.json</code> and <code>data/releases/web-bench-release.tar.gz</code>.
+It needs no provider key. Preview first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>invisiblebench.projection<span class="w"> </span>--bundle<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span>--dry-run
 </code></pre></div>
-<p>The script binds the plan, judgments, and candidate leaderboard by SHA-256,
-computed directly from the files at the given paths, and rejects a source run
-that is incomplete, not current (mismatched benchmark, checks, or judge
-settings), or has a dirty or missing <code>git_sha</code>. Changed inputs are re-hashed
-on the next run automatically.</p>
-<p>Inspect <code>expected_effects</code> in the dry-run output, then execute for real by
-dropping <code>--dry-run</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>invisiblebench.projection<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--bundle<span class="w"> </span>results/&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--leaderboard<span class="w"> </span>results/&lt;run-id&gt;/leaderboard.candidate.json
-</code></pre></div>
-<p>This replaces <code>data/leaderboard/leaderboard.json</code> and
-<code>data/releases/web-bench-release.tar.gz</code> with an atomic, digest-verified write
-(refuses symlinks, rolls back on partial failure). The archive contains only
-the aggregate leaderboard and its member manifest. It excludes conversations,
-judge answers, and private intake. Review and commit these outputs before a
-consumer reads them by exact commit. This command does not push or deploy.</p>
-<p>A contract update does not turn retained historical artifacts into results
-under the current method. A consumer must check the release schema and version.
-The current schemas are <code>safety-care/v4</code> and <code>gc-bench.web-benchmark-release/v4</code>.
-Deploy the owner documentation before the matching website consumer. Do not sync
-new releases into a consumer that still accepts the previous schema.</p>
+<p>The preview prints the scan's plan and judgments SHA-256 values and, for each
+output, its SHA-256 before and after. A reviewer uses these values to tie the
+Git change to the scan. Check <code>expected_effects</code>, then drop <code>--dry-run</code> to write.</p>
+<p>The script rejects a scan that is incomplete, was planned under a different
+benchmark, check, or judge version, or has a dirty or missing <code>git_sha</code>.</p>
+<ul>
+<li>Separate model runs can share a publication when their code and common
+  generation settings match.</li>
+<li>Each model needs one consistent serving policy. Conflicting policies for one
+  model are rejected, not merged.</li>
+<li>Missing scenario coverage is an error.</li>
+</ul>
+<p>The write is atomic and digest-verified. The archive holds only the aggregate
+leaderboard and its manifest, never conversations, judge answers, or private
+intake. Review and commit the outputs. The script does not push or deploy.</p>
+<p>The current schemas are <code>safety-care/v5</code> and <code>gc-bench.web-benchmark-release/v4</code>.
+A consumer must check both before it reads a release. Results from an older
+method stay results under that method.</p>
 <h2 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h2>
-<p>Run the proof checks before sharing an artifact:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>.
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/check_examples.py<span class="w"> </span>verify
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>benchmark/tests<span class="w"> </span>-q
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/lint_turn_indices.py<span class="w"> </span>--strict
+<p>Run <code>scripts/check.sh</code> before you share an artifact.</p>
+<p>After a refactor, replay a frozen current-format scan without API calls:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rescore_diff.py<span class="w"> </span>--frozen<span class="w"> </span>&lt;scan-dir&gt;
 </code></pre></div>
-<p>The scan can contain <code>UNCLEAR</code>. It remains evidence and does not start a second resolution pipeline.</p>
-<p>After a refactor, replay a frozen current-contract scan without API calls:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rescore_diff.py<span class="w"> </span>--frozen<span class="w"> </span>&lt;scan-dir&gt;
-</code></pre></div>
-<p>Replay re-derives judgments from the frozen plan and the saved answers in
-<code>answers.jsonl</code>. It does not call the judge model again. A scan from a
-retired contract requires a new benchmark run.</p>
+<p>Replay re-derives verdicts from the frozen plan and the saved answers. It does
+not call the judge again. A scan from a retired format needs a new run.</p>
 
 
 
