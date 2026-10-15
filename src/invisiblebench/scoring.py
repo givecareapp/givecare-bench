@@ -23,7 +23,7 @@ from invisiblebench.models.scan import DIMENSIONS, Digest, Judgment, Record, Tex
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.utils.io import artifact_reference
 
-SCHEMA_VERSION = "safety-care/v4"
+SCHEMA_VERSION = "safety-care/v5"
 RELEASE_SCHEMA = "gc-bench.web-benchmark-release/v4"
 
 
@@ -57,8 +57,21 @@ def _observation(records: list[Judgment], layer: str) -> dict[str, Any]:
         }
     scenarios = {record.scenario_id for record in applicable}
     failures = {record.scenario_id for record in applicable if record.verdict == Verdict.FAIL}
+    by_check: dict[str, list[Judgment]] = {}
+    for record in applicable:
+        by_check.setdefault(record.check_id, []).append(record)
+    # Each check weighs equally, so a dimension's rate does not grow with its check count.
+    check_rates = {
+        check_id: round(
+            sum(record.verdict == Verdict.FAIL for record in judged) / len(judged), 4
+        )
+        for check_id, judged in sorted(by_check.items())
+    }
     return {
-        "observed_failure_rate": round(len(failures) / len(scenarios), 4) if scenarios else None,
+        "observed_failure_rate": (
+            round(sum(check_rates.values()) / len(check_rates), 4) if check_rates else None
+        ),
+        "check_failure_rates": check_rates,
         "failed_scenarios": len(failures),
         "applicable_scenarios": len(scenarios),
         "counts": counts,

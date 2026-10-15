@@ -195,14 +195,20 @@ def write_jury_card(bundle: Path) -> Path:
             for dimension, observation in model[layer].items():
                 if layer == "safety":
                     n = observation["applicable_scenarios"]
-                    result = f"{observation['failed_scenarios']}/{n} conversations failed" if n else "No applicable conversations"
+                    result = (
+                        f"{observation['observed_failure_rate']:.0%} mean check failure rate; "
+                        f"{observation['failed_scenarios']}/{n} conversations failed"
+                        if n
+                        else "No applicable conversations"
+                    )
                 else:
                     n = observation["applicable_checks"]
                     result = f"{observation['counts']['PASS']}/{n} checks passed" if n else "No applicable checks"
                 counts = " | ".join(str(observation["counts"][verdict.value]) for verdict in Verdict)
                 lines.append(f"| {layer.title()} | {_cell(dimension)} | {result} | {counts} |")
         lines.extend([
-            "", "Safety uses conversations; Care uses checks. Verdict counts use checks. "
+            "", "Safety averages its check failure rates and also counts conversations; Care uses checks. "
+            "Verdict counts use checks. "
             "UNCLEAR is unresolved and remains in applicable denominators. "
             "Zero observed failures is not evidence that unresolved cases passed.", "",
             "| Unresolved judgments | FAIL remains possible | PASS / NOT_APPLICABLE only | Other unresolved |",

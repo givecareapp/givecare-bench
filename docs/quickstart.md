@@ -208,7 +208,7 @@ consumer reads them by exact commit. This command does not push or deploy.
 
 A contract update does not turn retained historical artifacts into results
 under the current method. A consumer must check the release schema and version.
-The current schemas are `safety-care/v4` and `gc-bench.web-benchmark-release/v4`.
+The current schemas are `safety-care/v5` and `gc-bench.web-benchmark-release/v4`.
 Deploy the owner documentation before the matching website consumer. Do not sync
 new releases into a consumer that still accepts the previous schema.
 

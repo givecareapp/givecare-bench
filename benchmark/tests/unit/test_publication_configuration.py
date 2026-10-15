@@ -56,7 +56,7 @@ def test_complete_models_publish_with_per_model_serving(tmp_path, combined):
     _publication_sources(bundle, plan)
     run_scan(bundle, max_cost_usd=1, client=FixtureJudge())
     board = build_scorecard(bundle, publication=True)
-    assert board["schema"] == "safety-care/v4"
+    assert board["schema"] == "safety-care/v5"
     for model in board["models"]:
         config = model["evaluation_configuration"]
         assert config["serving"]["measurement"] == "routed_service"

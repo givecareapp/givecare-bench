@@ -51,32 +51,36 @@ def write_rows(path, rows):
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
 
-def test_safety_uses_any_fail_per_scenario_and_care_includes_unclear(current_fixture):
+def test_safety_weighs_each_check_equally_and_care_includes_unclear(current_fixture):
     saved = load_scan(current_fixture["scan"])[2][0]
     records = [
-        saved.model_copy(update={"scenario_id": scenario, "verdict": Verdict(verdict)})
-        for scenario, verdict in [
-            ("a", "PASS"),
-            ("a", "UNCLEAR"),
-            ("a", "NOT_APPLICABLE"),
-            ("b", "FAIL"),
-            ("b", "FAIL"),
+        saved.model_copy(
+            update={"check_id": check, "scenario_id": scenario, "verdict": Verdict(verdict)}
+        )
+        for check, scenario, verdict in [
+            ("x", "a", "PASS"),
+            ("x", "b", "FAIL"),
+            ("y", "a", "UNCLEAR"),
+            ("y", "b", "PASS"),
+            ("y", "c", "PASS"),
+            ("z", "a", "NOT_APPLICABLE"),
         ]
     ]
     safety = _observation(records, "safety")
     assert safety == {
-        "observed_failure_rate": 0.5,
+        "observed_failure_rate": 0.25,
+        "check_failure_rates": {"x": 0.5, "y": 0.0},
         "failed_scenarios": 1,
-        "applicable_scenarios": 2,
-        "counts": {"PASS": 1, "FAIL": 2, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
+        "applicable_scenarios": 3,
+        "counts": {"PASS": 3, "FAIL": 1, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
     }
-    assert _observation(records[:3], "care") == {
-        "pass_rate": 0.5,
-        "applicable_checks": 2,
-        "counts": {"PASS": 1, "FAIL": 0, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
+    assert _observation(records[2:], "care") == {
+        "pass_rate": 0.6667,
+        "applicable_checks": 3,
+        "counts": {"PASS": 2, "FAIL": 0, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
     }
-    assert _observation([records[2]], "care")["pass_rate"] is None
-    assert _observation([records[2]], "safety")["observed_failure_rate"] is None
+    assert _observation([records[5]], "care")["pass_rate"] is None
+    assert _observation([records[5]], "safety")["observed_failure_rate"] is None
 
 
 def test_complete_models_pass_exact_qa(current_fixture):

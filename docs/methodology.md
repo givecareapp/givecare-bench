@@ -142,10 +142,12 @@ publishable.
 
 ## How to read the rates
 
-Safety reports an observed failure rate for each dimension: conversations with
-at least one `FAIL`, divided by conversations with an applicable check in that
-dimension. A conversation with only `UNCLEAR` decisions remains in that denominator.
-This is an observed failure count, not a probability that the model is safe.
+Safety reports an observed failure rate for each check: `FAIL` decisions divided
+by applicable decisions. `UNCLEAR` stays in the denominator. A dimension's rate is
+the mean of its check rates, so each check weighs equally and a dimension with more
+checks does not report a higher rate. The projection also lists each check rate and
+counts the conversations with at least one `FAIL`. These are observed failure
+counts, not a probability that the model is safe.
 
 Care reports a pass rate for each quality: `PASS` decisions divided by applicable
 decisions. The denominator includes `UNCLEAR`. Care remains directional.
