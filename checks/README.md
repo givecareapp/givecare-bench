@@ -44,6 +44,9 @@ The shape above uses `rule: clauses` (the default).
 Each definition records `basis` and `pass_meaning`. The basis distinguishes an
 `authored_policy`, `caregiver_request`, `product_contract`, or `supplied_evidence`.
 The pass meaning states the narrow result, not a claim of overall quality.
+Each `source_grounding` entry is a resolvable citation: author or body, year,
+title, and URL or DOI. It records provenance for readers; the judge never sees
+it, so editing it does not stale exemplars.
 
 `evaluation/requests.py` owns evidence binding, grouping, and request-size splitting.
 `Question.to_jev()` constructs native SDK primitives. `evaluation/rules.py`
