@@ -7,7 +7,7 @@ supplies hidden facts, target answers, or a second verdict rule.
 from itertools import product
 from typing import Any
 
-from invisiblebench.models.scan import Check, Verdict
+from invisiblebench.models.scan import Check, Verdict, join_verdicts
 from invisiblebench.models.scenario import TaskEvidence
 
 
@@ -50,10 +50,9 @@ def request(check: Check, transcript, role, turn, split):
 
     def ask(name, suffix="", binding=""):
         definition = check.questions[name]
-        q = definition.to_jev(
+        questions[f"{check.id}/{name}{suffix}"] = definition.spec(
             instructions={"question": definition.instructions, "evidence": binding},
         )
-        questions[f"{check.id}/{name}{suffix}"] = q.model_dump(mode="json", exclude_none=True)
 
     if check.rule == "task_completion":
         if task.kind != "draft":
@@ -122,8 +121,8 @@ def evaluate(check, transcript, read, split):
                         (False, True) if supported is None else (supported,),
                     )
                 }
-                current = _merge(current, local)
-        possible = _merge(possible, current)
+                current = join_verdicts(current, local)
+        possible = join_verdicts(possible, current)
         if current == {Verdict.FAIL} and failure is None:
             failure = turn
     if len(possible) > 1:
@@ -138,15 +137,3 @@ def evaluate(check, transcript, read, split):
     if verdict == Verdict.PASS:
         return possible, check.pass_meaning, []
     return possible, "No applicable task with the required supplied evidence was observed.", []
-
-
-def _merge(left, right):
-    return {
-        (
-            Verdict.FAIL
-            if Verdict.FAIL in (a, b)
-            else Verdict.PASS if Verdict.PASS in (a, b) else Verdict.NOT_APPLICABLE
-        )
-        for a in left
-        for b in right
-    }

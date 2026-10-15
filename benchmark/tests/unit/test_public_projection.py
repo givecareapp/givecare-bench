@@ -89,7 +89,7 @@ def test_current_scan_projects_with_real_qa_and_keeps_decisions_private(monkeypa
     plan = load_scan(paths["scan"])[0]
     source_manifest = paths["scan"] / plan.sources[0].manifest.path
     source_manifest.write_bytes(source_manifest.read_bytes() + b"\n")
-    with pytest.raises(projection.DriverError, match="Publication QA failed"):
+    with pytest.raises(projection.ProjectionError, match="Publication QA failed"):
         projection.project_web_release(payload, root=tmp_path)
 
 
@@ -103,16 +103,13 @@ def test_bound_input_computes_matching_digests_and_schema(tmp_path) -> None:
     leaderboard = bundle / "leaderboard.candidate.json"
     leaderboard.write_bytes(b'{"leaderboard":true}\n')
 
-    payload = projection._bound_input(
-        bundle=bundle, leaderboard=leaderboard, root=tmp_path, learning_lineage=None
-    )
+    payload = projection._bound_input(bundle=bundle, leaderboard=leaderboard, root=tmp_path)
     assert payload["schema_version"] == "gc-bench.web-benchmark-release.input/v3"
     assert payload["bundle_path"] == "results/run-1"
     assert payload["leaderboard_path"] == "results/run-1/leaderboard.candidate.json"
     assert payload["plan_sha256"] == sha((bundle / PLAN_FILE).read_bytes())
     assert payload["judgments_sha256"] == sha((bundle / LEDGER_FILE).read_bytes())
     assert payload["leaderboard_sha256"] == sha(leaderboard.read_bytes())
-    assert "learning_lineage" not in payload
 
 
 def test_writer_preserves_before_bytes_on_failed_exchange(monkeypatch, tmp_path):
@@ -142,11 +139,11 @@ def test_writer_refuses_symlinks_and_changed_before_bytes(tmp_path):
     target = tmp_path / "output"
     target.symlink_to(source)
     effects = [projection._effect(target, b"new", root=tmp_path)]
-    with pytest.raises(projection.DriverError, match="symlink"):
+    with pytest.raises(projection.ProjectionError, match="symlink"):
         projection._write_outputs({target: b"new"}, effects, root=tmp_path)
     target.unlink()
     target.write_bytes(b"changed")
-    with pytest.raises(projection.DriverError, match="before digest changed"):
+    with pytest.raises(projection.ProjectionError, match="before digest changed"):
         projection._write_outputs({target: b"new"}, effects, root=tmp_path)
     assert source.read_bytes() == b"old"
 
@@ -154,23 +151,10 @@ def test_writer_refuses_symlinks_and_changed_before_bytes(tmp_path):
 def test_bound_inputs_reject_digest_drift_and_symlinks(tmp_path):
     source = tmp_path / "source.json"
     source.write_bytes(b"{}\n")
-    with pytest.raises(projection.DriverError, match="does not match"):
+    with pytest.raises(projection.ProjectionError, match="does not match"):
         projection._read_bound_file("source.json", "0" * 64, field="source", root=tmp_path)
     (tmp_path / "link.json").symlink_to(source)
-    with pytest.raises(projection.DriverError, match="symbolic link"):
+    with pytest.raises(projection.ProjectionError, match="symbolic link"):
         projection._read_bound_file(
             "link.json", sha(source.read_bytes()), field="source", root=tmp_path
-        )
-
-
-def test_learning_lineage_remains_exact():
-    lineage = {
-        "demand_sha256": "c" * 64,
-        "trace_refs": [{"loop_id": "loop", "intent_sha256": "d" * 64}],
-        "module_refs": [],
-    }
-    assert projection._learning_lineage(lineage) is lineage
-    with pytest.raises(projection.DriverError, match="loop_id and intent_sha256"):
-        projection._learning_lineage(
-            {"demand_sha256": "c" * 64, "trace_refs": [{"loop_id": "loop"}], "module_refs": []}
         )

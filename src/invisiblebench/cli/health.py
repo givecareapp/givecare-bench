@@ -8,7 +8,7 @@ import tarfile
 from pathlib import Path
 from typing import Any
 
-from invisiblebench._agent_cli import emit_json
+from invisiblebench.cli.agent_commands import emit_json
 from invisiblebench.scoring import RELEASE_SCHEMA, SCHEMA_VERSION
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.version import BENCHMARK_VERSION
@@ -58,8 +58,7 @@ def append_local_web_release_health(analysis: dict[str, Any], *, root: Path | No
         analysis["errors"].append(str(exc))
 
 
-def run_health(verbose: bool = False, json_output: bool = False) -> int:
-    del verbose
+def run_health(json_output: bool = False) -> int:
     try:
         analysis = analyze_leaderboard(load_leaderboard())
     except (OSError, ValueError) as exc:
@@ -67,7 +66,7 @@ def run_health(verbose: bool = False, json_output: bool = False) -> int:
     if analysis["current"]:
         append_local_web_release_health(analysis)
     if json_output:
-        emit_json(command="health", data=analysis)
+        emit_json("health", analysis)
     else:
         print(f"Current benchmark projection: {analysis['current']}")
         print(f"Models: {analysis['model_count']}")

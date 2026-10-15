@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +12,7 @@ from urllib.parse import quote
 
 from inspect_ai.log import EvalLog, EvalSample, read_eval_log
 
-from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, request_cost
+from invisiblebench.api.typesafe import request_cost
 from invisiblebench.inspect_task import (
     MAX_REPLY_TOKENS,
     TRANSCRIPT_TEMPERATURE,
@@ -212,7 +211,6 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
         "artifact_type": "transcript_run/v1",
         "run_id": manifest["run_id"],
         "benchmark_version": manifest["benchmark_version"],
-        "contract_version": manifest.get("contract_version"),
         "stage": "transcripts",
         "status": "complete" if complete else "partial",
         "model_ids": manifest["model_ids"],
@@ -234,12 +232,6 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
         "resolved_providers": sorted({p for r in rows for p in r["resolved_providers"]}),
         "transcripts": rows,
         "errors": errors,
-        "next_steps": {
-            "scan_plan": shlex.join(
-                ["uv", "run", "bench", "scan", "plan", str(output_dir),
-                 "--llm-model", DEFAULT_JUDGE_MODEL]
-            )
-        },
     }
     if (seconds := _seconds(logs)) is not None:
         summary["elapsed_seconds"] = seconds

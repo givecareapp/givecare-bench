@@ -100,38 +100,19 @@ replay a scan.
 
 ## Validate the evaluator
 
-Prepare constructed controls without model calls:
-
-```bash
-uv run python scripts/plan_validation.py --output results/<new-run-id>
-```
-
-Use the ordinary budgeted scan command above to judge the saved plan. The Jury
-Card reports expected and observed outcomes. The [validation guide](docs/validation.md)
-defines each tested boundary and the limits of the resulting evidence.
+Plan constructed controls without model calls, then judge the saved plan with
+the budgeted scan command above. The [validation guide](docs/validation.md)
+defines the procedure, each tested boundary, and the limits of the evidence.
 
 ## Repository map
 
-| Path | Purpose |
-| --- | --- |
-| [`benchmark/`](benchmark/README.md) | Scenario corpus, inventory, and tests |
-| [`checks/`](checks/) | Questions, rule, evidence requirements, and exemplars with committed judge answers |
-| [`src/invisiblebench/`](src/invisiblebench/) | Runtime, CLI, and Jury Card generation |
-| [`scripts/`](scripts/) | Scan, validation, and documentation commands |
-| [`docs/`](docs/index.md) | Method and run guides |
-| [`data/`](data/) | Aggregate results and historical releases |
-
-Use the [inventory](benchmark/benchmark_inventory.json) for current corpus facts
-and the [scan contract](src/invisiblebench/models/scan.py) for artifact fields.
+See the Layout table in [`AGENTS.md`](AGENTS.md). Use the
+[inventory](benchmark/benchmark_inventory.json) for current corpus facts and the
+[scan contract](src/invisiblebench/models/scan.py) for artifact fields.
 
 ## Proof
 
-```bash
-uv run ruff check .
-uv run python scripts/check_examples.py verify
-uv run pytest benchmark/tests -q
-uv run python scripts/lint_turn_indices.py --strict
-```
+Run `scripts/check.sh`.
 
 Enable the required local hook with `git config core.hooksPath .githooks`.
 

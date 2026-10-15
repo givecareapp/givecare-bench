@@ -79,7 +79,7 @@ def test_refresh_keeps_disjoint_same_turn_answers_and_retires_changed_groups(tmp
         plan = check_examples.plan_refresh(root, checks, bundle)
         assert len(plan.tasks) == 2  # the existing cue and routing answers stay valid
         check_examples.refresh(root, checks, bundle, max_cost_usd=1, client=ScriptedJudge({}))
-        rows = check_examples._read_jsonl(path.parent / check_examples.ANSWERS)
+        rows = check_examples.read_jsonl(path.parent / check_examples.ANSWERS)
         assert len(rows) == 6
         assert check_examples.verify(root, checks, Thresholds())[1]["stale"] == 0
         assert check_examples.plan_refresh(root, checks, tmp_path / f"unchanged-{field}") is None

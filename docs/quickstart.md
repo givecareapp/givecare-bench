@@ -225,14 +225,7 @@ new releases into a consumer that still accepts the previous schema.
 
 ## Verify
 
-Run the proof checks before sharing an artifact:
-
-```bash
-uv run ruff check .
-uv run python scripts/check_examples.py verify
-uv run pytest benchmark/tests -q
-uv run python scripts/lint_turn_indices.py --strict
-```
+Run `scripts/check.sh` before sharing an artifact.
 
 The scan can contain `UNCLEAR`. It remains evidence and does not start a second resolution pipeline.
 

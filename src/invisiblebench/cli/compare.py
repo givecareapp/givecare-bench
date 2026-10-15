@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.cli.agent_commands import emit_json
 from invisiblebench.evaluation.rules import probabilities, tri
 from invisiblebench.judge import _read_ref, load_scan
 from invisiblebench.models.scan import Verdict
@@ -169,7 +170,7 @@ def compare_command(args: Any) -> int:
             expectations=Path(args.expectations) if getattr(args, "expectations", None) else None,
         )
     except (OSError, ValueError, KeyError) as exc:
-        print(json.dumps({"status": "error", "command": "compare", "error": str(exc)}))
+        emit_json("compare", error=str(exc))
         return 1
-    print(json.dumps({"status": "ok", "command": "compare", "data": report}, indent=2))
+    emit_json("compare", report)
     return 0

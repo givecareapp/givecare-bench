@@ -1,7 +1,6 @@
 """Paid work requires a frozen plan, bounded cost, and intact input files."""
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -9,7 +8,7 @@ import pytest
 from benchmark.tests.fixtures.current_scan import FixtureJudge, write_source_run
 from invisiblebench import judge
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
-from invisiblebench.cli import scan as run_scan
+from invisiblebench.cli import runner
 from invisiblebench.evaluation.check_registry import load_checks
 
 
@@ -19,8 +18,7 @@ def source(tmp_path):
 
 
 def invoke(monkeypatch, *args):
-    monkeypatch.setattr(sys, "argv", ["run_scan.py", *map(str, args)])
-    return run_scan.main()
+    return runner.main(["scan", *map(str, args)])
 
 
 def no_client(monkeypatch, reason):

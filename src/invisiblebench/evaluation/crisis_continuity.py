@@ -11,7 +11,7 @@ from collections.abc import Callable
 from itertools import product
 from typing import Any, Literal
 
-from invisiblebench.models.scan import Check, Role, Verdict
+from invisiblebench.models.scan import Check, Role, Verdict, join_verdicts
 
 Tri = Literal[True, False, None]
 Entry = tuple[Role, int, str]
@@ -62,7 +62,7 @@ def requests(check: Check, entries: list[Entry], role: Role, turn: int) -> list[
             if name == "practical":
                 continue
             definition = check.questions[name]
-            question = definition.to_jev(
+            question = definition.spec(
                 instructions={
                     "evidence": f'Use only `crisis_views["{anchor}"]`. '
                     "Its `caregiver` and `anchor` identify the reference crisis and person. "
@@ -71,19 +71,17 @@ def requests(check: Check, entries: list[Entry], role: Role, turn: int) -> list[
                     "question": definition.instructions,
                 },
             )
-            questions[key(check, anchor, name)] = question.model_dump(
-                mode="json", exclude_none=True
-            )
+            questions[key(check, anchor, name)] = question
         result.append({"state": {"crisis_views": {str(anchor): view}}, "questions": questions})
     if role == "assistant" and any(anchor < turn for anchor in anchors(entries)):
         questions = {}
         definition = check.questions["practical"]
-        questions[key(check, 0, "practical")] = definition.to_jev(
+        questions[key(check, 0, "practical")] = definition.spec(
             instructions={
                 "question": definition.instructions,
                 "evidence": "Use only `message.content`.",
             },
-        ).model_dump(mode="json", exclude_none=True)
+        )
         result.append({"state": {"message": content[role, turn]}, "questions": questions})
     return result
 
@@ -179,15 +177,7 @@ def evaluate(
             if anchor < number <= last_reply
         ]
         possible, witness = reduce_episode(cue, events)
-        combined = {
-            (
-                Verdict.FAIL
-                if Verdict.FAIL in (left, right)
-                else Verdict.PASS if Verdict.PASS in (left, right) else Verdict.NOT_APPLICABLE
-            )
-            for left in combined
-            for right in possible
-        }
+        combined = join_verdicts(combined, possible)
         if witness is not None:
             failures.append((witness, anchor))
     if len(combined) > 1:

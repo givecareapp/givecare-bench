@@ -18,7 +18,7 @@ def test_same_model_runs_are_distinct_and_ambiguous_prefix_is_rejected(tmp_path,
         plan = plan_scan([source], bundle)
         run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
     monkeypatch.setattr(agent_commands, "_runs_dir", lambda: results)
-    assert [item["name"] for item in agent_commands.list_runs(results)] == [p.name for p in bundles]
+    assert [item["id"] for item in agent_commands.list_runs(results)] == [p.name for p in bundles]
     assert all(item["artifact_state"] == "judged" for item in agent_commands.list_runs(results))
     with pytest.raises(ValueError, match="multiple runs"):
         agent_commands._load_run_metadata("2026-09-09")
@@ -30,7 +30,8 @@ def test_same_model_runs_are_distinct_and_ambiguous_prefix_is_rejected(tmp_path,
     assert metadata["manifests"][0]["run_id"] == "synthetic-fixture"
     assert metadata["jury_card"] == card
     assert metadata["date"].endswith("Z")
-    assert runner._collect_runs()[0]["id"] == bundles[1].name
+    assert runner.main(["--json", "runs"]) == 0
+    assert json.loads(capsys.readouterr().out)["data"]["runs"][0]["id"] == bundles[1].name
 
 
 def test_manifest_cannot_overwrite_a_previous_run(tmp_path):

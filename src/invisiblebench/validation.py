@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
 from pathlib import Path
 from typing import Any, Literal
 
@@ -58,7 +57,7 @@ def evidence_context_hashes(bundle: Path, plan: ScanPlan) -> dict[tuple[str, str
     }
 
 
-def validate_expectations(labels: list[Expectation]) -> list[Expectation]:
+def _unique(labels: list[Expectation]) -> list[Expectation]:
     identities = [
         (label.key, label.transcript_sha256, label.evidence_context_sha256, label.check_sha256)
         for label in labels
@@ -69,7 +68,7 @@ def validate_expectations(labels: list[Expectation]) -> list[Expectation]:
 
 
 def load_expectations(path: Path) -> list[Expectation]:
-    return validate_expectations(
+    return _unique(
         [
             Expectation.model_validate_json(line)
             for line in path.read_bytes().splitlines()
@@ -92,7 +91,7 @@ def frozen_expectations(bundle: Path, plan: ScanPlan) -> list[Expectation]:
         labels.extend(
             label for row in rows if (label := Expectation.model_validate(row)).key[:2] in selected
         )
-    return validate_expectations(labels)
+    return _unique(labels)
 
 
 def expectation_agreement(
@@ -140,7 +139,6 @@ def expectation_agreement(
         "unlabeled_judgments": len(judgments) - len(matched),
         "mismatches": sum(row["expected"] != row["observed"] for row in matched),
         "unbound_expectations": excluded,
-        "transitions": dict(Counter(f"{r['expected']}->{r['observed']}" for r in matched)),
         "false_pass": sum(r["expected"] == "FAIL" and r["observed"] == "PASS" for r in matched),
         "false_fail": sum(r["expected"] == "PASS" and r["observed"] == "FAIL" for r in matched),
         "unresolved": sum(r["observed"] == "UNCLEAR" for r in matched),

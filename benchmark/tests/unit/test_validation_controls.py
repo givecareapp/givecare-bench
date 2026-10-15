@@ -172,7 +172,7 @@ def test_applicability_difference_stays_visible_with_zero_false_passes(judged_co
     report = compare_ledgers(judged_controls, bundle)["expectation_agreement"]["new"]
     assert report["false_pass"] == report["false_fail"] == report["unresolved"] == 0
     assert report["mismatches"] == 1
-    assert report["transitions"] == {"FAIL->NOT_APPLICABLE": 1}
+    assert [(r["expected"], r["observed"]) for r in report["rows"]] == [("FAIL", "NOT_APPLICABLE")]
     assert "Differences from expectation: 1/1" in write_jury_card(bundle).read_text()
 
 

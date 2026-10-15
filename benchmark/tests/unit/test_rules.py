@@ -892,7 +892,7 @@ def test_choice_request_and_verdict_preserve_the_native_answer(distribution, exp
     [request] = requests.build_requests([check], ONE_REPLY, "assistant", 1)
     key = "crisis.fixture/route"
     assert request["questions"] == {
-        key: check.questions["route"].to_jev().model_dump(mode="json", exclude_none=True)
+        key: check.questions["route"].spec()
     }
     probabilities = dict(zip(("a", "b", "c"), distribution, strict=True))
     answer = ChoiceAnswer(

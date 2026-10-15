@@ -49,6 +49,19 @@ class Verdict(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+def join_verdicts(left: set[Verdict], right: set[Verdict]) -> set[Verdict]:
+    """Every pairwise outcome of two independent parts: FAIL beats PASS beats NOT_APPLICABLE."""
+    return {
+        (
+            Verdict.FAIL
+            if Verdict.FAIL in (a, b)
+            else Verdict.PASS if Verdict.PASS in (a, b) else Verdict.NOT_APPLICABLE
+        )
+        for a in left
+        for b in right
+    }
+
+
 class EvidenceSpan(Record):
     role: Role
     turn: StrictInt = Field(ge=1)
@@ -109,6 +122,10 @@ class Question(Record):
             instructions=self.instructions if instructions is None else instructions,
             criteria=self.criteria,
         )
+
+    def spec(self, *, instructions: JSONContent | None = None) -> dict[str, Any]:
+        """The request-ready JSON form of `to_jev`."""
+        return self.to_jev(instructions=instructions).model_dump(mode="json", exclude_none=True)
 
     @model_serializer(mode="wrap")
     def written_form(self, handler):

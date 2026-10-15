@@ -1,36 +1,8 @@
-"""Utilities for normalizing and linting turn index fields."""
+"""Lint turn index fields."""
 
 from __future__ import annotations
 
 from typing import Any
-
-
-def get_turn_index(item: dict[str, Any]) -> int | None:
-    """Return the turn index from common field names."""
-    for key in ("t", "turn_number", "turn"):
-        value = item.get(key)
-        if value is not None:
-            return value
-    return None
-
-
-def normalize_turn_indices(scenario: dict[str, Any]) -> list[str]:
-    """Normalize turn indices in-place to ensure `t` exists."""
-    warnings: list[str] = []
-    _normalize_list(scenario.get("turns", []), warnings, "turns")
-    _normalize_list(scenario.get("probes", []), warnings, "probes")
-    _normalize_list(scenario.get("risk_triggers", []), warnings, "risk_triggers")
-    for idx, turn in enumerate(scenario.get("turns", [])):
-        _normalize_list(turn.get("probes", []), warnings, f"turns[{idx}].probes")
-
-    for idx, session in enumerate(scenario.get("sessions", [])):
-        _normalize_list(session.get("turns", []), warnings, f"sessions[{idx}].turns")
-        for turn_idx, turn in enumerate(session.get("turns", [])):
-            _normalize_list(
-                turn.get("probes", []), warnings, f"sessions[{idx}].turns[{turn_idx}].probes"
-            )
-
-    return warnings
 
 
 def lint_turn_indices(scenario: dict[str, Any]) -> list[str]:
@@ -50,23 +22,6 @@ def lint_turn_indices(scenario: dict[str, Any]) -> list[str]:
             )
 
     return warnings
-
-
-def _normalize_list(items: list[Any], warnings: list[str], label: str) -> None:
-    for idx, item in enumerate(items):
-        if not isinstance(item, dict):
-            continue
-        t_value = item.get("t")
-        turn_number = item.get("turn_number")
-        turn_value = item.get("turn")
-
-        if t_value is None:
-            if turn_number is not None:
-                item["t"] = turn_number
-            elif turn_value is not None:
-                item["t"] = turn_value
-        elif turn_number is not None and t_value != turn_number:
-            warnings.append(f"{label}[{idx}] t={t_value} != turn_number={turn_number}")
 
 
 def _lint_list(items: list[Any], label: str) -> list[str]:

@@ -40,13 +40,14 @@ class PublicGenerationSettings(Record):
     transport_attempts: StrictInt | None = Field(ge=1)
 
 
-def _counts(records: list[Judgment]) -> dict[str, int]:
-    counts = Counter(record.verdict for record in records)
-    return {verdict.value: counts[verdict] for verdict in Verdict}
+def _has_provider(turn: dict[str, Any]) -> bool:
+    provider = turn.get("resolved_provider")
+    return isinstance(provider, str) and bool(provider.strip())
 
 
 def _observation(records: list[Judgment], layer: str) -> dict[str, Any]:
-    counts = _counts(records)
+    tally = Counter(record.verdict for record in records)
+    counts = {verdict.value: tally[verdict] for verdict in Verdict}
     applicable = [record for record in records if record.verdict != Verdict.NOT_APPLICABLE]
     if layer == "care":
         return {
@@ -91,7 +92,7 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
         providers = {
             turn["resolved_provider"]
             for turn in responses
-            if isinstance(turn.get("resolved_provider"), str) and turn["resolved_provider"].strip()
+            if _has_provider(turn)
         }
         entry = {
             "model_id": model_id,
@@ -102,9 +103,7 @@ def build_scorecard(bundle: Path, *, publication: bool = False) -> dict[str, Any
                 "generation": generation.model_dump(mode="json"),
                 "observed_providers": sorted(providers),
                 "provider_observation_complete": all(
-                    isinstance(turn.get("resolved_provider"), str)
-                    and bool(turn["resolved_provider"].strip())
-                    for turn in responses
+                    _has_provider(turn) for turn in responses
                 ),
             },
         }

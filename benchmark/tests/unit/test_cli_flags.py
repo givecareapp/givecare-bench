@@ -1,7 +1,6 @@
 """CLI contracts: machine-readable output, artifact state, consent, and cost limits."""
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -19,20 +18,16 @@ def runs(tmp_path, monkeypatch):
     return directory
 
 
-@pytest.mark.parametrize("relative_path", ["runs.json", "nested/deeper/runs.json"])
-def test_runs_export_writes_full_payload_and_one_summary(runs, tmp_path, capsys, relative_path):
-    output = tmp_path / relative_path
-    assert runner.main(["--json", "runs", "--out", str(output)]) == 0
+def test_runs_json_lists_newest_first(runs, capsys):
+    assert runner.main(["--json", "runs"]) == 0
     lines = capsys.readouterr().out.splitlines()
     assert len(lines) == 1
     envelope = json.loads(lines[0])
     assert (envelope["status"], envelope["command"]) == ("ok", "runs")
-    assert envelope["data"]["path"] == str(output.resolve())
-    assert envelope["data"]["record_count"] == 2
-    assert envelope["data"]["byte_count"] == len(output.read_bytes())
-    payload = json.loads(output.read_text())
-    assert payload["total"] == len(payload["runs"]) == 2
-    assert {row["id"] for row in payload["runs"]} == {path.name for path in runs.iterdir()}
+    assert envelope["data"]["total"] == 2
+    assert [row["id"] for row in envelope["data"]["runs"]] == sorted(
+        (path.name for path in runs.iterdir()), reverse=True
+    )
 
 
 @pytest.mark.parametrize(
@@ -73,35 +68,6 @@ def test_runs_reports_artifact_state(tmp_path, monkeypatch, capsys, summary, sta
     assert record["id"] == run.name
     assert record["has_results"] is False
     assert (record["artifact_state"], record["scenarios"]) == (state, scenarios)
-
-
-def test_runs_export_reports_filesystem_failure(runs, tmp_path, monkeypatch, capsys):
-    def refuse_write(*args, **kwargs):
-        raise PermissionError("read-only filesystem")
-
-    monkeypatch.setattr(Path, "mkdir", refuse_write)
-    assert runner.main(["--json", "runs", "--out", str(tmp_path / "out.json")]) == 1
-    lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 1
-    envelope = json.loads(lines[0])
-    assert (envelope["status"], envelope["command"]) == ("error", "runs")
-    assert "failed to write" in envelope["error"]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @pytest.mark.parametrize(
@@ -148,7 +114,7 @@ def test_health_reports_missing_or_historical_results(tmp_path, monkeypatch, cap
             )
         )
     monkeypatch.setattr(health, "get_project_root", lambda: tmp_path)
-    assert runner.main(["--json", "health"]) == 1
+    assert runner.main(["--json", "leaderboard", "status"]) == 1
     lines = capsys.readouterr().out.splitlines()
     assert len(lines) == 1
     envelope = json.loads(lines[0])
@@ -158,36 +124,3 @@ def test_health_reports_missing_or_historical_results(tmp_path, monkeypatch, cap
     assert envelope["data"]["errors"]
     if historical:
         assert "historical" in envelope["data"]["errors"][0]
-
-
-@pytest.mark.parametrize("export", [False, True])
-def test_leaderboard_read_never_prompts(tmp_path, monkeypatch, capsys, export):
-    payload = {"schema": "safety-care/v1", "models": []}
-    (tmp_path / "data/leaderboard").mkdir(parents=True)
-    (tmp_path / "data/leaderboard/leaderboard.json").write_text(json.dumps(payload))
-    monkeypatch.setattr(
-        "invisiblebench.utils.benchmark_inventory.get_project_root", lambda: tmp_path
-    )
-
-    def refuse_prompt(prompt):
-        pytest.fail("read command prompted for consent")
-
-    monkeypatch.setattr("builtins.input", refuse_prompt)
-    output = tmp_path / "out.json"
-    arguments = (
-        ["leaderboard", "status", "--out", str(output)]
-        if export
-        else ["--json", "leaderboard", "status"]
-    )
-    assert runner.main(arguments) == 0
-    lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 1
-    envelope = json.loads(lines[0])
-    assert (envelope["status"], envelope["command"]) == ("ok", "leaderboard")
-    if export:
-        assert envelope["data"]["path"] == str(output.resolve())
-        assert json.loads(output.read_text()) == payload
-    else:
-        assert envelope["data"] == payload
-
-

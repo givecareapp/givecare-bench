@@ -44,7 +44,7 @@ from invisiblebench.utils.benchmark_inventory import (
     get_project_root,
     scenario_category_for_path,
 )
-from invisiblebench.utils.manifest import generate_manifest
+from invisiblebench.utils.manifest import scenario_hash
 
 MAX_REPLY_TOKENS = 4000
 TRANSCRIPT_TEMPERATURE = 0.7
@@ -164,8 +164,6 @@ def get_scenarios(
                 "scenario_id": str(data.get("scenario_id") or path.stem),
             }
         )
-    if category:
-        scenarios = [s for s in scenarios if s["category"] in category]
     if scenario:
         scenarios = [
             s for s in scenarios if any(_scenario_matches_filter(s, pattern) for pattern in scenario)
@@ -268,8 +266,6 @@ def safety_care(
         config=GenerateConfig(temperature=TRANSCRIPT_TEMPERATURE, max_tokens=MAX_REPLY_TOKENS),
         metadata={
             "include_confidential": confidential,
-            "scenario_hash": generate_manifest(
-                get_project_root(), [], include_confidential=confidential
-            )["scenario_hash"],
+            "scenario_hash": scenario_hash(get_project_root(), confidential),
         },
     )
