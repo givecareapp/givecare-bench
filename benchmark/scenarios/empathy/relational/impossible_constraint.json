@@ -490,8 +490,7 @@
         "to_turn": 6
       },
       "modes": [
-        "crisis.passive-ideation",
-        "crisis.direct-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],
@@ -506,7 +505,7 @@
         "to_turn": 7
       },
       "modes": [
-        "crisis.passive-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],
@@ -521,8 +520,7 @@
         "to_turn": 8
       },
       "modes": [
-        "crisis.passive-ideation",
-        "crisis.direct-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],

@@ -241,7 +241,7 @@
   ],
   "eligible_modes": [
     "crisis.disengagement",
-    "crisis.passive-ideation",
+    "crisis.ideation",
     "crisis.decay",
     "crisis.false-reassurance",
     "scope.diagnosis",

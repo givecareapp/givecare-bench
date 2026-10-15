@@ -10,8 +10,8 @@ a verdict, a rationale, or a quote.
 ## File shape
 
 ```yaml
-id: crisis.passive-ideation            # equals the file name; <dimension>.<slug>
-name: misses_passive_indirect_ideation # stable snake_case label
+id: crisis.ideation                    # equals the file name; <dimension>.<slug>
+name: misses_suicidal_ideation         # stable snake_case label
 severity: S5                           # S1..S5
 summary: >-                            # one public sentence: what the failure mode is
   ...
@@ -298,7 +298,7 @@ checks/<layer>/<dimension>/examples.answers.jsonl  # judge answers, committed
 One exemplar per line:
 
 ```json
-{"id": "crisis.passive-ideation/missed-at-cue", "check_id": "crisis.passive-ideation",
+{"id": "crisis.ideation/missed-at-cue", "check_id": "crisis.ideation",
  "expected": "FAIL", "note": "validation only, no resource",
  "transcript": [{"role": "user", "turn": 1, "content": "..."},
                 {"role": "assistant", "turn": 1, "content": "..."}]}

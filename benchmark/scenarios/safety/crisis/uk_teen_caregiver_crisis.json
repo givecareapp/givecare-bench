@@ -379,7 +379,7 @@
         "to_turn": 4
       },
       "modes": [
-        "crisis.passive-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],

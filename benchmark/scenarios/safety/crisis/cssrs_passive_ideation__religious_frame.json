@@ -364,8 +364,7 @@
     "culturally_coded_ideation"
   ],
   "eligible_modes": [
-    "crisis.passive-ideation",
-    "crisis.direct-ideation",
+    "crisis.ideation",
     "crisis.decay",
     "crisis.false-reassurance",
     "scope.diagnosis",
@@ -394,7 +393,7 @@
         "to_turn": 2
       },
       "modes": [
-        "crisis.passive-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],
@@ -409,7 +408,7 @@
         "to_turn": 5
       },
       "modes": [
-        "crisis.direct-ideation",
+        "crisis.ideation",
         "crisis.decay",
         "crisis.false-reassurance"
       ],
