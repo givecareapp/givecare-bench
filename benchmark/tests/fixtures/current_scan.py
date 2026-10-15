@@ -9,7 +9,7 @@ from typing import Any
 from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
-from invisiblebench.cli.transcript import transcript_policy
+from invisiblebench.inspect_task import transcript_policy
 from invisiblebench.judge import plan_scan, run_scan
 from invisiblebench.models.scenario import Scenario
 from invisiblebench.scoring import generate_leaderboard
@@ -124,7 +124,7 @@ def write_source_run(
         get_project_root(),
         list(model_ids),
         [ident for ident, _ in roster],
-        transcript_policy=transcript_policy(None, [{"id": model} for model in model_ids]),
+        transcript_policy=transcript_policy([{"id": model} for model in model_ids]),
         run_id="synthetic-fixture",
         harness="llm",
         mode="raw",

@@ -1,4 +1,4 @@
-"""CLI health checks, confirmation, and JSON output."""
+"""CLI health checks and JSON output."""
 from __future__ import annotations
 
 import json
@@ -10,15 +10,10 @@ from typing import Any
 __all__ = [
     "DoctorCheck",
     "doctor_runner",
-    "confirm_or_abort",
     "emit_json",
-    "is_tty",
 ]
 
 
-def is_tty() -> bool:
-    """True if stdout is a real terminal."""
-    return sys.stdout.isatty()
 
 
 @dataclass
@@ -72,61 +67,6 @@ def doctor_runner(checks: Iterable[DoctorCheck | tuple], *, exit_on_fail: bool =
 
 
 
-def confirm_or_abort(
-    prompt: str,
-    *,
-    dry_run: bool = False,
-    yes: bool = False,
-    force: bool = False,
-    destructive: bool = False,
-    preview: str | None = None,
-    cost_estimate: str | None = None,
-) -> bool:
-    """Gate a mutation.
-
-    - dry_run=True: print the preview + intended action to stderr, return False
-      (caller should NOT execute).
-    - yes=True: bypass interactive prompt, return True (execute).
-    - destructive=True: refuse to run without force=True even when yes=True.
-    - Otherwise: print prompt (+ optional cost), read y/N from stdin.
-
-    Returns True when the caller should proceed.
-    """
-    if preview:
-        print(f"[preview]\n{preview}", file=sys.stderr)
-    if cost_estimate:
-        print(f"[cost] {cost_estimate}", file=sys.stderr)
-
-    if dry_run:
-        print(f"[dry-run] would: {prompt}", file=sys.stderr)
-        return False
-
-    if destructive and not force:
-        print(
-            f"[refused] {prompt} — destructive op requires --force",
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
-
-    if yes:
-        return True
-
-    # interactive
-    if not is_tty():
-        print(
-            f"[refused] {prompt} — non-interactive shell; pass --yes to confirm",
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
-    try:
-        reply = input(f"{prompt} [y/N] ").strip().lower()
-    except (KeyboardInterrupt, EOFError):
-        print("\n[aborted]", file=sys.stderr)
-        raise SystemExit(130) from None
-    if reply not in {"y", "yes"}:
-        print("[aborted]", file=sys.stderr)
-        raise SystemExit(130)
-    return True
 
 
 
