@@ -2,23 +2,10 @@
 
 Type: how-to.
 
-Install the project with uv. Set the provider key for transcripts and the TypeSafe
-key for judging. Scenarios with judge-decided branches also call TypeSafe during
-generation, so a live run needs both keys and both hosts (`openrouter.ai` and
-`api.typesafe.ai`). Bound generation with `--cost-limit`. Plan judge scans
-before running them. Credential presence does not prove network access.
-From the same execution environment, check DNS/TLS/HTTP reachability to both
-hosts before requesting pilot approval:
+Generate transcripts with Inspect, judge them with a planned and budgeted scan,
+then read the evidence. Generation and judging each have their own cost ceiling.
 
-```bash
-curl -A 'OpenAI File Downloader, XaiImageApiFetch/1.0' --head --max-time 20 https://openrouter.ai/
-curl -A 'OpenAI File Downloader, XaiImageApiFetch/1.0' --head --max-time 20 https://api.typesafe.ai/
-```
-
-An HTTP response proves only that this endpoint responded. A 401, 403, or proxy
-failure still needs investigation. A successful root request does not prove that
-authenticated inference will work. Establish that with the approved small pilot,
-then inspect its saved responses before a broader run.
+## Install
 
 ```bash
 uv sync --extra dev
@@ -26,11 +13,28 @@ export OPENROUTER_API_KEY=...
 export TYPESAFE_API_KEY=...
 ```
 
-Generation runs through UK AISI Inspect (`inspect_ai`). Bench no longer
-generates transcripts itself. Select a model from
-`src/invisiblebench/models/config.py`. Add a new model there with verified
-provider prices before running it. Loading the task registers the roster prices
-with Inspect, so `--cost-limit` works for every roster model.
+A live run needs both keys and both hosts. OpenRouter serves the target models.
+TypeSafe serves the judge, and it also decides branches in scenarios that branch
+during generation. A key does not prove network access, so check that both hosts
+answer from the machine that will run the scan:
+
+```bash
+curl --head --max-time 20 https://openrouter.ai/
+curl --head --max-time 20 https://api.typesafe.ai/
+```
+
+An HTTP response proves only that the host answered. A 401, 403, or proxy error
+still needs investigation. Only a small pilot run proves that inference works.
+Run one first and read its saved responses before a broader run.
+
+`uv run bench doctor` checks credentials and run storage.
+
+## Generate transcripts
+
+Generation runs through UK AISI Inspect (`inspect_ai`). Pick a model from
+`src/invisiblebench/models/config.py`. To add a model, add it there with verified
+provider prices. Loading the task registers those prices with Inspect, so
+`--cost-limit` works for every roster model.
 
 ```bash
 uv run inspect eval invisiblebench/safety_care --model openrouter/<catalog-model-id> \
@@ -39,48 +43,47 @@ uv run inspect eval invisiblebench/safety_care --model openrouter/<catalog-model
 uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
 ```
 
-Pick task options with `-T`: `category=`, `scenario=`, and `confidential=true`.
-Set concurrency with Inspect's `--max-samples` and `--max-connections`. Browse
-runs with `inspect view`.
+- Task options use `-T`: `category=`, `scenario=`, and `confidential=true`.
+- Concurrency uses Inspect's `--max-samples` and `--max-connections`.
+- `inspect view` browses runs.
+- `--cost-limit` bounds each conversation. The worst case is the number of
+  conversations times the limit.
+- To resume a failed generation, run `inspect eval-retry <log>`, then repeat
+  `bench export`. Inspect owns retries, timeouts, and transport.
 
-Each model also owns an optional `endpoint`: the exact OpenRouter provider slug.
-To pin one provider, pass `"only": ["<slug>"], "allow_fallbacks": false` in the
-`-M provider=` object. With fallbacks allowed, the run measures the **routed
-service**. Both modes require support for the supplied generation parameters.
+`bench export` writes `results/<run-id>/`. The run ID is a UTC timestamp in
+`YYYY-MM-DD_HH-MM-SSZ` form, and each run gets its own directory. Model identity
+lives in the manifest and the Jury Card, not in the directory name.
+
+### Provider routing
+
+A model can set an optional `endpoint`: an exact OpenRouter provider slug.
+
+- With fallbacks allowed, the run measures the **routed service**.
+- To pin one provider, pass `"only": ["<slug>"], "allow_fallbacks": false` in the
+  `-M provider=` object.
+
+Both modes require providers that support the supplied generation parameters.
 `bench export` checks the generation settings against the roster policy and
-freezes the policy per model under `transcript_policy.serving`. Actual returned
-providers remain in transcript metadata and the summary.
-Verify endpoint availability and prices before selecting one. A base provider
-slug can match multiple variants or regions. For an endpoint-specific study,
-verify and select the full endpoint slug. A restriction alone does not establish
-an immutable endpoint. Never infer a single-provider comparison from a model name.
+records the policy per model under `transcript_policy.serving`. The providers
+that actually served each reply stay in the transcript metadata.
 
-Generation cost is bounded by Inspect's per-conversation `--cost-limit`. The
-worst case is conversations times the limit. Judge scans keep their own
-dry-run plan and `--max-cost-usd` ceiling (below).
+Verify an endpoint's availability and prices before you pin it. A base slug can
+match several variants or regions, so an endpoint-specific study needs the full
+slug. Never infer a single-provider comparison from a model name.
 
-`bench export` writes `results/<run-id>/`. The run ID is a UTC timestamp
-in `YYYY-MM-DD_HH-MM-SSZ` form. Model identity stays in the manifest and Jury Card.
-Each new run has its own directory, including repeated runs of the same model.
+## Judge the transcripts
 
-To resume a crashed or errored generation, run `inspect eval-retry <log>`, then
-repeat `bench export`. Inspect owns retries, timeouts, and transport. Product
-transcripts from gc-sms's Harbor export use the same run contract with
-`harness: product`.
-Card titles show the model name and a readable UTC date and time.
-
-Create a dry-run scan plan in the same directory, then run it with an explicit
-ceiling. `--llm-model` defaults to the pinned judge model in
-`src/invisiblebench/api/typesafe.py`:
+Plan the scan first. Planning makes no paid calls and prints an estimate. Then
+run the plan with an explicit ceiling. `--llm-model` defaults to the judge model
+pinned in `src/invisiblebench/api/typesafe.py`.
 
 ```bash
-uv run bench scan plan results/<run-id> \
-  --llm-model <judge>
-uv run bench scan run \
-  --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
+uv run bench scan plan results/<run-id> --llm-model <judge>
+uv run bench scan run --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 
-The bundle contains all inputs needed for a scan and replay:
+The run directory then holds everything needed to replay the scan:
 
 ```text
 results/<run-id>/
@@ -94,136 +97,117 @@ results/<run-id>/
 └── transcripts/
 ```
 
-The Jury Card and evidence bundle are the two logical artifacts. There is no
-separate per-run narrative report or scorecard export. The public leaderboard
-is a shared projection across runs.
+The Jury Card and this evidence bundle are the two outputs of a run. The public
+leaderboard is a separate projection across runs.
 
-To plan a different judge against the exact frozen evidence, use:
+Planning groups questions that share identical evidence and splits groups to fit
+the judge's context limit. Each request is checked again before dispatch. Evidence
+is never truncated or summarized, so an observation too long for the limit is
+rejected.
+
+### Resume a scan
+
+Each request is written to `attempts.jsonl` before dispatch, and its answer is
+written to `answers.jsonl` before the next request. To resume, repeat the same
+`bench scan run` command. Completed requests are kept.
+
+Resume retries a request only when its outcome and cost are known: a budget
+refusal before dispatch, or an invalid answer with reported usage. Any other
+error after dispatch leaves the outcome unknown, because a missing answer does
+not prove there was no charge. That includes interruptions, timeouts, dropped
+connections, HTTP errors, and answers without reported usage. It stops automatic
+resume. Keep the blocked bundle for inspection, and plan a new scan from the same
+transcripts:
+
+```bash
+uv run bench scan plan results/<run-id> --output results/<new-run-id>
+```
+
+`UNCLEAR` verdicts are complete results, not failures to resume.
+
+### Judge again or compare
+
+To judge the same frozen evidence with a different judge:
 
 ```bash
 uv run bench scan rejudge results/<run-id> --output results/<new-run-id> \
   --llm-model <judge>
 ```
 
-Review the estimate, then execute with `bench scan run`. `bench questions
-<run-id>` orders observation families by affected unresolved judgments, then raw
-unresolved rate. Use `bench --json questions <run-id>` for exact conversation,
-turn, bound observation, and possible-verdict references.
-`bench compare --old <run-id> --new <new-run-id>` reports transitions,
-applicability, coverage, uncertainty, and cost on unchanged transcript bytes.
-Add `--expectations <file.jsonl>` to report agreement with frozen expectations.
-Follow [Evaluator validation](validation.md) before interpreting that agreement
-as accuracy.
-The new bundle retains source files under `inputs/<source-hash>/`. Keep those
-relative paths intact. They are part of the frozen plan.
+Review the estimate, then run it with `bench scan run`. The new bundle keeps its
+source files under `inputs/<source-hash>/`. Keep those relative paths intact,
+because the frozen plan refers to them.
 
-Planning groups questions by identical evidence and splits groups against the
-judge's estimated context limits. Every resulting request is checked again before
-dispatch. A single observation whose evidence exceeds the limit is rejected;
-evidence is never truncated or summarized. Long conversations can still exceed
-that single-observation limit.
+- `bench compare --old <run-id> --new <new-run-id>` reports verdict changes,
+  applicability, coverage, uncertainty, and cost on unchanged transcripts. Add
+  `--expectations <file.jsonl>` to report agreement with frozen expectations.
+  Read [Evaluator validation](validation.md) before treating that agreement as
+  accuracy.
+- `bench questions <run-id>` ranks observation families by how many unresolved
+  verdicts they affect. `bench --json questions <run-id>` gives exact
+  conversation, turn, and observation references.
 
-Each
-request is recorded in `attempts.jsonl` before dispatch. Its answer is flushed
-to `answers.jsonl` before the next request. Judgments are derived from those
-answers, not saved separately per request. Repeat the `bench scan run` command
-to resume unfinished judging. Request identity includes the conversation, role,
-turn, and exact input hash, so completed requests within a turn are retained.
+To replay a historical scan, use a source checkout at the engine version
+recorded in its plan, and keep its bundle unchanged. New judging needs a new
+plan; old plans are not migrated.
 
-Use a source checkout with the engine version recorded in a historical scan
-plan to replay that scan. Keep its bundle unchanged. New judging requires a new
-plan and cost approval; old plans are not migrated to the current request format.
-
-Resume retries a request only when its outcome and cost are known: a budget
-refusal before dispatch, or an invalid answer with reported usage. Any error
-after dispatch leaves the outcome unknown: an interruption, timeout, dropped
-connection, HTTP error, or an answer without reported usage. It stops automatic
-resume, because a missing answer does not prove there was no charge. A partial
-scan without an attempt journal also cannot resume. Keep the blocked bundle
-for inspection. To continue, plan a new scan from the retained transcript run:
+## Read the evidence
 
 ```bash
-uv run bench scan plan results/<run-id> --output results/<new-run-id>
-```
-
-Planning makes no paid calls. Review the estimate before `bench scan run`.
-Valid `UNCLEAR` decisions are complete.
-Move the entire bundle to retain replay.
-
-Inspect evidence with:
-
-```bash
-uv run bench explain your-org/your-model <scenario-id> --failures \
-  --scan results/<run-id>
+uv run bench explain <model-id> <scenario-id> --failures --scan results/<run-id>
 uv run bench runs
 uv run bench get <run-id>
 uv run bench jury <run-id>
 ```
 
-`bench jury` regenerates the card without model calls. It preserves the marked
-commentary section when the plan and ledger hashes still match. Put the author,
-date, observation, and check or transcript-turn references in that section.
-Notes do not change the judge's verdicts. The card and its quoted evidence stay
-private. Move complete old run directories into `results/archive/` with `mv`.
+`bench jury` regenerates the Jury Card without model calls. It keeps the card's
+marked commentary section when the plan and ledger hashes still match. Put the
+author, date, observation, and check or turn references there. Commentary never
+changes a verdict. The card quotes conversations, so keep it private.
 
-## Prepare a public projection
+To archive a run, move its whole directory into `results/archive/` with `mv`.
 
-The public contract is `.givecare/module.json`: it produces the web release
-archive that `invisiblebench.projection`, a plain script, writes. It writes only
-`data/leaderboard/leaderboard.json` and the web release archive.
-Projection needs no provider key or private workspace adapter.
+## Publish a projection
 
-Separate model runs may share a publication when their code and common generation
-settings match. Each model must have one recorded, consistent serving policy.
-Different policies for the same model are rejected, not merged into one row.
-Missing scenario coverage remains a separate publication error.
-
-Publication is one step from a complete current-contract scan. The script
-recomputes the scorecard from the scan, runs the strict publication QA on it,
-and writes the outputs. It rejects a source run that is incomplete, not current
-(mismatched benchmark, checks, or judge settings), or has a dirty or missing
-`git_sha`. Preview with `--dry-run` first:
+Publication is one step from a complete, current scan. The projection script
+recomputes the scorecard, runs strict publication checks, and writes
+`data/leaderboard/leaderboard.json` and `data/releases/web-bench-release.tar.gz`.
+It needs no provider key. Preview first:
 
 ```bash
 uv run python -m invisiblebench.projection --bundle results/<run-id> --dry-run
 ```
 
-The result prints the plan and judgments SHA-256 of the scan and, for each
-output, its before and after SHA-256. A reviewer binds the Git change to the
-scan with these values.
+The preview prints the scan's plan and judgments SHA-256 values and, for each
+output, its SHA-256 before and after. A reviewer uses these values to tie the
+Git change to the scan. Check `expected_effects`, then drop `--dry-run` to write.
 
-Inspect `expected_effects` in the dry-run output, then execute for real by
-dropping `--dry-run`:
+The script rejects a scan that is incomplete, was planned under a different
+benchmark, check, or judge version, or has a dirty or missing `git_sha`.
 
-```bash
-uv run python -m invisiblebench.projection --bundle results/<run-id>
-```
+- Separate model runs can share a publication when their code and common
+  generation settings match.
+- Each model needs one consistent serving policy. Conflicting policies for one
+  model are rejected, not merged.
+- Missing scenario coverage is an error.
 
-This replaces `data/leaderboard/leaderboard.json` and
-`data/releases/web-bench-release.tar.gz` with an atomic, digest-verified write
-(refuses symlinks, rolls back on partial failure). The archive contains only
-the aggregate leaderboard and its member manifest. It excludes conversations,
-judge answers, and private intake. Review and commit these outputs before a
-consumer reads them by exact commit. This command does not push or deploy.
+The write is atomic and digest-verified. The archive holds only the aggregate
+leaderboard and its manifest, never conversations, judge answers, or private
+intake. Review and commit the outputs. The script does not push or deploy.
 
-A contract update does not turn retained historical artifacts into results
-under the current method. A consumer must check the release schema and version.
 The current schemas are `safety-care/v5` and `gc-bench.web-benchmark-release/v4`.
-Deploy the owner documentation before the matching website consumer. Do not sync
-new releases into a consumer that still accepts the previous schema.
+A consumer must check both before it reads a release. Results from an older
+method stay results under that method.
 
 ## Verify
 
-Run `scripts/check.sh` before sharing an artifact.
+Run `scripts/check.sh` before you share an artifact.
 
-The scan can contain `UNCLEAR`. It remains evidence and does not start a second resolution pipeline.
-
-After a refactor, replay a frozen current-contract scan without API calls:
+After a refactor, replay a frozen current-format scan without API calls:
 
 ```bash
 uv run python scripts/rescore_diff.py --frozen <scan-dir>
 ```
 
-Replay re-derives judgments from the frozen plan and the saved answers in
-`answers.jsonl`. It does not call the judge model again. A scan from a
-retired contract requires a new benchmark run.
+Replay re-derives verdicts from the frozen plan and the saved answers. It does
+not call the judge again. A scan from a retired format needs a new run.
