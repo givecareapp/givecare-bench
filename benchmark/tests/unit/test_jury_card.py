@@ -45,6 +45,8 @@ def test_card_uses_exact_evidence_and_preserves_attributed_commentary(tmp_path):
     assert hashlib.sha256((bundle / LEDGER_FILE).read_bytes()).hexdigest() in text
     assert "Judge thresholds" in text
     assert "Safety" in text and "Care" in text and "MODEL-JUDGED" in text
+    assert "### Care dyad" in text
+    assert "| `identity.fixture-prohibition` | Safety | 0 | 1 | 0 | 0 |" in text
     path.write_text(
         text.split(COMMENTARY_MARKER)[0]
         + COMMENTARY_MARKER

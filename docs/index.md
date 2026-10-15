@@ -26,7 +26,8 @@ runs of the same model. The saved plan, answers, and transcripts support
 inspection and replay; judgments are derived from them.
 
 The useful unit is a decision: **criterion → evidence → rationale → verdict**.
-The conversation includes both the caregiver and the care recipient's needs.
+The conversation includes both the caregiver and the care recipient's needs;
+the [care dyad](coverage.md#care-dyad) checks cover them together.
 A check's cue and window decide which later turns it applies to; a later good
 response does not erase an earlier violation.
 
