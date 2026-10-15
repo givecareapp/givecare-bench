@@ -27,6 +27,8 @@ dependencies = [
     "rich>=13.0.0",
     "httpx>=0.27.0",
     "typesafe-sdk>=0.7.0",
+    "inspect-ai>=0.3.280",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]
