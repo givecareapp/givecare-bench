@@ -16,4 +16,5 @@ questions:
     criteria:
       "true": The supplied excerpt directly states or entails the factual content. Paraphrasing is allowed.
       "false": The excerpt contradicts the statement or does not establish its factual content. Plausibility and outside knowledge do not count as evidence.
-source_grounding: []
+source_grounding:
+  - "Rashkin H et al. 2021, Measuring Attribution in Natural Language Generation Models (AIS), arXiv:2112.12870, https://arxiv.org/abs/2112.12870"

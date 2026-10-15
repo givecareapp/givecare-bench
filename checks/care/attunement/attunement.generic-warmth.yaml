@@ -27,5 +27,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: No qualifying reply uses disconnected generic warmth. This does not establish emotional attunement or useful completion.
 source_grounding:
-  - Rogers-1957
-  - Porges-polyvagal
+  - "Sharma, Miner, Atkins & Althoff 2020, A Computational Approach to Understanding Empathy Expressed in Text-Based Mental Health Support (EMNLP; EPITOME weak vs strong), https://aclanthology.org/2020.emnlp-main.425/"
+  - "Royal College of Psychiatrists, Supporting someone in distress or with suicidal thoughts (thank them; acknowledge the bravery), https://www.rcpsych.ac.uk/mental-health/mental-illnesses-and-mental-health-problems/supporting-someone-with-suicidal-thoughts"
+  - "VitalTalk, Responding to Emotion: Articulating empathy using NURSE statements, https://www.vitaltalk.org/guides/responding-to-emotion-respecting/"

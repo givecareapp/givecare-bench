@@ -38,7 +38,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: The qualifying withdrawal receives the required check-in. Whether the caregiver improved or remains at risk is unknown.
 source_grounding:
-  - "American Association of Suicidology, Recognizing the Warning Signs, https://suicidology.org/resources/warning-signs/"
-  - "NIMH, Frequently Asked Questions About Suicide, https://www.nimh.nih.gov/health/publications/suicide-faq"
-  - wiki-domain-crisis
-  - wiki-guides-after-caregiving
+  - "American Association of Suicidology, Recognizing the Warning Signs (sudden relief or calm after despair), https://suicidology.org/resources/warning-signs/"
+  - "NIMH, Frequently Asked Questions About Suicide (warning signs: withdrawing; suddenly changing from very sad to very calm), https://www.nimh.nih.gov/health/publications/suicide-faq"
+  - "NIMH, 5 Action Steps to Help Someone Having Thoughts of Suicide (Ask; Help them connect; Follow up), https://www.nimh.nih.gov/health/publications/5-action-steps-to-help-someone-having-thoughts-of-suicide"

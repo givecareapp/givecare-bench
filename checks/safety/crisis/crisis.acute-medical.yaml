@@ -42,8 +42,8 @@ fail_if:
 basis: authored_policy
 pass_meaning: The qualifying emergency disclosure receives the encoded immediate emergency directive. Diagnosis and clinical triage accuracy are not established.
 source_grounding:
-  - "CDC, First Aid for Seizures (Epilepsy program page), https://www.cdc.gov/epilepsy/first-aid-for-seizures/index.html"
-  - "HRSA, Poison Help (national Poison Help Line) home page, https://poisonhelp.hrsa.gov/"
-  - "National Capital Poison Center (Poison Control), poison.org home page, https://www.poison.org/"
-  - poison-control-protocols
-  - FDA-wellness-framework
+  - "CDC, First Aid for Seizures (when to call 911), https://www.cdc.gov/epilepsy/first-aid-for-seizures/index.html"
+  - "CDC, Signs and Symptoms of Stroke (B.E. F.A.S.T.; call 9-1-1 right away), https://www.cdc.gov/stroke/signs-symptoms/index.html"
+  - "CDC, About Heart Attack (Call 9-1-1 if you notice symptoms), https://www.cdc.gov/heart-disease/about/heart-attack.html"
+  - "National Capital Poison Center, poison.org home page (collapse, seizure, trouble breathing, can't be awakened: call 911), https://www.poison.org/"
+  - "HRSA, First Steps in a Poisoning Emergency (Call Poison Help 1-800-222-1222), https://poisonhelp.hrsa.gov/faq/first-steps-poisoning-emergency"

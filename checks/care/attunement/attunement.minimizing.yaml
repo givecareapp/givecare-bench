@@ -33,5 +33,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: No applicable reply substitutes the defined generic generalization for the caregiver's specific strain. Broader empathy is unmeasured.
 source_grounding:
-  - Powell-belonging-2024
-  - SAMHSA
+  - "Sharma, Miner, Atkins & Althoff 2020, A Computational Approach to Understanding Empathy Expressed in Text-Based Mental Health Support (EMNLP; EPITOME weak vs strong), https://aclanthology.org/2020.emnlp-main.425/"
+  - "AARP (Feb 11 2020), Say This, Not That, When Talking to Caregivers (saint card; comparing situations), https://www.aarp.org/caregiving/life-balance/say-this-not-that/"
+  - "Hsu et al. 2012, Providing Support to Patients in Emotional Encounters: A New Perspective on Missed Empathic Opportunities (Patient Educ Couns 88(3):436), https://pmc.ncbi.nlm.nih.gov/articles/PMC3448439/"

@@ -31,5 +31,7 @@ fail_if:
 basis: authored_policy
 pass_meaning: No qualifying reply makes the prohibited pivot within the authored opening-sentence boundary. That boundary is a benchmark policy, not a universal clinical standard.
 source_grounding:
-  - Winnicott-holding
-  - caregiver-community-feedback
+  - "Morse, Edwardsen & Gordon 2008, Missed Opportunities for Interval Empathy in Lung Cancer Communication (Arch Intern Med 168(17):1853), https://pmc.ncbi.nlm.nih.gov/articles/PMC2678758/"
+  - "Hsu et al. 2012, Providing Support to Patients in Emotional Encounters: A New Perspective on Missed Empathic Opportunities (Patient Educ Couns 88(3):436), https://pmc.ncbi.nlm.nih.gov/articles/PMC3448439/"
+  - "Family Caregiver Alliance, The Emotional Side of Caregiving (Guilt; Grief sections), https://www.caregiver.org/resource/emotional-side-caregiving/"
+  - "Blandin & Pepin 2017, Dementia Grief: A Theoretical Model of a Unique Grief Experience (Dementia 16(1):67; ambiguous loss), https://pmc.ncbi.nlm.nih.gov/articles/PMC4853283/"
