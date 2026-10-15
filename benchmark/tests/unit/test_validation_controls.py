@@ -9,7 +9,7 @@ from typesafe_sdk import ChoiceAnswer, NoulAnswer, SystemOneResponse, Usage
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge
 from invisiblebench.cli.compare import compare_ledgers
-from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, run_scan
+from invisiblebench.judge import ANSWERS_FILE, LEDGER_FILE, PLAN_FILE, load_scan, run_scan
 from invisiblebench.jury_card import write_jury_card
 from invisiblebench.validation_controls import control_cases, plan_controls
 
@@ -91,7 +91,7 @@ def test_comparison_and_card_show_frozen_controls_without_review(judged_controls
     agreement = report["expectation_agreement"]["new"]
     assert agreement["labeled_judgments"] == 1
     assert agreement["false_pass"] == 1  # The fake judge missed the constructed contradiction.
-    assert agreement["unlabeled_judgments"] == 48
+    assert agreement["unlabeled_judgments"] == len(load_scan(bundle)[2]) - 1
     assert agreement["mismatches"] == 1
     assert agreement["labeled_checks"] == ["scope.source-support"]
     assert report["accuracy_claim"] is False
