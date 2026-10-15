@@ -48,7 +48,7 @@ def _reset_global_cost_tracker():
     touches the same singleton directly (unlike tests that monkeypatch their
     own local `CostTracker`).
     """
-    from invisiblebench.api.client import cost_tracker
+    from invisiblebench.api.typesafe import cost_tracker
 
     cost_tracker.reset()
     yield

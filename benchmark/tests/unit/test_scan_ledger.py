@@ -11,8 +11,7 @@ import pytest
 from typesafe_sdk import ChoiceAnswer, SystemOneResponse, TypeSafeAPIError, Usage
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
-from invisiblebench.api.client import CostBudgetExceededError, cost_tracker
-from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, CostBudgetExceededError, cost_tracker
 from invisiblebench.judge import (
     ANSWERS_FILE,
     ATTEMPTS_FILE,

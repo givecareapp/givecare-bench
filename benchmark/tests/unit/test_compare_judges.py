@@ -6,7 +6,7 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
 from invisiblebench.api import typesafe
-from invisiblebench.api.client import CostBudgetExceededError
+from invisiblebench.api.typesafe import CostBudgetExceededError
 from invisiblebench.cli.compare import compare_ledgers
 from invisiblebench.judge import (
     ANSWERS_FILE,

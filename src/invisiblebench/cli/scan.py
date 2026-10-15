@@ -6,8 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from invisiblebench.api.client import CostBudgetExceededError
-from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, CostBudgetExceededError
 from invisiblebench.judge import PLAN_FILE, load_scan, plan_rejudge, plan_scan, run_scan
 from invisiblebench.jury_card import write_jury_card
 

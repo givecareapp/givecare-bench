@@ -89,7 +89,6 @@ exclude = "scripts|benchmark/tests"
 
 [[tool.mypy.overrides]]
 module = [
-    "dataclasses_json.*",
     "yaml.*",
 ]
 ignore_missing_imports = true
@@ -98,12 +97,6 @@ ignore_missing_imports = true
 module = [
     "dotenv",
     "dotenv.*",
-    "pandas",
-    "pandas.*",
-    "seaborn",
-    "seaborn.*",
-    "tqdm",
-    "tqdm.*",
 ]
 ignore_missing_imports = true
 
@@ -126,7 +119,7 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = [
     "invisiblebench.evaluation.*",
-    "invisiblebench.api.client",
+    "invisiblebench.api.typesafe",
 ]
 ignore_errors = false
 check_untyped_defs = true

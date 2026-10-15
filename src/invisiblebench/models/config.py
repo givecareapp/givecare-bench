@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -11,9 +11,6 @@ class ModelConfig(BaseModel):
 
     id: str = Field(..., description="Model ID (e.g., 'deepseek/deepseek-chat')")
     name: str = Field(..., description="Display name (e.g., 'DeepSeek V3')")
-    provider: Literal["openrouter", "anthropic", "openai"] = Field(
-        default="openrouter", description="API provider"
-    )
     endpoint: str | None = Field(
         default=None,
         min_length=1,
@@ -62,28 +59,24 @@ MODELS_FULL = [
     ModelConfig(
         id="openai/gpt-6-sol",
         name="GPT-6 Sol",
-        provider="openrouter",
         cost_per_m_input=2.00,
         cost_per_m_output=10.00,
     ),
     ModelConfig(
         id="anthropic/claude-opus-5.5",
         name="Claude Opus 5.5",
-        provider="openrouter",
         cost_per_m_input=4.00,
         cost_per_m_output=20.00,
     ),
     ModelConfig(
         id="google/gemini-3.1-pro-preview",
         name="Gemini 3.1 Pro",
-        provider="openrouter",
         cost_per_m_input=2.00,
         cost_per_m_output=12.00,
     ),
     ModelConfig(
         id="x-ai/grok-4.7",
         name="Grok 4.7",
-        provider="openrouter",
         cost_per_m_input=1.60,
         cost_per_m_output=4.80,
     ),
@@ -91,14 +84,12 @@ MODELS_FULL = [
     ModelConfig(
         id="moonshotai/kimi-k2.6",
         name="Kimi K2.6",
-        provider="openrouter",
         cost_per_m_input=0.66,
         cost_per_m_output=3.41,
     ),
     ModelConfig(
         id="minimax/minimax-m3",
         name="MiniMax M3",
-        provider="openrouter",
         cost_per_m_input=0.30,
         cost_per_m_output=1.20,
     ),
@@ -106,21 +97,18 @@ MODELS_FULL = [
     ModelConfig(
         id="deepseek/deepseek-v4-pro",
         name="DeepSeek V4 Pro",
-        provider="openrouter",
         cost_per_m_input=0.435,
         cost_per_m_output=0.87,
     ),
     ModelConfig(
         id="qwen/qwen3.7-max",
         name="Qwen 3.7 Max",
-        provider="openrouter",
         cost_per_m_input=1.25,
         cost_per_m_output=3.75,
     ),
     ModelConfig(
         id="z-ai/glm-5.2",
         name="GLM-5.2",
-        provider="openrouter",
         cost_per_m_input=0.54,
         cost_per_m_output=1.76,
     ),
@@ -128,21 +116,18 @@ MODELS_FULL = [
     ModelConfig(
         id="anthropic/claude-haiku-4.5",
         name="Claude Haiku 4.5",
-        provider="openrouter",
         cost_per_m_input=1.00,
         cost_per_m_output=5.00,
     ),
     ModelConfig(
         id="openai/gpt-5.6-luna",
         name="GPT-5.6 Luna",
-        provider="openrouter",
         cost_per_m_input=1.00,
         cost_per_m_output=6.00,
     ),
     ModelConfig(
         id="google/gemini-3.5-flash",
         name="Gemini 3.5 Flash",
-        provider="openrouter",
         cost_per_m_input=1.50,
         cost_per_m_output=9.00,
     ),
@@ -150,21 +135,18 @@ MODELS_FULL = [
     ModelConfig(
         id="nvidia/nemotron-3-super-120b-a12b",
         name="Nemotron 3 Super 120B",
-        provider="openrouter",
         cost_per_m_input=0.08,
         cost_per_m_output=0.45,
     ),
     ModelConfig(
         id="qwen/qwen3.6-35b-a3b",
         name="Qwen 3.6 35B",
-        provider="openrouter",
         cost_per_m_input=0.14,
         cost_per_m_output=1.00,
     ),
     ModelConfig(
         id="google/gemma-4-26b-a4b-it",
         name="Gemma 4 26B A4B",
-        provider="openrouter",
         cost_per_m_input=0.06,
         cost_per_m_output=0.33,
     ),

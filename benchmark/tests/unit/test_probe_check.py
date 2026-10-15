@@ -50,7 +50,7 @@ def test_failed_probe_saves_progress_and_resumes(tmp_path):
 def test_multiple_requests_in_one_turn_resume_by_exact_identity(
     tmp_path, published_checks, unknown
 ):
-    from invisiblebench.api.client import CostBudgetExceededError, cost_tracker
+    from invisiblebench.api.typesafe import CostBudgetExceededError, cost_tracker
 
     source = tmp_path / "conversation.jsonl"
     source.write_text(TRANSCRIPT)

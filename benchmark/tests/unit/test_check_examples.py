@@ -8,7 +8,7 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import ScriptedJudge
 from invisiblebench import examples as check_examples
-from invisiblebench.api.client import CostBudgetExceededError
+from invisiblebench.api.typesafe import CostBudgetExceededError
 from invisiblebench.evaluation.check_registry import load_checks
 from invisiblebench.judge import ANSWERS_FILE
 from invisiblebench.models.scan import Thresholds

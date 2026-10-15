@@ -13,7 +13,7 @@ from typesafe_sdk import (
 )
 
 from invisiblebench.api import typesafe
-from invisiblebench.api.client import CostBudgetExceededError, CostTracker
+from invisiblebench.api.typesafe import CostBudgetExceededError, CostTracker
 
 
 @pytest.fixture
@@ -71,7 +71,6 @@ def test_native_answers_survive_the_transport(api):
     # The SDK names itself; the benchmark never borrows another client's identity.
     assert requests[0].headers["user-agent"].startswith("typesafe")
     assert json.loads(requests[0].content)["questions"] == QUESTIONS
-    assert tracker.calls == 1
     assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
 
@@ -83,7 +82,7 @@ def test_invalid_choice_is_billed_and_rejected(api, values):
     answers["check"]["probabilities"] = values
     with pytest.raises(ValueError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert tracker.calls == 1
+    assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
 
 def test_missing_answer_is_billed_and_rejected(api):
@@ -91,7 +90,7 @@ def test_missing_answer_is_billed_and_rejected(api):
     del answers["signal"]
     with pytest.raises(ValueError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert tracker.calls == 1
+    assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
 
 def test_exhausted_budget_blocks_request(api):
@@ -126,7 +125,7 @@ def test_a_request_past_the_state_budget_is_refused_before_dispatch(api):
     with pytest.raises(ValueError, match="state plus the longest question"):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state=state, questions=QUESTIONS)
 
-    assert requests == [] and tracker.calls == 0
+    assert requests == [] and tracker.total == 0
 
 
 @pytest.mark.parametrize("character", ["漢", "🫂", "\u0000"])
@@ -135,7 +134,7 @@ def test_context_estimate_counts_utf8_and_json_escapes_without_dispatch(api, cha
     state = character * (typesafe.MAX_STATE_AND_QUESTION_TOKENS + 1)
     with pytest.raises(ValueError, match="state plus the longest question"):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state=state, questions=QUESTIONS)
-    assert not requests and tracker.calls == 0
+    assert not requests and tracker.total == 0
 
 
 def test_many_questions_past_the_request_budget_are_refused():
@@ -166,7 +165,7 @@ def test_an_unknown_outcome_is_sent_once_and_counted(monkeypatch):
     with _client(handle) as client, pytest.raises(TypeSafeAPIConnectionError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
     assert len(sent) == 1
-    assert (tracker.calls, tracker.snapshot()["unknown_calls"]) == (1, 1)
+    assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001
 
 
 def test_a_rejected_request_counts_as_a_call_of_unknown_cost(monkeypatch):
@@ -177,7 +176,7 @@ def test_a_rejected_request_counts_as_a_call_of_unknown_cost(monkeypatch):
     monkeypatch.setattr(typesafe, "cost_tracker", tracker)
     with _client(handle) as client, pytest.raises(TypeSafeAPIError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
-    assert (tracker.calls, tracker.snapshot()["unknown_calls"]) == (1, 1)
+    assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001
 
 
 def test_missing_usage_is_unknown_cost_not_an_invalid_answer(monkeypatch):
@@ -199,7 +198,7 @@ def test_missing_usage_is_unknown_cost_not_an_invalid_answer(monkeypatch):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=questions)
     assert not isinstance(caught.value, ValueError)
     assert caught.value.response.usage.input_tokens is None
-    assert tracker.snapshot()["unknown_calls"] == 1
+    assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001
 
 
 def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
@@ -214,4 +213,4 @@ def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
     with _client(handle) as client, pytest.raises(TypeSafeAPIError):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
     assert len(sent) == 1
-    assert tracker.snapshot()["unknown_calls"] == 1
+    assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001

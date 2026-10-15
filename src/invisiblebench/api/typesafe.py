@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
+from pathlib import Path
 from typing import Any
 
 import httpx2
+from dotenv import load_dotenv
 from typesafe_sdk import (
     Answer,
     ChoiceAnswer,
@@ -18,7 +21,11 @@ from typesafe_sdk import (
     TypeSafeClient,
 )
 
-from invisiblebench.api.client import cost_tracker, register_model_pricing
+_env_file = Path(__file__).parent.parent.parent.parent / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+else:
+    load_dotenv()
 
 DEFAULT_JUDGE_MODEL = "jev-1.13.0"
 JUDGE_PRICE_PER_MTOK_INPUT = 0.042
@@ -36,12 +43,157 @@ API_KEY_ENV = "TYPESAFE_API_KEY"
 RETRY = RetryPolicy(http_statuses={408, 429}, api_connection_error=False, api_timeout_error=False)
 
 
-# The judge is billed only on input tokens. Registering it with the shared
-# cost tracker's pricing catalog lets `ask()` reserve and settle through the
-# same reserve/settle path every other dispatch uses, instead of a separate
-# implementation.
-for _model, _price in JUDGE_PRICING.items():
-    register_model_pricing(_model, _price, 0.0)
+def _nonnegative_cost(value: float, name: str) -> float:
+    value = float(value)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return value
+
+
+class CostBudgetExceededError(RuntimeError):
+    """The process-level API cost ceiling has been reached."""
+
+
+class UnpricedModelCostError(CostBudgetExceededError):
+    """A call with unknown cost was refused under an active runtime ceiling."""
+
+
+MAX_COST_CEILING_MULTIPLIER = 1.5
+MIN_COST_CEILING_HEADROOM_USD = 1.0
+
+
+def maximum_reasonable_cost_ceiling(planned_cost_usd: float) -> float:
+    """Bound live approval so a nominal ceiling remains a meaningful guardrail."""
+    planned_cost_usd = _nonnegative_cost(planned_cost_usd, "planned cost")
+    return max(
+        planned_cost_usd * MAX_COST_CEILING_MULTIPLIER,
+        planned_cost_usd + MIN_COST_CEILING_HEADROOM_USD,
+    )
+
+
+def _call_cost(
+    model: str,
+    prompt_tokens: int | None,
+    completion_tokens: int | None,
+    actual_cost: float | None,
+) -> float | None:
+    """Cost of one call, or None when it cannot be known (never a fake zero)."""
+    if actual_cost is not None:
+        try:
+            return _nonnegative_cost(actual_cost, "reported cost")
+        except (TypeError, ValueError):
+            pass
+    price = JUDGE_PRICING.get(model)
+    if price is None or prompt_tokens is None or completion_tokens is None:
+        return None
+    if any(
+        not isinstance(n, int) or isinstance(n, bool) or n < 0
+        for n in (prompt_tokens, completion_tokens)
+    ):
+        return None
+    return prompt_tokens * price / 1_000_000
+
+
+class CostTracker:
+    """Process-wide judge spend with a reserve-then-settle ceiling."""
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._total: float = 0.0
+        self._max_cost_usd: float | None = None
+        self._reserved: float = 0.0
+        self._next_token: int = 0
+        self._reservations: dict[int, float] = {}
+
+    def reserve(self, amount: float | None, *, allow_unknown: bool = False) -> int:
+        """Reserve an estimated dollar amount before dispatching a request.
+
+        ``amount`` is ``None`` when the request's cost cannot be estimated in
+        advance (no known pricing). Under an active ceiling, an unknown
+        amount is refused unless the caller opts in with ``allow_unknown``.
+        Returns a token to pass to :meth:`settle` or :meth:`release`.
+        """
+        with self._lock:
+            if amount is None:
+                if self._max_cost_usd is not None and not allow_unknown:
+                    raise UnpricedModelCostError(
+                        f"refusing to dispatch a call with unknown cost under the active "
+                        f"${self._max_cost_usd:.4f} runtime cost ceiling "
+                        "(pass allow_unknown=True to opt in)"
+                    )
+                reserved_amount = 0.0
+            else:
+                reserved_amount = _nonnegative_cost(amount, "reservation")
+            if self._max_cost_usd is not None:
+                projected = self._total + self._reserved + reserved_amount
+                if projected > self._max_cost_usd:
+                    raise CostBudgetExceededError(
+                        f"Runtime cost ceiling ${self._max_cost_usd:.4f} would be exceeded "
+                        f"(spent ${self._total:.4f}, reserved ${self._reserved:.4f}, "
+                        f"this request up to ${reserved_amount:.4f})"
+                    )
+            self._next_token += 1
+            token = self._next_token
+            self._reservations[token] = reserved_amount
+            self._reserved += reserved_amount
+            return token
+
+    def release(self, token: int) -> None:
+        """Cancel a reservation without recording a call (e.g. after an error)."""
+        with self._lock:
+            amount = self._reservations.pop(token, None)
+            if amount is not None:
+                self._reserved -= amount
+
+    def record(
+        self,
+        model: str,
+        prompt_tokens: int | None,
+        completion_tokens: int | None,
+        *,
+        actual_cost: float | None = None,
+    ) -> float:
+        """Record one completed call. An unknown cost adds nothing."""
+        cost = _call_cost(model, prompt_tokens, completion_tokens, actual_cost)
+        if cost is None:
+            return 0.0
+        with self._lock:
+            self._total += cost
+        return cost
+
+    def settle(
+        self,
+        token: int,
+        model: str,
+        prompt_tokens: int | None,
+        completion_tokens: int | None,
+        *,
+        actual_cost: float | None = None,
+    ) -> float:
+        """Release a reservation and record the call's actual cost in one step."""
+        with self._lock:
+            if token not in self._reservations:
+                raise ValueError("reservation is unknown or already settled")
+            cost = self.record(model, prompt_tokens, completion_tokens, actual_cost=actual_cost)
+            self.release(token)
+            return cost
+
+    @property
+    def total(self) -> float:
+        with self._lock:
+            return self._total
+
+    def reset(self, *, max_cost_usd: float | None = None) -> None:
+        if max_cost_usd is not None:
+            max_cost_usd = _nonnegative_cost(max_cost_usd, "cost ceiling")
+        with self._lock:
+            self._total = 0.0
+            self._max_cost_usd = max_cost_usd
+            self._reserved = 0.0
+            self._reservations.clear()
+
+
+cost_tracker = CostTracker()
 
 
 def _tokens(value: Any) -> float:

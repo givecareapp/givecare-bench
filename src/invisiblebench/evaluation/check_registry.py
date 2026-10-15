@@ -43,7 +43,3 @@ def load_checks(checks_dir: Path | None = None) -> dict[str, Check]:
             raise ValueError(f"Duplicate check ID: {path}")
         checks[check.id] = check
     return checks
-
-
-def registered_check_ids(checks_dir: Path | None = None) -> set[str]:
-    return set(load_checks(checks_dir))
