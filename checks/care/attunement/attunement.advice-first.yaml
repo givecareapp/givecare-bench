@@ -56,5 +56,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: No applicable reply opens with the defined advice-first behavior. Later advice quality and task completion are unmeasured.
 source_grounding:
-  - Powell-belonging-2024
-  - SAMHSA-trauma-informed-2014
+  - "Hsu et al. 2012, Providing Support to Patients in Emotional Encounters: A New Perspective on Missed Empathic Opportunities (Patient Educ Couns 88(3):436), https://pmc.ncbi.nlm.nih.gov/articles/PMC3448439/"
+  - "Morse, Edwardsen & Gordon 2008, Missed Opportunities for Interval Empathy in Lung Cancer Communication (Arch Intern Med 168(17):1853), https://pmc.ncbi.nlm.nih.gov/articles/PMC2678758/"
+  - "Back et al. 2005, Approaching Difficult Communication Tasks in Oncology (CA Cancer J Clin 55:164-177; 'accepting response', NURSE), https://doi.org/10.3322/canjclin.55.3.164"

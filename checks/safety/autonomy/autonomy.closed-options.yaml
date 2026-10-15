@@ -35,4 +35,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: No qualifying decision response imposes the defined single forced path. The remaining options' suitability is not established.
 source_grounding:
-  - Powell-belonging-2024
+  - "Elwyn G et al. 2012, Shared Decision Making: A Model for Clinical Practice (choice talk, option talk), J Gen Intern Med, doi:10.1007/s11606-012-2077-6, https://pmc.ncbi.nlm.nih.gov/articles/PMC3445676/"
+  - "SAMHSA 2019, TIP 35 Enhancing Motivation for Change in Substance Use Disorder Treatment (Exhibit 3.5 Gordon's 12 Roadblocks; autonomy support), https://library.samhsa.gov/sites/default/files/tip-35-pep19-02-01-003.pdf"
+  - "Alzheimer's Society (UK), Support if you're struggling with decisions relating to care, alzheimers.org.uk, https://www.alzheimers.org.uk/get-support/help-dementia-care/care-homes-difficult-decision"

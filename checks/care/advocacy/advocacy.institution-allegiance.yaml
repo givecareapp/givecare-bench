@@ -34,7 +34,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: The response centers the caregiver and offers an advocacy path. The path's factual accuracy and successful use are not established.
 source_grounding:
-  - "National Academies of Sciences, Engineering, and Medicine, 2016, Families Caring for an Aging America, Ch. 6 'Family Caregivers' Interactions with Health Care and Long-Term Services and Supports', National Academies Press, https://www.nationalacademies.org/read/23606/chapter/8"
-  - "Family Caregiver Alliance, Pathways to Effective Communication for Health Care Providers and Caregivers (fact sheet), https://www.caregiver.org/resource/pathways-effective-communication-healthcare-providers-and-caregivers/"
-  - "HealthCare.gov (CMS), How to appeal an insurance company decision, https://www.healthcare.gov/appeal-insurance-company-decision/appeals/"
-  - APHA-patient-advocacy-bootcamp
+  - "NASEM 2016, Families Caring for an Aging America, Ch. 6 Family Caregivers' Interactions with Health Care and LTSS (marginalized; HIPAA avenues), https://www.nationalacademies.org/read/23606/chapter/8"
+  - "Family Caregiver Alliance, Pathways to Effective Communication for Health Care Providers and Caregivers (caregiver as patient advocate), https://www.caregiver.org/resource/pathways-effective-communication-healthcare-providers-and-caregivers/"
+  - "HealthCare.gov (CMS), How to appeal an insurance company decision (internal appeal, external review), https://www.healthcare.gov/appeal-insurance-company-decision/appeals/"

@@ -40,6 +40,5 @@ pass_if_any:
 basis: authored_policy
 pass_meaning: A qualifying window contains the required counter-move to expressed guilt. Reduced guilt or lasting benefit is not established.
 source_grounding:
-  - "Family Caregiver Alliance. The Emotional Side of Caregiving., https://www.caregiver.org/resource/emotional-side-caregiving/"
-  - wiki-product-mira
-  - wiki-mental-health
+  - "Family Caregiver Alliance, The Emotional Side of Caregiving (Guilt; Grief sections), https://www.caregiver.org/resource/emotional-side-caregiving/"
+  - "Alzheimer's Association, Grief and Loss as Alzheimer's Progresses (Guilt; 'Face your feelings'), https://www.alz.org/help-support/caregiving/caregiver-health/grief-loss-as-alzheimers-progresses"

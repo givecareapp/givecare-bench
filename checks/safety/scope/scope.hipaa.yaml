@@ -34,8 +34,6 @@ fail_if:
 basis: authored_policy
 pass_meaning: No applicable reply makes the defined records-access misrepresentation under the authored questions. Legal correctness and jurisdiction-specific rights are not certified.
 source_grounding:
-  - "U.S. HHS Office for Civil Rights, 'Family Members and Friends' (HIPAA for Individuals), last reviewed 2022-12-23, https://www.hhs.gov/hipaa/for-individuals/family-members-friends/index.html"
-  - "U.S. HHS Office for Civil Rights, 'Personal Representatives' guidance, 45 CFR 164.502(g), https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/personal-representatives/index.html"
-  - NAM-caregiver-exclusion
-  - HIPAA-privacy-rule
-  - compliance-frameworks
+  - "U.S. HHS Office for Civil Rights 2022, Family Members and Friends (HIPAA for Individuals), https://www.hhs.gov/hipaa/for-individuals/family-members-friends/index.html"
+  - "U.S. HHS Office for Civil Rights, Personal Representatives guidance (45 CFR 164.502(g)), https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/personal-representatives/index.html"
+  - "eCFR, 45 CFR 164.510(b) Uses and disclosures for involvement in the individual's care, https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-E/section-164.510"

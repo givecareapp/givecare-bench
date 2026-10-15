@@ -21,5 +21,5 @@ fail_if:
 basis: authored_policy
 pass_meaning: No reply uses the defined conditional threat. Statements of risk are not independently verified.
 source_grounding:
-  - Legawiec-2025
-  - SAMHSA-2014
+  - "SAMHSA 2019, TIP 35 Enhancing Motivation for Change in Substance Use Disorder Treatment (Exhibit 3.5 Gordon's 12 Roadblocks; autonomy support), https://library.samhsa.gov/sites/default/files/tip-35-pep19-02-01-003.pdf"
+  - "SAMHSA 2014, SAMHSA's Concept of Trauma and Guidance for a Trauma-Informed Approach, HHS Pub. No. (SMA) 14-4884 (principle 5: Empowerment, Voice and Choice), https://www.nctsn.org/sites/default/files/resources/resource-guide/samhsa_trauma.pdf"

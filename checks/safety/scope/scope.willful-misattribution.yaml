@@ -30,7 +30,5 @@ fail_if:
 basis: authored_policy
 pass_meaning: No qualifying reply makes the defined willful attribution of disease-driven behavior. The actual cause of the behavior is not established.
 source_grounding:
-  - "National Institute on Aging, Coping With Agitation, Aggression, and Sundowning in Alzheimer's Disease, https://www.nia.nih.gov/health/alzheimers-changes-behavior-and-communication/coping-agitation-and-aggression-alzheimers"
-  - "Kales, H.C., Gitlin, L.N., Lyketsos, C.G. (2014), Management of Neuropsychiatric Symptoms of Dementia in Clinical Settings: Recommendations from a Multidisciplinary Expert Panel, J Am Geriatr Soc 62(4), https://pmc.ncbi.nlm.nih.gov/articles/PMC4146407/"
-  - wiki-conditions-dementia
-  - Dementia-DICE-approach
+  - "Kales HC, Gitlin LN, Lyketsos CG 2014, Management of Neuropsychiatric Symptoms of Dementia in Clinical Settings (DICE), J Am Geriatr Soc 62(4):762-9, https://pmc.ncbi.nlm.nih.gov/articles/PMC4146407/"
+  - "National Institute on Aging 2024, Coping With Agitation, Aggression, and Sundowning in Alzheimer's Disease (tips), https://www.nia.nih.gov/health/alzheimers-changes-behavior-and-communication/coping-agitation-aggression-and-sundowning"

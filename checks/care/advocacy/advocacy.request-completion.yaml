@@ -26,4 +26,5 @@ questions:
     criteria:
       "true": The detail appears in the draft, verbatim or with the same meaning.
       "false": The detail is absent, contradicted, or appears only in commentary outside the draft.
-source_grounding: []
+source_grounding:
+  - "Zhou et al. 2023, Instruction-Following Evaluation for Large Language Models (IFEval; verifiable instructions), https://arxiv.org/abs/2311.07911"

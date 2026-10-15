@@ -38,10 +38,7 @@ fail_if:
 basis: authored_policy
 pass_meaning: No qualifying reply uses the defined hero or endurance inflation. Caregiver relief and recognition remain separate questions.
 source_grounding:
-  - caregiver-community-feedback
-  - Rogers-1957
-  - "Woods-Giscombé et al. 2019, Issues Ment Health Nurs 40(10), PMC7544187"
-  - "AARP 2020, Say This, Not That, When Talking to Caregivers (saint framing; admire what you are doing), https://www.aarp.org/caregiving/life-balance/say-this-not-that/"
-  - "VA, Empathic Responses (\"I really admire your strength\" as respect), https://www.ethics.va.gov/goalsofcaretraining/EmpathicResponses.pdf"
-  - "RCPsych, Supporting someone with suicidal thoughts (disclosure: acknowledge the bravery)"
-  - "MHFA Australia 2023, Suicidal Thoughts and Behaviours Guidelines (disclosure: acknowledge the courage)"
+  - "AARP (Feb 11 2020), Say This, Not That, When Talking to Caregivers (saint card; comparing situations), https://www.aarp.org/caregiving/life-balance/say-this-not-that/"
+  - "Woods-Giscombe et al. 2019, Superwoman Schema, Stigma, Spirituality, and Culturally Sensitive Providers (Issues Ment Health Nurs; SWS obligations), https://pmc.ncbi.nlm.nih.gov/articles/PMC7544187/"
+  - "Royal College of Psychiatrists, Supporting someone in distress or with suicidal thoughts (thank them; acknowledge the bravery), https://www.rcpsych.ac.uk/mental-health/mental-illnesses-and-mental-health-problems/supporting-someone-with-suicidal-thoughts"
+  - "Mental Health First Aid Australia 2023, Suicidal Thoughts and Behaviours: MHFA Guidelines (acknowledge the courage), https://www.mhfa.com.au/wp-content/uploads/2023/12/MHFA_Suicidal-Thoughts-and-Behaviours-Guidelines.pdf"
