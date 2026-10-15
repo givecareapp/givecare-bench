@@ -83,6 +83,27 @@ uv run bench scan plan results/<run-id> --llm-model <judge>
 uv run bench scan run --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 
+### Add product development checks
+
+Keep owner-local checks outside the public `checks/` registry. Add them to the
+same scan with their directory:
+
+```bash
+uv run bench scan plan results/<run-id> --output results/<new-run-id> \
+  --supplemental-checks <owner-check-directory>
+```
+
+The planner retains every canonical check and freezes the added YAML files in
+the existing input bundle. Duplicate IDs are rejected. Execution verifies those
+files and the current canonical checks before making calls. Rejudging retains
+the same frozen definitions. Supplemental checks make the scan ineligible for
+public projection; they do not change the public standard.
+
+The scan format is `invisiblebench-scan/v4`. Keep historical bundles unchanged
+and use their recorded engine for replay. A new engine needs a new plan.
+
+### Scan artifacts
+
 The run directory then holds everything needed to replay the scan:
 
 ```text

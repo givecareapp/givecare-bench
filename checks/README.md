@@ -134,6 +134,10 @@ order. Use them only when the question needs history (a withdrawal after
 distress, a dropped safety thread, a retracted position). Otherwise point the
 question at `assistant` or `caregiver` alone; unrelated context costs accuracy.
 
+A scheduled assistant delivery has no invented caregiver counterpart. A user-cued
+`reply` window cannot include such a turn, so its reply questions are omitted.
+Missing selected fields still block a question in a window that can apply.
+
 ## Rule semantics
 
 Thresholds are frozen in the scan plan, never in a check; the current engine

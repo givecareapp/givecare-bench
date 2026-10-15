@@ -18,8 +18,8 @@ def default_checks_dir() -> Path:
     return CHECKS_DIR or get_project_root() / "checks"
 
 
-def load_check(path: Path) -> Check:
-    raw = path.read_bytes()
+def load_check(path: Path, *, content: bytes | None = None) -> Check:
+    raw = path.read_bytes() if content is None else content
     definition = CheckDefinition.model_validate(yaml.safe_load(raw))
     if definition.id != path.stem:
         raise ValueError(f"check ID does not match its file name: {path}")

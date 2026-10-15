@@ -18,6 +18,11 @@ def configure(parser):
     plan.add_argument("--llm-model", default=DEFAULT_JUDGE_MODEL)
     plan.add_argument("--limit", type=int)
     plan.add_argument("--filter")
+    plan.add_argument(
+        "--supplemental-checks",
+        type=Path,
+        help="Add owner-local check definitions; freezes them and forbids public projection",
+    )
     rejudge = commands.add_parser("rejudge", help="Plan a new run over exact frozen evidence")
     rejudge.add_argument("frozen", type=Path)
     rejudge.add_argument("--output", type=Path, required=True)
@@ -53,6 +58,7 @@ def scan_command(args):
                     judge_model=args.llm_model,
                     limit=args.limit,
                     filename_filter=args.filter,
+                    supplemental_checks=args.supplemental_checks,
                 )
             print(f"Plan: {args.output / PLAN_FILE}")
             print(
@@ -74,4 +80,3 @@ def scan_command(args):
         print(str(exc), file=sys.stderr)
         return 2
     return 0
-

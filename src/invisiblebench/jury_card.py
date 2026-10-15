@@ -156,6 +156,11 @@ def write_jury_card(bundle: Path) -> Path:
         f"# {_cell(model_label)} — {_cell(date_label)}", "", binding, "",
         "**Jury Card · MODEL-JUDGED. Care remains directional.** This card describes the recorded run. "
         "It does not establish clinical outcomes, general model quality, or judge accuracy.", "",
+        *([
+            "**Product development scan.** Supplemental checks are included in the results below. "
+            "This scan is not eligible for public benchmark projection. "
+            "Read individual checks when comparing product changes.", "",
+        ] if plan.supplemental_checks else []),
         "Read [commentary](#commentary) for attributed observations and disputed interpretations.", "",
         "| Model run | Jury assessment |", "| --- | --- |",
         f"| {len(plan.transcripts)} conversations | {len(plan.checks)} frozen checks per conversation |",
