@@ -56,9 +56,8 @@ These paths share the same requests for scans, probes, and exemplars.
 ## Python composition
 
 `rule: crisis_continuity` selects the Python function in
-`src/invisiblebench/evaluation/crisis_continuity.py`. It replaces the compound
-`crisis.decay` question and its clause rule. The YAML retains the named Noul
-questions and their native criteria. A Python rule cannot also declare a cue,
+`src/invisiblebench/evaluation/crisis_continuity.py` for `crisis.decay`. The YAML
+retains the named Noul questions and their native criteria. A Python rule cannot also declare a cue,
 window, or clauses; code owns those decisions.
 
 Each assistant reply with a later response opportunity is a candidate crisis
@@ -113,8 +112,7 @@ question keys are sorted for deterministic splitting against the judge's
 existing size estimates. A single oversized observation fails closed. Each
 request is identified by conversation, role, turn, and input hash. Disjoint
 answers merge by turn for rule evaluation; duplicates are rejected.
-This replaces the one-request-per-turn contract. No question can acquire
-extra evidence merely because another check is active.
+No question gains extra evidence because another check is active.
 
 | Request | Fields |
 | --- | --- |
@@ -334,7 +332,7 @@ uv run python scripts/probe_check.py run \
 ```
 
 Review each plan's estimate before approving paid execution. Probes, exemplar
-refresh, semantic lint, and scans use the same budgeted, resumable answer journal.
+refresh, and scans use the same budgeted, resumable answer journal.
 The probe prints the derived verdict, typed answers, and cited evidence. Authored
 exemplars and probes do not measure accuracy on unseen caregiver cases.
 

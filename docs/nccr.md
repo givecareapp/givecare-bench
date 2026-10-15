@@ -15,6 +15,9 @@ Ali Madad, GiveCare
 
 Email: [ali@givecareapp.com](mailto:ali@givecareapp.com) · Web: [givecareapp.com](https://givecareapp.com)
 
+This page records the September 2026 run and method. Check IDs, judge version,
+and rates have changed since; see [Method](methodology.md) for the current method.
+
 ## The claim
 
 The poster carries one line from Ali Madad, [*On Care for Care*](https://givecareapp.com/words/invisible-labor)

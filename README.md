@@ -24,13 +24,13 @@ A **Jury Card** complements a model card with evidence from a specific run.
 It shows model results and quoted evidence beside each verdict and its
 code-composed rationale. It also records judge settings, costs, technical
 errors, and attributed commentary. Frozen validation expectations add case-level
-agreement, errors, and untested coverage. Human review remains optional.
+agreement, errors, and untested coverage.
 
 Each run has two parts in one private directory:
 
 | Part | Contents |
 | --- | --- |
-| `jury-card.md` | The standard report. Replaces separate per-run reports and scorecard exports. |
+| `jury-card.md` | The standard report for the run. |
 | Saved evidence | `scan_plan.json`, `answers.jsonl`, `judgments.jsonl`, source manifests, and transcripts. Supports inspection and replay. |
 
 Verdicts are `PASS`, `FAIL`, `UNCLEAR`, or `NOT_APPLICABLE`. Every `FAIL` needs
@@ -43,72 +43,51 @@ clinical outcomes. Care remains directional. Read the
 
 ## Quickstart
 
-Install dependencies. Set the provider key for transcripts and the TypeSafe key
-for judging:
-
 ```bash
 uv sync --extra dev
-export OPENROUTER_API_KEY=...
-export TYPESAFE_API_KEY=...
-```
+export OPENROUTER_API_KEY=...   # target models
+export TYPESAFE_API_KEY=...     # judge
 
-Generate transcripts with UK AISI Inspect. Pick a catalog model from
-`src/invisiblebench/models/config.py`. Inspect bounds spend with a cost limit
-per conversation, so the worst case is conversations times that limit. Then
-export the Inspect logs into a judge-ready run directory:
-
-```bash
+# 1. Generate transcripts with UK AISI Inspect, bounded per conversation.
 uv run inspect eval invisiblebench/safety_care --model openrouter/<catalog-model-id> \
   -M 'provider={"allow_fallbacks": true, "require_parameters": true}' \
   --cost-limit <usd-per-conversation> --log-dir results/<run-id>/inspect
 uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
+
+# 2. Plan the judge scan (no paid calls), review the estimate, then run it.
+uv run bench scan plan results/<run-id>
+uv run bench scan run --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
+
+# 3. Read the evidence.
+uv run bench explain <catalog-model-id> <scenario-id> --failures --scan results/<run-id>
 ```
 
-Find the run ID with `uv run bench runs`. Replace `<run-id>` below with that
-directory name. Create a scan plan, then review its estimate before running
-it. `--llm-model` defaults to the pinned judge model in
-`src/invisiblebench/api/typesafe.py`:
-
-```bash
-uv run bench scan plan results/<run-id> \
-  --llm-model <judge>
-uv run bench scan run \
-  --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
-```
-
-Completion writes `results/<run-id>/jury-card.md`. Inspect the run and its evidence:
-
-```bash
-uv run bench get <run-id>
-uv run bench explain <catalog-model-id> <scenario-id> \
-  --failures --scan results/<run-id>
-```
-
-Each run lives in `results/<run-id>/`, named by its UTC start time in
-`YYYY-MM-DD_HH-MM-SSZ` form. Each new run gets its own directory, including runs
-of the same model. The card title shows the model and a readable UTC date.
-Historical runs live under `results/archive/`.
-
-Repeat the scan command to resume unfinished judgments. A request with an
-unknown outcome blocks automatic resume. Resume generation with
-`inspect eval-retry`. The
-[full quickstart](docs/quickstart.md) explains recovery for both generation
-and judging. Use `uv run bench jury
-<run-id>` to regenerate the card from saved evidence without model calls.
-See the [full quickstart](docs/quickstart.md) to judge saved responses again or
-replay a scan.
+Models and their prices live in `src/invisiblebench/models/config.py`. The scan
+writes `results/<run-id>/jury-card.md`. Repeat `bench scan run` to resume
+judging, and use `inspect eval-retry` to resume generation. The
+[full quickstart](docs/quickstart.md) covers provider routing, recovery,
+rejudging, and publication.
 
 ## Validate the evaluator
 
-Plan constructed controls without model calls, then judge the saved plan with
-the budgeted scan command above. The [validation guide](docs/validation.md)
-defines the procedure, each tested boundary, and the limits of the evidence.
+`uv run python scripts/plan_validation.py --output results/<run-id>` plans
+constructed controls without model calls. Run that plan with the budgeted scan
+command above. The [validation guide](docs/validation.md) defines the procedure,
+each tested boundary, and the limits of the evidence.
 
 ## Repository map
 
-See the Layout table in [`AGENTS.md`](AGENTS.md). Use the
-[inventory](benchmark/benchmark_inventory.json) for current corpus facts and the
-[scan contract](src/invisiblebench/models/scan.py) for artifact fields.
+| Path | Contents |
+| --- | --- |
+| `benchmark/` | Public scenarios, inventory, benchmark card, and tests |
+| `checks/` | Check definitions and exemplars; grammar in [`checks/README.md`](checks/README.md) |
+| `src/invisiblebench/` | Inspect task, export, judge runtime, rules, and projection |
+| `scripts/` | Checks, probes, exemplar refresh, and docs tooling |
+| `data/` | Committed leaderboard projection and release archive |
+| `docs/` | The [published documentation](https://givecareapp.github.io/givecare-bench/) |
+
+Use the [inventory](benchmark/benchmark_inventory.json) for current corpus facts
+and the [scan contract](src/invisiblebench/models/scan.py) for artifact fields.
 
 ## Proof
 

@@ -47,8 +47,7 @@ result is published by this protocol.
 
 ## Plan the constructed controls
 
-Run the existing scan planner through the controlled-case preparation script.
-This replaces hand-prepared study fixtures. It makes no provider calls:
+Plan the constructed controls with this script. It makes no provider calls:
 
 ```bash
 uv run python scripts/plan_validation.py --output results/<new-run-id>

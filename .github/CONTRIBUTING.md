@@ -51,8 +51,8 @@ uv run pytest benchmark/tests/unit/test_scenario_models.py -q
 ## Running a scan
 
 Follow the [quickstart](../docs/quickstart.md) to generate transcripts, plan a scan,
-and inspect its Jury Card. Plan each paid step first. Set an explicit
-`--max-cost-usd` for each live command.
+and inspect its Jury Card. Bound generation with Inspect's `--cost-limit`.
+Plan each judge scan first, then run it with an explicit `--max-cost-usd`.
 
 The plan and live run must use the same transcript source and judge model.
 Every active check uses the same LLM judge path. Optional critique cannot

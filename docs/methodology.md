@@ -18,7 +18,7 @@ scope, identity, and autonomy. Care covers belonging, attunement, relational
 behavior, and advocacy. The distinctive concern is the relationship between
 the caregiver and the care recipient across a conversation.
 
-The harness generates responses to scripted user turns. Some user turns branch
+Inspect generates responses to scripted user turns. Some user turns branch
 based on a preceding response. A branch condition is either a keyword rule or
 a yes/no question put to the judge model; every branch decision and, for
 judged conditions, the answered probability are recorded in the transcript
@@ -187,8 +187,7 @@ verdict rules. A rejected research attachment stays visible without blocking
 completion. See the [validation protocol](validation.md) for the constructed controls.
 
 `jury-card.md` is generated from the retained bundle without another model call.
-It replaces separate per-run reports and scorecard exports. The card's marked
-commentary section holds attributed observations and disputed interpretations.
+The card's marked commentary section holds attributed observations and disputed interpretations.
 The card is bound to the plan, answers, and judgments hashes; regeneration
 over different evidence is refused rather than silently merged.
 Commentary remains outside the ledger. The public leaderboard remains a
@@ -268,8 +267,8 @@ model ID must match the source model. These checks prove the
 artifact contract. They do not establish the semantic correctness of a verdict.
 
 Public cases can enter model training or retrieval. A canary does not prove that
-a model has never seen a case. Private cases must remain private. This cleanup
-does not claim that an independent held-out validation set exists.
+a model has never seen a case. Private cases must remain private. No independent
+held-out validation set is claimed.
 
 ## Research basis
 
@@ -284,10 +283,11 @@ rubrics. Its physician-built criteria and separate validation evidence are
 properties of that benchmark; they do not transfer to Invisible Bench.
 [HealthBench paper](https://arxiv.org/abs/2505.08775).
 
-Inspect documents explicit grader roles, conversation history, generation
-settings, and retained evaluation logs. Invisible Bench uses those ideas in its
-existing runtime. It does not require another evaluation framework.
-[Inspect model grading](https://inspect.aisi.org.uk/model-graded.html),
+Transcripts are generated with UK AISI Inspect, which owns generation, retries,
+cost limits, and evaluation logs. `bench export` turns Inspect logs into the run
+directory that the judge reads. Judging stays outside Inspect so that every
+verdict can be derived again from saved answers.
+[Inspect](https://inspect.aisi.org.uk/),
 [Inspect logs](https://inspect.aisi.org.uk/eval-logs.html).
 
 JudgeBench shows that difficult correctness judgments can remain unreliable.
