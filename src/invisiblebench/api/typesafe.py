@@ -27,9 +27,13 @@ if _env_file.exists():
 else:
     load_dotenv()
 
-DEFAULT_JUDGE_MODEL = "jev-1.13.0"
+DEFAULT_JUDGE_MODEL = "jev-1.14.0"
 JUDGE_PRICE_PER_MTOK_INPUT = 0.042
-JUDGE_PRICING: dict[str, float] = {DEFAULT_JUDGE_MODEL: JUDGE_PRICE_PER_MTOK_INPUT}
+# Saved runs keep the judge that answered them, so every pinned Jev stays priced.
+JUDGE_PRICING: dict[str, float] = {
+    "jev-1.13.0": JUDGE_PRICE_PER_MTOK_INPUT,
+    "jev-1.14.0": JUDGE_PRICE_PER_MTOK_INPUT,
+}
 ESTIMATED_BYTES_PER_TOKEN = 3
 # Jev's context: 64k tokens per request, and 32k for state plus the longest
 # question (docs.typesafe.ai/models). Serialized bytes / ESTIMATED_BYTES_PER_TOKEN
