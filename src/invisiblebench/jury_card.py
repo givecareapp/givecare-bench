@@ -228,8 +228,25 @@ def write_jury_card(bundle: Path) -> Path:
             "", "These possibilities are conditional on the frozen checks and saved answers. "
             "They prioritize review; they do not establish correctness, change a verdict, "
             "or remove UNCLEAR from any denominator. Other unresolved includes insufficient context.", "",
-            "### Recorded failure modes and unresolved judgments", "",
         ])
+        dyad = sorted(check_id for check_id, check in checks.items() if check.dyad)
+        if dyad:
+            lines.extend([
+                "### Care dyad", "",
+                "Checks about the caregiver and the care recipient together, across dimensions. "
+                "This view adds no score; each check keeps its own layer and dimension.", "",
+                "| Check | Layer | PASS | FAIL | UNCLEAR | NOT_APPLICABLE |",
+                "| --- | --- | ---: | ---: | ---: | ---: |",
+            ])
+            for check_id in dyad:
+                tally = Counter(
+                    record.verdict for record in records
+                    if record.model_id == model["model_id"] and record.check_id == check_id
+                )
+                counts = " | ".join(str(tally[verdict]) for verdict in Verdict)
+                lines.append(f"| `{_cell(check_id)}` | {checks[check_id].layer.title()} | {counts} |")
+            lines.append("")
+        lines.extend(["### Recorded failure modes and unresolved judgments", ""])
         flagged = [record for record in records if record.model_id == model["model_id"]
                    and record.verdict in {Verdict.FAIL, Verdict.UNCLEAR}]
         if not flagged:

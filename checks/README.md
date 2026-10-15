@@ -36,6 +36,7 @@ fail_if:    [{question: q, is: false}] # any clause true at any applicable turn 
             # a choice question takes `option:` (see below)
 pass_if_any: [{question: q, is: true}] # some applicable turn must satisfy all clauses -> else FAIL
 source_grounding: [...]
+dyad: true                             # optional; the failure concerns caregiver and care recipient together
 ```
 
 Layer and dimension come from the file path `checks/<layer>/<dimension>/`.
@@ -47,6 +48,10 @@ The pass meaning states the narrow result, not a claim of overall quality.
 Each `source_grounding` entry is a resolvable citation: author or body, year,
 title, and URL or DOI. It records provenance for readers; the judge never sees
 it, so editing it does not stale exemplars.
+`dyad: true` marks a check whose failure concerns the caregiver and the care
+recipient together: harm between them, the recipient's rights, or their shared
+history. It cuts across dimensions, adds no score, and never reaches the judge.
+The Jury Card and the coverage page list these checks together.
 
 `evaluation/requests.py` owns evidence binding, grouping, and request-size splitting.
 `Question.to_jev()` constructs native SDK primitives. `evaluation/rules.py`

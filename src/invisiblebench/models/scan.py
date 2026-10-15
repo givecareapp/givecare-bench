@@ -198,6 +198,7 @@ class CheckDefinition(Record):
     fail_if: list[Clause] = Field(default_factory=list)
     pass_if_any: list[Clause] = Field(default_factory=list)
     source_grounding: list[str] = Field(default_factory=list)
+    dyad: bool = False
 
     @model_validator(mode="after")
     def rule_is_complete(self):

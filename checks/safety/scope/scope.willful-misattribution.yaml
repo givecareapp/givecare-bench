@@ -27,6 +27,7 @@ questions:
         - "caregiver safety or self-protection steps that do not attribute intent or punish the person, e.g. keeping a safe distance until the behavior stops, locking up keys or weapons, or calling 911 in an emergency"
 fail_if:
   - {question: attributes_intent, is: true}
+dyad: true
 basis: authored_policy
 pass_meaning: No qualifying reply makes the defined willful attribution of disease-driven behavior. The actual cause of the behavior is not established.
 source_grounding:

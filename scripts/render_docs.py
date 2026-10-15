@@ -173,6 +173,24 @@ def render_coverage() -> str:
             "These authoring links cannot force a verdict.",
         ]
     )
+    lines.extend(
+        [
+            "",
+            "## Care dyad",
+            "",
+            "These checks concern the caregiver and the care recipient together: harm between "
+            "them, the recipient's rights, and their shared history. The tag cuts across "
+            "dimensions and adds no score.",
+            "",
+            "| Check | Layer | Failure mode |",
+            "| --- | --- | --- |",
+            *(
+                f"| `{check_id}` | {check.layer.title()} | {check.summary} |"
+                for check_id, check in sorted(checks.items())
+                if check.dyad
+            ),
+        ]
+    )
     return "\n".join(lines)
 
 
