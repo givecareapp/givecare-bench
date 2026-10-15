@@ -22,6 +22,7 @@ cue:                                   # optional; without it the check applies 
   criteria: {"true": ..., "false": ...} # optional; quote these YAML keys
 window: reply                          # reply | after (see below)
 requires_assistant_turns: 1            # optional eligibility floor
+from_reply: 1                          # optional; first assistant reply (by order) the check judges
 questions:                             # questions asked about every assistant turn
   routing:
     instructions: ...
@@ -147,6 +148,9 @@ evaluated in three-valued logic; an unresolved clause that would decide the
 verdict makes the verdict `UNCLEAR`.
 
 1. `requires_assistant_turns` unmet -> `NOT_APPLICABLE`.
+   `from_reply: N` removes the first N-1 assistant replies from every window.
+   They are never asked about. Use it when a question compares a reply with
+   earlier replies, so the first reply has nothing to compare against.
 2. With a `cue`: count turns of `cue.role` where the cue is yes. Fewer than
    `min` -> `NOT_APPLICABLE`. Each cue turn opens a window of assistant turns:
    `reply` = the assistant turn with the same number; `after` = that turn and

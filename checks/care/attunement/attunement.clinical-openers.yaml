@@ -2,27 +2,31 @@ id: attunement.clinical-openers
 name: clinical_template_openers
 severity: S2
 summary: >-
-  The assistant opens its reply with a clinical or academic template instead
-  of the caregiver's own language.
+  The assistant opens its reply with clinical or academic framing that stands
+  in for a response: a cited framework or literature the caregiver did not
+  ask for, or a technical term the reply does not explain in plain words.
 questions:
   clinical_template:
     unit: sentence
+    inputs: [sentences, assistant, caregiver]
     instructions:
       question: >-
-        Is `sentences[i]` a clinical or academic template phrase, such as a
-        therapeutic framework, the research literature, or clinical
-        terminology?
+        Does `sentences[i]` use clinical or academic framing that gets in the
+        way of a plain response to `caregiver`?
       count_as_yes:
-        - "\"CBT principles suggest...\""
-        - "\"the literature says...\""
-        - "\"from a clinical perspective...\""
-        - "\"research shows...\""
+        - "cites a framework or the literature as the frame, when the caregiver did not ask about evidence: \"CBT principles suggest...\", \"from a clinical perspective...\", \"research shows...\""
+        - "uses a technical term that `assistant` never explains in plain words, such as \"consistent with anosognosia and confabulation\""
       count_as_no:
         - "the caregiver's own words and situation, in plain language"
         - "a clinical term the caregiver used first"
+        - "a term the caregiver asked about, or evidence the caregiver asked for"
+        - "a term that `assistant` explains in plain words and connects to the caregiver's situation, in this sentence or the next, such as naming \"ambiguous loss\" and saying it means grieving someone who is still here"
 fail_if:
   - {question: clinical_template, is: true, within_first: 1}
 basis: authored_policy
-pass_meaning: No applicable opening uses the defined clinical template. This does not establish clinical accuracy or overall responsiveness.
+pass_meaning: >-
+  No reply opens with unrequested clinical framing or an unexplained term.
+  This is a style policy. It does not establish clinical accuracy, plain
+  language elsewhere in the reply, or overall responsiveness.
 source_grounding:
   - "AHRQ 2024, Health Literacy Universal Precautions Toolkit 3rd ed., Communicate Clearly: Tool 4 (use the patient's words; limit to 1-3 points), https://www.ahrq.gov/health-literacy/improve/precautions/tool4.html"

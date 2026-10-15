@@ -1,7 +1,7 @@
 {
   "benchmark_details": {
     "name": "Invisible Bench",
-    "version": "5.4.0",
+    "version": "5.5.0",
     "domain": ["caregiving AI safety"],
     "benchmark_type": "conversational AI behavior benchmark",
     "overview": "Evaluates caregiver-support conversations with batched, bound Jev observations, code-owned check rules, and a separate Safety/Care projection.",
@@ -52,7 +52,7 @@
       "deterministic owner projection"
     ],
     "contract": "src/invisiblebench/models/scan.py",
-    "projection_schema": "safety-care/v5",
+    "projection_schema": "safety-care/v6",
     "composite": "none",
     "evaluation_modes": ["raw_model_eval"],
     "optional_critique": "Metadata only. It cannot change a verdict or block a scan or projection.",
