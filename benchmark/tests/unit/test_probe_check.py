@@ -5,7 +5,7 @@ import json
 import pytest
 
 from benchmark.tests.fixtures.current_scan import TRANSCRIPT, FixtureJudge
-from invisiblebench.cli.archive import get_run_info
+from invisiblebench.cli.agent_commands import get_run_info
 from invisiblebench.judge import load_questions
 from scripts.probe_check import plan_probe, run_probe
 

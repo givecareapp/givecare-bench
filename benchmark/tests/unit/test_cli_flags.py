@@ -5,24 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from invisiblebench import _agent_cli
-from invisiblebench.cli import agent_commands, archive, runner
-from invisiblebench.cli.run_command import run_benchmark
-
-
-@pytest.fixture
-def model():
-    return {
-        "id": "test/model",
-        "name": "Test Model",
-        "cost_per_m_input": 1.0,
-        "cost_per_m_output": 1.0,
-    }
-
-
-@pytest.fixture
-def noninteractive(monkeypatch):
-    monkeypatch.setattr(_agent_cli, "is_tty", lambda: False)
+from invisiblebench.cli import agent_commands, runner
 
 
 @pytest.fixture
@@ -105,128 +88,20 @@ def test_runs_export_reports_filesystem_failure(runs, tmp_path, monkeypatch, cap
     assert "failed to write" in envelope["error"]
 
 
-def test_benchmark_dry_run_creates_no_artifacts(tmp_path, model):
-    output = tmp_path / "run"
-    assert (
-        run_benchmark(
-            models=[model],
-            output_dir=output,
-            dry_run=True,
-            auto_confirm=False,
-            scenario_filter=["context_regulatory_data_privacy_001"],
-        )
-        == 0
-    )
-    assert not output.exists()
 
 
-@pytest.mark.parametrize(("interactive", "exit_code"), [(False, 2), (True, 130)])
-def test_benchmark_refuses_without_consent(
-    tmp_path, monkeypatch, capsys, model, interactive, exit_code
-):
-    output = tmp_path / "run"
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setattr(_agent_cli, "is_tty", lambda: interactive)
-    monkeypatch.setattr("builtins.input", lambda prompt: "n")
-    with pytest.raises(SystemExit) as exc:
-        run_benchmark(
-            models=[model],
-            output_dir=output,
-            dry_run=False,
-            auto_confirm=False,
-            max_cost_usd=1,
-            scenario_filter=["context_regulatory_data_privacy_001"],
-        )
-    assert exc.value.code == exit_code
-    if not interactive:
-        assert "--yes" in capsys.readouterr().err
-    assert not output.exists()
 
 
-def test_benchmark_yes_never_prompts(tmp_path, monkeypatch, capsys, model, noninteractive):
-    output = tmp_path / "run"
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-
-    def refuse_prompt(prompt):
-        pytest.fail("--yes prompted for consent")
-
-    monkeypatch.setattr("builtins.input", refuse_prompt)
-    assert (
-        run_benchmark(
-            models=[model],
-            output_dir=output,
-            dry_run=False,
-            auto_confirm=True,
-            max_cost_usd=1,
-            scenario_filter=["context_regulatory_data_privacy_001"],
-        )
-        == 1
-    )
-    # The suite disables real target calls; consent must pass before client refusal.
-    assert "Failed to initialize API client" in capsys.readouterr().out
-    assert not output.exists()
 
 
-@pytest.mark.parametrize(
-    ("ceiling", "error"),
-    [
-        (None, "--max-cost-usd"),
-        (0, "exceeds --max-cost-usd"),
-        (1_000_000, "not a meaningful guardrail"),
-    ],
-)
-def test_benchmark_rejects_unsafe_cost_ceiling(
-    tmp_path, monkeypatch, capsys, model, ceiling, error
-):
-    output = tmp_path / "run"
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    assert (
-        run_benchmark(
-            models=[model],
-            output_dir=output,
-            dry_run=False,
-            auto_confirm=True,
-            max_cost_usd=ceiling,
-            scenario_filter=["context_regulatory_data_privacy_001"],
-        )
-        == 2
-    )
-    assert error in capsys.readouterr().out
-    assert not output.exists()
 
 
-def test_full_and_selected_models_cannot_start_together(monkeypatch, capsys):
-    from invisiblebench.cli import run_command
-
-    def refuse_run(**kwargs):
-        pytest.fail("conflicting model selection started a run")
-
-    monkeypatch.setattr(run_command, "run_benchmark", refuse_run)
-    assert runner.main(["--full", "-m", "openai/gpt-6-sol", "--dry-run"]) == 1
-    assert "--full runs the whole roster" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("arguments", [[], ["--before", "20200101", "--keep", "5", "--dry-run"]])
-def test_archive_requires_one_selection_rule(capsys, arguments):
-    assert runner.main(["archive", *arguments]) == 2
-    assert "pass one of" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize(
-    "arguments", [["--yes", "archive", "--keep", "5"], ["archive", "--keep", "5", "--yes"]]
-)
-def test_archive_accepts_explicit_consent(tmp_path, monkeypatch, noninteractive, arguments):
-    monkeypatch.setattr(archive, "get_project_root", lambda: tmp_path)
-    (tmp_path / "results").mkdir()
-    assert runner.main(arguments) == 0
 
 
-def test_archive_refuses_without_consent(tmp_path, monkeypatch, noninteractive):
-    monkeypatch.setattr(archive, "get_project_root", lambda: tmp_path)
-    (tmp_path / "results").mkdir()
-    with pytest.raises(SystemExit) as exc:
-        runner.main(["archive", "--keep", "5"])
-    assert exc.value.code == 2
 
 
 @pytest.mark.parametrize(
@@ -286,7 +161,7 @@ def test_health_reports_missing_or_historical_results(tmp_path, monkeypatch, cap
 
 
 @pytest.mark.parametrize("export", [False, True])
-def test_leaderboard_read_never_prompts(tmp_path, monkeypatch, capsys, noninteractive, export):
+def test_leaderboard_read_never_prompts(tmp_path, monkeypatch, capsys, export):
     payload = {"schema": "safety-care/v1", "models": []}
     (tmp_path / "data/leaderboard").mkdir(parents=True)
     (tmp_path / "data/leaderboard/leaderboard.json").write_text(json.dumps(payload))
@@ -316,20 +191,3 @@ def test_leaderboard_read_never_prompts(tmp_path, monkeypatch, capsys, nonintera
         assert envelope["data"] == payload
 
 
-def test_judge_branched_generation_requires_a_judge_key(tmp_path, monkeypatch, capsys, model):
-    output = tmp_path / "run"
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    assert (
-        run_benchmark(
-            models=[model],
-            output_dir=output,
-            dry_run=False,
-            auto_confirm=True,
-            max_cost_usd=1,
-            scenario_filter=["tier1_crisis_cssrs_passive_001"],
-        )
-        == 1
-    )
-    assert "TYPESAFE_API_KEY" in capsys.readouterr().out
-    assert not output.exists()

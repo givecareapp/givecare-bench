@@ -1,26 +1,24 @@
-"""The bench command: generation, scans, evidence reads, and run storage."""
+"""The bench command: export Inspect logs, scans, evidence reads, and run storage."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 from rich.table import Table
 
-from invisiblebench._agent_cli import confirm_or_abort, emit_json
-from invisiblebench.cli import agent_commands, run_command, scan
+from invisiblebench._agent_cli import emit_json
+from invisiblebench.cli import agent_commands, scan
 from invisiblebench.cli._console import make_console
-from invisiblebench.models.config import MODELS_FULL
 from invisiblebench.utils.manifest import RUN_DIRECTORY_TIME_FORMAT
 
 
 def _collect_runs():
-    from invisiblebench.cli.archive import list_runs
-
     runs = sorted(
-        list_runs(agent_commands._runs_dir()), key=lambda r: r["date"] or datetime.min, reverse=True
+        agent_commands.list_runs(agent_commands._runs_dir()), key=lambda r: r["date"] or datetime.min, reverse=True
     )
     return [
         {
@@ -88,12 +86,6 @@ def build_parser():
     jury.add_argument("run_id")
     health = sub.add_parser("health", help="Check the owner leaderboard")
     health.add_argument("--verbose", "-v", action="store_true")
-    archive = sub.add_parser("archive", help="Move explicitly selected old runs to the archive")
-    archive.add_argument("--before")
-    archive.add_argument("--keep", type=int)
-    archive.add_argument("--list", action="store_true", dest="list_runs")
-    archive.add_argument("--dry-run", action="store_true")
-    archive.add_argument("--yes", action="store_true", dest="archive_yes")
     runs = sub.add_parser("runs", help="List runs")
     runs.add_argument("--limit", type=int, default=25)
     runs.add_argument("--offset", type=int, default=0)
@@ -125,17 +117,12 @@ def build_parser():
     leaderboard.add_argument("--verbose", "-v", action="store_true")
     leaderboard.add_argument("--out")
     scan.configure(sub.add_parser("scan", help="Plan, execute, or rejudge a frozen scan"))
-    parser.add_argument("--full", action="store_true")
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--yes", "-y", action="store_true")
-    parser.add_argument("--max-cost-usd", type=float)
-    parser.add_argument("--category", "-c")
-    parser.add_argument("--scenario", "-s")
-    parser.add_argument("--parallel", "-p", type=int)
-    parser.add_argument("--scenario-parallel", type=int, default=1)
-    parser.add_argument("--models", "-m")
-    parser.add_argument("--confidential", action="store_true")
+    export = sub.add_parser(
+        "export",
+        help="Write a judge-ready run directory from Inspect logs (see invisiblebench.inspect_task)",
+    )
+    export.add_argument("logs", nargs="+", type=Path)
+    export.add_argument("--output", type=Path)
     return parser
 
 
@@ -212,59 +199,24 @@ def main(argv=None):
         from invisiblebench.cli.health import run_health
 
         return run_health(verbose=args.verbose)
-    if args.command == "archive":
-        from invisiblebench.cli.archive import run_archive
+    if args.command == "export":
+        from invisiblebench.inspect_export import export_run
 
-        if args.list_runs:
-            return _run_runs(limit=sys.maxsize, offset=0, json_output=json_output)
-        if (args.before is None) == (args.keep is None):
-            print("archive: pass one of --before YYYYMMDD or --keep N", file=sys.stderr)
-            return 2
-        if not args.dry_run:
-            prompt = (
-                f"archive runs older than {args.before}"
-                if args.before
-                else f"archive runs keeping {args.keep} most recent"
-            )
-            confirm_or_abort(prompt, yes=args.yes or args.archive_yes)
-        return run_archive(before=args.before, keep=args.keep, dry_run=args.dry_run)
-
-    models = [m.model_dump() for m in MODELS_FULL]
-    if args.full and args.models:
-        print("--full runs the whole roster; drop it to run only -m SPEC.", file=sys.stderr)
-        return 1
-    if not args.full:
-        if not args.models:
-            print("No model selected. Use --full or -m SPEC.\n")
-            for i, model in enumerate(models, 1):
-                print(f"{i:>2}. {model['name']:<24} {model['id']}")
-            return 1
+        output = args.output or Path("results") / datetime.now(UTC).strftime(
+            RUN_DIRECTORY_TIME_FORMAT
+        )
         try:
-            indices = run_command.resolve_models(args.models, models)
-            if not indices:
-                raise ValueError(f"No models match '{args.models}'")
-            models = [models[i] for i in indices]
-        except ValueError as exc:
+            export_run(args.logs, output)
+        except (OSError, ValueError, KeyError) as exc:
             print(str(exc), file=sys.stderr)
             return 1
-        make_console().print(f"Models: {', '.join(m['name'] for m in models)}")
-    return run_command.run_benchmark(
-        models=models,
-        output_dir=args.output
-        or Path("results") / datetime.now(UTC).strftime(RUN_DIRECTORY_TIME_FORMAT),
-        dry_run=args.dry_run,
-        auto_confirm=args.yes,
-        category_filter=(
-            [c.strip().lower() for c in args.category.split(",")] if args.category else None
-        ),
-        scenario_filter=(
-            [s.strip().lower() for s in args.scenario.split(",")] if args.scenario else None
-        ),
-        parallel=args.parallel,
-        scenario_parallel=args.scenario_parallel,
-        include_confidential=args.confidential,
-        max_cost_usd=args.max_cost_usd,
-    )
+        summary = json.loads((output / "transcript_run.json").read_bytes())
+        print(f"{summary['status']}: {summary['transcript_count']}/{summary['expected_transcripts']}"
+              f" transcripts, {summary['error_count']} errors, {summary['missing_count']} missing")
+        print(f"Next: {summary['next_steps']['scan_plan']}")
+        return 0 if summary["status"] == "complete" else 1
+    build_parser().print_help()
+    return 2
 
 
 if __name__ == "__main__":

@@ -52,14 +52,16 @@ export OPENROUTER_API_KEY=...
 export TYPESAFE_API_KEY=...
 ```
 
-Generate transcripts. Pick a catalog model from
-`src/invisiblebench/models/config.py`; unknown IDs are rejected because the
-CLI does not invent prices. Review the dry-run estimate before setting a cost
-ceiling:
+Generate transcripts with UK AISI Inspect. Pick a catalog model from
+`src/invisiblebench/models/config.py`. Inspect bounds spend with a cost limit
+per conversation, so the worst case is conversations times that limit. Then
+export the Inspect logs into a judge-ready run directory:
 
 ```bash
-uv run bench -m <catalog-model-id> --dry-run
-uv run bench -m <catalog-model-id> -y --max-cost-usd <budget>
+uv run inspect eval invisiblebench/safety_care --model openrouter/<catalog-model-id> \
+  -M 'provider={"allow_fallbacks": true, "require_parameters": true}' \
+  --cost-limit <usd-per-conversation> --log-dir results/<run-id>/inspect
+uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
 ```
 
 Find the run ID with `uv run bench runs`. Replace `<run-id>` below with that
@@ -88,7 +90,8 @@ of the same model. The card title shows the model and a readable UTC date.
 Historical runs live under `results/archive/`.
 
 Repeat the scan command to resume unfinished judgments. A request with an
-unknown outcome blocks automatic resume. The
+unknown outcome blocks automatic resume. Resume generation with
+`inspect eval-retry`. The
 [full quickstart](docs/quickstart.md) explains recovery for both generation
 and judging. Use `uv run bench jury
 <run-id>` to regenerate the card from saved evidence without model calls.

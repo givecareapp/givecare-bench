@@ -5,7 +5,7 @@ import json
 import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, write_source_run
-from invisiblebench.cli.transcript import transcript_policy
+from invisiblebench.inspect_task import transcript_policy
 from invisiblebench.judge import _publication_sources, plan_scan, run_scan
 from invisiblebench.scoring import build_scorecard
 
@@ -15,7 +15,7 @@ def source(root, models=("fixture/a",), *, endpoint=None, temperature=0.7, part=
     manifest_path = path / "run_manifest.json"
     manifest = json.loads(manifest_path.read_bytes())
     manifest["transcript_policy"] = transcript_policy(
-        None, [{"id": model, "endpoint": endpoint} for model in models]
+        [{"id": model, "endpoint": endpoint} for model in models]
     )
     manifest["transcript_policy"]["temperature"] = temperature
     # A shared manifest may contain private fields; these must not be projected.

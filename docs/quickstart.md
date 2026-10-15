@@ -5,8 +5,8 @@ Type: how-to.
 Install the project with uv. Set the provider key for transcripts and the TypeSafe
 key for judging. Scenarios with judge-decided branches also call TypeSafe during
 generation, so a live run needs both keys and both hosts (`openrouter.ai` and
-`api.typesafe.ai`); generation refuses to start without the judge key. Plan paid
-work before running it. Credential presence does not prove network access.
+`api.typesafe.ai`). Bound generation with `--cost-limit`. Plan judge scans
+before running them. Credential presence does not prove network access.
 From the same execution environment, check DNS/TLS/HTTP reachability to both
 hosts before requesting pilot approval:
 
@@ -24,50 +24,49 @@ then inspect its saved responses before a broader run.
 uv sync --extra dev
 export OPENROUTER_API_KEY=...
 export TYPESAFE_API_KEY=...
-uv run bench -m <catalog-model-id> --dry-run
-uv run bench -m <catalog-model-id> -y --max-cost-usd <budget>
 ```
 
-Select a model from `src/invisiblebench/models/config.py`. Add a new model there
-with verified provider prices before planning it. Unknown IDs are rejected;
-the CLI does not invent prices. The selected prices drive both estimation and
-dispatch accounting and are saved as `model_pricing` in `run_manifest.json`.
+Generation runs through UK AISI Inspect (`inspect_ai`). Bench no longer
+generates transcripts itself. Select a model from
+`src/invisiblebench/models/config.py`. Add a new model there with verified
+provider prices before running it. Loading the task registers the roster prices
+with Inspect, so `--cost-limit` works for every roster model.
+
+```bash
+uv run inspect eval invisiblebench/safety_care --model openrouter/<catalog-model-id> \
+  -M 'provider={"allow_fallbacks": true, "require_parameters": true}' \
+  --cost-limit <usd-per-conversation> --log-dir results/<run-id>/inspect
+uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
+```
+
+Pick task options with `-T`: `category=`, `scenario=`, and `confidential=true`.
+Set concurrency with Inspect's `--max-samples` and `--max-connections`. Browse
+runs with `inspect view`.
+
 Each model also owns an optional `endpoint`: the exact OpenRouter provider slug.
-A named endpoint sends `only: [endpoint]` with `allow_fallbacks: false`. An absent
-endpoint explicitly measures the **routed service**, with fallbacks allowed.
-Both modes require support for the supplied generation parameters. The dry run
-prints the policy. The manifest freezes it per model under
-`transcript_policy.serving`, and the same provider object enters each journaled
-request. Actual returned providers remain in transcript metadata and the summary.
+To pin one provider, pass `"only": ["<slug>"], "allow_fallbacks": false` in the
+`-M provider=` object. With fallbacks allowed, the run measures the **routed
+service**. Both modes require support for the supplied generation parameters.
+`bench export` checks the generation settings against the roster policy and
+freezes the policy per model under `transcript_policy.serving`. Actual returned
+providers remain in transcript metadata and the summary.
 Verify endpoint availability and prices before selecting one. A base provider
 slug can match multiple variants or regions. For an endpoint-specific study,
 verify and select the full endpoint slug. A restriction alone does not establish
 an immutable endpoint. Never infer a single-provider comparison from a model name.
 
-Reservations are estimates, not an absolute billing guarantee. Provider usage
-can exceed them. Cost ceilings and prices must be finite and non-negative.
+Generation cost is bounded by Inspect's per-conversation `--cost-limit`. The
+worst case is conversations times the limit. Judge scans keep their own
+dry-run plan and `--max-cost-usd` ceiling (below).
 
-The transcript run writes to `results/<run-id>/`. The run ID is a UTC timestamp
+`bench export` writes `results/<run-id>/`. The run ID is a UTC timestamp
 in `YYYY-MM-DD_HH-MM-SSZ` form. Model identity stays in the manifest and Jury Card.
 Each new run has its own directory, including repeated runs of the same model.
-To resume generation, repeat the same command with `--output results/<run-id>`
-and the total approved ceiling, not an additional budget. Saved costs count
-against that ceiling. The model roster, prices, scenario bytes, generation policy,
-source code, and lockfile must match. Runs created before generation journals
-were added cannot resume. A run with a scan plan cannot resume generation.
 
-`generation/*.jsonl` retains each target attempt and response, including empty
-responses and paid branch decisions. Records are flushed and synced before the
-next call. Completed calls are replayed, not purchased again. `transcripts/`
-is derived from those records after each scenario completes.
-
-A timeout, cancellation during dispatch, malformed response, or incomplete record
-stops automatic resume: a missing response does not prove there was no charge.
-A saved response with unknown cost also stops generation and automatic resume.
-Keep the run intact and reconcile with the provider before approving a new run.
-Only a budget refusal before dispatch can retry automatically on resume.
-Target HTTP calls have no hidden retries. Empty responses retain the bounded
-retry policy saved in the manifest.
+To resume a crashed or errored generation, run `inspect eval-retry <log>`, then
+repeat `bench export`. Inspect owns retries, timeouts, and transport. Product
+transcripts from gc-sms's Harbor export use the same run contract with
+`harness: product`.
 Card titles show the model name and a readable UTC date and time.
 
 Create a dry-run scan plan in the same directory, then run it with an explicit
@@ -92,7 +91,6 @@ results/<run-id>/
 ├── judgments.jsonl      # one verdict per conversation and check, derived from answers.jsonl
 ├── run_manifest.json
 ├── transcript_run.json
-├── generation/          # target attempts and responses; generation recovery source
 └── transcripts/
 ```
 
@@ -125,7 +123,7 @@ dispatch. A single observation whose evidence exceeds the limit is rejected;
 evidence is never truncated or summarized. Long conversations can still exceed
 that single-observation limit.
 
-Judge requests follow the same recovery contract as target generation. Each
+Each
 request is recorded in `attempts.jsonl` before dispatch. Its answer is flushed
 to `answers.jsonl` before the next request. Judgments are derived from those
 answers, not saved separately per request. Repeat the `bench scan run` command
@@ -166,7 +164,7 @@ uv run bench jury <run-id>
 commentary section when the plan and ledger hashes still match. Put the author,
 date, observation, and check or transcript-turn references in that section.
 Notes do not change the judge's verdicts. The card and its quoted evidence stay
-private. Archive complete run directories under `results/archive/`.
+private. Move complete old run directories into `results/archive/` with `mv`.
 
 ## Prepare a public projection
 
