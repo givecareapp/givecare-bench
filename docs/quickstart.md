@@ -216,7 +216,7 @@ The write is atomic and digest-verified. The archive holds only the aggregate
 leaderboard and its manifest, never conversations, judge answers, or private
 intake. Review and commit the outputs. The script does not push or deploy.
 
-The current schemas are `safety-care/v5` and `gc-bench.web-benchmark-release/v4`.
+The current schemas are `safety-care/v6` and `gc-bench.web-benchmark-release/v5`.
 A consumer must check both before it reads a release. Results from an older
 method stay results under that method.
 

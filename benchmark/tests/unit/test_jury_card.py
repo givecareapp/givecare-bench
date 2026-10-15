@@ -100,7 +100,8 @@ def test_card_distinguishes_possible_failure_from_applicability_without_relabeli
         Verdict.FAIL, Verdict.PASS,
     }
     text = write_jury_card(bundle).read_text()
-    assert "| Safety | 1 | 1 | 0 |" in text
+    assert "| `identity.fixture-prohibition` | No settled case | 0 | no | 0 | 1 |" in text
+    assert "| `crisis.fixture-cue` | No settled case | 0 | no | 0 | 0 |" in text
     assert "Possible outcomes: NOT_APPLICABLE, PASS" in text
     assert "Requirements evaluated" in text
     assert (bundle / LEDGER_FILE).read_bytes() == saved

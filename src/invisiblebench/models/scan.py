@@ -193,6 +193,7 @@ class CheckDefinition(Record):
     cue: Cue | None = None
     window: Literal["reply", "after"] = "reply"
     requires_assistant_turns: StrictInt = Field(default=1, ge=1)
+    from_reply: StrictInt = Field(default=1, ge=1)
     questions: dict[Identifier, Question] = Field(min_length=1)
     applies_if: list[Clause] = Field(default_factory=list)
     fail_if: list[Clause] = Field(default_factory=list)
@@ -209,6 +210,7 @@ class CheckDefinition(Record):
                 or self.fail_if
                 or self.pass_if_any
                 or self.window != "reply"
+                or self.from_reply != 1
             ):
                 raise ValueError(
                     "a Python rule owns applicability and composition; remove clauses and cue"

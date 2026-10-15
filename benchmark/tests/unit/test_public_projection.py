@@ -25,7 +25,7 @@ def test_contract_declares_the_web_release_projection() -> None:
     declaration = json.loads((ROOT / ".givecare/module.json").read_text())
     release = next(
         item for item in declaration["produces"]
-        if item["id"] == "gc-bench.web-benchmark-release/v4"
+        if item["id"] == "gc-bench.web-benchmark-release/v5"
     )
     assert release["path"] == "data/releases/web-bench-release.tar.gz"
     assert release["for"] == ["gc-web"]

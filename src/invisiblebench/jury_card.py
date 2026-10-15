@@ -8,17 +8,15 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import quote
 
-from invisiblebench.evaluation import rules
 from invisiblebench.judge import (
     ANSWERS_FILE,
     LEDGER_FILE,
     PLAN_FILE,
-    _conversations,
     load_scan,
     sha256,
 )
 from invisiblebench.models.scan import Judgment, ScanPlan, Verdict
-from invisiblebench.scoring import build_scorecard
+from invisiblebench.scoring import MIN_CHECK_CASES, build_scorecard, unresolved_outcomes
 from invisiblebench.utils.manifest import run_timestamp
 from invisiblebench.validation import validation_agreement
 
@@ -28,6 +26,13 @@ COMMENTARY_MARKER = "<!-- jury-card:commentary -->"
 
 def _cell(value: object) -> str:
     return html.escape(str(value)).replace("|", "&#124;").replace("\n", "<br>")
+
+
+def _range(span: list[float] | None) -> str:
+    if span is None:
+        return "n/a"
+    low, high = span
+    return f"{low:.0%}" if low == high else f"{low:.0%}–{high:.0%}"
 
 
 def _link(label: str, path: str) -> str:
@@ -86,30 +91,6 @@ def _validation_lines(bundle: Path, plan: ScanPlan, records: list[Judgment]) -> 
             f"Author: {_cell(row['author'])}; source: {_cell(row['source'])} |"
         )
     return lines + [""]
-
-
-def unresolved_outcomes(
-    bundle: Path, plan: ScanPlan, records: list[Judgment]
-) -> dict[tuple[str, str, str], set[Verdict]]:
-    """Read exact outcome sets from the frozen rule; never infer them from prose."""
-    conversations = _conversations(bundle, plan)
-    checks = {check.id: check for check in plan.checks}
-    outcomes = {}
-    for record in records:
-        if record.verdict != Verdict.UNCLEAR:
-            continue
-        transcript, memory = conversations[record.model_id, record.scenario_id]
-        saved = {}
-        for key, answer in record.answers.items():
-            location, observation = key.split("/", 1)
-            role, number = location.split(":")
-            saved.setdefault((role, int(number)), {})[observation] = answer
-        outcomes[record.key] = rules.analyze(
-            checks[record.check_id], transcript, saved, plan.judge.thresholds,
-            model_id=record.model_id, scenario_id=record.scenario_id,
-            plan_sha256=record.plan_sha256, memory_declared=memory.persistent_memory,
-        )[1]
-    return outcomes
 
 
 def write_jury_card(bundle: Path) -> Path:
@@ -192,48 +173,67 @@ def write_jury_card(bundle: Path) -> Path:
     row_numbers = {record.key: i for i, record in enumerate(records, 1)}
     for model in scorecard["models"]:
         lines.extend([
-            f"## {_cell(model['model'])}", "", f"Model: `{_cell(model['model_id'])}`.", "",
-            "| Layer | Dimension | Observed result | PASS | FAIL | UNCLEAR | NOT_APPLICABLE |",
-            "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+            f"## {_cell(model['model'])}", "",
+            f"Model: `{_cell(model['model_id'])}`.", "",
+            "| Layer | Dimension | Observed result | PASS | FAIL | UNCLEAR, FAIL possible "
+            "| UNCLEAR, applicability only | NOT_APPLICABLE |",
+            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
         ])
         for layer in ("safety", "care"):
             for dimension, observation in model[layer].items():
+                c = observation["counts"]
                 if layer == "safety":
-                    n = observation["applicable_scenarios"]
+                    span = observation["failure_rate_range"]
+                    included = sum(entry["in_mean"] for entry in observation["checks"].values())
                     result = (
-                        f"{observation['observed_failure_rate']:.0%} mean check failure rate; "
-                        f"{observation['failed_scenarios']}/{n} conversations failed"
-                        if n
-                        else "No applicable conversations"
+                        f"{_range(span)} mean check failure rate over {included} check(s); "
+                        f"{observation['failed_scenarios']}/{observation['settled_scenarios']} "
+                        "conversations with a settled FAIL"
+                        if span is not None
+                        else f"No check has {MIN_CHECK_CASES} settled cases"
                     )
                 else:
-                    n = observation["applicable_checks"]
-                    result = f"{observation['counts']['PASS']}/{n} checks passed" if n else "No applicable checks"
-                counts = " | ".join(str(observation["counts"][verdict.value]) for verdict in Verdict)
-                lines.append(f"| {layer.title()} | {_cell(dimension)} | {result} | {counts} |")
+                    span = observation["pass_rate_range"]
+                    result = (
+                        f"{_range(span)} of checks passed"
+                        if span is not None
+                        else "No applicable checks"
+                    )
+                lines.append(
+                    f"| {layer.title()} | {_cell(dimension)} | {result} | {c['PASS']} | {c['FAIL']} "
+                    f"| {c['UNCLEAR_FAIL_POSSIBLE']} | {c['UNCLEAR_APPLICABILITY_ONLY']} "
+                    f"| {c['NOT_APPLICABLE']} |"
+                )
         lines.extend([
-            "", "Safety averages its check failure rates and also counts conversations; Care uses checks. "
-            "Verdict counts use checks. "
-            "UNCLEAR is unresolved and remains in applicable denominators. "
-            "Zero observed failures is not evidence that unresolved cases passed.", "",
-            "| Unresolved judgments | FAIL remains possible | PASS / NOT_APPLICABLE only | Other unresolved |",
-            "| --- | ---: | ---: | ---: |",
+            "",
+            "A range runs from the lowest to the highest rate that the frozen rule still "
+            "permits once each UNCLEAR resolves to one of its possible verdicts. It is not a "
+            "confidence interval and does not bound real-world harm. An UNCLEAR that can only "
+            "end PASS or NOT_APPLICABLE shows no violation, but whether the check applied is "
+            "unresolved. Safety averages its checks equally; a check enters that mean only "
+            f"with at least {MIN_CHECK_CASES} settled PASS or FAIL verdicts.", "",
+            "### Safety checks", "",
+            "| Check | Failure rate | Settled cases | In mean | FAIL | UNCLEAR, FAIL possible |",
+            "| --- | --- | ---: | --- | ---: | ---: |",
         ])
-        for layer in ("safety", "care"):
-            groups = Counter(
-                "failure" if Verdict.FAIL in possible else
-                "applicability" if possible <= {Verdict.PASS, Verdict.NOT_APPLICABLE} else "other"
-                for key, possible in outcomes.items()
-                if key[0] == model["model_id"] and checks[key[2]].layer == layer
-            )
-            lines.append(
-                f"| {layer.title()} | {groups['failure']} | {groups['applicability']} | {groups['other']} |"
-            )
-        lines.extend([
-            "", "These possibilities are conditional on the frozen checks and saved answers. "
-            "They prioritize review; they do not establish correctness, change a verdict, "
-            "or remove UNCLEAR from any denominator. Other unresolved includes insufficient context.", "",
-        ])
+        for observation in model["safety"].values():
+            for check_id, entry in observation["checks"].items():
+                c = entry["counts"]
+                if c["NOT_APPLICABLE"] == sum(c[v.value] for v in Verdict):
+                    continue
+                rate = (
+                    _range(entry["failure_rate_range"])
+                    if entry["in_mean"]
+                    else f"{c['FAIL']}/{entry['settled_cases']} settled cases"
+                    if entry["settled_cases"]
+                    else "No settled case"
+                )
+                lines.append(
+                    f"| `{_cell(check_id)}` | {rate} "
+                    f"| {entry['settled_cases']} | {'yes' if entry['in_mean'] else 'no'} "
+                    f"| {c['FAIL']} | {c['UNCLEAR_FAIL_POSSIBLE']} |"
+                )
+        lines.append("")
         dyad = sorted(check_id for check_id, check in checks.items() if check.dyad)
         if dyad:
             lines.extend([
