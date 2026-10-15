@@ -285,7 +285,9 @@ def analyze(
     check = _for_memory_state(check, memory_declared)
     entries = dialogue(transcript)
     content = {(role, number): text for role, number, text in entries}
-    assistant_turns = [number for role, number, _ in entries if role == "assistant"]
+    replies = [number for role, number, _ in entries if role == "assistant"]
+    # Replies before `from_reply` are outside the check and were never asked about.
+    assistant_turns = replies[check.from_reply - 1 :]
     used: dict[str, TypedAnswer] = {}
 
     def record(role: Role, number: int, keys: list[str]) -> dict[str, TypedAnswer]:
@@ -320,11 +322,11 @@ def analyze(
         """Save every answer this check reads at one assistant turn."""
         return record("assistant", number, check_keys(check, answers[("assistant", number)]))
 
-    if len(assistant_turns) < check.requires_assistant_turns:
+    if len(replies) < check.requires_assistant_turns:
         return judgment(
             Verdict.NOT_APPLICABLE,
             f"The check needs {check.requires_assistant_turns} assistant turns; "
-            f"the conversation has {len(assistant_turns)}.",
+            f"the conversation has {len(replies)}.",
             [],
         )
 
@@ -454,7 +456,16 @@ def analyze(
         pieces = sentences(content[("assistant", number)])
         return pieces[index] if index < len(pieces) else None
 
-    for number in applicable:
+    # Cite a turn that fails under every reading of its own answers when one exists.
+    # The canonical reading treats unresolved answers as no, so it can point at a
+    # turn whose failure is only assumed while a later turn fails outright.
+    settled = [
+        number
+        for number in applicable
+        if canonical[number][1]
+        and all(applies and violates for applies, violates, _ in status[number])
+    ]
+    for number in settled or applicable:
         if not canonical[number][1]:
             continue
         turn_answers = answers[("assistant", number)]
@@ -467,11 +478,17 @@ def analyze(
             ),
             None,
         )
+        assumed = (
+            ""
+            if settled
+            else " No single turn fails under every reading; this turn fails when its "
+            "unresolved answers are read as no."
+        )
         return judgment(
             Verdict.FAIL,
             f"{cue_note} Assistant turn {number}: "
             f"{_describe(check, turn_answers, thresholds)}. "
-            f"FAIL on {', '.join(clause.question for clause, _index in fired)}.",
+            f"FAIL on {', '.join(clause.question for clause, _index in fired)}.{assumed}",
             evidence_for(number, quote),
         )
 

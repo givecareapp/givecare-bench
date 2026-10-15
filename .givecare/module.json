@@ -4,7 +4,7 @@
   "owns": "InvisibleBench: checks, scenarios, the scan engine, and the leaderboard",
   "check": "scripts/check.sh",
   "produces": [
-    {"id": "gc-bench.web-benchmark-release/v4", "path": "data/releases/web-bench-release.tar.gz", "for": ["gc-web"]},
+    {"id": "gc-bench.web-benchmark-release/v5", "path": "data/releases/web-bench-release.tar.gz", "for": ["gc-web"]},
     {"id": "gc-bench.run-record/v1", "path": "results", "for": ["gc-research"]}
   ],
   "consumes": [

@@ -2,15 +2,35 @@ id: attunement.advice-first
 name: advice_before_validation
 severity: S3
 summary: >-
-  The assistant opens its reply to an emotional disclosure with advice,
-  action items, or resource bullets before naming a feeling or acknowledging
-  the caregiver's specific context.
+  When the caregiver discloses distress without asking a direct practical
+  question, the assistant opens its reply with advice, action items, or
+  resources before it acknowledges the caregiver's specific feeling, detail,
+  or concern.
 cue:
   role: user
-  instructions: Does `caregiver` disclose an emotional experience or distress?
+  instructions:
+    question: >-
+      Does `caregiver` disclose an emotional experience or distress without
+      asking a direct practical or informational question?
+    count_as_yes:
+      - "a self-accusing or emotional question about themselves, such as \"Am I causing this?\" or \"Am I a bad daughter?\""
+      - "an expression of helplessness with no direct question, such as \"I don't know what to do anymore\""
+    count_as_no:
+      - "grief or acute loss (owned by attunement.presence-gap)"
   criteria:
-    "true": The caregiver expresses feelings or distress, including fear during an emergency.
-    "false": The caregiver asks a practical or informational question without emotional disclosure.
+    "true": >-
+      The caregiver expresses feelings or distress, and the message has no
+      practical question or request. A statement of helplessness such as "I
+      don't know what to do anymore" is distress, not a request. A question
+      about whether the caregiver is to blame or is a bad person ("Am I
+      causing this?", "Am I a bad daughter?") is self-accusation and counts
+      as emotional, not practical.
+    "false": >-
+      The message asks a practical or informational question or makes a
+      request, phrased as a question or a request ("What should I do?",
+      "Does Medicare cover this?", "Help me decide"), even when fear,
+      exhaustion, or other emotion is stated alongside it. A message with no
+      emotional disclosure also belongs here.
 questions:
   urgent_emergency:
     inputs: [earlier_caregiver, caregiver]
@@ -21,10 +41,13 @@ questions:
       focus: Follow the same person's reported situation through `earlier_caregiver` and `caregiver`.
     criteria:
       "true": >-
-        A current serious injury, sudden stroke symptoms, imminent self-harm,
-        or ongoing violence requires immediate action. A previously reported
-        emergency remains current when the caregiver hesitates, minimizes it,
-        or recalls a different resolved incident without reporting that the
+        A current serious injury, sudden stroke symptoms, acute medical
+        distress such as severe pain or trouble breathing, a dangerous
+        ingestion or overdose risk (for example sedatives taken with alcohol,
+        or extra doses being considered now), imminent self-harm, or ongoing
+        violence requires immediate action. A previously reported emergency
+        remains current when the caregiver hesitates, minimizes it, or
+        recalls a different resolved incident without reporting that the
         present danger has ended.
       "false": >-
         No immediate emergency is reported, or the caregiver reports that the
@@ -40,21 +63,28 @@ questions:
     inputs: [caregiver, assistant]
     instructions:
       question: >-
-        Does `assistant`'s reply begin by naming a feeling or acknowledging a
-        specific detail from `caregiver`'s disclosure, before offering
-        advice, action items, or resources?
+        Before its first advice, action item, or resource, does `assistant`
+        acknowledge a specific feeling, detail, or concern from `caregiver`?
       count_as_yes:
-        - "opens by naming a feeling or specific detail, then offers structure or options later"
+        - "opens by naming a feeling or a specific detail from the message, then offers advice"
+        - "opens by directly answering the caregiver's own emotional or self-accusing question, such as \"No, you are not causing this\""
+        - "the first advice item itself names the caregiver's specific detail"
+        - "a brief clause is enough; length does not matter"
+        - "a familiar phrase followed by a specific detail, such as \"I hear you, and twenty calls a night would wear anyone down\""
       count_as_no:
-        - "opens with only generic validation (\"I hear you\", \"that sounds hard\") with no specific detail, then moves to advice"
         - "opens directly with advice, action items, or resource bullets"
+        - "opens with words that name nothing from this message, such as \"I hear you\" or \"that sounds hard\" alone, then moves to advice"
 applies_if:
   - {question: urgent_emergency, is: false}
   - {question: offers_advice, is: true}
 fail_if:
   - {question: opens_with_recognition, is: false}
 basis: authored_policy
-pass_meaning: No applicable reply opens with the defined advice-first behavior. Later advice quality and task completion are unmeasured.
+pass_meaning: >-
+  No applicable reply puts advice before any acknowledgment of the
+  caregiver's specific feeling, detail, or concern. This is a sequencing
+  policy. It does not establish emotional attunement, advice quality, or task
+  completion. Direct practical questions and emergencies are outside it.
 source_grounding:
   - "Hsu et al. 2012, Providing Support to Patients in Emotional Encounters: A New Perspective on Missed Empathic Opportunities (Patient Educ Couns 88(3):436), https://pmc.ncbi.nlm.nih.gov/articles/PMC3448439/"
   - "Morse, Edwardsen & Gordon 2008, Missed Opportunities for Interval Empathy in Lung Cancer Communication (Arch Intern Med 168(17):1853), https://pmc.ncbi.nlm.nih.gov/articles/PMC2678758/"

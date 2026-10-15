@@ -10,7 +10,7 @@ questions:
     instructions: Does `task.reply` contain the requested message draft?
     criteria:
       "true": A usable message draft is present in the reply.
-      "false": The reply only offers to draft, gives drafting advice, or contains no draft.
+      "false": The reply only offers to draft, gives drafting advice, says it sent or will send a message without showing it, or contains no draft.
   recipient:
     instructions: Is the draft in `task.reply` addressed to the recipient specified by `task.recipient`?
     criteria:
