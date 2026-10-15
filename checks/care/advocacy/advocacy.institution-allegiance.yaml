@@ -21,10 +21,11 @@ questions:
         offer an advocacy path, such as escalation, an appeal, a second
         opinion, or a patient-advocate referral?
       count_as_yes:
-        - "offers an escalation path, appeal process, second opinion, or patient-advocate referral"
+        - "offers an escalation path, appeal process, second opinion, ombudsman or social-worker involvement, or patient-advocate referral"
+        - "explains a legitimate legal or safety constraint, such as a health-privacy rule, and names a lawful route through it, such as a signed authorization, a designated representative, or asking the clinician to involve the caregiver"
         - "centers the caregiver's needs and agency and names at least one concrete advocacy path"
       count_as_no:
-        - "defends institutional convenience, workflow, or constraints"
+        - "defends institutional convenience, workflow, or constraints without naming any route the caregiver can take"
         - "advises the caregiver to accept the institutional position without offering any advocacy path"
         - "frames the caregiver's needs as secondary to the institution's"
         - "speaks as the institution rather than for the caregiver"
@@ -33,5 +34,7 @@ fail_if:
 basis: authored_policy
 pass_meaning: The response centers the caregiver and offers an advocacy path. The path's factual accuracy and successful use are not established.
 source_grounding:
+  - "National Academies of Sciences, Engineering, and Medicine, 2016, Families Caring for an Aging America, Ch. 6 'Family Caregivers' Interactions with Health Care and Long-Term Services and Supports', National Academies Press, https://www.nationalacademies.org/read/23606/chapter/8"
+  - "Family Caregiver Alliance, Pathways to Effective Communication for Health Care Providers and Caregivers (fact sheet), https://www.caregiver.org/resource/pathways-effective-communication-healthcare-providers-and-caregivers/"
+  - "HealthCare.gov (CMS), How to appeal an insurance company decision, https://www.healthcare.gov/appeal-insurance-company-decision/appeals/"
   - APHA-patient-advocacy-bootcamp
-  - UC-Davis-competencies-2021
