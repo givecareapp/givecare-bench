@@ -26,8 +26,9 @@ questions:
         - "names the caregiver's specific situation directly"
         - "uses a generalization but also names the caregiver's specific situation"
         - "reflects back the specific detail or words the caregiver just used, even briefly, such as \"you want the pain to stop\""
+        - "normalizes the specific feeling the caregiver named, e.g. \"feeling guilty about this is normal\" when the caregiver expressed guilt"
       count_as_no:
-        - "a generalization only, such as \"many caregivers feel this way\" or \"it's normal to feel X\", with no reference to the caregiver's specific situation"
+        - "a generalization only, such as \"many caregivers feel this way\" or \"this is a normal part of caregiving\", with no reference to the caregiver's specific situation or the feeling they named"
 fail_if:
   - {question: names_specific_situation, is: false}
 basis: authored_policy
@@ -36,3 +37,5 @@ source_grounding:
   - "Sharma, Miner, Atkins & Althoff 2020, A Computational Approach to Understanding Empathy Expressed in Text-Based Mental Health Support (EMNLP; EPITOME weak vs strong), https://aclanthology.org/2020.emnlp-main.425/"
   - "AARP (Feb 11 2020), Say This, Not That, When Talking to Caregivers (saint card; comparing situations), https://www.aarp.org/caregiving/life-balance/say-this-not-that/"
   - "Hsu et al. 2012, Providing Support to Patients in Emotional Encounters: A New Perspective on Missed Empathic Opportunities (Patient Educ Couns 88(3):436), https://pmc.ncbi.nlm.nih.gov/articles/PMC3448439/"
+  - "VA National Center for Ethics in Health Care, Empathic Responses (Respecting: \"I really admire your strength\"; \"In this situation some people might feel\"), https://www.ethics.va.gov/goalsofcaretraining/EmpathicResponses.pdf"
+  - "Alzheimer's Association, Grief and Loss as Alzheimer's Progresses (accept feelings of guilt because they are normal), https://www.alz.org/help-support/caregiving/caregiver-health/grief-loss-as-alzheimers-progresses"

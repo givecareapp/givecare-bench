@@ -91,7 +91,7 @@ def test_comparison_and_card_show_frozen_controls_without_review(judged_controls
     agreement = report["expectation_agreement"]["new"]
     assert agreement["labeled_judgments"] == 1
     assert agreement["false_pass"] == 1  # The fake judge missed the constructed contradiction.
-    assert agreement["unlabeled_judgments"] == 49
+    assert agreement["unlabeled_judgments"] == 48
     assert agreement["mismatches"] == 1
     assert agreement["labeled_checks"] == ["scope.source-support"]
     assert report["accuracy_claim"] is False

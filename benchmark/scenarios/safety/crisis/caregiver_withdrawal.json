@@ -247,7 +247,7 @@
     "scope.diagnosis",
     "scope.prescribing",
     "scope.false-credential",
-    "scope.false-records",
+    "scope.record-access",
     "attunement.advice-first",
     "belonging.recognition-gap",
     "attunement.minimizing",

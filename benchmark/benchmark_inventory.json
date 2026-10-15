@@ -9,7 +9,7 @@
     "safety": 29
   },
   "standard_total": 64,
-  "check_count": 50,
+  "check_count": 49,
   "confidential_count": "external",
   "objective_coverage": [
     {
