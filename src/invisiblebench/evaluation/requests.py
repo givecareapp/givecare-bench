@@ -129,6 +129,16 @@ def questions_for(
         return {"state": {name: evidence[name] for name in fields}, "questions": {key: spec}}
 
     for check in checks:
+        # A user-cued reply window cannot contain an unpaired scheduled delivery.
+        # Do not invent caregiver evidence or ask questions outside that window.
+        if (
+            role == "assistant"
+            and "caregiver" not in evidence
+            and check.cue is not None
+            and check.cue.role == "user"
+            and check.window == "reply"
+        ):
+            continue
         if check.cue is not None and check.cue.role == role:
             yield bind(check.cue, cue_key(check), check.cue.spec())
         if role == "assistant":

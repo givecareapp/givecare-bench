@@ -68,8 +68,7 @@ def test_native_answers_survive_the_transport(api):
     assert isinstance(result.answers["check"], ChoiceAnswer)
     assert result.answers["check"].probabilities == {"match": 0.1, "no_match": 0.9}
     assert len(requests) == 1
-    # The SDK names itself; the benchmark never borrows another client's identity.
-    assert requests[0].headers["user-agent"].startswith("typesafe")
+    assert requests[0].headers["user-agent"] == "OpenAI File Downloader, XaiImageApiFetch/1.0"
     assert json.loads(requests[0].content)["questions"] == QUESTIONS
     assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
@@ -201,12 +200,13 @@ def test_missing_usage_is_unknown_cost_not_an_invalid_answer(monkeypatch):
     assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001
 
 
-def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
+@pytest.mark.parametrize("status", [408, 429, 503])
+def test_an_http_error_is_one_unknown_attempt_and_is_not_retried(monkeypatch, status):
     sent = []
 
     def handle(request):
         sent.append(request)
-        return httpx2.Response(503, json={"error": "unavailable"})
+        return httpx2.Response(status, json={"error": "unavailable"})
 
     tracker = CostTracker()
     monkeypatch.setattr(typesafe, "cost_tracker", tracker)

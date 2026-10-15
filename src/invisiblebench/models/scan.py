@@ -344,12 +344,13 @@ class SourceRun(Record):
 
 
 class ScanPlan(Record):
-    schema_version: Literal["invisiblebench-scan/v3"] = "invisiblebench-scan/v3"
+    schema_version: Literal["invisiblebench-scan/v4"] = "invisiblebench-scan/v4"
     benchmark_version: Text
     engine_version: Text
     scenario_corpus_sha256: Digest
     judge: JudgeSettings
     checks: list[Check] = Field(min_length=1)
+    supplemental_checks: list[FileRef] = Field(default_factory=list)
     sources: list[SourceRun] = Field(min_length=1)
     planned_requests: StrictInt = Field(ge=1)
     input_token_envelope: StrictInt = Field(ge=0)

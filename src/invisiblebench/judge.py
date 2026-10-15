@@ -37,12 +37,13 @@ from invisiblebench.api.typesafe import (
     validate_response,
 )
 from invisiblebench.evaluation import rules
-from invisiblebench.evaluation.check_registry import load_checks
+from invisiblebench.evaluation.check_registry import load_check, load_checks
 from invisiblebench.evaluation.requests import conversation_requests as _requests
 from invisiblebench.evaluation.requests import input_hash, merge_answers
 from invisiblebench.models.config import serving_policy
 from invisiblebench.models.scan import (
     Answer,
+    Check,
     FileRef,
     JudgeObservation,
     JudgeSettings,
@@ -207,6 +208,7 @@ def plan_scan(
     judge_model: str = DEFAULT_JUDGE_MODEL,
     limit: int | None = None,
     filename_filter: str | None = None,
+    supplemental_checks: Path | None = None,
 ) -> ScanPlan:
     """Freeze source bytes and judge inputs without creating a model client."""
     if limit is not None and limit < 1:
@@ -274,7 +276,24 @@ def plan_scan(
                     transcripts=inputs,
                 )
             )
-        checks = list(load_checks().values())
+        extra_refs = []
+        if supplemental_checks is not None:
+            for path in sorted(supplemental_checks.rglob("*.yaml")):
+                if not path.name.startswith("_"):
+                    extra_refs.append(
+                        _snapshot(
+                            path,
+                            bundle / "inputs/checks" / path.relative_to(supplemental_checks),
+                            bundle,
+                        )
+                    )
+            if not extra_refs:
+                raise ValueError(f"No checks found under {supplemental_checks}")
+        checks = [*load_checks().values(), *_supplemental_checks(bundle, extra_refs)]
+        if len({check.id for check in checks}) != len(checks):
+            raise ValueError(
+                "scan contains duplicate checks; supplemental checks cannot replace canonical checks"
+            )
         envelope, planned = 0, 0
         for source in sources:
             for _ref, transcript, memory in _source_conversations(bundle, source):
@@ -288,6 +307,7 @@ def plan_scan(
             scenario_corpus_sha256=scenario_corpus_hash(root),
             judge=JudgeSettings(model=judge_model),
             checks=checks,
+            supplemental_checks=extra_refs,
             sources=sources,
             planned_requests=planned,
             input_token_envelope=envelope,
@@ -320,6 +340,7 @@ def plan_rejudge(frozen: Path, bundle: Path, *, model: str = DEFAULT_JUDGE_MODEL
             for source in plan.sources
             for ref in [source.manifest, source.summary, *source.transcripts]
         }
+        refs.update({ref.path: ref for ref in plan.supplemental_checks})
         for ref in refs.values():
             _read_ref(frozen, ref)
             if _snapshot(frozen / ref.path, bundle / ref.path, bundle).sha256 != ref.sha256:
@@ -340,12 +361,17 @@ def _supported_engine(plan: ScanPlan) -> None:
         )
 
 
-def _current_plan(plan: ScanPlan) -> None:
+def _supplemental_checks(bundle: Path, refs: list[FileRef]) -> list[Check]:
+    return [load_check(Path(ref.path), content=_read_ref(bundle, ref)) for ref in refs]
+
+
+def _current_plan(plan: ScanPlan, *, supplemental: list[Check] | None = None) -> None:
     _supported_engine(plan)
     if (
         plan.benchmark_version != get_benchmark_version()
         or plan.scenario_corpus_sha256 != scenario_corpus_hash(get_project_root())
-        or plan.checks != list(load_checks().values())
+        or plan.checks != [*load_checks().values(), *(supplemental or [])]
+        or (plan.supplemental_checks and supplemental is None)
         or plan.judge != JudgeSettings(model=plan.judge.model)
     ):
         raise ValueError("plan differs from the current benchmark, checks, or judge settings")
@@ -615,6 +641,9 @@ def load_scan(
     plan_bytes = (bundle / PLAN_FILE).read_bytes()
     plan = ScanPlan.model_validate_json(plan_bytes)
     _supported_engine(plan)
+    supplemental = _supplemental_checks(bundle, plan.supplemental_checks)
+    if supplemental and plan.checks[-len(supplemental) :] != supplemental:
+        raise ValueError("frozen supplemental checks differ from their definitions")
     plan_sha = sha256(plan_bytes)
     conversations = _conversations(bundle, plan)
     requests = _planned_requests(plan, conversations)
@@ -897,7 +926,7 @@ def run_scan(bundle: Path, *, max_cost_usd: float, client: Any | None = None) ->
         raise ValueError("a saved dry-run scan plan is required")
     content = (bundle / PLAN_FILE).read_bytes()
     plan = ScanPlan.model_validate_json(content)
-    _current_plan(plan)
+    _current_plan(plan, supplemental=_supplemental_checks(bundle, plan.supplemental_checks))
     conversations = _conversations(bundle, plan)
     digest = sha256(content)
     with execute_requests(

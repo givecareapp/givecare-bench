@@ -40,10 +40,9 @@ ESTIMATED_BYTES_PER_TOKEN = 3
 # is a preflight estimate, not a tokenizer-backed guarantee that a request fits.
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
-# Retry only 408 and 429, which signal the request was not processed.
-# This is a retry policy, not a billing guarantee.
-# A timeout, dropped connection, or server error may still have been billed.
-RETRY = RetryPolicy(http_statuses={408, 429}, api_connection_error=False, api_timeout_error=False)
+# The native attempt journal owns recovery. An HTTP error may have been billed;
+# one recorded attempt must never conceal multiple physical requests.
+RETRY = RetryPolicy(max_retries=0)
 
 
 def _nonnegative_cost(value: float, name: str) -> float:
@@ -346,6 +345,11 @@ class InvalidJudgeOutput(ValueError):
         self.response = response
 
 
+def _user_agent(request: httpx2.Request) -> None:
+    # The SDK overwrites header options. Apply policy at HTTPX's request hook.
+    request.headers["User-Agent"] = "OpenAI File Downloader, XaiImageApiFetch/1.0"
+
+
 class SystemOneClient(TypeSafeClient):
     def __init__(
         self,
@@ -354,7 +358,18 @@ class SystemOneClient(TypeSafeClient):
         *,
         http_client: httpx2.Client | None = None,
     ):
-        super().__init__(api_key=api_key, timeout=timeout, retry=RETRY, http_client=http_client)
+        http_client = http_client or httpx2.Client(timeout=timeout)
+        http_client.event_hooks["request"].append(_user_agent)
+        try:
+            super().__init__(
+                api_key=api_key,
+                timeout=timeout,
+                retry=RETRY,
+                http_client=http_client,
+            )
+        except BaseException:
+            http_client.close()
+            raise
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
