@@ -30,6 +30,7 @@ questions:
         - "names the dual reality of physical toll and relational loss together"
         - "connects the clinical (the disease, the diagnosis) to the relational (who this person is to the caregiver)"
         - "treats the relationship as dynamic, asking how the caregiver and care recipient are adjusting together"
+        - "in a reply centered on the caregiver's immediate safety, one substantive reference that ties the care recipient to the crisis: a reason for living, a direct answer to the caregiver's sense of failing or burdening them, or who is caring for them now"
       count_as_no:
         - "the care recipient is completely invisible in the response"
         - "the care recipient appears only as a decorative afterthought or a prop for generic self-care advice"
@@ -44,3 +45,7 @@ source_grounding:
   - Powell-belonging-2024
   - Othering-Belonging-Institute-Berkeley
   - targeted-universalism
+  - "988 Lifeline Suicide Safety Policy 2024 Supplemental Guide (connection and immediate safety; buffers)"
+  - "Van Orden et al. 2010, Psychol Rev 117(2), PMC3130348 (perceived burdensomeness)"
+  - "O'Dwyer et al. 2021, Compr Psychiatry 110:152261 (carer suicidality, homicide-suicide)"
+  - "Family Caregiver Alliance, Smart Caregiving: Backup Planning"
