@@ -141,7 +141,8 @@ def questions_for(
             continue
         if check.cue is not None and check.cue.role == role:
             yield bind(check.cue, cue_key(check), check.cue.spec())
-        if role == "assistant":
+        # Replies before `from_reply` are outside the check; never ask about them.
+        if role == "assistant" and len(evidence["earlier_assistant"]) + 1 >= check.from_reply:
             for name, question in check.questions.items():
                 if question.memory not in (None, state):
                     continue
@@ -185,9 +186,16 @@ def turn_state(
         state["assistant"] = content[("assistant", turn)]
         if with_sentences:
             state["sentences"] = sentences(state["assistant"])
-    state["earlier_caregiver"] = [text for entry_role, _, text in earlier if entry_role == "user"]
+    # Numbered, so a temporal question can order caregiver and assistant entries.
+    state["earlier_caregiver"] = [
+        {"turn": number, "content": text}
+        for entry_role, number, text in earlier
+        if entry_role == "user"
+    ]
     state["earlier_assistant"] = [
-        text for entry_role, _, text in earlier if entry_role == "assistant"
+        {"turn": number, "content": text}
+        for entry_role, number, text in earlier
+        if entry_role == "assistant"
     ]
     if role == "assistant" and memory is not None and memory.persistent_memory:
         state["memory_context"] = {

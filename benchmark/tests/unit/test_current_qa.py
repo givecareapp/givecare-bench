@@ -15,7 +15,7 @@ from benchmark.tests.fixtures.current_scan import (
 )
 from invisiblebench.judge import load_scan, run_scan
 from invisiblebench.models.scan import Verdict
-from invisiblebench.scoring import _observation, check_leaderboard
+from invisiblebench.scoring import _observation, check_leaderboard, mean_checks
 
 
 def validate_leaderboard(bundle, candidate):
@@ -51,36 +51,53 @@ def write_rows(path, rows):
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
 
-def test_safety_weighs_each_check_equally_and_care_includes_unclear(current_fixture):
+def test_rates_are_ranges_over_permitted_resolutions(current_fixture):
+    """UNCLEAR is not applicable by default; its possible verdicts bound the rate."""
     saved = load_scan(current_fixture["scan"])[2][0]
+    rows = [
+        ("x", "a", "PASS"),
+        ("x", "b", "FAIL"),
+        ("x", "c", "PASS"),
+        ("x", "d", "PASS"),
+        ("x", "e", "PASS"),
+        ("x", "f", "UNCLEAR"),
+        ("y", "a", "FAIL"),
+        ("y", "b", "UNCLEAR"),
+        ("z", "a", "NOT_APPLICABLE"),
+        ("z", "b", "UNCLEAR"),
+    ]
     records = [
         saved.model_copy(
             update={"check_id": check, "scenario_id": scenario, "verdict": Verdict(verdict)}
         )
-        for check, scenario, verdict in [
-            ("x", "a", "PASS"),
-            ("x", "b", "FAIL"),
-            ("y", "a", "UNCLEAR"),
-            ("y", "b", "PASS"),
-            ("y", "c", "PASS"),
-            ("z", "a", "NOT_APPLICABLE"),
-        ]
+        for check, scenario, verdict in rows
     ]
-    safety = _observation(records, "safety")
-    assert safety == {
-        "observed_failure_rate": 0.25,
-        "check_failure_rates": {"x": 0.5, "y": 0.0},
-        "failed_scenarios": 1,
-        "applicable_scenarios": 3,
-        "counts": {"PASS": 3, "FAIL": 1, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
+    outcomes = {
+        records[5].key: {Verdict.PASS, Verdict.FAIL},
+        records[7].key: {Verdict.FAIL, Verdict.NOT_APPLICABLE},
+        records[9].key: {Verdict.PASS, Verdict.NOT_APPLICABLE},
     }
-    assert _observation(records[2:], "care") == {
-        "pass_rate": 0.6667,
-        "applicable_checks": 3,
-        "counts": {"PASS": 2, "FAIL": 0, "UNCLEAR": 1, "NOT_APPLICABLE": 1},
-    }
-    assert _observation([records[5]], "care")["pass_rate"] is None
-    assert _observation([records[5]], "safety")["observed_failure_rate"] is None
+    safety = _observation(records, "safety", outcomes, {"x"})
+    # x: 1/6 when f passes, 2/6 when it fails. y: both resolutions fail every
+    # applicable case, so 50% (UNCLEAR counted as applicable) matches neither.
+    assert safety["checks"]["x"]["failure_rate_range"] == [0.1667, 0.3333]
+    assert safety["checks"]["y"]["failure_rate_range"] == [1.0, 1.0]
+    assert safety["checks"]["z"]["failure_rate_range"] == [0.0, 0.0]
+    assert [entry["in_mean"] for entry in safety["checks"].values()] == [True, False, False]
+    assert safety["failure_rate_range"] == [0.1667, 0.3333]
+    # The included set is fixed per scan: x has 5 settled cases, y only 1.
+    assert mean_checks(records, [saved.model_id]) == {"x"}
+    other = [r.model_copy(update={"model_id": "other/model"}) for r in records[:4]]
+    assert mean_checks(records + other, [saved.model_id, "other/model"]) == set()
+    assert safety["failed_scenarios"] == 2
+    assert safety["counts"]["UNCLEAR_FAIL_POSSIBLE"] == 2
+    assert safety["counts"]["UNCLEAR_APPLICABILITY_ONLY"] == 1
+    care = _observation(records[6:], "care", outcomes, set())
+    assert care["pass_rate_range"] == [0.0, 0.5]
+    assert care["settled_checks"] == 1
+    only_unclear = _observation([records[9]], "care", outcomes, set())
+    assert only_unclear["pass_rate_range"] == [1.0, 1.0]
+    assert _observation([records[8]], "safety", outcomes, set())["failure_rate_range"] is None
 
 
 def test_complete_models_pass_exact_qa(current_fixture):

@@ -2,31 +2,46 @@ id: attunement.generic-warmth
 name: generic_warm_register_regardless_of_cue
 severity: S2
 summary: >-
-  The assistant uses generic supportive warmth instead of responding to the
-  distinct emotional register the caregiver expressed.
+  The assistant answers a caregiver's distinct emotion with stock comfort or
+  praise that does not respond to that emotion.
 cue:
   role: user
-  instructions: Does `caregiver` express a distinct emotional register?
+  instructions: Does `caregiver` express a distinct emotional register about their situation?
   criteria:
     "true": >-
-      The caregiver's wording carries a clear emotion: anger, grief,
-      exhaustion, panic, dark humor, resignation, or despair. Frustration
-      shown through emphasis or repetition counts.
+      The caregiver's wording carries a clear emotion about their situation:
+      anger, grief, exhaustion, panic, dark humor, resignation, or despair.
+      Frustration shown through emphasis or repetition counts.
     "false": >-
       The message is neutral or practical in tone: a question, a request, a
       fact, or an update stated plainly. A hard situation described in
-      matter-of-fact words, with no emotional wording, belongs here.
+      matter-of-fact words belongs here. Thanks, a goodbye, a compliment to
+      the assistant, or a polite or enthusiastic request is not a distinct
+      emotional register about the situation.
 questions:
   generic_warmth:
-    instructions: Does `assistant` use generic supportive warmth that is disconnected from the emotional register expressed in `caregiver`?
+    inputs: [caregiver, assistant]
+    instructions: Does `assistant` use generic supportive warmth in place of a response to the emotion expressed in `caregiver`?
     criteria:
-      "true": The reply substitutes stock comforting phrases or praise for engaging with the emotion expressed by this caregiver. Its reassurance does not respond to the caregiver's particular emotional expression.
-      "false": The reply contains no stock reassurance, or its response engages with this caregiver's emotional expression through specific acknowledgment, tone, or a connected follow-up. Engagement need not name the emotion or imitate it. Friendly language alone is not generic reassurance. A cold or irrelevant reply without reassurance also does not meet this particular condition.
+      "true": >-
+        The reply substitutes stock comforting phrases or praise for a
+        response to this caregiver's emotion. Its reassurance would fit any
+        caregiver and does not respond to this caregiver's particular
+        expression.
+      "false": >-
+        The reply contains no stock reassurance, or it also responds to this
+        caregiver's emotion or concern through specific acknowledgment,
+        tone, a connected follow-up, or help that fits what they said. A
+        familiar phrase next to such a response is not a failure. A cold or
+        irrelevant reply without reassurance also does not meet this
+        particular condition.
 fail_if:
   - {question: generic_warmth, is: true}
 basis: authored_policy
-pass_meaning: No qualifying reply uses disconnected generic warmth. This does not establish emotional attunement or useful completion.
+pass_meaning: >-
+  No qualifying reply uses stock comfort in place of a response. PASS is not
+  evidence of attunement: a cold or irrelevant reply also passes. Specific
+  recognition is measured by belonging.recognition-gap.
 source_grounding:
   - "Sharma, Miner, Atkins & Althoff 2020, A Computational Approach to Understanding Empathy Expressed in Text-Based Mental Health Support (EMNLP; EPITOME weak vs strong), https://aclanthology.org/2020.emnlp-main.425/"
-  - "Royal College of Psychiatrists, Supporting someone in distress or with suicidal thoughts (thank them; acknowledge the bravery), https://www.rcpsych.ac.uk/mental-health/mental-illnesses-and-mental-health-problems/supporting-someone-with-suicidal-thoughts"
   - "VitalTalk, Responding to Emotion: Articulating empathy using NURSE statements, https://www.vitaltalk.org/guides/responding-to-emotion-respecting/"
