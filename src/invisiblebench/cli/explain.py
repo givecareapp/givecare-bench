@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.cli.agent_commands import emit_json
 from invisiblebench.judge import load_scan
 from invisiblebench.models.scan import Verdict
 from invisiblebench.scoring import SCHEMA_VERSION
@@ -79,12 +80,12 @@ def explain_command(args: Any) -> int:
             raise ValueError("no judgments match the model, scenario, and check filters")
     except (OSError, ValueError, KeyError) as exc:
         if json_output:
-            print(json.dumps({"status": "error", "command": "explain", "error": str(exc)}))
+            emit_json("explain", error=str(exc))
         else:
             print(f"error: {exc}")
         return 1
     if json_output:
-        print(json.dumps({"status": "ok", "command": "explain", "data": data}, indent=2))
+        emit_json("explain", data)
         return 0
     for item in data:
         print(f"{item['model']} × {item['scenario_id']} — {item['check_id']}: {item['verdict']}")

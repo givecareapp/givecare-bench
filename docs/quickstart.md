@@ -178,36 +178,25 @@ settings match. Each model must have one recorded, consistent serving policy.
 Different policies for the same model are rejected, not merged into one row.
 Missing scenario coverage remains a separate publication error.
 
-Generate and check a candidate from a complete current-contract scan:
+Publication is one step from a complete current-contract scan. The script
+recomputes the scorecard from the scan, runs the strict publication QA on it,
+and writes the outputs. It rejects a source run that is incomplete, not current
+(mismatched benchmark, checks, or judge settings), or has a dirty or missing
+`git_sha`. Preview with `--dry-run` first:
 
 ```bash
-uv run bench leaderboard generate --scan results/<run-id>
-uv run bench leaderboard qa --scan results/<run-id> \
-  --candidate results/<run-id>/leaderboard.candidate.json
+uv run python -m invisiblebench.projection --bundle results/<run-id> --dry-run
 ```
 
-Compute the projection first with `--dry-run` to inspect what would change:
-
-```bash
-uv run python -m invisiblebench.projection \
-  --bundle results/<run-id> \
-  --leaderboard results/<run-id>/leaderboard.candidate.json \
-  --dry-run
-```
-
-The script binds the plan, judgments, and candidate leaderboard by SHA-256,
-computed directly from the files at the given paths, and rejects a source run
-that is incomplete, not current (mismatched benchmark, checks, or judge
-settings), or has a dirty or missing `git_sha`. Changed inputs are re-hashed
-on the next run automatically.
+The result prints the plan and judgments SHA-256 of the scan and, for each
+output, its before and after SHA-256. A reviewer binds the Git change to the
+scan with these values.
 
 Inspect `expected_effects` in the dry-run output, then execute for real by
 dropping `--dry-run`:
 
 ```bash
-uv run python -m invisiblebench.projection \
-  --bundle results/<run-id> \
-  --leaderboard results/<run-id>/leaderboard.candidate.json
+uv run python -m invisiblebench.projection --bundle results/<run-id>
 ```
 
 This replaces `data/leaderboard/leaderboard.json` and
@@ -225,14 +214,7 @@ new releases into a consumer that still accepts the previous schema.
 
 ## Verify
 
-Run the proof checks before sharing an artifact:
-
-```bash
-uv run ruff check .
-uv run python scripts/check_examples.py verify
-uv run pytest benchmark/tests -q
-uv run python scripts/lint_turn_indices.py --strict
-```
+Run `scripts/check.sh` before sharing an artifact.
 
 The scan can contain `UNCLEAR`. It remains evidence and does not start a second resolution pipeline.
 

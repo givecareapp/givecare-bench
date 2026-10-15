@@ -2,7 +2,6 @@
 
 import json
 import subprocess
-import sys
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -32,10 +31,10 @@ def test_manifest_captures_run_identity_and_generation_policy(project_root):
     assert manifest["model_ids"] == ["provider/model"]
     assert manifest["scenario_ids"] == ["s1", "s2"]
     assert manifest["transcript_policy"] == policy
-    assert manifest["benchmark_version"] == manifest["code_version"] == BENCHMARK_VERSION
-    assert manifest["python_version"] == sys.version
+    assert manifest["benchmark_version"] == BENCHMARK_VERSION
+    assert not {"code_version", "python_version"} & manifest.keys()
     assert datetime.fromisoformat(manifest["run_date"]).tzinfo == UTC
-    assert manifest["scenario_hash"] == manifests.scenario_corpus_hash(project_root)
+    assert manifest["scenario_hash"] == manifests.scenario_hash(project_root)
 
 
 @pytest.mark.parametrize("failure", ["sha", "status", "exception", "malformed"])
@@ -95,17 +94,17 @@ def test_scenario_hash_binds_contents_and_paths_without_binding_checkout_locatio
     first, second = tmp_path / "first", tmp_path / "second"
     for root, entries in [(first, files), (second, reversed(files))]:
         for name, text in entries:
-            path = root / name
+            path = root / "benchmark/scenarios" / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
-    saved = manifests._scenario_hash(first)
-    assert manifests._scenario_hash(second) == saved
-    source = first / "a.json"
+    saved = manifests.scenario_hash(first)
+    assert manifests.scenario_hash(second) == saved
+    source = first / "benchmark/scenarios/a.json"
     source.write_text('{"id":"changed"}')
-    assert manifests._scenario_hash(first) != saved
+    assert manifests.scenario_hash(first) != saved
     source.write_text('{"id":"a"}')
-    source.rename(first / "renamed.json")
-    assert manifests._scenario_hash(first) != saved
+    source.rename(first / "benchmark/scenarios/renamed.json")
+    assert manifests.scenario_hash(first) != saved
 
 
 def test_default_run_identity_is_unique_and_roundtrips(tmp_path, project_root):

@@ -10,9 +10,9 @@ from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
 from invisiblebench.inspect_task import transcript_policy
-from invisiblebench.judge import plan_scan, run_scan
+from invisiblebench.judge import json_bytes, plan_scan, run_scan
 from invisiblebench.models.scenario import Scenario
-from invisiblebench.scoring import generate_leaderboard
+from invisiblebench.scoring import build_scorecard
 from invisiblebench.utils.benchmark_inventory import collect_public_scenario_paths, get_project_root
 from invisiblebench.utils.manifest import generate_manifest
 
@@ -151,6 +151,13 @@ def write_source_run(
     return source_run
 
 
+def write_candidate(bundle: Path, output: Path | None = None) -> Path:
+    """Write a scorecard file, as the committed leaderboard would be, for comparison tests."""
+    output = output or bundle / "leaderboard.candidate.json"
+    output.write_bytes(json_bytes(build_scorecard(bundle)))
+    return output
+
+
 def write_current_qa_fixture(
     root: Path,
     *,
@@ -160,7 +167,7 @@ def write_current_qa_fixture(
     bundle = root / "scan"
     plan = plan_scan([source_run], bundle, judge_model=DEFAULT_JUDGE_MODEL)
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())
-    candidate = generate_leaderboard(bundle)
+    candidate = write_candidate(bundle)
     return {
         "scan": bundle,
         "plan": bundle / "scan_plan.json",

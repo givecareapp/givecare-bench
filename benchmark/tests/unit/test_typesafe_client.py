@@ -214,3 +214,21 @@ def test_a_server_error_is_an_unknown_outcome_and_is_not_retried(monkeypatch):
         client.ask(model=typesafe.DEFAULT_JUDGE_MODEL, state="Authored case", questions=QUESTIONS)
     assert len(sent) == 1
     assert (tracker.total, tracker._reserved) == (0.0, 0.0)  # noqa: SLF001
+
+
+def test_a_missing_api_key_is_refused_by_the_sdk_at_construction(monkeypatch):
+    from typesafe_sdk import TypeSafeError
+
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    with pytest.raises(TypeSafeError, match="TYPESAFE_API_KEY"):
+        typesafe.SystemOneClient()
+
+
+def test_a_box_answer_is_not_part_of_the_judge_contract():
+    from typesafe_sdk import BoxAnswer
+
+    answer = BoxAnswer(
+        type="box", box={"top": 0.1, "left": 0.1, "bottom": 0.5, "right": 0.5}, confidence=None
+    )
+    with pytest.raises(ValueError, match="box answers"):
+        typesafe.validate_answers({"q": answer}, {"q": {"type": "box"}})

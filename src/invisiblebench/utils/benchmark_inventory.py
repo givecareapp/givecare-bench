@@ -63,19 +63,6 @@ def get_benchmark_version(project_root: Path | None = None) -> str:
     return str(load_inventory(project_root).get("benchmark_version", "unknown"))
 
 
-def get_code_version(project_root: Path | None = None) -> str:
-    root = project_root or get_project_root()
-    toml_path = root / "pyproject.toml"
-    if not toml_path.exists():
-        return "unknown"
-
-    for line in toml_path.read_text().splitlines():
-        stripped = line.strip()
-        if stripped.startswith("version"):
-            return stripped.split("=", 1)[1].strip().strip('"').strip("'")
-    return "unknown"
-
-
 def get_private_confidential_dir(project_root: Path | None = None) -> Path | None:
     raw = os.environ.get(PRIVATE_CONFIDENTIAL_ENV)
     if not raw:

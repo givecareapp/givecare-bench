@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -76,8 +75,3 @@ def scan_command(args):
         return 2
     return 0
 
-
-def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    configure(parser)
-    return scan_command(parser.parse_args(argv))

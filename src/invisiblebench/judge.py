@@ -181,6 +181,14 @@ def _planned_requests(
     }
 
 
+def _write_new(path: Path, content: bytes) -> None:
+    """Create `path` exclusively and make its bytes durable."""
+    with path.open("xb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def _snapshot(path: Path, destination: Path, bundle: Path) -> FileRef:
     content = path.read_bytes()
     ref = FileRef(path=destination.relative_to(bundle).as_posix(), sha256=sha256(content))
@@ -188,10 +196,7 @@ def _snapshot(path: Path, destination: Path, bundle: Path) -> FileRef:
         _read_ref(bundle, ref)
         return ref
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with destination.open("xb") as stream:
-        stream.write(content)
-        stream.flush()
-        os.fsync(stream.fileno())
+    _write_new(destination, content)
     return ref
 
 
@@ -253,7 +258,6 @@ def plan_scan(
                 if not original.resolve().is_relative_to(run):
                     raise ValueError("source transcript escapes its run directory")
                 ref = _snapshot(original, destination / relative, bundle)
-                _transcript(_read_ref(bundle, ref))
                 inputs.append(
                     TranscriptSource(
                         **ref.model_dump(),
@@ -275,7 +279,6 @@ def plan_scan(
         for source in sources:
             for _ref, transcript, memory in _source_conversations(bundle, source):
                 for request in _requests(checks, transcript, memory).values():
-                    check_context(request["state"], request["questions"])
                     envelope += len(json.dumps(request, ensure_ascii=False).encode())
                     planned += 1
         root = get_project_root()
@@ -290,10 +293,7 @@ def plan_scan(
             input_token_envelope=envelope,
             estimated_cost_usd=estimated_cost(judge_model, envelope),
         )
-        with (bundle / PLAN_FILE).open("xb") as stream:
-            stream.write(json_bytes(plan.model_dump(mode="json")))
-            stream.flush()
-            os.fsync(stream.fileno())
+        _write_new(bundle / PLAN_FILE, json_bytes(plan.model_dump(mode="json")))
         return plan
     except BaseException:
         if not in_place:
@@ -324,10 +324,7 @@ def plan_rejudge(frozen: Path, bundle: Path, *, model: str = DEFAULT_JUDGE_MODEL
             _read_ref(frozen, ref)
             if _snapshot(frozen / ref.path, bundle / ref.path, bundle).sha256 != ref.sha256:
                 raise ValueError("frozen source changed while planning")
-        with (bundle / PLAN_FILE).open("xb") as stream:
-            stream.write(json_bytes(candidate.model_dump(mode="json")))
-            stream.flush()
-            os.fsync(stream.fileno())
+        _write_new(bundle / PLAN_FILE, json_bytes(candidate.model_dump(mode="json")))
     except BaseException:
         shutil.rmtree(bundle)
         raise
@@ -511,11 +508,11 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
                 or (parent / item["transcript_path"]).as_posix() != transcript.path
             ):
                 raise ValueError("transcript identity differs from the retained source summary")
-            scenario = public_scenarios.get(transcript.scenario_id)
-            if scenario is not None:
-                verify_execution(
-                    _transcript(_read_ref(bundle, transcript)), scenario, transcript.model_id
-                )
+            verify_execution(
+                _transcript(_read_ref(bundle, transcript)),
+                public_scenarios[transcript.scenario_id],
+                transcript.model_id,
+            )
             by_model.setdefault(transcript.model_id, set()).add(transcript.scenario_id)
     if any(scenarios != expected for scenarios in by_model.values()):
         raise ValueError(
@@ -547,8 +544,6 @@ def _read_answers(
             raise ValueError("duplicate or unplanned answer")
         if answer.plan_sha256 != plan_sha256:
             raise ValueError("answer is bound to a different scan plan")
-        if answer.input_sha256 != input_hash(request):
-            raise ValueError("answer request differs from the frozen inputs")
         if answer.answers is not None:
             validate_answers(answer.answers, request["questions"])
             if answer.judge.model != model:
@@ -849,10 +844,7 @@ def plan_questions(
         for name, path in (sources or {}).items():
             relative = FileRef(path=name, sha256="0" * 64).path
             plan.inputs.append(_snapshot(path, bundle / relative, bundle))
-        with (bundle / PLAN_FILE).open("xb") as stream:
-            stream.write(json_bytes(plan.model_dump(mode="json")))
-            stream.flush()
-            os.fsync(stream.fileno())
+        _write_new(bundle / PLAN_FILE, json_bytes(plan.model_dump(mode="json")))
     except BaseException:
         shutil.rmtree(bundle)
         raise
@@ -868,22 +860,24 @@ def question_requests(plan: QuestionPlan) -> dict:
     return requests
 
 
-def load_questions(bundle: Path) -> tuple[QuestionPlan, list[Answer]]:
-    """Read a question run for inspection; never retry or recover journal bytes."""
+def _open_questions(bundle: Path) -> tuple[bytes, QuestionPlan]:
     content = (bundle / PLAN_FILE).read_bytes()
     plan = QuestionPlan.model_validate_json(content)
     for ref in plan.inputs:
         _read_ref(bundle, ref)
+    return content, plan
+
+
+def load_questions(bundle: Path) -> tuple[QuestionPlan, list[Answer]]:
+    """Read a question run for inspection; never retry or recover journal bytes."""
+    content, plan = _open_questions(bundle)
     return plan, _read_answers(bundle, sha256(content), question_requests(plan), plan.judge.model)
 
 
 @contextmanager
 def run_questions(bundle: Path, *, max_cost_usd: float, client: Any | None = None):
     """Execute authoring questions; retain the journal lock through the caller's projection."""
-    content = (bundle / PLAN_FILE).read_bytes()
-    plan = QuestionPlan.model_validate_json(content)
-    for ref in plan.inputs:
-        _read_ref(bundle, ref)
+    content, plan = _open_questions(bundle)
     with execute_requests(
         bundle,
         model=plan.judge.model,

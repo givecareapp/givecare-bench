@@ -8,12 +8,12 @@ only replays the saved answers of a completed or partial scan.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from typesafe_sdk import NoulAnswer
 
+from invisiblebench.cli.agent_commands import emit_json
 from invisiblebench.evaluation import requests, rules
 from invisiblebench.judge import _conversations, load_scan
 from invisiblebench.models.scan import Answer, Judgment, ScanPlan, Verdict
@@ -226,12 +226,12 @@ def questions_command(args: Any) -> int:
             data = data[:limit]
     except (OSError, ValueError, KeyError) as exc:
         if json_output:
-            print(json.dumps({"status": "error", "command": "questions", "error": str(exc)}))
+            emit_json("questions", error=str(exc))
         else:
             print(f"error: {exc}")
         return 1
     if json_output:
-        print(json.dumps({"status": "ok", "command": "questions", "data": data}, indent=2))
+        emit_json("questions", data)
         return 0
     if not data:
         print("No questions.")

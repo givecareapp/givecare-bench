@@ -31,7 +31,7 @@ VERDICTS = {v.value for v in Verdict}
 ANSWER_MAP = TypeAdapter(dict[str, TypedAnswer])
 
 
-def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return (
         [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
         if path.exists()
@@ -42,7 +42,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 def load_examples(root: Path, checks: dict[str, Check]) -> dict[Path, list[dict[str, Any]]]:
     found, seen = {}, set()
     for directory in sorted(p for p in root.glob("*/*") if p.is_dir()):
-        rows = _read_jsonl(directory / EXAMPLES)
+        rows = read_jsonl(directory / EXAMPLES)
         for row in rows:
             if not {"id", "check_id", "expected", "transcript"} <= row.keys():
                 raise ValueError(f"{directory}: exemplar missing required fields")
@@ -70,6 +70,26 @@ def requests_for(
     return requests.conversation_requests([check], exemplar["transcript"], memory)
 
 
+def _fresh_row(
+    answers: dict[tuple[str, str, int, str], dict[str, Any]],
+    exemplar_id: str,
+    role: str,
+    turn: int,
+    digest: str,
+    request: dict[str, Any],
+    model: str,
+) -> dict[str, Any] | None:
+    """The saved answer row if it matches this request and judge model, else None."""
+    row = answers.get((exemplar_id, role, turn, digest))
+    fresh = (
+        row is not None
+        and "answers" in row
+        and row["input_sha256"] == requests.input_hash(request)
+        and row["model"] == model
+    )
+    return row if fresh else None
+
+
 def _answer_index(rows: list[dict[str, Any]]) -> dict[tuple[str, str, int, str], dict[str, Any]]:
     index = {(row["id"], row["role"], row["turn"], row["input_sha256"]): row for row in rows}
     if len(index) != len(rows):
@@ -88,19 +108,14 @@ def verify(
     totals = {"exemplars": 0, "passed": 0, "mismatch": 0, "stale": 0, "uncovered": 0}
     covered = defaultdict(set)
     for directory, exemplars in load_examples(root, checks).items():
-        answers = _answer_index(_read_jsonl(directory / ANSWERS))
+        answers = _answer_index(read_jsonl(directory / ANSWERS))
         for exemplar in exemplars:
             totals["exemplars"] += 1
             check = checks[exemplar["check_id"]]
             saved = {}
             for (role, turn, digest), request in requests_for(check, exemplar).items():
-                row = answers.get((exemplar["id"], role, turn, digest))
-                if (
-                    row is None
-                    or "answers" not in row
-                    or row["input_sha256"] != requests.input_hash(request)
-                    or row["model"] != model
-                ):
+                row = _fresh_row(answers, exemplar["id"], role, turn, digest, request, model)
+                if row is None:
                     totals["stale"] += 1
                     failures.append(f"STALE    {exemplar['id']}: plan and refresh its answers")
                     break
@@ -149,19 +164,13 @@ def plan_refresh(
         raise ValueError(f"unknown check: {only}")
     tasks = []
     for directory, exemplars in load_examples(root, checks).items():
-        existing = _answer_index(_read_jsonl(directory / ANSWERS))
+        existing = _answer_index(read_jsonl(directory / ANSWERS))
         for exemplar in exemplars:
             check = checks[exemplar["check_id"]]
             if only is not None and check.id != only:
                 continue
             for (role, turn, digest), request in requests_for(check, exemplar).items():
-                row = existing.get((exemplar["id"], role, turn, digest))
-                if (
-                    row is not None
-                    and "answers" in row
-                    and row["input_sha256"] == requests.input_hash(request)
-                    and row["model"] == model
-                ):
+                if _fresh_row(existing, exemplar["id"], role, turn, digest, request, model):
                     continue
                 tasks.append(
                     RequestTask(
@@ -195,7 +204,7 @@ def refresh(
             raise ValueError(
                 "exemplars or checks changed during refresh; answers are saved, projection refused"
             )
-        by_directory = {d: _answer_index(_read_jsonl(d / ANSWERS)) for d in examples}
+        by_directory = {d: _answer_index(read_jsonl(d / ANSWERS)) for d in examples}
         for answer in answers:
             if answer.error is None:
                 directory, _ = current[answer.scenario_id]

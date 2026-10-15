@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -13,6 +12,7 @@ import httpx2
 from dotenv import load_dotenv
 from typesafe_sdk import (
     Answer,
+    BoxAnswer,
     ChoiceAnswer,
     NoulAnswer,
     RetryPolicy,
@@ -36,7 +36,6 @@ ESTIMATED_BYTES_PER_TOKEN = 3
 # is a preflight estimate, not a tokenizer-backed guarantee that a request fits.
 MAX_REQUEST_TOKENS = 64_000
 MAX_STATE_AND_QUESTION_TOKENS = 32_000
-API_KEY_ENV = "TYPESAFE_API_KEY"
 # Retry only 408 and 429, which signal the request was not processed.
 # This is a retry policy, not a billing guarantee.
 # A timeout, dropped connection, or server error may still have been billed.
@@ -196,8 +195,29 @@ class CostTracker:
 cost_tracker = CostTracker()
 
 
-def _tokens(value: Any) -> float:
-    return len(json.dumps(value, ensure_ascii=False, default=str).encode()) / ESTIMATED_BYTES_PER_TOKEN
+def _bytes(value: Any) -> int:
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode())
+
+
+# `{"state": ` + state + `, "questions": ` + questions + `}`
+_REQUEST_FRAME_BYTES = len('{"state": ') + len(', "questions": ') + len("}")
+
+
+def _check_sizes(state: int, longest: int, items: int, count: int) -> None:
+    """Apply both limits to serialized byte sizes.
+
+    `items` is the summed size of every `"key": value` pair; the whole request
+    adds braces and `", "` separators, which is exactly what json.dumps writes.
+    """
+    if state / ESTIMATED_BYTES_PER_TOKEN + longest / ESTIMATED_BYTES_PER_TOKEN > (
+        MAX_STATE_AND_QUESTION_TOKENS
+    ):
+        raise ValueError(
+            f"state plus the longest question may exceed {MAX_STATE_AND_QUESTION_TOKENS} tokens"
+        )
+    whole = _REQUEST_FRAME_BYTES + state + 2 + items + 2 * max(count - 1, 0)
+    if whole / ESTIMATED_BYTES_PER_TOKEN > MAX_REQUEST_TOKENS:
+        raise ValueError(f"the whole request may exceed {MAX_REQUEST_TOKENS} tokens")
 
 
 def check_context(state: Any, questions: dict[str, Any]) -> None:
@@ -206,14 +226,54 @@ def check_context(state: Any, questions: dict[str, Any]) -> None:
     A passing estimate can still exceed the provider's tokenizer limit. The
     native error remains a technical failure, never a fabricated judgment.
     """
-    state_tokens = _tokens(state)
-    longest = max((_tokens(question) for question in questions.values()), default=0.0)
-    if state_tokens + longest > MAX_STATE_AND_QUESTION_TOKENS:
-        raise ValueError(
-            f"state plus the longest question may exceed {MAX_STATE_AND_QUESTION_TOKENS} tokens"
-        )
-    if _tokens({"state": state, "questions": questions}) > MAX_REQUEST_TOKENS:
-        raise ValueError(f"the whole request may exceed {MAX_REQUEST_TOKENS} tokens")
+    sizes = [(_bytes({key: question}) - 2, _bytes(question)) for key, question in questions.items()]
+    _check_sizes(
+        _bytes(state),
+        max((value for _, value in sizes), default=0),
+        sum(item for item, _ in sizes),
+        len(sizes),
+    )
+
+
+class ContextFit:
+    """Grow one request question by question; each size is serialized once.
+
+    Decisions equal `check_context` on the same state and questions.
+    """
+
+    def __init__(self, state: Any):
+        self._state = _bytes(state)
+        self.reset()
+
+    def reset(self) -> None:
+        self._longest = 0
+        self._items = 0
+        self._count = 0
+
+    @staticmethod
+    def size(key: str, question: Any) -> tuple[int, int]:
+        """Serialized bytes of the `"key": value` pair and of the value alone."""
+        return _bytes({key: question}) - 2, _bytes(question)
+
+    def check_alone(self, size: tuple[int, int]) -> None:
+        _check_sizes(self._state, size[1], size[0], 1)
+
+    def accepts(self, size: tuple[int, int]) -> bool:
+        try:
+            _check_sizes(
+                self._state,
+                max(self._longest, size[1]),
+                self._items + size[0],
+                self._count + 1,
+            )
+        except ValueError:
+            return False
+        return True
+
+    def add(self, size: tuple[int, int]) -> None:
+        self._longest = max(self._longest, size[1])
+        self._items += size[0]
+        self._count += 1
 
 
 def estimated_cost(model: str, request_bytes: int) -> float | None:
@@ -235,6 +295,8 @@ def validate_answers(answers: dict[str, Answer], questions: dict[str, Any]) -> N
         answer = answers[key]
         if answer.type != spec.get("type", "noul"):
             raise ValueError(f"{key}: answer type differs from its question")
+        if isinstance(answer, BoxAnswer):
+            raise ValueError(f"{key}: box answers are not part of the judge contract")
         if isinstance(answer, NoulAnswer):
             values = [answer.noul]
         else:
@@ -288,10 +350,7 @@ class SystemOneClient(TypeSafeClient):
         *,
         http_client: httpx2.Client | None = None,
     ):
-        key = api_key or os.environ.get(API_KEY_ENV)
-        if not key:
-            raise ValueError(f"{API_KEY_ENV} is required for a paid scan")
-        super().__init__(api_key=key, timeout=timeout, retry=RETRY, http_client=http_client)
+        super().__init__(api_key=api_key, timeout=timeout, retry=RETRY, http_client=http_client)
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a

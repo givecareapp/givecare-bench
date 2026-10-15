@@ -19,7 +19,7 @@ def test_identity_comes_from_the_canonical_inventory():
 def test_public_example_refuses_stale_evidence(monkeypatch):
     from scripts import render_docs
 
-    real = render_docs._read_jsonl
+    real = render_docs.read_jsonl
 
     def stale(path):
         rows = real(path)
@@ -28,6 +28,6 @@ def test_public_example_refuses_stale_evidence(monkeypatch):
                 row["input_sha256"] = "0" * 64
         return rows
 
-    monkeypatch.setattr(render_docs, "_read_jsonl", stale)
+    monkeypatch.setattr(render_docs, "read_jsonl", stale)
     with pytest.raises(ValueError, match="stale"):
         render_example()

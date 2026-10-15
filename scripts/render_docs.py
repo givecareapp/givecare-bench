@@ -9,7 +9,7 @@ from collections import Counter
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, validate_answers
 from invisiblebench.evaluation import requests, rules
 from invisiblebench.evaluation.check_registry import load_checks
-from invisiblebench.examples import ANSWER_MAP, _read_jsonl, load_examples, requests_for
+from invisiblebench.examples import ANSWER_MAP, load_examples, read_jsonl, requests_for
 from invisiblebench.models.scan import Thresholds
 from invisiblebench.utils.benchmark_inventory import get_project_root, load_inventory
 from invisiblebench.version import ENGINE_VERSION
@@ -42,7 +42,7 @@ def render_example() -> str:
     check = checks[example["check_id"]]
     saved_rows = {
         (row["role"], row["turn"], row["input_sha256"]): row
-        for row in _read_jsonl(directory / "examples.answers.jsonl")
+        for row in read_jsonl(directory / "examples.answers.jsonl")
         if row["id"] == EXAMPLE_ID
     }
     saved, request_sections = {}, []

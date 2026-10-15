@@ -10,6 +10,7 @@ import json
 import re
 from typing import Any
 
+from invisiblebench.api.typesafe import ContextFit
 from invisiblebench.evaluation import crisis_continuity, tasks
 from invisiblebench.models.scan import Check, MemoryContext, Question, Role
 
@@ -92,19 +93,13 @@ def sentence_key(check: Check, name: str, index: int) -> str:
 
 def _noul_sentence(question: Question, index: int) -> dict[str, Any]:
     """The same question, told which sentence of the reply it is about."""
-    spec = question.to_jev().model_dump(mode="json", exclude_none=True)
+    spec = question.spec()
     pointer = f"`sentences[{index}]`"
     if isinstance(question.instructions, dict):
         spec["instructions"] = {**question.instructions, "inspect": pointer}
     else:
         spec["instructions"] = f"About {pointer}: {question.instructions}"
     return spec
-
-
-def reads_sentences(checks: list[Check]) -> bool:
-    return any(
-        question.unit == "sentence" for check in checks for question in check.questions.values()
-    )
 
 
 def _memory_state(memory_declared: bool) -> str:
@@ -135,21 +130,13 @@ def questions_for(
 
     for check in checks:
         if check.cue is not None and check.cue.role == role:
-            yield bind(
-                check.cue,
-                cue_key(check),
-                check.cue.to_jev().model_dump(mode="json", exclude_none=True),
-            )
+            yield bind(check.cue, cue_key(check), check.cue.spec())
         if role == "assistant":
             for name, question in check.questions.items():
                 if question.memory not in (None, state):
                     continue
                 if question.unit == "turn":
-                    yield bind(
-                        question,
-                        question_key(check, name),
-                        question.to_jev().model_dump(mode="json", exclude_none=True),
-                    )
+                    yield bind(question, question_key(check, name), question.spec())
                     continue
                 consumers = [
                     clause
@@ -202,10 +189,6 @@ def turn_state(
     return state
 
 
-def request_turns(transcript: list[Turn]) -> list[tuple[Role, int]]:
-    return [(role, number) for role, number, _ in dialogue(transcript)]
-
-
 def build_requests(
     checks: list[Check],
     transcript: list[Turn],
@@ -213,11 +196,19 @@ def build_requests(
     turn: int,
     memory: MemoryContext | None = None,
 ) -> list[dict[str, Any]]:
-    from invisiblebench.api.typesafe import check_context
-
     clauses = [check for check in checks if check.rule == "clauses"]
     state = (
-        turn_state(transcript, role, turn, memory, with_sentences=reads_sentences(clauses))
+        turn_state(
+            transcript,
+            role,
+            turn,
+            memory,
+            with_sentences=any(
+                question.unit == "sentence"
+                for check in clauses
+                for question in check.questions.values()
+            ),
+        )
         if clauses
         else {}
     )
@@ -253,17 +244,17 @@ def build_requests(
     for group_key in sorted(groups):
         group = groups[group_key]
         chunk = {}
+        fit = ContextFit(group["state"])
         for key, question in sorted(group["questions"].items()):
+            size = fit.size(key, question)
             # A single observation must fit intact; splitting never truncates evidence.
-            check_context(group["state"], {key: question})
-            candidate = {**chunk, key: question}
-            try:
-                check_context(group["state"], candidate)
-            except ValueError:
+            fit.check_alone(size)
+            if not fit.accepts(size):
                 result.append({"state": group["state"], "questions": chunk})
-                chunk = {key: question}
-            else:
-                chunk = candidate
+                chunk = {}
+                fit.reset()
+            chunk[key] = question
+            fit.add(size)
         if chunk:
             result.append({"state": group["state"], "questions": chunk})
     return result
@@ -273,7 +264,7 @@ def conversation_requests(checks, transcript, memory=None):
     """The sole request inventory for scans, probes, and exemplar tools."""
     return {
         (role, turn, input_hash(request)): request
-        for role, turn in request_turns(transcript)
+        for role, turn, _ in dialogue(transcript)
         for request in build_requests(checks, transcript, role, turn, memory)
     }
 

@@ -1,4 +1,4 @@
-"""Agent-friendly subcommand handlers: doctor, runs, get, leaderboard JSON envelopes."""
+"""Subcommand handlers: doctor, runs, get, and the shared JSON envelope."""
 from __future__ import annotations
 
 import json
@@ -7,10 +7,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from invisiblebench._agent_cli import DoctorCheck, doctor_runner, emit_json
 from invisiblebench.utils.benchmark_inventory import get_project_root
-from invisiblebench.utils.io import leaderboard_rows
 from invisiblebench.utils.manifest import run_timestamp
+
+
+def emit_json(command: str, data: Any = None, error: str | None = None) -> None:
+    """Write one {status, command, data|error} line to stdout."""
+    payload: dict[str, Any] = {"status": "error" if error else "ok", "command": command}
+    if data is not None:
+        payload["data"] = data
+    if error:
+        payload["error"] = error
+    print(json.dumps(payload, separators=(",", ":"), default=str))
 
 
 def _runs_dir() -> Path:
@@ -18,15 +26,13 @@ def _runs_dir() -> Path:
     return get_project_root() / "results"
 
 
-def get_run_info(run_path: Path) -> dict[str, Any]:
-    """Get info about a run directory."""
+def get_run_info(run_path: Path, *, verify: bool = True) -> dict[str, Any]:
+    """Get info about a run directory. Without verify, a scan is read, not replayed."""
     manifest_file = run_path / "run_manifest.json"
     info = {
-        "path": run_path,
-        "name": run_path.name,
+        "id": run_path.name,
+        "path": str(run_path),
         "date": None,
-        "size_mb": sum(f.stat().st_size for f in run_path.rglob("*") if f.is_file())
-        / (1024 * 1024),
         "has_results": False,
         "artifact_state": "empty_no_results",
         "models": [],
@@ -37,8 +43,8 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
         ),
     }
     if (run_path / "scan_plan.json").exists():
-        from invisiblebench.judge import load_questions, load_scan
-        from invisiblebench.models.scan import QuestionPlan
+        from invisiblebench.judge import LEDGER_FILE, load_questions, load_scan
+        from invisiblebench.models.scan import QuestionPlan, ScanPlan
 
         try:
             schema = json.loads((run_path / "scan_plan.json").read_bytes())["schema_version"]
@@ -50,10 +56,16 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
                     "questions_complete" if info["has_results"] else "questions_incomplete"
                 )
             else:
-                plan, _answers, records = load_scan(run_path)
+                if verify:
+                    plan, _answers, records = load_scan(run_path)
+                    judged = len(records)
+                else:
+                    plan = ScanPlan.model_validate_json((run_path / "scan_plan.json").read_bytes())
+                    path = run_path / LEDGER_FILE
+                    judged = path.read_bytes().count(b"\n") if path.is_file() else 0
                 info["models"] = sorted({ref.model_id for ref in plan.transcripts})
                 info["scenarios"] = len(plan.transcripts)
-                info["has_results"] = len(records) == plan.planned_judgments
+                info["has_results"] = judged == plan.planned_judgments
                 info["artifact_state"] = "judged" if info["has_results"] else "judging_incomplete"
                 info["manifests"] = [
                     json.loads((run_path / source.manifest.path).read_bytes())
@@ -102,7 +114,8 @@ def get_run_info(run_path: Path) -> dict[str, Any]:
                 info["manifests"] = [manifest]
         except (OSError, ValueError):
             pass
-    info["date"] = run_timestamp(run_path, info["manifests"])
+    date = run_timestamp(run_path, info["manifests"])
+    info["date"] = date.isoformat(timespec="seconds") + "Z" if date else None
     return info
 
 
@@ -115,7 +128,7 @@ def list_runs(results_dir: Path) -> list[dict[str, Any]]:
             and d.name != "archive"
             and any((d / name).is_file() for name in ("run_manifest.json", "scan_plan.json"))
         ):
-            runs.append(get_run_info(d))
+            runs.append(get_run_info(d, verify=False))
     return runs
 
 
@@ -123,14 +136,7 @@ def _run_doctor(json_output: bool = False) -> int:
     """Validate env vars + runs dir for the bench CLI."""
     runs_dir = _runs_dir()
 
-    def _openrouter_key() -> bool:
-        key = os.getenv("OPENROUTER_API_KEY", "")
-        return bool(key) and not key.startswith("your_")
-
-    def _typesafe_key() -> bool:
-        return bool(os.getenv("TYPESAFE_API_KEY"))
-
-    def _runs_dir_writable() -> bool:
+    def runs_dir_writable() -> bool:
         try:
             runs_dir.mkdir(parents=True, exist_ok=True)
             probe = runs_dir / ".doctor_probe"
@@ -140,88 +146,34 @@ def _run_doctor(json_output: bool = False) -> int:
         except OSError:
             return False
 
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
     checks = [
-        DoctorCheck(
-            name="Target API key (OPENROUTER_API_KEY)",
-            check=_openrouter_key,
-            hint="set OPENROUTER_API_KEY",
+        (
+            "Target API key (OPENROUTER_API_KEY)",
+            bool(openrouter_key) and not openrouter_key.startswith("your_"),
+            "set OPENROUTER_API_KEY",
         ),
-        DoctorCheck(
-            name="Judge API key (TYPESAFE_API_KEY)",
-            check=_typesafe_key,
-            hint="set TYPESAFE_API_KEY; scans and judge-branched scenarios need it",
+        (
+            "Judge API key (TYPESAFE_API_KEY)",
+            bool(os.getenv("TYPESAFE_API_KEY")),
+            "set TYPESAFE_API_KEY; scans and judge-branched scenarios need it",
         ),
-        DoctorCheck(
-            name=f"runs_dir exists ({runs_dir})",
-            check=lambda: runs_dir.exists() and runs_dir.is_dir(),
-            hint="mkdir -p results/",
-        ),
-        DoctorCheck(
-            name="runs_dir writable",
-            check=_runs_dir_writable,
-            hint="chmod +w on the runs directory",
-        ),
+        (f"runs_dir exists ({runs_dir})", runs_dir.is_dir(), "mkdir -p results/"),
+        ("runs_dir writable", runs_dir_writable(), "chmod +w on the runs directory"),
     ]
-
-    if not json_output:
-        return doctor_runner(checks, exit_on_fail=False)
-
-    results: list[dict[str, Any]] = []
-    failures = 0
-    for c in checks:
-        try:
-            ok = bool(c.check())
-        except Exception as exc:  # noqa: BLE001 — mirrors doctor_runner's own catch-all
-            ok = False
-            hint = f"{c.hint or ''} ({exc})".strip()
-        else:
-            hint = c.hint if not ok else None
-        if not ok:
-            failures += 1
-        results.append({"name": c.name, "passed": ok, "hint": hint})
-
-    emit_json(command="doctor", data={"checks": results, "failures": failures})
+    results = [
+        {"name": name, "passed": ok, "hint": None if ok else hint} for name, ok, hint in checks
+    ]
+    failures = sum(not row["passed"] for row in results)
+    if json_output:
+        emit_json("doctor", {"checks": results, "failures": failures})
+    else:
+        for row in results:
+            line = f"  [{'PASS' if row['passed'] else 'FAIL'}] {row['name']}"
+            print(line + (f"  - {row['hint']}" if row["hint"] else ""), file=sys.stderr)
+        print(f"\ndoctor: {failures} check(s) failed" if failures else "\ndoctor: all checks passed",
+              file=sys.stderr)
     return 1 if failures else 0
-
-
-def _emit_or_write_json(
-    *,
-    command: str,
-    data: dict[str, Any],
-    record_count: int,
-    out_path: str | None,
-) -> int:
-    """Emit envelope on stdout, or write full payload to file and emit a summary.
-
-    When out_path is set, the full `data` dict is written to the path and the
-    stdout envelope is `{status, command, data: {path, byte_count, record_count}}`.
-    Otherwise the full data is inlined. Both cases write exactly one line to
-    stdout so agents can parse predictably.
-    """
-    if out_path:
-        try:
-            resolved = Path(out_path).expanduser().resolve()
-            resolved.parent.mkdir(parents=True, exist_ok=True)
-            payload = json.dumps(data, separators=(",", ":"), default=str)
-            resolved.write_text(payload)
-        except OSError as exc:
-            emit_json(
-                status="error",
-                command=command,
-                error=f"failed to write {out_path}: {exc}",
-            )
-            return 1
-        emit_json(
-            command=command,
-            data={
-                "path": str(resolved),
-                "byte_count": len(payload),
-                "record_count": record_count,
-            },
-        )
-        return 0
-    emit_json(command=command, data=data)
-    return 0
 
 
 def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
@@ -230,92 +182,37 @@ def _load_run_metadata(run_id: str) -> dict[str, Any] | None:
     if not results_dir.exists():
         return None
 
-    candidates: list[Path] = []
     requested = Path(run_id).expanduser()
     direct = requested if requested.is_absolute() or requested.is_dir() else results_dir / run_id
     if direct.is_dir():
         candidates = [direct]
     else:
-        for entry in sorted(results_dir.iterdir()):
-            if entry.is_dir() and entry.name != "archive" and entry.name.startswith(run_id):
-                candidates.append(entry)
-        # also check archive
-        archive = results_dir / "archive"
-        if archive.exists():
-            for entry in sorted(archive.iterdir()):
-                if entry.is_dir() and entry.name.startswith(run_id):
-                    candidates.append(entry)
+        candidates = [
+            entry
+            for parent in (results_dir, results_dir / "archive")
+            if parent.is_dir()
+            for entry in sorted(parent.iterdir())
+            if entry.is_dir() and entry.name != "archive" and entry.name.startswith(run_id)
+        ]
     if not candidates:
         return None
     if len(candidates) != 1:
         raise ValueError("run prefix matches multiple runs; use the full run directory name")
-    run_path = candidates[0]
-
-    info = get_run_info(run_path)
-    return {
-        "id": run_path.name,
-        "path": str(run_path),
-        "date": info["date"].isoformat(timespec="seconds") + "Z" if info.get("date") else None,
-        "models": info.get("models", []),
-        "scenarios": info.get("scenarios", 0),
-        "size_mb": round(info.get("size_mb", 0.0), 2),
-        "has_results": info.get("has_results", False),
-        "artifact_state": info.get("artifact_state", "unknown"),
-        "manifests": info["manifests"],
-        "jury_card": info["jury_card"],
-    }
+    return get_run_info(candidates[0])
 
 
-def _run_get(run_id: str, *, json_output: bool, out_path: str | None = None) -> int:
-    """Handle `bench get <run-id>`."""
+def _run_get(run_id: str, *, json_output: bool) -> int:
+    """Handle `bench get <run-id>`; always emits the JSON envelope on success."""
     try:
         record = _load_run_metadata(run_id)
+        error = None if record is not None else f"run not found: {run_id}"
     except ValueError as exc:
+        error = str(exc)
+    if error:
         if json_output:
-            emit_json(status="error", command="get", error=str(exc))
+            emit_json("get", error=error)
         else:
-            print(str(exc), file=sys.stderr)
+            print(error, file=sys.stderr)
         return 1
-    if record is None:
-        if json_output:
-            emit_json(status="error", command="get", error=f"run not found: {run_id}")
-        else:
-            print(f"Run not found: {run_id}", file=sys.stderr)
-        return 1
-    # get always emits JSON envelope (read-by-id, per cli.md)
-    return _emit_or_write_json(
-        command="get",
-        data=record,
-        record_count=1,
-        out_path=out_path,
-    )
-
-
-def _run_leaderboard_status_json(out_path: str | None = None) -> int:
-    """Emit the leaderboard.json contents as a JSON envelope."""
-    from invisiblebench.utils.benchmark_inventory import get_project_root
-
-    lb_path = get_project_root() / "data" / "leaderboard" / "leaderboard.json"
-    if not lb_path.exists():
-        emit_json(
-            status="error",
-            command="leaderboard",
-            error=f"leaderboard.json not found at {lb_path}",
-        )
-        return 1
-    try:
-        data = json.loads(lb_path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        emit_json(status="error", command="leaderboard", error=str(exc))
-        return 1
-    try:
-        rows = leaderboard_rows(data) if isinstance(data, dict) else []
-    except ValueError:
-        rows = []
-    record_count = len(rows) if rows else 1
-    return _emit_or_write_json(
-        command="leaderboard",
-        data=data,
-        record_count=record_count,
-        out_path=out_path,
-    )
+    emit_json("get", record)
+    return 0

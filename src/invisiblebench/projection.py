@@ -1,9 +1,9 @@
 """Deterministic public projection: a plain script, not a driver protocol.
 
 Private intake is a separate local tool. This module owns `corpus.project`:
-it reads a bound scan bundle and a generated candidate leaderboard, reproves
-them against current, complete evidence, and atomically writes the committed
-public projection. Run it directly with `python -m invisiblebench.projection`;
+it recomputes the scorecard from a current, complete scan bundle, runs the
+strict publication QA on it, and atomically writes the committed public
+projection. Run it directly with `python -m invisiblebench.projection`;
 there is no request envelope, plan/execute handshake, or external runner.
 """
 
@@ -21,26 +21,16 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from invisiblebench.scoring import RELEASE_SCHEMA, check_leaderboard
+from invisiblebench.scoring import RELEASE_SCHEMA, build_scorecard
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.version import BENCHMARK_VERSION
 
 ROOT = get_project_root()
-MAX_PROJECTION_BYTES = 2_000_000
 WEB_RELEASE_VERSION = f"v{BENCHMARK_VERSION}"
 WEB_RELEASE_ARTIFACT = Path("data/releases/web-bench-release.tar.gz")
-ARTIFACT_FIELDS = {
-    "schema_version",
-    "owner",
-    "kind",
-    "artifact_id",
-    "revision",
-    "sha256",
-    "access",
-}
 
 
-class DriverError(Exception):
+class ProjectionError(Exception):
     pass
 
 
@@ -50,44 +40,6 @@ def _sha256(data: bytes) -> str:
 
 def _json_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
-
-
-def _repo_path(value: Any, *, field: str, root: Path) -> Path:
-    if not isinstance(value, str) or not value or "\\" in value:
-        raise DriverError(f"{field} must be a non-empty repo-relative POSIX path")
-    relative = Path(value)
-    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
-        raise DriverError(f"{field} must stay inside the owner repository")
-    path = root.absolute()
-    for part in relative.parts:
-        path /= part
-        if path.is_symlink():
-            raise DriverError(f"{field} must not contain a symbolic link")
-    return path
-
-
-def _require_sha256(value: Any, *, field: str) -> str:
-    if (
-        not isinstance(value, str)
-        or len(value) != 64
-        or any(char not in "0123456789abcdef" for char in value)
-    ):
-        raise DriverError(f"{field} must be a lowercase SHA-256 digest")
-    return value
-
-
-def _read_bound_file(
-    path_value: Any, digest_value: Any, *, field: str, root: Path, maximum_bytes: int | None = None
-) -> Path:
-    path = _repo_path(path_value, field=f"{field}_path", root=root)
-    expected = _require_sha256(digest_value, field=f"{field}_sha256")
-    if not path.is_file():
-        raise DriverError(f"{field}_path is not a file: {path.relative_to(root)}")
-    if maximum_bytes is not None and path.stat().st_size > maximum_bytes:
-        raise DriverError(f"{field}_path exceeds the size limit")
-    if _sha256(path.read_bytes()) != expected:
-        raise DriverError(f"{field}_sha256 does not match {field}_path")
-    return path
 
 
 def _effect(path: Path, after: bytes, *, root: Path) -> dict[str, Any]:
@@ -111,12 +63,12 @@ def _refuse_symlinks(path: Path, *, root: Path) -> None:
     try:
         relative = path.absolute().relative_to(root.absolute())
     except ValueError as error:
-        raise DriverError("output path must stay inside the owner repository") from error
+        raise ProjectionError("output path must stay inside the owner repository") from error
     current = root.absolute()
     for part in relative.parts:
         current /= part
         if current.is_symlink():
-            raise DriverError(f"output path must not contain a symlink: {relative.as_posix()}")
+            raise ProjectionError(f"output path must not contain a symlink: {relative.as_posix()}")
 
 
 def _stage_file(path: Path, content: bytes, mode: int, *, label: str) -> Path:
@@ -138,14 +90,6 @@ def _write_outputs(
     outputs: dict[Path, bytes], expected_effects: list[dict[str, Any]], *, root: Path
 ) -> None:
     expected = {item["path"]: item for item in expected_effects}
-    actual_paths = {path.relative_to(root).as_posix() for path in outputs}
-    if actual_paths != set(expected):
-        raise DriverError("execute outputs do not match the approved plan")
-    for path, content in outputs.items():
-        relative = path.relative_to(root).as_posix()
-        if _sha256(content) != expected[relative]["after_sha256"]:
-            raise DriverError(f"execute bytes drifted for {relative}")
-
     ordered = sorted(outputs)
     staged: dict[Path, Path] = {}
     backups: dict[Path, Path | None] = {}
@@ -156,11 +100,11 @@ def _write_outputs(
             path.parent.mkdir(parents=True, exist_ok=True)
             _refuse_symlinks(path, root=root)
             if path.exists() and not path.is_file():
-                raise DriverError(f"output target is not a regular file: {path.relative_to(root)}")
+                raise ProjectionError(f"output target is not a regular file: {path.relative_to(root)}")
             relative = path.relative_to(root).as_posix()
             current = _sha256(path.read_bytes()) if path.is_file() else None
             if current != expected[relative]["before_sha256"]:
-                raise DriverError(f"approved before digest changed for {relative}")
+                raise ProjectionError(f"approved before digest changed for {relative}")
             mode = int(expected[relative]["mode"], 8)
             staged[path] = _stage_file(path, outputs[path], mode, label="stage")
             backups[path] = (
@@ -168,12 +112,6 @@ def _write_outputs(
                 if path.is_file()
                 else None
             )
-        for path in ordered:
-            relative = path.relative_to(root).as_posix()
-            _refuse_symlinks(path, root=root)
-            current = _sha256(path.read_bytes()) if path.is_file() else None
-            if current != expected[relative]["before_sha256"]:
-                raise DriverError(f"approved before digest changed for {relative}")
         for path in ordered:
             os.replace(staged[path], path)
             replaced.append(path)
@@ -192,7 +130,7 @@ def _write_outputs(
             except Exception as error:
                 rollback_error = rollback_error or error
         if rollback_error is not None:
-            raise DriverError(
+            raise ProjectionError(
                 f"owner write failed and rollback failed: {rollback_error}"
             ) from rollback_error
         raise
@@ -202,7 +140,6 @@ def _write_outputs(
 
 
 def _web_release_ref(digest: str) -> dict[str, str]:
-    _require_sha256(digest, field="projection sha256")
     return {
         "schema_version": "givecare.artifact-ref/v1",
         "owner": "bench.publish",
@@ -212,49 +149,6 @@ def _web_release_ref(digest: str) -> dict[str, str]:
         "sha256": digest,
         "access": "public",
     }
-
-
-def _learning_lineage(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict) or set(value) != {"demand_sha256", "trace_refs", "module_refs"}:
-        raise DriverError(
-            "learning_lineage must contain demand_sha256, trace_refs, and module_refs"
-        )
-    _require_sha256(value["demand_sha256"], field="learning_lineage.demand_sha256")
-    trace_refs = value["trace_refs"]
-    if not isinstance(trace_refs, list) or len(trace_refs) > 500:
-        raise DriverError("learning_lineage.trace_refs must contain at most 500 items")
-    seen: set[tuple[str, str]] = set()
-    for index, ref in enumerate(trace_refs):
-        label = f"learning_lineage.trace_refs[{index}]"
-        if not isinstance(ref, dict) or set(ref) != {"loop_id", "intent_sha256"}:
-            raise DriverError(f"{label} must contain loop_id and intent_sha256")
-        if not isinstance(ref["loop_id"], str) or not ref["loop_id"]:
-            raise DriverError(f"{label}.loop_id must be a non-empty string")
-        digest = _require_sha256(ref["intent_sha256"], field=f"{label}.intent_sha256")
-        key = (ref["loop_id"], digest)
-        if key in seen:
-            raise DriverError("learning_lineage.trace_refs must be unique")
-        seen.add(key)
-    module_refs = value["module_refs"]
-    if not isinstance(module_refs, list) or len(module_refs) > 100:
-        raise DriverError("learning_lineage.module_refs must contain at most 100 items")
-    canonical: set[bytes] = set()
-    for index, ref in enumerate(module_refs):
-        label = f"learning_lineage.module_refs[{index}]"
-        if not isinstance(ref, dict) or set(ref) != ARTIFACT_FIELDS:
-            raise DriverError(f"{label} must be an exact givecare.artifact-ref/v1 object")
-        _require_sha256(ref.get("sha256"), field=f"{label}.sha256")
-        if ref.get("schema_version") != "givecare.artifact-ref/v1":
-            raise DriverError(f"{label}.schema_version is invalid")
-        if any(not isinstance(ref.get(field), str) or not ref[field] for field in ARTIFACT_FIELDS):
-            raise DriverError(f"{label} fields must be non-empty strings")
-        if ref["access"] not in {"restricted", "workspace", "public"}:
-            raise DriverError(f"{label}.access is invalid")
-        encoded = json.dumps(ref, sort_keys=True, separators=(",", ":")).encode()
-        if encoded in canonical:
-            raise DriverError("learning_lineage.module_refs must be unique")
-        canonical.add(encoded)
-    return value
 
 
 def _deterministic_archive(members: dict[str, bytes]) -> bytes:
@@ -271,43 +165,13 @@ def _deterministic_archive(members: dict[str, bytes]) -> bytes:
     return raw.getvalue()
 
 
-def _web_release_outputs(payload: Any, *, root: Path) -> tuple[dict[Path, bytes], dict[str, Any]]:
-    from invisiblebench.judge import LEDGER_FILE, PLAN_FILE
-
-    required = {
-        "schema_version",
-        "bundle_path",
-        "plan_sha256",
-        "judgments_sha256",
-        "leaderboard_path",
-        "leaderboard_sha256",
-    }
-    if not isinstance(payload, dict) or set(payload) not in (
-        required,
-        required | {"learning_lineage"},
-    ):
-        raise DriverError("corpus.project input has invalid fields")
-    if payload["schema_version"] != "gc-bench.web-benchmark-release.input/v3":
-        raise DriverError("corpus.project input has an invalid schema_version")
-    bundle = _repo_path(payload["bundle_path"], field="bundle_path", root=root)
+def _web_release_outputs(bundle: Path, *, root: Path) -> tuple[dict[Path, bytes], dict[str, Any]]:
     if not bundle.is_dir():
-        raise DriverError("bundle_path must name a scan bundle")
-    relative = bundle.relative_to(root).as_posix()
-    _read_bound_file(f"{relative}/{PLAN_FILE}", payload["plan_sha256"], field="plan", root=root)
-    _read_bound_file(
-        f"{relative}/{LEDGER_FILE}", payload["judgments_sha256"], field="judgments", root=root
-    )
-    candidate = _read_bound_file(
-        payload["leaderboard_path"],
-        payload["leaderboard_sha256"],
-        field="leaderboard",
-        maximum_bytes=MAX_PROJECTION_BYTES,
-        root=root,
-    )
+        raise ProjectionError("bundle must name a scan bundle")
     try:
-        source = check_leaderboard(bundle, candidate)
+        source = build_scorecard(bundle, publication=True)
     except (OSError, ValueError, KeyError) as exc:
-        raise DriverError(f"Publication QA failed: {exc}") from exc
+        raise ProjectionError(f"Publication QA failed: {exc}") from exc
     projection_bytes = _json_bytes(source)
     members = {"leaderboard.json": projection_bytes}
     manifest = _json_bytes(
@@ -321,16 +185,15 @@ def _web_release_outputs(payload: Any, *, root: Path) -> tuple[dict[Path, bytes]
         }
     )
     archive_bytes = _deterministic_archive({"release-manifest.json": manifest, **members})
+    metadata = source["scan_metadata"]
     result = {
         "schema_version": RELEASE_SCHEMA,
-        "source_plan_sha256": payload["plan_sha256"],
-        "source_judgments_sha256": payload["judgments_sha256"],
+        "source_plan_sha256": metadata["plan_sha256"],
+        "source_judgments_sha256": metadata["judgments_sha256"],
         "release": _web_release_ref(_sha256(archive_bytes)),
         "strict_qa": True,
         "member_count": len(members),
     }
-    if "learning_lineage" in payload:
-        result["learning_lineage"] = _learning_lineage(payload["learning_lineage"])
     outputs = {}
     for target, content in {
         root / "data/leaderboard/leaderboard.json": projection_bytes,
@@ -342,17 +205,16 @@ def _web_release_outputs(payload: Any, *, root: Path) -> tuple[dict[Path, bytes]
 
 
 def project_web_release(
-    payload: dict[str, Any], *, root: Path = ROOT, dry_run: bool = False
+    bundle: Path, *, root: Path = ROOT, dry_run: bool = False
 ) -> dict[str, Any]:
     """Compute the `corpus.project` outputs and, unless `dry_run`, write them.
 
-    Reuses the same hash-bound reads (`_read_bound_file`), the same deterministic
-    QA recomputation (`check_leaderboard`), and the same atomic, digest-verified,
-    rollback-on-failure write (`_write_outputs`) that the projection has always
-    used. The only thing removed is the external plan/execute request envelope:
-    this function is called directly, once, by the CLI below.
+    One step: recompute the scorecard from the scan (`build_scorecard` with the
+    publication gates), then do the atomic, digest-verified, rollback-on-failure
+    write (`_write_outputs`). The result carries the input and output SHA-256
+    values so a reviewer can bind the Git change to the scan.
     """
-    outputs, result = _web_release_outputs(payload, root=root)
+    outputs, result = _web_release_outputs(bundle, root=root)
     effects = [_effect(path, outputs[path], root=root) for path in sorted(outputs)]
     written: list[str] = []
     if not dry_run and outputs:
@@ -362,44 +224,17 @@ def project_web_release(
     return {**result, "outcome": outcome, "expected_effects": effects, "written": written}
 
 
-def _bound_input(
-    *, bundle: Path, leaderboard: Path, root: Path, learning_lineage: dict[str, Any] | None
-) -> dict[str, Any]:
-    from invisiblebench.judge import LEDGER_FILE, PLAN_FILE
-
-    payload: dict[str, Any] = {
-        "schema_version": "gc-bench.web-benchmark-release.input/v3",
-        "bundle_path": bundle.relative_to(root).as_posix(),
-        "plan_sha256": _sha256((bundle / PLAN_FILE).read_bytes()),
-        "judgments_sha256": _sha256((bundle / LEDGER_FILE).read_bytes()),
-        "leaderboard_path": leaderboard.relative_to(root).as_posix(),
-        "leaderboard_sha256": _sha256(leaderboard.read_bytes()),
-    }
-    if learning_lineage is not None:
-        payload["learning_lineage"] = learning_lineage
-    return payload
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Compute and write the public gc-bench web-release projection "
             "(data/leaderboard/leaderboard.json and the release archive) from "
-            "a complete, current scan bundle and its generated candidate "
-            "leaderboard. Strict QA and the publication currency gate run "
-            "on every call."
+            "a complete, current scan bundle. Strict QA and the publication "
+            "currency gate run on every call."
         )
     )
     parser.add_argument(
         "--bundle", required=True, type=Path, help="Scan bundle directory, e.g. results/<run-id>"
-    )
-    parser.add_argument(
-        "--leaderboard",
-        type=Path,
-        help="Candidate leaderboard path (default: <bundle>/leaderboard.candidate.json)",
-    )
-    parser.add_argument(
-        "--learning-lineage", type=Path, help="Optional learning_lineage JSON file to attach"
     )
     parser.add_argument(
         "--dry-run",
@@ -410,19 +245,10 @@ def main(argv: list[str] | None = None) -> int:
 
     root = ROOT
     bundle = args.bundle if args.bundle.is_absolute() else root / args.bundle
-    leaderboard = args.leaderboard or (bundle / "leaderboard.candidate.json")
-    if not leaderboard.is_absolute():
-        leaderboard = root / leaderboard
-    learning_lineage = (
-        json.loads(args.learning_lineage.read_text()) if args.learning_lineage else None
-    )
 
     try:
-        payload = _bound_input(
-            bundle=bundle, leaderboard=leaderboard, root=root, learning_lineage=learning_lineage
-        )
-        result = project_web_release(payload, root=root, dry_run=args.dry_run)
-    except (DriverError, OSError, ValueError) as error:
+        result = project_web_release(bundle, root=root, dry_run=args.dry_run)
+    except (ProjectionError, OSError, ValueError) as error:
         print(f"gc-bench projection: {error}", file=sys.stderr)
         return 1
     json.dump(result, sys.stdout, ensure_ascii=False, sort_keys=True, indent=2)

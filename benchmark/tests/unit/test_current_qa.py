@@ -10,12 +10,24 @@ import pytest
 from benchmark.tests.fixtures.current_scan import (
     FixtureJudge,
     ScriptedJudge,
+    write_candidate,
     write_current_qa_fixture,
 )
 from invisiblebench.judge import load_scan, run_scan
 from invisiblebench.models.scan import Verdict
-from invisiblebench.scoring import _observation, generate_leaderboard, validate_leaderboard
-from invisiblebench.utils.io import load_jsonl
+from invisiblebench.scoring import _observation, check_leaderboard
+
+
+def validate_leaderboard(bundle, candidate):
+    try:
+        check_leaderboard(bundle, candidate)
+    except (OSError, ValueError, KeyError) as exc:
+        return [str(exc)]
+    return []
+
+
+def load_jsonl(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
 @pytest.fixture(scope="module")
@@ -152,7 +164,7 @@ def test_a_semantic_unclear_derived_from_its_answers_is_publishable(current_fixt
         ledger.unlink()  # judgments are derived; edited answers need a fresh derivation
         judgments = run_scan(scan, max_cost_usd=1.0, client=FixtureJudge())
         assert {judgment.verdict for judgment in judgments} == {Verdict.UNCLEAR}
-        generate_leaderboard(scan, board)
+        write_candidate(scan, board)
         assert validate_leaderboard(scan, board) == []
 
 
@@ -166,6 +178,6 @@ def test_complete_subset_is_inspectable_but_cannot_publish(current_fixture, tmp_
         max_cost_usd=plan.estimated_cost_usd,
         client=ScriptedJudge({"cue": 0.9, "routing": 0.0}),
     )
-    candidate = generate_leaderboard(bundle)
+    candidate = write_candidate(bundle)
     errors = validate_leaderboard(bundle, candidate)
     assert errors and "complete current scenario roster" in errors[0]

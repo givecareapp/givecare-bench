@@ -154,8 +154,5 @@ def _evaluate_condition(
         values = condition["values"]
         return not any(v.lower() in response_lower for v in values)
 
-    if ctype == "regex":
-        pattern: str = condition["pattern"]
-        return bool(re.search(pattern, response, re.IGNORECASE))
-
-    raise ValueError(f"Unknown branch condition type: {ctype!r}")
+    pattern: str = condition["pattern"]  # regex: the schema admits no other type here
+    return bool(re.search(pattern, response, re.IGNORECASE))

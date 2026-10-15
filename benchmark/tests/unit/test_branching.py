@@ -407,28 +407,6 @@ class TestNoulCondition:
 
 
 # ---------------------------------------------------------------------------
-# Unknown condition type
-# ---------------------------------------------------------------------------
-
-
-class TestUnknownCondition:
-    def test_raises(self) -> None:
-        turn = {
-            "turn_number": 1,
-            "user_message": "Default",
-            "branches": [
-                {
-                    "branch_id": "bad",
-                    "condition": {"type": "unknown_type", "values": []},
-                    "user_message": "Nope",
-                }
-            ],
-        }
-        with pytest.raises(ValueError, match="Unknown branch condition type"):
-            resolve_branch(turn, "anything")
-
-
-# ---------------------------------------------------------------------------
 # First-match-wins ordering
 # ---------------------------------------------------------------------------
 

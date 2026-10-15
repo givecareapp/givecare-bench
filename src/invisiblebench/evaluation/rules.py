@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
-from typing import Literal
+from typing import Any, Literal
 
 from typesafe_sdk import Answer as TypedAnswer
 from typesafe_sdk import ChoiceAnswer, NoulAnswer
@@ -71,17 +71,13 @@ def check_keys(check: Check, answers: dict[str, TypedAnswer]) -> list[str]:
     return keys
 
 
-def _top(check: Check, name: str, answers: dict[str, TypedAnswer]) -> tuple[str, float]:
-    answer = answers[question_key(check, name)]
-    assert isinstance(answer, ChoiceAnswer)
-    return max(answer.probabilities.items(), key=lambda item: item[1])
-
-
 def _describe(check: Check, answers: dict[str, TypedAnswer], thresholds: Thresholds) -> str:
     parts = []
     for name, question in check.questions.items():
         if question.type == "choice":
-            option, probability = _top(check, name, answers)
+            answer = answers[question_key(check, name)]
+            assert isinstance(answer, ChoiceAnswer)
+            option, probability = max(answer.probabilities.items(), key=lambda item: item[1])
             parts.append(f"{name} top={option} {probability:.2f}")
             continue
         if question.unit == "turn":
@@ -117,11 +113,6 @@ def _for_memory_state(check: Check, memory_declared: bool) -> Check:
     def active(clauses: list[Clause]) -> list[Clause]:
         return [clause for clause in clauses if clause.memory in (None, state)]
 
-    clauses = [*check.applies_if, *check.fail_if, *check.pass_if_any]
-    if all(clause.memory is None for clause in clauses) and all(
-        question.memory is None for question in check.questions.values()
-    ):
-        return check
     return check.model_copy(
         update={
             "questions": {
@@ -269,22 +260,9 @@ def derive(
     transcript: list[Turn],
     answers: dict[tuple[Role, int], dict[str, TypedAnswer]],
     thresholds: Thresholds,
-    *,
-    model_id: str,
-    scenario_id: str,
-    plan_sha256: str,
-    memory_declared: bool = False,
+    **context: Any,
 ) -> Judgment:
-    return analyze(
-        check,
-        transcript,
-        answers,
-        thresholds,
-        model_id=model_id,
-        scenario_id=scenario_id,
-        plan_sha256=plan_sha256,
-        memory_declared=memory_declared,
-    )[0]
+    return analyze(check, transcript, answers, thresholds, **context)[0]
 
 
 def analyze(

@@ -27,14 +27,7 @@ uv run bench doctor
 
 ## Proof
 
-```bash
-uv run ruff check .
-uv run python scripts/check_examples.py verify
-uv run pytest benchmark/tests -q
-uv run python scripts/lint_turn_indices.py --strict
-```
-
-Configure the local hook with:
+Run `scripts/check.sh`. Configure the local hook with:
 
 ```bash
 git config core.hooksPath .githooks
@@ -67,7 +60,7 @@ change the result.
 
 ## Pull request checklist
 
-- [ ] Every command under [Proof](#proof) passes.
+- [ ] `scripts/check.sh` passes.
 - [ ] The change updates machine-readable inventory or contract files when
       behavior or version changes.
 - [ ] New behavior has a focused test when the test proves a required contract.
