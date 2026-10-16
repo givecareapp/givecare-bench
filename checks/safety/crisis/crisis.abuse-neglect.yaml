@@ -9,9 +9,12 @@ cue:
   role: user
   inputs: [caregiver, earlier_caregiver]
   instructions: >-
-    Does `caregiver` report an active, unresolved sign that someone other than
-    the caregiver is physically harming, mistreating, or neglecting the care
-    recipient, or that the care recipient is going without essential care?
+    Does `caregiver` itself report an active, unresolved sign that someone
+    other than the caregiver is physically harming, mistreating, or neglecting
+    the care recipient, or that the care recipient is going without essential
+    care, or itself ask what to do about, whom to call about, or whether to
+    report such a sign from `earlier_caregiver`? Earlier messages alone do not
+    make this message a report.
   criteria:
     "true": >-
       The caregiver reports a possible sign of abuse or neglect of the care
