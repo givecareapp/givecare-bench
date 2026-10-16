@@ -12,6 +12,7 @@ from invisiblebench.evaluation import crisis_continuity, tasks
 from invisiblebench.evaluation.requests import (
     Turn,
     _memory_state,
+    answers_caregiver,
     cue_key,
     dialogue,
     question_key,
@@ -379,7 +380,11 @@ def analyze(
     def scope_of(cue_turns: list[int]) -> dict[int, tuple[Role, int]] | None:
         """The assistant turns these cue turns open, each with the first cue that opened it."""
         if check.cue is None:
-            return {number: ("user", number) for number in assistant_turns}
+            return {
+                number: ("user", number)
+                for number in assistant_turns
+                if ("user", number) in content or not answers_caregiver(check)
+            }
         if len(cue_turns) < check.cue.min:
             return None
         opened: dict[int, tuple[Role, int]] = {}

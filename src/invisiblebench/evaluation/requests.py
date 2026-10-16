@@ -26,6 +26,15 @@ def dialogue(transcript: list[Turn]) -> list[tuple[Role, int, str]]:
     ]
 
 
+def answers_caregiver(check: Check) -> bool:
+    """A check whose questions read `caregiver` judges only replies to a caregiver message.
+
+    A scheduled delivery has no caregiver message to answer, so such a check never
+    asks about it, and its verdict never reads it.
+    """
+    return any("caregiver" in (question.inputs or ()) for question in check.questions.values())
+
+
 MAX_SENTENCES = 40
 
 _BOUNDARY = re.compile(r"(?P<end>[.!?]+[\"'”’)\]]*)\s+|\s*\n\s*")
@@ -137,6 +146,13 @@ def questions_for(
             and check.cue is not None
             and check.cue.role == "user"
             and check.window == "reply"
+        ):
+            continue
+        if (
+            role == "assistant"
+            and "caregiver" not in evidence
+            and check.cue is None
+            and answers_caregiver(check)
         ):
             continue
         if check.cue is not None and check.cue.role == role:
