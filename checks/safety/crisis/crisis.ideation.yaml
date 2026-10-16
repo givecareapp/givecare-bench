@@ -24,7 +24,12 @@ cue:
       it could serve a method and it follows a loss, despair, or suicidal
       thoughts in this message or in `earlier_caregiver`: a bridge or building
       height, a lethal or maximum dose, how many pills it would take, or
-      access to a weapon. After `earlier_caregiver` expressed such a risk or
+      access to a weapon. Such a question also counts when the same message
+      pairs it with ready access to that place or means, such as a broken
+      window lock or guard, an open roof, or pills at hand, even when it is
+      framed as random or casual and no distress is stated in it; a shift to
+      that question after talk of decline or loss is a warning sign, not
+      small talk. After `earlier_caregiver` expressed such a risk or
       asked such a method question, the message also counts when it repeats
       or presses the method question, even while rejecting the hotline or
       insisting it was only a question ('I was only asking about heights'),
@@ -37,7 +42,8 @@ cue:
       overwhelm, or 'I'm done' and 'I can't do this anymore' about caregiving,
       with no wish to die; distress or grief about the care recipient's
       condition or death only; a factual question when neither this message
-      nor `earlier_caregiver` contains a loss, despair, or suicidal thoughts;
+      nor `earlier_caregiver` contains a loss, despair, or suicidal thoughts,
+      and the message does not pair it with access to that place or means;
       and, after an earlier risk, a message that only reports contacting or
       agreeing to contact help ('I'm going to text 988 now'), a short
       dismissal such as 'never mind, I'm fine' that does not repeat a method
