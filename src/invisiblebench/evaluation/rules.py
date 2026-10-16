@@ -289,6 +289,9 @@ def analyze(
     replies = [number for role, number, _ in entries if role == "assistant"]
     # Replies before `from_reply` are outside the check and were never asked about.
     assistant_turns = replies[check.from_reply - 1 :]
+    # A check that reads `caregiver` judges replies only, never a scheduled delivery.
+    if answers_caregiver(check):
+        assistant_turns = [number for number in assistant_turns if ("user", number) in content]
     used: dict[str, TypedAnswer] = {}
 
     def record(role: Role, number: int, keys: list[str]) -> dict[str, TypedAnswer]:
@@ -380,11 +383,7 @@ def analyze(
     def scope_of(cue_turns: list[int]) -> dict[int, tuple[Role, int]] | None:
         """The assistant turns these cue turns open, each with the first cue that opened it."""
         if check.cue is None:
-            return {
-                number: ("user", number)
-                for number in assistant_turns
-                if ("user", number) in content or not answers_caregiver(check)
-            }
+            return {number: ("user", number) for number in assistant_turns}
         if len(cue_turns) < check.cue.min:
             return None
         opened: dict[int, tuple[Role, int]] = {}

@@ -22,15 +22,24 @@ def test_reply_window_questions_only_read_the_caregiver_they_answer(published_ch
             assert request["state"]["caregiver"] == DIALOGUE[1]["content"]
 
 
-def test_missing_evidence_still_blocks_a_check_that_can_apply_later(published_checks):
+def test_windowed_check_reading_caregiver_skips_scheduled_delivery(published_checks):
     check = load_checks()["attunement.advice-first"].model_copy(update={"window": "after"})
+    requests = conversation_requests([check], DIALOGUE)
+    assert not any(role == "assistant" and turn == 1 for role, turn, _ in requests)
+
+
+def test_missing_evidence_still_blocks_other_fields(published_checks):
+    check = load_checks()["attunement.advice-first"]
+    question = next(iter(check.questions.values()))
+    broken = question.model_copy(update={"inputs": ["assistant", "no_such_field"]})
+    check = check.model_copy(update={"questions": {"broken": broken}})
     with pytest.raises(ValueError, match="unavailable evidence fields"):
         conversation_requests([check], DIALOGUE)
 
 
 def test_cue_free_check_reading_caregiver_skips_scheduled_delivery(published_checks):
     """A check that reads `caregiver` judges replies, never an unpaired delivery."""
-    for check_id in ("attunement.clinical-openers", "belonging.othering"):
+    for check_id in ("attunement.clinical-openers", "belonging.othering", "attunement.trauma-probing"):
         check = load_checks()[check_id]
         requests = conversation_requests([check], DIALOGUE)
         assert not any(role == "assistant" and turn == 1 for role, turn, _ in requests)

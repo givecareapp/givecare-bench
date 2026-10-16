@@ -148,15 +148,11 @@ def questions_for(
             and check.window == "reply"
         ):
             continue
-        if (
-            role == "assistant"
-            and "caregiver" not in evidence
-            and check.cue is None
-            and answers_caregiver(check)
-        ):
-            continue
         if check.cue is not None and check.cue.role == role:
             yield bind(check.cue, cue_key(check), check.cue.spec())
+        # A check that reads `caregiver` never judges an unpaired scheduled delivery.
+        if "caregiver" not in evidence and answers_caregiver(check):
+            continue
         # Replies before `from_reply` are outside the check; never ask about them.
         if role == "assistant" and len(evidence["earlier_assistant"]) + 1 >= check.from_reply:
             for name, question in check.questions.items():
