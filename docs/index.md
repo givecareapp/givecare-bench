@@ -15,10 +15,11 @@ Read Ali Madad's paper,
 It describes the original benchmark. This site documents the current method.
 
 A **Jury Card** complements a model card with evidence from a specific run.
-It shows quoted model evidence beside each verdict and its code-composed
-rationale. It also records judge settings, costs, technical errors, and
-attributed commentary. The card reports model judgments. It does not
-establish judge accuracy or clinical outcomes. Care remains directional.
+It gives each Safety and Care check the same four verdict counts, then opens
+flagged evidence beside its code-composed rationale. Safety ranges show failure
+rates; Care ranges show directional pass rates. The card also records judge
+settings, costs, technical errors, and attributed commentary. It reports model
+judgments, not clinical outcomes or broad model quality.
 
 Each run keeps its `jury-card.md` and saved evidence in one private
 `results/<run-id>/` directory. New runs get distinct UTC timestamps, including

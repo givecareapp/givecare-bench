@@ -184,12 +184,14 @@ Keep the critique outside the ledger. Preserve the original decision.
 If a critique changes a rule or judge setting,
 version that change and run a new scan. Do not edit the old verdict.
 
-The **Jury Card** is the standard report for an evaluated run. It complements a
-model card by describing observed behavior under recorded test conditions.
-Its title identifies the model and the UTC run date and time.
-It shows separate Safety and Care results, recorded failure modes, unresolved
-judgments, model evidence, and the derived rationale. It also records the judge,
-versions, execution errors, source-run costs, and source-run elapsed time.
+The **Jury Card** is the report for an evaluated run. It opens with the model
+and UTC run date, then shows Safety and Care in the same per-check table format. Each row gives a plain check label and counts for PASS, FAIL, UNCLEAR,
+and NOT_APPLICABLE; expandable details give the narrow meaning and flagged
+evidence. Dimension ranges follow the findings: Safety is a failure rate, Care
+is a directional pass rate. They are never combined. Judge, version, execution,
+source-run cost, and elapsed-time records remain available later in the card.
+The card describes behavior under recorded test conditions; it does not
+establish broad model quality.
 When a source summary carries frozen research expectations, the card reports
 expected and observed outcomes, their stated evidence basis, errors, unresolved
 cases, and unlabeled coverage. These annotations never enter judge requests or
