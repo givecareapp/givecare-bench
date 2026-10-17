@@ -71,9 +71,8 @@ The scan verifies the retained bytes and record shape; it does not independently
 authenticate a product's database. Keep sensitive memory evidence private.
 
 Check YAML holds the canonical questions, requirement basis, rule, and narrow
-pass meaning. Scenario `criteria` are authoring notes, not a second scored rubric.
-Their optional check-ID links document coverage without forcing a verdict.
-The generated inventory identifies mapped positions and counts unmapped objectives.
+pass meaning. It is the only rubric. A scenario is the caregiver script; it
+carries no grading notes.
 
 ## One decision per check
 

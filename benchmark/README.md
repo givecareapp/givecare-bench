@@ -11,8 +11,8 @@ This directory contains the public benchmark contract.
   `../src/invisiblebench/scoring.py` derives the public projection.
 - `scenarios/` contains the public scenarios. `models/scenario.py` in the runtime
   owns validation; `scenarios/SCENARIO_SCHEMA.yaml` is its generated JSON Schema.
-  Turn `criteria` are authoring notes (`description`, `expect`, `examples`), not
-  scoring rules. Branches, sessions, persona context, and provenance are retained.
+  A scenario is the caregiver script; check YAML is the only rubric. Branches,
+  sessions, persona context, and provenance are retained.
 - `tests/` proves the runtime and artifact contract.
 
 The runtime package lives in `src/invisiblebench/`. The active scan path groups

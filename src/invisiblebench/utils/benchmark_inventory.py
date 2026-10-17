@@ -161,44 +161,10 @@ def regenerate_inventory() -> dict[str, Any]:
     from collections import Counter
 
     from invisiblebench.evaluation.check_registry import load_checks
-    from invisiblebench.models.scenario import Scenario
     from invisiblebench.version import BENCHMARK_VERSION
 
     paths = collect_public_scenario_paths()
     checks = load_checks()
-    coverage = []
-    for path in paths:
-        scenario = Scenario.model_validate_json(path.read_bytes())
-        mapped, unmapped = [], 0
-        for turn in scenario.all_turns:
-            groups = [(None, turn.criteria)] + [
-                (i, b.criteria) for i, b in enumerate(turn.branches)
-            ]
-            for branch, criteria in groups:
-                for index, criterion in enumerate(criteria):
-                    unknown = set(criterion.checks) - checks.keys()
-                    if unknown:
-                        raise ValueError(
-                            f"{scenario.scenario_id}: unknown check references {sorted(unknown)}"
-                        )
-                    if criterion.checks:
-                        mapped.append(
-                            {
-                                "turn": turn.turn_number,
-                                "branch_index": branch,
-                                "criterion_index": index,
-                                "checks": criterion.checks,
-                            }
-                        )
-                    else:
-                        unmapped += 1
-        coverage.append(
-            {
-                "scenario": str(path.relative_to(get_project_root())),
-                "mapped": mapped,
-                "unmapped_objectives": unmapped,
-            }
-        )
     return {
         "benchmark_version": BENCHMARK_VERSION,
         "public_scope": "benchmark-core-only",
@@ -207,7 +173,6 @@ def regenerate_inventory() -> dict[str, Any]:
         "standard_total": len(paths),
         "check_count": len(checks),
         "confidential_count": "external",
-        "objective_coverage": coverage,
     }
 
 

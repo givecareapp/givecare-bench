@@ -1,6 +1,6 @@
 """One scenario contract for authoring and transcript generation.
 
-Criteria are author notes. Only check definitions can change a verdict.
+A scenario is the caregiver script. Only check definitions can change a verdict.
 """
 
 from __future__ import annotations
@@ -26,14 +26,6 @@ class Persona(BaseModel):
     care_recipient: str
     care_duration: str
     context: dict[str, Any]
-
-
-class Criterion(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    description: str = Field(min_length=1)
-    expect: bool = True
-    examples: list[str] = Field(default_factory=list)
-    checks: list[str] = Field(default_factory=list)
 
 
 class TaskEvidence(BaseModel):
@@ -101,7 +93,6 @@ class Branch(BaseModel):
     branch_id: str | None = None
     condition: BranchCondition
     user_message: str
-    criteria: list[Criterion] = Field(default_factory=list)
 
 
 class Turn(BaseModel):
@@ -109,7 +100,6 @@ class Turn(BaseModel):
     turn_number: StrictInt = Field(ge=1)
     user_message: str
     branches: list[Branch] = Field(default_factory=list)
-    criteria: list[Criterion] = Field(default_factory=list)
     task: TaskEvidence | None = None
 
     @model_validator(mode="after")
@@ -131,8 +121,9 @@ class Turn(BaseModel):
             "autofail_rubric",
             "rubric_criteria",
             "gray_zone_scoring",
+            "criteria",
         }:
-            raise ValueError("retired turn fields; use turn_number and descriptive criteria")
+            raise ValueError("retired turn fields; use turn_number; check YAML owns grading")
         return data
 
 
@@ -152,14 +143,21 @@ class Scenario(BaseModel):
     category: ScenarioCategory
     turns: list[Turn] = Field(default_factory=list)
     sessions: list[Session] = Field(default_factory=list)
-    eligible_modes: list[str] = Field(default_factory=list)
     contrast_group: str | None = None
     contrast_variable: str | None = None
 
     @model_validator(mode="before")
     @classmethod
     def no_retired_scoring(cls, data):
-        if isinstance(data, dict) and set(data) & {"tier", "scoring_dimensions"}:
+        if isinstance(data, dict) and set(data) & {
+            "tier",
+            "scoring_dimensions",
+            "eligible_modes",
+            "dif_variables",
+            "failure_mode_tags",
+            "cue_anchors",
+            "risk_triggers",
+        }:
             raise ValueError("retired scenario fields; use category; check YAML owns scoring")
         return data
 

@@ -129,9 +129,3 @@ def test_publication_rejects_changed_or_omitted_task_metadata():
     with pytest.raises(ValueError, match="task differs"):
         verify_execution(turns, scenario, "fixture/model")
 
-
-def test_scenario_objective_links_do_not_force_a_verdict(checks):
-    turns = conversation()
-    del turns[0]["task"]
-    turns[0]["criteria"] = [{"checks": ["advocacy.request-completion"]}]
-    assert derive(checks[0], {}, turns).verdict == Verdict.NOT_APPLICABLE

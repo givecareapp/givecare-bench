@@ -164,15 +164,6 @@ def render_coverage() -> str:
         lines.append(
             f"| `{check_id}` | {counts['FAIL']} | {counts['PASS']} | {counts['NOT_APPLICABLE']} |"
         )
-    mapped = sum(len(row["mapped"]) for row in inventory["objective_coverage"])
-    unmapped = sum(row["unmapped_objectives"] for row in inventory["objective_coverage"])
-    lines.extend(
-        [
-            "",
-            f"Scenario objectives: {mapped} mapped positions; {unmapped} unmapped objectives. "
-            "These authoring links cannot force a verdict.",
-        ]
-    )
     lines.extend(
         [
             "",

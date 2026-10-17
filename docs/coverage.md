@@ -4,7 +4,7 @@ Type: reference.
 
 <!-- benchmark:identity -->
 
-The inventory owns scenario counts and criterion links. Check definitions own
+The inventory owns scenario and check counts. Check definitions own
 requirements and their pass meanings. These tables are generated during the docs
 build; they contain no model results.
 

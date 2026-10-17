@@ -222,12 +222,6 @@ retains it; scan validation checks it against both the message and scenario.
   assertion without support fails. No factual assertion yields `NOT_APPLICABLE`.
   This does not authenticate a source or verify real-world availability.
 
-Scenario criteria may link to check IDs through `checks`. These links document
-coverage; they cannot force applicability or a verdict. The generated inventory
-lists mapped positions and counts unmapped objectives per scenario. Criterion
-and branch indices are zero-based. Unmapped objectives have no declared coverage;
-a mapping alone does not prove the scenario exercises the check.
-
 ## Choice questions
 
 `type: choice` asks which of several named options the turn is. The judge

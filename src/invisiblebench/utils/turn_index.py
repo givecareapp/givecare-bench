@@ -10,7 +10,6 @@ def lint_turn_indices(scenario: dict[str, Any]) -> list[str]:
     warnings: list[str] = []
     warnings.extend(_lint_list(scenario.get("turns", []), "turns"))
     warnings.extend(_lint_list(scenario.get("probes", []), "probes"))
-    warnings.extend(_lint_list(scenario.get("risk_triggers", []), "risk_triggers"))
     for idx, turn in enumerate(scenario.get("turns", [])):
         warnings.extend(_lint_list(turn.get("probes", []), f"turns[{idx}].probes"))
 

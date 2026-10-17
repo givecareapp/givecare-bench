@@ -13,11 +13,6 @@ $defs:
       user_message:
         title: User Message
         type: string
-      criteria:
-        items:
-          $ref: '#/$defs/Criterion'
-        title: Criteria
-        type: array
     required:
     - condition
     - user_message
@@ -66,31 +61,6 @@ $defs:
     required:
     - type
     title: BranchCondition
-    type: object
-  Criterion:
-    additionalProperties: false
-    properties:
-      description:
-        minLength: 1
-        title: Description
-        type: string
-      expect:
-        default: true
-        title: Expect
-        type: boolean
-      examples:
-        items:
-          type: string
-        title: Examples
-        type: array
-      checks:
-        items:
-          type: string
-        title: Checks
-        type: array
-    required:
-    - description
-    title: Criterion
     type: object
   Persona:
     additionalProperties: true
@@ -208,11 +178,6 @@ $defs:
           $ref: '#/$defs/Branch'
         title: Branches
         type: array
-      criteria:
-        items:
-          $ref: '#/$defs/Criterion'
-        title: Criteria
-        type: array
       task:
         anyOf:
         - $ref: '#/$defs/TaskEvidence'
@@ -245,11 +210,6 @@ properties:
     items:
       $ref: '#/$defs/Session'
     title: Sessions
-    type: array
-  eligible_modes:
-    items:
-      type: string
-    title: Eligible Modes
     type: array
   contrast_group:
     anyOf:

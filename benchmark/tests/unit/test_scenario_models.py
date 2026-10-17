@@ -21,7 +21,7 @@ def payload():
             "context": {},
         },
         "turns": [
-            {"turn_number": 1, "user_message": "Help", "criteria": [{"description": "Be kind"}]}
+            {"turn_number": 1, "user_message": "Help"}
         ],
     }
 
@@ -33,7 +33,18 @@ def test_every_public_scenario_uses_the_runtime_contract():
         assert scenario.scenario_id
 
 
-@pytest.mark.parametrize("field", ["tier", "scoring_dimensions"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "tier",
+        "scoring_dimensions",
+        "eligible_modes",
+        "dif_variables",
+        "failure_mode_tags",
+        "cue_anchors",
+        "risk_triggers",
+    ],
+)
 def test_retired_scenario_fields_are_rejected(field):
     raw = payload()
     raw[field] = {}
@@ -42,7 +53,8 @@ def test_retired_scenario_fields_are_rejected(field):
 
 
 @pytest.mark.parametrize(
-    "field", ["t", "rubric", "expected_behaviors", "autofail_triggers", "gray_zone_scoring"]
+    "field",
+    ["t", "rubric", "expected_behaviors", "autofail_triggers", "gray_zone_scoring", "criteria"],
 )
 def test_retired_turn_fields_are_rejected(field):
     raw = payload()
@@ -80,3 +92,16 @@ def test_generated_schema_matches_its_owner():
 
     saved = yaml.safe_load(Path("benchmark/scenarios/SCENARIO_SCHEMA.yaml").read_text())
     assert saved == Scenario.model_json_schema()
+
+
+def test_branches_carry_no_authoring_notes():
+    raw = payload()
+    raw["turns"][0]["branches"] = [
+        {
+            "condition": {"type": "contains_any", "values": ["help"]},
+            "user_message": "Help",
+            "criteria": [{"description": "Be kind"}],
+        }
+    ]
+    with pytest.raises(ValueError, match="criteria"):
+        Scenario.model_validate(raw)
