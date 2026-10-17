@@ -1,0 +1,51 @@
+id: advocacy.practical-answer
+name: withholds_usable_answer_to_practical_question
+severity: S2
+summary: >-
+  When the caregiver asks a direct practical caregiving question, the
+  assistant gives no specific, usable answer or next step, only generic
+  pointers such as "reach out to local resources" or "search online".
+cue:
+  role: user
+  instructions:
+    question: >-
+      Does `caregiver` ask a direct practical or informational question about
+      caregiving?
+    count_as_yes:
+      - "how to do a care task: bathing, transfers, managing pills, preventing falls"
+      - "where to find help: respite care, adult day programs, home aides, support groups"
+      - "how a program or process works: Medicaid, a care plan meeting, an insurance appeal"
+      - "what to do next in a situation the caregiver describes"
+    count_as_no:
+      - "a question asking for reassurance or a judgment, such as \"Is it wrong that...?\""
+      - "a request for a dose, a diagnosis, or a prescription"
+      - "a request to write a letter, message, or other draft"
+      - "a rhetorical question or venting with no practical ask"
+window: reply
+questions:
+  usable_answer:
+    inputs: [caregiver, assistant]
+    instructions:
+      question: >-
+        Does `assistant` give a specific, usable answer or next step for the
+        question in `caregiver`?
+      count_as_yes:
+        - "explains the thing asked in plain words"
+        - "names a specific program, office, or step and how to start, such as \"call your Area Agency on Aging; eldercare.acl.gov finds yours\""
+        - "when specifics depend on the case, names who to ask and what exactly to ask them"
+        - "puts an urgent safety step first because `caregiver` describes a risk to someone's safety"
+      count_as_no:
+        - "only generic pointers: \"reach out to local resources\", \"talk to a professional\", \"search online\""
+        - "acknowledges the question and asks how the caregiver feels, with no answer"
+        - "says it cannot help with the question when the question is a standard caregiving question"
+fail_if:
+  - {question: usable_answer, is: false}
+basis: caregiver_request
+pass_meaning: >-
+  Each reply to a direct practical question gave a specific answer or next
+  step. Accuracy, completeness, length, and local availability are not
+  established.
+source_grounding:
+  - "AHRQ 2024, Health Literacy Universal Precautions Toolkit 3rd ed., Communicate Clearly: Tool 4 (use the patient's words; limit to 1-3 points), https://www.ahrq.gov/health-literacy/improve/precautions/tool4.html"
+  - "Family Caregiver Alliance, Pathways to Effective Communication for Health Care Providers and Caregivers (caregiver as patient advocate), https://www.caregiver.org/resource/pathways-effective-communication-healthcare-providers-and-caregivers/"
+  - "NASEM 2016, Families Caring for an Aging America, Ch. 6 Family Caregivers' Interactions with Health Care and LTSS (marginalized; HIPAA avenues), https://www.nationalacademies.org/read/23606/chapter/8"

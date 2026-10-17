@@ -137,164 +137,103 @@ def write_jury_card(bundle: Path) -> Path:
         f"# {_cell(model_label)} — {_cell(date_label)}", "", binding, "",
         "**Jury Card · MODEL-JUDGED. Care remains directional.** This card describes the recorded run. "
         "It does not establish clinical outcomes, general model quality, or judge accuracy.", "",
-        *([
-            "**Product development scan.** Supplemental checks are included in the results below. "
-            "This scan is not eligible for public benchmark projection. "
-            "Read individual checks when comparing product changes.", "",
-        ] if plan.supplemental_checks else []),
-        "Read [commentary](#commentary) for attributed observations and disputed interpretations.", "",
-        "| Model run | Jury assessment |", "| --- | --- |",
-        f"| {len(plan.transcripts)} conversations | {len(plan.checks)} frozen checks per conversation |",
-        f"| Benchmark {_cell(plan.benchmark_version)} | Engine {_cell(plan.engine_version)} |",
-        f"| Source settings retained below | Judge: {_cell(plan.judge.model)} |",
-        f"| Source transcripts retained below | Judge thresholds: no at or below "
-        f"{plan.judge.thresholds.low:g}; yes at or above {plan.judge.thresholds.high:g} |",
-        f"| Source generation cost: {'not recorded' if generation_cost is None else f'${generation_cost:.8f}'} "
-        f"| Judge request cost, answered and failed requests: ${judge_cost:.8f} |",
-        "",
-        "Generation costs and elapsed times describe the complete source runs, including any "
-        "conversations outside this scan's selection.", "",
-        *([f"Total recorded cost: **${generation_cost + judge_cost:.8f}**.", ""] if generation_cost is not None else []),
-        "## Judge execution", "",
-        f"- Completed judge requests: {sum(answer.error is None for answer in answers)}; "
-        f"derived judgments: {len(records)}.",
-        f"- Valid first attempts: {first_valid}/{len(first_attempts)} requests. This measures "
-        "answer acceptance, not accuracy.",
-        f"- Technical attempts: {sum(errors.values())}. "
-        + "; ".join(f"{_cell(key)}: {count}" for key, count in sorted(errors.items())),
-        f"- Returned judge model: {_cell('; '.join(judges))}.",
-        "- Source hashes, quote provenance, decision binding, and complete coverage of the plan "
-        "were checked when this card was generated.", "",
+        *(["**Product development scan.** Supplemental checks are included; this scan is not eligible "
+           "for public benchmark projection.", ""] if plan.supplemental_checks else []),
+        f"{len(plan.transcripts)} conversations · {len(plan.checks)} checks per conversation · "
+        f"Benchmark {_cell(plan.benchmark_version)}.", "",
+        "## Findings", "",
+        "Each row counts conversations. PASS is limited to that check; UNCLEAR is unresolved; "
+        "NOT_APPLICABLE means the check did not apply.", "",
     ]
-    lines.extend(_validation_lines(bundle, plan, records))
     checks = {check.id: check for check in plan.checks}
     outcomes = unresolved_outcomes(bundle, plan, records)
     refs = {(ref.model_id, ref.scenario_id): ref for ref in plan.transcripts}
     row_numbers = {record.key: i for i, record in enumerate(records, 1)}
     for model in scorecard["models"]:
-        lines.extend([
-            f"## {_cell(model['model'])}", "",
-            f"Model: `{_cell(model['model_id'])}`.", "",
-            "| Layer | Dimension | Observed result | PASS | FAIL | UNCLEAR, FAIL possible "
-            "| UNCLEAR, applicability only | NOT_APPLICABLE |",
-            "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
-        ])
+        lines.extend([f"### {_cell(model['model'])}", ""])
+        for layer in ("safety", "care"):
+            lines.extend([f"#### {layer.title()}", ""])
+            for dimension in model[layer]:
+                check_ids = [check.id for check in plan.checks
+                             if check.layer == layer and check.dimension == dimension]
+                if not check_ids:
+                    continue
+                lines.extend([f"**{_cell(dimension)}**", "",
+                    "| Check | PASS | FAIL | UNCLEAR | NOT_APPLICABLE |",
+                    "| --- | ---: | ---: | ---: | ---: |"])
+                for check_id in check_ids:
+                    check = checks[check_id]
+                    judged = [r for r in records if r.model_id == model["model_id"]
+                              and r.check_id == check_id]
+                    tally = Counter(r.verdict for r in judged)
+                    c = {verdict.value: tally[verdict] for verdict in Verdict}
+                    label = check.name.replace("_", " ")
+                    dyad = " · caregiver–recipient" if check.dyad else ""
+                    lines.append(f"| {_cell(label)}{dyad} (`{_cell(check_id)}`) | {c['PASS']} | {c['FAIL']} "
+                                 f"| {c['UNCLEAR']} | {c['NOT_APPLICABLE']} |")
+                lines.extend(["", f"<details><summary>{layer.title()} / {_cell(dimension)}: "
+                              f"scope and evidence for {len(check_ids)} checks</summary>", ""])
+                for check_id in check_ids:
+                    check = checks[check_id]
+                    label = check.name.replace("_", " ")
+                    flagged = [r for r in records if r.model_id == model["model_id"]
+                               and r.check_id == check_id and r.verdict in {Verdict.FAIL, Verdict.UNCLEAR}]
+                    lines.extend([f"##### {_cell(label)} (`{_cell(check_id)}`)", "",
+                        f"{_cell(check.summary)} **PASS means:** {_cell(check.pass_meaning)} "
+                        f"(basis: {_cell(check.basis)}). Frozen definition: {_link('scan plan', PLAN_FILE)}.", ""])
+                    if not flagged:
+                        lines.append(f"No FAIL or UNCLEAR judgments. See the full {_link('judgments ledger', LEDGER_FILE)} and frozen source index in the scan plan.")
+                    for record in flagged:
+                        ref = refs[record.model_id, record.scenario_id]
+                        evidence = "<br>".join(
+                            f"{span.role} turn {span.turn}: “{_cell(span.quote)}”" for span in record.evidence
+                        ) or "No quote supplied."
+                        result = f"**{record.verdict.value}** — {_cell(record.rationale)}"
+                        if record.key in outcomes:
+                            result += ". Possible outcomes: " + ", ".join(
+                                sorted(value.value for value in outcomes[record.key])
+                            )
+                        lines.append(f"- {_link(record.scenario_id, ref.path)}: {evidence} — {result}; "
+                                     f"{_link(f'ledger row {row_numbers[record.key]}', f'{LEDGER_FILE}#L{row_numbers[record.key]}')}.")
+                    lines.append("")
+                lines.extend(["</details>", ""])
+                lines.append("")
+    lines.extend([
+        "<details><summary>Method and run records</summary>", "",
+        "## Score details", "",
+        "Safety shows the failure-rate range; Care shows the pass-rate range. A range shows the lowest and highest rate allowed by unresolved verdicts; it is not a confidence interval or a bound on real-world harm. Safety averages eligible checks equally, with at least "
+        f"{MIN_CHECK_CASES} settled cases per check. Care rates remain directional. No combined score is calculated.", "",
+    ])
+    for model in scorecard["models"]:
+        lines.extend([f"### {_cell(model['model'])}", "",
+                      "| Layer | Dimension | Rate and meaning | Conversations with settled FAIL |",
+                      "| --- | --- | ---: | ---: |"])
         for layer in ("safety", "care"):
             for dimension, observation in model[layer].items():
-                c = observation["counts"]
-                if layer == "safety":
-                    span = observation["failure_rate_range"]
-                    included = sum(entry["in_mean"] for entry in observation["checks"].values())
-                    result = (
-                        f"{_range(span)} mean check failure rate over {included} check(s); "
-                        f"{observation['failed_scenarios']}/{observation['settled_scenarios']} "
-                        "conversations with a settled FAIL"
-                        if span is not None
-                        else f"No check has {MIN_CHECK_CASES} settled cases"
-                    )
-                else:
-                    span = observation["pass_rate_range"]
-                    result = (
-                        f"{_range(span)} of checks passed"
-                        if span is not None
-                        else "No applicable checks"
-                    )
-                lines.append(
-                    f"| {layer.title()} | {_cell(dimension)} | {result} | {c['PASS']} | {c['FAIL']} "
-                    f"| {c['UNCLEAR_FAIL_POSSIBLE']} | {c['UNCLEAR_APPLICABILITY_ONLY']} "
-                    f"| {c['NOT_APPLICABLE']} |"
-                )
-        lines.extend([
-            "",
-            "A range runs from the lowest to the highest rate that the frozen rule still "
-            "permits once each UNCLEAR resolves to one of its possible verdicts. It is not a "
-            "confidence interval and does not bound real-world harm. An UNCLEAR that can only "
-            "end PASS or NOT_APPLICABLE shows no violation, but whether the check applied is "
-            "unresolved. Safety averages its checks equally; a check enters that mean only "
-            f"with at least {MIN_CHECK_CASES} settled PASS or FAIL verdicts.", "",
-            "### Safety checks", "",
-            "| Check | Failure rate | Settled cases | In mean | FAIL | UNCLEAR, FAIL possible |",
-            "| --- | --- | ---: | --- | ---: | ---: |",
-        ])
-        for observation in model["safety"].values():
-            for check_id, entry in observation["checks"].items():
-                c = entry["counts"]
-                if c["NOT_APPLICABLE"] == sum(c[v.value] for v in Verdict):
-                    continue
-                rate = (
-                    _range(entry["failure_rate_range"])
-                    if entry["in_mean"]
-                    else f"{c['FAIL']}/{entry['settled_cases']} settled cases"
-                    if entry["settled_cases"]
-                    else "No settled case"
-                )
-                lines.append(
-                    f"| `{_cell(check_id)}` | {rate} "
-                    f"| {entry['settled_cases']} | {'yes' if entry['in_mean'] else 'no'} "
-                    f"| {c['FAIL']} | {c['UNCLEAR_FAIL_POSSIBLE']} |"
-                )
+                span = observation["failure_rate_range"] if layer == "safety" else observation["pass_rate_range"]
+                rate = f"{_range(span)} {'failure rate' if layer == 'safety' else 'pass rate'}"
+                failed = (f"{observation['failed_scenarios']}/{observation['settled_scenarios']}"
+                          if layer == "safety" else "—")
+                lines.append(f"| {layer.title()} | {_cell(dimension)} | {rate} | {failed} |")
         lines.append("")
-        dyad = sorted(check_id for check_id, check in checks.items() if check.dyad)
-        if dyad:
-            lines.extend([
-                "### Care dyad", "",
-                "Checks about the caregiver and the care recipient together, across dimensions. "
-                "This view adds no score; each check keeps its own layer and dimension.", "",
-                "| Check | Layer | PASS | FAIL | UNCLEAR | NOT_APPLICABLE |",
-                "| --- | --- | ---: | ---: | ---: | ---: |",
-            ])
-            for check_id in dyad:
-                tally = Counter(
-                    record.verdict for record in records
-                    if record.model_id == model["model_id"] and record.check_id == check_id
-                )
-                counts = " | ".join(str(tally[verdict]) for verdict in Verdict)
-                lines.append(f"| `{_cell(check_id)}` | {checks[check_id].layer.title()} | {counts} |")
-            lines.append("")
-        lines.extend(["### Recorded failure modes and unresolved judgments", ""])
-        flagged = [record for record in records if record.model_id == model["model_id"]
-                   and record.verdict in {Verdict.FAIL, Verdict.UNCLEAR}]
-        if not flagged:
-            lines.extend(["No FAIL or UNCLEAR judgments in this run.", ""])
-        for check_id in sorted({record.check_id for record in flagged}):
-            check = checks[check_id]
-            lines.extend([
-                f"#### {_cell(check_id)}", "",
-                f"{check.layer.title()} / {_cell(check.dimension)} · {check.severity}. "
-                f"{_cell(check.summary)} {_link('Frozen check', PLAN_FILE)}: `{_cell(check_id)}`.", "",
-                f"Requirement basis: `{_cell(check.basis)}`. PASS means: {_cell(check.pass_meaning)}", "",
-                "| Model evidence | Rule outcome |", "| --- | --- |",
-            ])
-            for record in flagged:
-                if record.check_id != check_id:
-                    continue
-                ref = refs[record.model_id, record.scenario_id]
-                evidence = "<br>".join(
-                    f"{span.role} turn {span.turn}: “{_cell(span.quote)}”" for span in record.evidence
-                ) or "No quote supplied."
-                left = _link(record.scenario_id, ref.path) + "<br>" + evidence
-                right = f"**{record.verdict.value}** — {_cell(record.rationale)}<br>" + _link(
-                    f"Ledger row {row_numbers[record.key]}", f"{LEDGER_FILE}#L{row_numbers[record.key]}",
-                )
-                if record.key in outcomes:
-                    right += "<br>Possible outcomes: " + ", ".join(
-                        sorted(value.value for value in outcomes[record.key])
-                    )
-                lines.append(f"| {left} | {right} |")
-            lines.append("")
-
     lines.extend([
-        "## Requirements evaluated", "",
-        "Every frozen check retains its own requirement and evidence basis. "
-        "Dimensions can overlap; these are evaluation lenses, not live routing categories.", "",
-        "| Check | Layer / dimension | Requirement basis | Meaning of PASS |",
-        "| --- | --- | --- | --- |",
+        "## Run details", "",
+        "- Model ID(s): " + "; ".join(_cell(m["model_id"]) for m in scorecard["models"]) +
+        f"; benchmark { _cell(plan.benchmark_version) }; engine {_cell(plan.engine_version)}.",
+        f"- Judge: {_cell(plan.judge.model)}; thresholds: no at or below {plan.judge.thresholds.low:g}, "
+        f"yes at or above {plan.judge.thresholds.high:g}.",
+        f"- Completed requests: {sum(a.error is None for a in answers)}; derived judgments: {len(records)}.",
+        f"- Valid first attempts: {first_valid}/{len(first_attempts)} (answer acceptance, not accuracy).",
+        f"- Technical attempts: {sum(errors.values())}. " + "; ".join(
+            f"{_cell(k)}: {v}" for k, v in sorted(errors.items())),
+        f"- Returned judge model: {_cell('; '.join(judges))}; request cost: ${judge_cost:.8f}.",
+        f"- Source generation cost: {'not recorded' if generation_cost is None else f'${generation_cost:.8f}'}; "
+        "cost and elapsed time describe complete source runs, including unselected conversations.", "",
+        *([f"- Total recorded cost: **${generation_cost + judge_cost:.8f}**.", ""]
+          if generation_cost is not None else []),
+        "Source hashes, quote provenance, decision binding, and plan coverage were checked when generated.", "",
     ])
-    for check in plan.checks:
-        lines.append(
-            f"| {_cell(check.id)} | {_cell(check.layer)} / {_cell(check.dimension)} "
-            f"| {_cell(check.basis)} | {_cell(check.pass_meaning)} |"
-        )
+    lines.extend(_validation_lines(bundle, plan, records))
     lines.extend(["", "## Source records", ""])
     for source, manifest, summary in sources:
         policy = manifest.get("transcript_policy") or {}
@@ -313,14 +252,13 @@ def write_jury_card(bundle: Path) -> Path:
             f"generated {_cell(summary.get('transcript_count', 'not recorded'))}; evaluated in this scan {len(source.transcripts)}.",
             f"- Source generation elapsed seconds: {_cell(summary.get('elapsed_seconds', 'not recorded'))}.",
         ])
-        for ref in source.transcripts:
-            lines.append(f"  - {_link(ref.model_id + ' / ' + ref.scenario_id, ref.path)}")
         lines.append("")
     lines.extend([
         f"Plan: {_link(PLAN_FILE, PLAN_FILE)} · SHA-256 `{plan_hash}`.", "",
         f"Answers: {_link(ANSWERS_FILE, ANSWERS_FILE)} · SHA-256 `{answers_hash}`.", "",
         f"Judgments: {_link(LEDGER_FILE, LEDGER_FILE)} · SHA-256 `{ledger_hash}`.", "",
         f"Corpus SHA-256: `{plan.scenario_corpus_sha256}`.", "",
+        "</details>", "",
         "## Commentary", "",
         "Add the author, date, observation, and relevant check or transcript turns below. "
         "These notes do not change verdicts. Regeneration preserves this section for the same evidence.", "",
