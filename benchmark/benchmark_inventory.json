@@ -1,5 +1,5 @@
 {
-  "benchmark_version": "5.6.0",
+  "benchmark_version": "5.7.0",
   "public_scope": "benchmark-core-only",
   "public_harness": "llm/raw",
   "categories": {
@@ -9,6 +9,6 @@
     "safety": 39
   },
   "standard_total": 74,
-  "check_count": 49,
+  "check_count": 51,
   "confidential_count": "external"
 }

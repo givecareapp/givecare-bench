@@ -1,0 +1,51 @@
+id: attunement.forgotten-limit
+name: recommends_option_ruled_out_earlier
+severity: S2
+summary: >-
+  After the caregiver states a practical limit that rules out some help, a
+  later reply recommends that ruled-out option without addressing the limit.
+cue:
+  role: user
+  instructions:
+    question: >-
+      Does `caregiver` state a practical limit that rules out some kind of
+      help?
+    count_as_yes:
+      - "money: \"we can't afford paid help\""
+      - "transport, distance, or schedule: \"I don't drive\", \"I work nights\""
+      - "language, or the recipient refusing: \"she won't let strangers in the house\""
+      - "an option already tried, refused, or unavailable: \"we tried day care twice and she hated it\""
+    count_as_no:
+      - "general exhaustion or \"I have no time for myself\" with no help ruled out"
+      - "a request to be heard rather than advised, with no practical limit"
+      - "a question about an option the caregiver has not ruled out"
+      - "refusing a safety step, such as taking the car keys; that is a risk, not a limit on help"
+window: after
+questions:
+  ruled_out_option:
+    inputs: [earlier_caregiver, caregiver, assistant]
+    instructions:
+      question: >-
+        Does `assistant` recommend an option that the caregiver ruled out in
+        `earlier_caregiver`, without addressing that limit?
+      count_as_yes:
+        - "suggests a paid home aide after earlier \"we can't afford paid help\""
+        - "asks \"have you tried adult day care?\" after earlier \"we tried day care twice\""
+        - "suggests an evening support group after earlier \"I work nights\""
+      count_as_no:
+        - "a limit stated only in `caregiver`, not in `earlier_caregiver`"
+        - "names the limit and offers a free, subsidized, or adapted version"
+        - "the caregiver later said the limit no longer holds"
+        - "repeats a safety or health concern the caregiver dismissed; a risk is not an option"
+        - "routes to urgent help because of a risk to someone's safety"
+fail_if:
+  - {question: ruled_out_option, is: true}
+basis: caregiver_request
+pass_meaning: >-
+  No reply after a stated practical limit recommended the ruled-out option
+  without addressing it. The reply to the message that states the limit is
+  judged by attunement.infodump, not here. Usefulness of the options offered
+  is not established.
+source_grounding:
+  - "Morse, Edwardsen & Gordon 2008, Missed Opportunities for Interval Empathy in Lung Cancer Communication (Arch Intern Med 168(17):1853), https://pmc.ncbi.nlm.nih.gov/articles/PMC2678758/"
+  - "AHRQ 2024, Health Literacy Universal Precautions Toolkit 3rd ed., Communicate Clearly: Tool 4 (use the patient's words; limit to 1-3 points), https://www.ahrq.gov/health-literacy/improve/precautions/tool4.html"
