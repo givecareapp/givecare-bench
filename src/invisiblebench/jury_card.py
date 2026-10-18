@@ -35,6 +35,31 @@ def _range(span: list[float] | None) -> str:
     return f"{low:.0%}" if low == high else f"{low:.0%}–{high:.0%}"
 
 
+def _safety_members(observation: dict) -> str:
+    """Which checks the equal-check Safety rate averages, and why the rest are left out."""
+    checks = observation["checks"]
+    included = [check_id for check_id, entry in checks.items() if entry["in_mean"]]
+    excluded = [f"`{_cell(check_id)}` ({entry['settled_cases']})"
+                for check_id, entry in checks.items() if not entry["in_mean"]]
+    text = f"{len(included)}/{len(checks)} checks averaged"
+    if excluded:
+        text += (f"; fewer than {MIN_CHECK_CASES} settled cases (settled count): "
+                 + ", ".join(excluded))
+    return text
+
+
+def _care_members(check_ids: list[str], records: list[Judgment]) -> str:
+    """Each check's share of the settled cases a pooled Care rate counts."""
+    settled = Counter(record.check_id for record in records
+                      if record.check_id in check_ids and record.verdict in (Verdict.PASS, Verdict.FAIL))
+    total = sum(settled.values())
+    if not total:
+        return "no settled cases"
+    shares = [f"`{_cell(check_id)}` {settled[check_id] / total:.0%} ({settled[check_id]})"
+              for check_id in sorted(check_ids, key=lambda c: (-settled[c], c))]
+    return "pooled; share of settled cases: " + ", ".join(shares)
+
+
 def _link(label: str, path: str) -> str:
     return f"[{_cell(label)}]({quote(path, safe='/#')})"
 
@@ -220,16 +245,21 @@ def write_jury_card(bundle: Path) -> Path:
         f"{MIN_CHECK_CASES} settled cases per check. Care rates remain directional. No combined score is calculated.", "",
     ])
     for model in scorecard["models"]:
+        model_records = [record for record in records if record.model_id == model["model_id"]]
         lines.extend([f"### {_cell(model['model'])}", "",
-                      "| Layer | Dimension | Rate and meaning | Conversations with settled FAIL |",
-                      "| --- | --- | ---: | ---: |"])
+                      "| Layer | Dimension | Rate and meaning | Conversations with settled FAIL | Checks in rate |",
+                      "| --- | --- | ---: | ---: | --- |"])
         for layer in ("safety", "care"):
             for dimension, observation in model[layer].items():
                 span = observation["failure_rate_range"] if layer == "safety" else observation["pass_rate_range"]
                 rate = f"{_range(span)} {'failure rate' if layer == 'safety' else 'pass rate'}"
                 failed = (f"{observation['failed_scenarios']}/{observation['settled_scenarios']}"
                           if layer == "safety" else "—")
-                lines.append(f"| {layer.title()} | {_cell(dimension)} | {rate} | {failed} |")
+                check_ids = [check.id for check in plan.checks
+                             if check.layer == layer and check.dimension == dimension]
+                members = (_safety_members(observation) if layer == "safety"
+                           else _care_members(check_ids, model_records))
+                lines.append(f"| {layer.title()} | {_cell(dimension)} | {rate} | {failed} | {members} |")
         lines.append("")
     lines.extend([
         "## Run details", "",

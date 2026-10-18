@@ -194,7 +194,10 @@ how many have none; this describes coverage, not accuracy. Each row gives a
 plain check label and counts for PASS, FAIL, UNCLEAR, and NOT_APPLICABLE. One
 expandable section per dimension gives each check’s narrow meaning and flagged
 evidence. Dimension ranges follow the findings: Safety is a failure rate, Care
-is a directional pass rate. They are never combined. Judge, version, execution,
+is a directional pass rate. They are never combined. Score details names the
+checks each Safety rate averages and lists the rest with their settled counts.
+For each pooled Care rate it gives every check's share of the settled cases,
+so a dimension driven by one check is visible. Judge, version, execution,
 source-run cost, and elapsed-time records remain available later in the card.
 The card describes behavior under recorded test conditions; it does not
 establish broad model quality.

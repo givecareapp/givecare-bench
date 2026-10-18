@@ -41,15 +41,18 @@ def serving_policy(model: dict[str, Any]) -> dict[str, Any]:
 
 # Default model configurations
 #
-# 15 models × 3 metadata axes: class (frontier/flash/small), origin (US/China),
+# 16 models × 3 metadata axes: class (frontier/flash/small), origin (US/China),
 # access (closed/open). Each model carries all three tags; slice results any way.
 #
 #   Frontier (9)  — top from each major lab (safety ceiling)
 #   Flash (3)     — cost-optimized from US labs (does speed hurt safety?)
-#   Small (3)     — edge-class open models (safety floor, what breaks first?)
+#   Small (4)     — edge-class open models (safety floor, what breaks first?)
 #
 # Exact IDs and list prices verified against OpenRouter on 2026-07-10.
 # US-closed frontier IDs and prices refreshed on 2026-09-23.
+# Qwen 3.6 35B and Qwen 3.8 27B (the product model) are pinned to one OpenRouter
+# provider each, priced at that provider's list price on 2026-10-18, so Inspect's
+# --cost-limit counts what the pinned provider bills.
 # Grok 4.5 was excluded because xAI rejected it in the benchmark run region;
 # Grok 4.7 has not yet passed the live transcript canary.
 #
@@ -141,8 +144,16 @@ MODELS_FULL = [
     ModelConfig(
         id="qwen/qwen3.6-35b-a3b",
         name="Qwen 3.6 35B",
-        cost_per_m_input=0.14,
+        endpoint="parasail",
+        cost_per_m_input=0.15,
         cost_per_m_output=1.00,
+    ),
+    ModelConfig(
+        id="qwen/qwen3.8-27b",
+        name="Qwen 3.8 27B",
+        endpoint="deepinfra",
+        cost_per_m_input=0.15,
+        cost_per_m_output=1.875,
     ),
     ModelConfig(
         id="google/gemma-4-26b-a4b-it",

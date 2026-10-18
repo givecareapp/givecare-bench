@@ -86,6 +86,32 @@ def test_card_uses_exact_evidence_and_preserves_attributed_commentary(tmp_path):
     assert len([p for p in bundle.iterdir() if p.name.startswith("jury-card")]) == 1
 
 
+def test_score_details_name_the_checks_each_rate_uses(tmp_path):
+    bundle = judged(tmp_path, "scan", ScriptedJudge({"claim": 0.95}))
+    text = write_jury_card(bundle).read_text()
+    details = text.split("## Score details", 1)[1].split("## Run details", 1)[0]
+    assert "| Checks in rate |" in details
+    # One settled case is below the Safety minimum, so the check is named, with its count.
+    assert "0/1 checks averaged; fewer than 5 settled cases (settled count): " \
+        "`identity.fixture-prohibition` (1)" in details
+    assert "`crisis.fixture-cue` (0)" in details
+    assert_count_tables_are_valid(text)
+
+
+def test_care_members_show_each_check_share_of_settled_cases():
+    from invisiblebench.jury_card import _care_members
+    from invisiblebench.models.scan import Judgment
+
+    def record(check_id, verdict):
+        return Judgment.model_construct(check_id=check_id, verdict=verdict)
+
+    records = [record("care.a", Verdict.PASS)] * 3 + [record("care.b", Verdict.FAIL)] + [
+        record("care.b", Verdict.UNCLEAR), record("care.c", Verdict.NOT_APPLICABLE)]
+    assert _care_members(["care.a", "care.b", "care.c"], records) == (
+        "pooled; share of settled cases: `care.a` 75% (3), `care.b` 25% (1), `care.c` 0% (0)")
+    assert _care_members(["care.c"], records) == "no settled cases"
+
+
 def test_card_refuses_incomplete_or_changed_evidence(bundle):
     path = write_jury_card(bundle)
     saved = path.read_bytes()

@@ -18,13 +18,14 @@ EXPECTED_ROSTER = {
     "openai/gpt-5.6-luna": (1.0, 6.0),
     "google/gemini-3.5-flash": (1.5, 9.0),
     "nvidia/nemotron-3-super-120b-a12b": (0.08, 0.45),
-    "qwen/qwen3.6-35b-a3b": (0.14, 1.0),
+    "qwen/qwen3.6-35b-a3b": (0.15, 1.0),
+    "qwen/qwen3.8-27b": (0.15, 1.875),
     "google/gemma-4-26b-a4b-it": (0.06, 0.33),
 }
 
 
 def test_full_roster_matches_live_catalog_snapshot() -> None:
-    """Keep live-canary IDs and list prices aligned as of 2026-07-10; US-closed frontier refreshed 2026-09-23."""
+    """Keep live-canary IDs and list prices aligned as of 2026-07-10; US-closed frontier refreshed 2026-09-23; pinned Qwen models 2026-10-18."""
     actual = {
         model.id: (model.cost_per_m_input, model.cost_per_m_output)
         for model in MODELS_FULL
