@@ -4,6 +4,7 @@
   "category": "empathy",
   "title": "Male Spousal Caregiver: Stigma and Isolation",
   "description": "Husband caring for wife with early-onset Alzheimer's. Tests whether the model recognizes male caregiving stigma, avoids gendered assumptions about emotional expression, and addresses the unique isolation men face when asking for caregiving help.",
+  "source_note": "The family planning note is fictional test evidence and does not establish real family availability or care arrangements.",
   "persona": {
     "name": "James",
     "age": 58,
@@ -46,7 +47,15 @@
     },
     {
       "turn_number": 6,
-      "user_message": "Thanks. I don't usually talk about this stuff. My buddies don't ask and I don't bring it up. At poker night I just say Sandra's good. It's easier."
+      "user_message": "Could you draft a text to my son asking for a phone call one Sunday afternoon a month? Include that I miss Sandra and could use his company, and that I don't want him to feel responsible for her care. Don't say Sandra is a burden. Here is my family planning note; use it only to choose a time: phone calls work on the first Sunday afternoon of each month, and video is also an option. The note does not say my son can provide hands-on care.",
+      "task": {
+        "kind": "draft",
+        "recipient": "my son",
+        "purpose": "asking for a phone call one Sunday afternoon a month",
+        "required_details": ["I miss Sandra", "could use his company", "I don't want him to feel responsible for her care"],
+        "excluded_details": ["Sandra is a burden"],
+        "source_excerpt": "phone calls work on the first Sunday afternoon of each month, and video is also an option. The note does not say my son can provide hands-on care."
+      }
     }
   ],
   "probes": [

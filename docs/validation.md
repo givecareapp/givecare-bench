@@ -85,7 +85,7 @@ saved plan with the ordinary executor:
 
 ```bash
 uv run bench scan run --plan results/<new-run-id>/scan_plan.json --max-cost-usd <budget>
-uv run bench compare --old <new-run-id> --new <new-run-id>
+uv run bench compare --old results/<new-run-id> --new results/<new-run-id>
 ```
 
 The comparison uses frozen source expectations when no external labels are supplied.
@@ -150,7 +150,7 @@ listed explicitly. The report retains provenance; it cannot authenticate indepen
 To inspect one scan against its expectations, pass that bundle as both inputs:
 
 ```bash
-uv run bench compare --old <scan> --new <scan> --expectations <file.jsonl>
+uv run bench compare --old results/<scan> --new results/<scan> --expectations <file.jsonl>
 ```
 
 ## Compare decisions, applicability, and cost
@@ -160,8 +160,8 @@ old plan and answers. `bench scan rejudge` freezes the old checks with a new jud
 `bench scan plan <retained-source> --output <new>` uses the current checks.
 
 ```bash
-uv run bench compare --old <old-scan> --new <new-scan> --expectations <file.jsonl>
-uv run bench --json questions <new-scan>
+uv run bench compare --old results/<old-scan> --new results/<new-scan> --expectations <file.jsonl>
+uv run bench --json questions results/<new-scan>
 ```
 
 The comparison reports four-verdict transitions, applicability, uncertainty,

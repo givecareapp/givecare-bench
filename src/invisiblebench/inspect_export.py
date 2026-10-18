@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import subprocess
 from datetime import datetime
@@ -78,17 +79,69 @@ def _entries(sample: EvalSample) -> list[dict[str, Any]]:
     return entries
 
 
-def _judge_cost(entries: list[dict[str, Any]]) -> float | None:
-    """Cost of Jev branch choices; None when a branch judge's price is unknown."""
+def _judge_cost(entries: list[dict[str, Any]]) -> tuple[float, bool]:
+    """Known Jev branch spend and whether any attempted request cost is unknown."""
     total = 0.0
+    unknown = False
     for entry in entries:
         for decision in entry.get("branch_decisions", [])[:1]:
             if response := decision.get("judge_response"):
                 try:
-                    total += request_cost(response["model"], response["usage"]["input_tokens"])
+                    cost = request_cost(response["model"], response["usage"]["input_tokens"])
                 except (KeyError, TypeError, ValueError):
-                    return None
-    return total
+                    unknown = True
+                    continue
+                if not math.isfinite(cost) or cost < 0:
+                    unknown = True
+                    continue
+                total += cost
+            elif decision.get("type") == "noul" and decision.get("probability") is not None:
+                unknown = True
+    return total, unknown
+
+
+def _sample_cost(sample: EvalSample) -> tuple[float, bool]:
+    """Return known target+branch spend and whether any spend for this sample is unknown."""
+    known = 0.0
+    unknown = False
+
+    usages = list(sample.model_usage.values())
+    if usages:
+        for usage in usages:
+            if usage.total_cost is None:
+                unknown = True
+                continue
+            cost = float(usage.total_cost)
+            if not math.isfinite(cost) or cost < 0:
+                unknown = True
+                continue
+            known += cost
+    elif any(event.event == "model" for event in sample.events):
+        # A model call exists but Inspect did not record its priced usage.
+        unknown = True
+
+    metadata = sample.metadata or {}
+    if "branch_judge_cost_usd" in metadata or "branch_judge_cost_unknown" in metadata:
+        try:
+            branch_cost = float(metadata.get("branch_judge_cost_usd", 0.0))
+            if not math.isfinite(branch_cost) or branch_cost < 0:
+                raise ValueError("invalid branch judge cost")
+            known += branch_cost
+        except (TypeError, ValueError):
+            unknown = True
+        unknown = unknown or bool(metadata.get("branch_judge_cost_unknown", False))
+    else:
+        # Older logs have no sample-level branch accounting. Read only message
+        # metadata so partial samples need not have complete transcript turns.
+        decisions = [
+            {"branch_decisions": (message.metadata or {}).get("branch_decisions", [])}
+            for message in sample.messages
+        ]
+        branch_cost, branch_unknown = _judge_cost(decisions)
+        known += branch_cost
+        unknown = unknown or branch_unknown
+
+    return known, unknown
 
 
 def _seconds(logs: list[EvalLog]) -> float | None:
@@ -154,23 +207,19 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
             }
             if sample is None:
                 continue
-            judge_cost = None
+            sample_cost, sample_cost_unknown = _sample_cost(sample)
+            cost_by_model[model_id] = cost_by_model.get(model_id, 0.0) + sample_cost
+            if sample_cost_unknown:
+                unknown_cost_samples += 1
             try:
                 if sample.error or sample.limit:
                     raise ValueError(
                         sample.error.message if sample.error else f"limit: {sample.limit.type}"
                     )
                 entries = _entries(sample)
-                judge_cost = _judge_cost(entries)
             except (KeyError, ValueError) as exc:
                 errors.append({**row, "reason": str(exc)})
                 entries = None
-            costs = [u.total_cost for u in sample.model_usage.values()]
-            if not costs or None in costs or judge_cost is None and entries is not None:
-                unknown_cost_samples += 1
-            cost_by_model[model_id] = (
-                cost_by_model.get(model_id, 0.0) + sum(c for c in costs if c) + (judge_cost or 0.0)
-            )
             if entries is not None:
                 filename = f"{quote(model_id, safe='')}_{quote(scenario_id, safe='')}.jsonl"
                 transcripts[filename] = entries

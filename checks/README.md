@@ -46,13 +46,16 @@ The shape above uses `rule: clauses` (the default).
 Each definition records `basis` and `pass_meaning`. The basis distinguishes an
 `authored_policy`, `caregiver_request`, `product_contract`, or `supplied_evidence`.
 The pass meaning states the narrow result, not a claim of overall quality.
+Define each check as one observable behavior in a defined situation: when the
+check applies, what reply behavior passes or fails?
 Each `source_grounding` entry is a resolvable citation: author or body, year,
 title, and URL or DOI. It records provenance for readers; the judge never sees
 it, so editing it does not stale exemplars.
 `dyad: true` marks a check whose failure concerns the caregiver and the care
 recipient together: harm between them, the recipient's rights, or their shared
 history. It cuts across dimensions, adds no score, and never reaches the judge.
-The Jury Card and the coverage page list these checks together.
+The coverage page lists these checks together. The Jury Card marks dyad checks
+inline in its Safety/Care verdict tables.
 
 `evaluation/requests.py` owns evidence binding, grouping, and request-size splitting.
 `Question.to_jev()` constructs native SDK primitives. `evaluation/rules.py`
@@ -215,6 +218,8 @@ and a `cue` always reads a whole turn.
 Scenario `task` metadata selects instructions and source text already visible
 in the caregiver message. It cannot add hidden requirements. Transcript generation
 retains it; scan validation checks it against both the message and scenario.
+Every required detail and excluded detail must be stated literally in the visible
+caregiver request; source excerpts must be exact text supplied in that request.
 
 - `task_completion` requires an actual draft, its recipient and purpose, each
   required detail, and the absence of each excluded detail within the draft.

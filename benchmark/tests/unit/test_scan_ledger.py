@@ -10,8 +10,15 @@ import httpx2
 import pytest
 from typesafe_sdk import ChoiceAnswer, SystemOneResponse, TypeSafeAPIError, Usage
 
-from benchmark.tests.fixtures.current_scan import FixtureJudge, ScriptedJudge, write_source_run
+from benchmark.tests.fixtures.current_scan import (
+    FixtureJudge,
+    ScriptedJudge,
+    judge_response,
+    write_source_run,
+)
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, CostBudgetExceededError, cost_tracker
+from invisiblebench.evaluation.branching import noul_request
+from invisiblebench.evaluation.requests import input_hash
 from invisiblebench.judge import (
     ANSWERS_FILE,
     ATTEMPTS_FILE,
@@ -495,7 +502,19 @@ def _valid_transcript() -> list[dict[str, Any]]:
     return [
         {"role": "user", "turn": 1, "content": "Hello there"},
         {"role": "assistant", "turn": 1, "content": "Hi, glad you're here."},
-        {"role": "user", "turn": 2, "content": "How are you?"},
+        {
+            "role": "user",
+            "turn": 2,
+            "content": "How are you?",
+            "branch_decisions": [
+                {
+                    "branch_id": "no_ack",
+                    "type": "contains_any",
+                    "matched": False,
+                    "probability": None,
+                }
+            ],
+        },
         {"role": "assistant", "turn": 2, "content": "Doing well, thanks for asking."},
     ]
 
@@ -562,9 +581,81 @@ def test_verify_execution_rejects_an_invalid_branch_path():
 
 def test_verify_execution_accepts_a_valid_branch_path():
     transcript = _valid_transcript()
+    transcript[1]["content"] = "You said 'no ack'."
     transcript[2]["content"] = "You didn't even acknowledge me."
     transcript[2]["branch_id"] = "no_ack"
+    transcript[2]["branch_decisions"][0]["matched"] = True
     verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_a_branch_whose_condition_did_not_match():
+    """A recorded authored branch is not proof the previous reply selected it."""
+    transcript = _valid_transcript()
+    transcript[2]["content"] = "You didn't even acknowledge me."
+    transcript[2]["branch_id"] = "no_ack"
+    with pytest.raises(ValueError, match="branch path differs from the executed condition"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_default_path_when_a_branch_condition_matched():
+    transcript = _valid_transcript()
+    transcript[1]["content"] = "You said 'no ack'."
+    transcript[2]["branch_decisions"][0]["matched"] = True
+    with pytest.raises(ValueError, match="branch path differs from the executed condition"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def test_verify_execution_rejects_inconsistent_branch_decisions():
+    transcript = _valid_transcript()
+    transcript[2]["branch_decisions"][0]["matched"] = True
+    with pytest.raises(ValueError, match="branch path differs from the executed condition"):
+        verify_execution(transcript, _scenario(), "fixture/model")
+
+
+def _noul_branch_transcript(probability: float = 0.1) -> tuple[list[dict[str, Any]], Scenario]:
+    scenario = _scenario(
+        branches=[
+            {
+                "branch_id": "missed_signal",
+                "condition": {"type": "noul", "instructions": "Did the reply miss the cue?"},
+                "user_message": "You missed what I said.",
+            }
+        ]
+    )
+    transcript = _valid_transcript()
+    turn = scenario.turns[1].model_dump(mode="json", exclude_none=True)
+    state, questions = noul_request(turn, transcript[1]["content"])
+    response = judge_response(DEFAULT_JUDGE_MODEL, {"0": probability}, 5).model_dump(mode="json")
+    transcript[2]["branch_decisions"] = [
+        {
+            "branch_id": "missed_signal",
+            "type": "noul",
+            "matched": False,
+            "probability": probability,
+            "judge_response": response,
+            "judge_request_hash": input_hash({"state": state, "questions": questions}),
+        }
+    ]
+    return transcript, scenario
+
+
+def test_verify_execution_accepts_noul_evidence_bound_to_prior_reply():
+    transcript, scenario = _noul_branch_transcript()
+    verify_execution(transcript, scenario, "fixture/model")
+
+
+def test_verify_execution_rejects_noul_probability_inconsistent_with_response():
+    transcript, scenario = _noul_branch_transcript()
+    transcript[2]["branch_decisions"][0]["probability"] = 0.9
+    with pytest.raises(ValueError, match="branch path differs from the executed condition"):
+        verify_execution(transcript, scenario, "fixture/model")
+
+
+def test_verify_execution_rejects_noul_response_for_different_prior_reply():
+    transcript, scenario = _noul_branch_transcript()
+    transcript[1]["content"] = "A different assistant reply."
+    with pytest.raises(ValueError, match="invalid branch judge evidence"):
+        verify_execution(transcript, scenario, "fixture/model")
 
 
 def test_verify_execution_rejects_a_branch_taken_on_the_opening_turn():

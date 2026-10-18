@@ -34,7 +34,10 @@ from inspect_ai.model import (
     set_model_info,
 )
 from inspect_ai.solver import Generate, TaskState, solver
+from inspect_ai.util import LimitExceededError
+from inspect_ai.util._limit import check_cost_limit, record_model_cost
 
+from invisiblebench.api.typesafe import JEV_MAX_INPUT_TOKENS, request_cost
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL, serving_policy
 from invisiblebench.models.scenario import Scenario
@@ -184,7 +187,79 @@ def _has_noul_branch(turn: dict[str, Any]) -> bool:
 def _judge_client():
     from invisiblebench.api.typesafe import SystemOneClient
 
-    return SystemOneClient()
+    return SystemOneClient(track_cost=False)
+
+
+class _BudgetedBranchClient:
+    """Charge the external branch request to Inspect's active sample budget."""
+
+    def __init__(self, client, state: TaskState):
+        self.client = client
+        self.state = state
+
+    def ask(self, *, model: str, state: Any, questions: dict[str, Any]):
+        maximum = request_cost(model, JEV_MAX_INPUT_TOKENS)
+        limit = self.state.cost_limit
+        if limit is None:
+            raise ValueError("Noul branching requires an Inspect per-sample --cost-limit")
+        projected = self.state.cost_usage + maximum
+        if projected > limit:
+            raise LimitExceededError(
+                "cost",
+                value=projected,
+                limit=limit,
+                message="Noul branch request maximum exceeds remaining per-sample cost limit",
+            )
+
+        unknown_before = self.state.metadata.get("branch_judge_cost_unknown", False)
+        self.state.metadata["branch_judge_cost_unknown"] = True
+        try:
+            response = self.client.ask(model=model, state=state, questions=questions)
+        except BaseException as exc:
+            cost = self._response_cost(getattr(exc, "response", None), model)
+            if cost is None:
+                self._record_cost(maximum)
+            else:
+                self._save_cost(cost)
+                self._clear_unknown(unknown_before)
+                self._record_cost(cost)
+            raise
+
+        cost = self._response_cost(response, model)
+        if cost is None:
+            self._record_cost(maximum)
+            raise ValueError("Noul branch response has unknown input usage")
+        self._save_cost(cost)
+        self._clear_unknown(unknown_before)
+        self._record_cost(cost)
+        return response
+
+    @staticmethod
+    def _response_cost(response, model: str) -> float | None:
+        try:
+            tokens = response.usage.input_tokens
+            if tokens is None or tokens < 0 or tokens > JEV_MAX_INPUT_TOKENS:
+                return None
+            return request_cost(model, tokens)
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    def _record_cost(self, cost: float) -> None:
+        # Inspect 0.3.280 keeps its recorder private; this task is pinned to that
+        # SDK version and uses the same native sample budget as its model calls.
+        record_model_cost(cost)
+        check_cost_limit()
+
+    def _save_cost(self, cost: float) -> None:
+        metadata = self.state.metadata
+        metadata["branch_judge_cost_usd"] = metadata.get("branch_judge_cost_usd", 0.0) + cost
+
+    def _clear_unknown(self, unknown_before: bool) -> None:
+        if not unknown_before:
+            self.state.metadata.pop("branch_judge_cost_unknown", None)
+
+    def close(self) -> None:
+        self.client.close()
 
 
 @solver
@@ -193,6 +268,10 @@ def replay_scenario():
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         data = _load(state.metadata["path"])
+        if state.cost_limit is None and any(
+            _has_noul_branch(turn) for turn, _ in iter_scenario_turns(data)
+        ):
+            raise ValueError("Noul branching requires an explicit Inspect per-sample --cost-limit")
         state.messages = [ChatMessageSystem(content=SYSTEM_PROMPT)]
         previous, client = None, None
         try:
@@ -200,7 +279,7 @@ def replay_scenario():
                 number = turn["turn_number"]
                 state.messages[0].content = session_system_prompt(SYSTEM_PROMPT, session)
                 if previous is not None and client is None and _has_noul_branch(turn):
-                    client = _judge_client()
+                    client = _BudgetedBranchClient(_judge_client(), state)
                 user, branch, decisions = await asyncio.to_thread(
                     resolve_branch, turn, previous, client=client
                 )

@@ -9,6 +9,7 @@ from typing import Any
 from typesafe_sdk import NoulAnswer, SystemOneResponse, Usage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.inspect_task import transcript_policy
 from invisiblebench.judge import json_bytes, plan_scan, run_scan
 from invisiblebench.models.scenario import Scenario
@@ -25,18 +26,29 @@ TRANSCRIPT = (
 
 
 def _scripted_transcript(scenario: Scenario) -> str:
-    """A genuine, unbranched, default-path run of every authored turn.
+    """A deterministic replay of every authored turn and its branch rules.
 
     Publication now verifies that a source transcript actually executed its
-    scenario (`invisiblebench.judge.verify_execution`), so a fixture standing
-    in for a real scan must replay each turn's authored user text in order
-    rather than a generic placeholder exchange.
+    scenario (`invisiblebench.judge.verify_execution`), so synthetic source
+    runs must select and record the same default or branch path as generation.
+    Judged conditions receive confident no answers; the assistant replies stay
+    fixed so the fixture remains deterministic.
     """
     lines = []
+    judge = FixtureJudge()
+    previous = None
     for turn in scenario.all_turns:
-        user = {"role": "user", "turn": turn.turn_number, "content": turn.user_message}
+        turn_data = turn.model_dump(mode="json", exclude_none=True)
+        content, branch_id, decisions = resolve_branch(
+            turn_data, previous, client=judge, model=DEFAULT_JUDGE_MODEL
+        )
+        user = {"role": "user", "turn": turn.turn_number, "content": content}
         if turn.task is not None:
             user["task"] = turn.task.model_dump(mode="json")
+        if branch_id is not None:
+            user["branch_id"] = branch_id
+        if decisions:
+            user["branch_decisions"] = decisions
         lines.append(json.dumps(user))
         lines.append(
             json.dumps(
@@ -48,6 +60,7 @@ def _scripted_transcript(scenario: Scenario) -> str:
                 }
             )
         )
+        previous = "Standard support response."
     return "\n".join(lines) + "\n"
 
 

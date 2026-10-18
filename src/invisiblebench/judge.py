@@ -37,6 +37,7 @@ from invisiblebench.api.typesafe import (
     validate_response,
 )
 from invisiblebench.evaluation import rules
+from invisiblebench.evaluation.branching import evaluate_branch, noul_request
 from invisiblebench.evaluation.check_registry import load_check, load_checks
 from invisiblebench.evaluation.requests import conversation_requests as _requests
 from invisiblebench.evaluation.requests import input_hash, merge_answers
@@ -415,18 +416,77 @@ def verify_execution(transcript: list[Turn], scenario: Scenario, model_id: str) 
             TaskEvidence.model_validate(recorded_task) if recorded_task is not None else None
         ) != expected_task:
             raise ValueError(f"transcript turn {turn.turn_number} task differs from its script")
-        branch_id, content = user_entry.get("branch_id"), user_entry.get("content")
-        if branch_id is None:
-            if content != turn.user_message:
-                raise ValueError(f"transcript turn {turn.turn_number} does not match its script")
-        else:
-            branch = next((b for b in turn.branches if b.branch_id == branch_id), None)
-            if branch is None or content != branch.user_message or index == 0:
-                raise ValueError(f"transcript turn {turn.turn_number} took an invalid branch")
+        _verify_branch_decision(
+            turn,
+            transcript[2 * index - 1] if index else None,
+            user_entry,
+        )
         for entry in (user_entry, assistant_entry):
             resolved = entry.get("resolved_model_id")
             if resolved is not None and resolved != model_id:
                 raise ValueError(f"transcript turn {turn.turn_number} resolved a different model")
+
+
+def _verify_branch_decision(turn, previous_assistant: Turn | None, user_entry: Turn) -> None:
+    """Recompute the recorded path from authored rules and saved judge answers."""
+    turn_data = turn.model_dump(mode="json", exclude_none=True)
+    branches = turn_data.get("branches", [])
+    state, noul_questions = (
+        noul_request(turn_data, str(previous_assistant.get("content") or ""))
+        if previous_assistant is not None
+        else ({}, {})
+    )
+    probabilities: dict[int, float] = {}
+    recorded_decisions = user_entry.get("branch_decisions", [])
+    if noul_questions:
+        try:
+            if not isinstance(recorded_decisions, list) or not recorded_decisions:
+                raise ValueError("missing branch decisions")
+            response_data = recorded_decisions[0]["judge_response"]
+            request_hash = input_hash({"state": state, "questions": noul_questions})
+            if recorded_decisions[0].get("judge_request_hash") != request_hash:
+                raise ValueError("branch judge request hash differs from the executed evidence")
+            response = SystemOneResponse.model_validate(response_data)
+            validate_response(response, DEFAULT_JUDGE_MODEL, noul_questions)
+            if response.model_dump(mode="json") != response_data:
+                raise ValueError("branch judge response is not canonical")
+            probabilities = {
+                int(index): float(answer.noul) for index, answer in response.answers.items()
+            }
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"transcript turn {turn.turn_number} has invalid branch judge evidence"
+            ) from exc
+    elif isinstance(recorded_decisions, list) and any(
+        "judge_response" in decision for decision in recorded_decisions
+    ):
+        raise ValueError(f"transcript turn {turn.turn_number} has unexpected branch judge evidence")
+
+    try:
+        expected_message, expected_branch, expected_decisions = evaluate_branch(
+            turn_data,
+            previous_assistant.get("content") if previous_assistant else None,
+            noul_probabilities=probabilities,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"transcript turn {turn.turn_number} has invalid branch decisions") from exc
+
+    if noul_questions:
+        expected_decisions[0]["judge_response"] = response_data
+        expected_decisions[0]["judge_request_hash"] = request_hash
+    branch_id = user_entry.get("branch_id")
+    if branch_id is not None and (
+        previous_assistant is None or branch_id not in {b.get("branch_id") for b in branches}
+    ):
+        raise ValueError(f"transcript turn {turn.turn_number} took an invalid branch")
+    if branch_id != expected_branch or recorded_decisions != expected_decisions:
+        raise ValueError(
+            f"transcript turn {turn.turn_number} branch path differs from the executed condition"
+        )
+    if user_entry.get("content") != expected_message:
+        if branch_id is None:
+            raise ValueError(f"transcript turn {turn.turn_number} does not match its script")
+        raise ValueError(f"transcript turn {turn.turn_number} took an invalid branch")
 
 
 def source_policies(manifest: dict[str, Any]) -> tuple[dict, dict]:

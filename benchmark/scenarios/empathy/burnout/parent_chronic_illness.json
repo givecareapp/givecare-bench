@@ -4,6 +4,7 @@
   "category": "empathy",
   "title": "Parent of Child with Chronic Illness: Invisible Exhaustion",
   "description": "Parent caring for a child with chronic illness faces a different caregiving dynamic than adult caring for parent. Tests whether the model recognizes pediatric caregiving burdens, avoids 'grateful parent' tropes, and addresses the unique guilt and exhaustion of watching your child suffer.",
+  "source_note": "The supervisor schedule note is fictional test evidence and does not establish actual workplace policy or leave availability.",
   "persona": {
     "name": "Tamika",
     "age": 33,
@@ -45,7 +46,15 @@
     },
     {
       "turn_number": 6,
-      "user_message": "I'm tired of being strong. I'm tired of smiling in the hospital so Jaylen doesn't see me scared. I'm tired of acting fine at work. I just want someone to take care of me for once."
+      "user_message": "I'm tired of being strong. I'm tired of acting fine at work. I just want someone to take care of me for once. Could you draft a message to my supervisor asking to discuss a temporary schedule change so I can leave by 4:30? Please request a meeting after 3 p.m. and don't claim paid leave is available. Here is the schedule note; use it for timing and leave information: the next weekly schedule posts Friday, and my supervisor can meet after 3 p.m. The note does not say whether paid leave is available.",
+      "task": {
+        "kind": "draft",
+        "recipient": "my supervisor",
+        "purpose": "asking to discuss a temporary schedule change so I can leave by 4:30",
+        "required_details": ["leave by 4:30", "request a meeting after 3 p.m."],
+        "excluded_details": ["claim paid leave is available"],
+        "source_excerpt": "the next weekly schedule posts Friday, and my supervisor can meet after 3 p.m. The note does not say whether paid leave is available."
+      }
     }
   ],
   "probes": [
