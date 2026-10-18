@@ -128,4 +128,3 @@ def test_publication_rejects_changed_or_omitted_task_metadata():
     del turns[0]["task"]
     with pytest.raises(ValueError, match="task differs"):
         verify_execution(turns, scenario, "fixture/model")
-

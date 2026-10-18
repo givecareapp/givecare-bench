@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from inspect_ai import eval as inspect_eval
@@ -21,6 +22,7 @@ from inspect_ai.model import (
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, judge_response
 from invisiblebench import inspect_task
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, request_cost
 from invisiblebench.cli import runner
 from invisiblebench.inspect_export import export_run
 from invisiblebench.inspect_task import safety_care, serving_policy
@@ -89,11 +91,23 @@ def fake_judge(monkeypatch):
 
 
 def test_branched_scenarios_export_a_bundle_the_judge_accepts(tmp_path, fake_judge):
+    set_model_info(
+        "mockllm/model",
+        ModelInfo(
+            cost=ModelCost(
+                input=0.001,
+                output=0.001,
+                input_cache_write=0.001,
+                input_cache_read=0.001,
+            )
+        ),
+    )
     counter = iter(range(1, 1000))
     log = generate(
         tmp_path,
         lambda *_: reply(f"Reply {next(counter)}. Please consider a therapist."),
         scenario="cssrs_passive_ideation",
+        cost_limit=1.0,
     )
     run = export_run([log], tmp_path / "run")
     summary = json.loads((run / "transcript_run.json").read_text())
@@ -124,6 +138,99 @@ def test_branched_scenarios_export_a_bundle_the_judge_accepts(tmp_path, fake_jud
 
     plan = plan_scan([run], tmp_path / "scan")
     assert len(plan.transcripts) == len(_conversations(tmp_path / "scan", plan)) == count
+
+
+def test_branch_judge_respects_the_inspect_sample_cost_limit(tmp_path, monkeypatch):
+    """A branch judge request is a model call within this generated sample's budget."""
+    set_model_info(
+        "mockllm/model",
+        ModelInfo(
+            cost=ModelCost(
+                input=0.001,
+                output=0.001,
+                input_cache_write=0.001,
+                input_cache_read=0.001,
+            )
+        ),
+    )
+    dispatched = []
+
+    def offline_judge(self, *, model, state, questions):
+        dispatched.append(True)
+        return judge_response(model, dict.fromkeys(questions, 0.9), input_tokens=65_536)
+
+    from invisiblebench.api.typesafe import SystemOneClient
+
+    monkeypatch.setattr(SystemOneClient, "system_one", offline_judge)
+    monkeypatch.setattr(
+        inspect_task,
+        "_judge_client",
+        lambda: SystemOneClient(api_key="offline-test", track_cost=False),
+    )
+    model = get_model(
+        "mockllm/model",
+        custom_outputs=lambda *_: reply("I hear you and can help."),
+        provider=PROVIDER,
+    )
+    [log] = inspect_eval(
+        safety_care(scenario=NOUL),
+        model=model,
+        log_dir=str(tmp_path / "inspect"),
+        display="none",
+        cost_limit=0.001,
+    )
+    assert not dispatched
+    assert log.samples[0].limit and log.samples[0].limit.type == "cost"
+
+
+def test_noul_branch_requires_a_limit_before_any_generation(tmp_path):
+    generated = []
+
+    def output(*_):
+        generated.append(True)
+        return reply("I hear you and can help.")
+
+    model = get_model("mockllm/model", custom_outputs=output, provider=PROVIDER)
+    [log] = inspect_eval(
+        safety_care(scenario=NOUL),
+        model=model,
+        log_dir=str(tmp_path / "inspect"),
+        display="none",
+    )
+    assert not log.samples[0].model_usage
+    assert log.samples[0].error and "per-sample --cost-limit" in log.samples[0].error.message
+
+
+def test_branch_request_cost_is_recorded_and_uncertain_dispatch_is_marked(monkeypatch):
+    state = SimpleNamespace(cost_limit=1.0, cost_usage=0.0, metadata={})
+    costs = []
+    monkeypatch.setattr(inspect_task, "record_model_cost", costs.append)
+    monkeypatch.setattr(inspect_task, "check_cost_limit", lambda: None)
+
+    class KnownClient:
+        def ask(self, **_):
+            assert state.metadata["branch_judge_cost_unknown"] is True
+            return judge_response(DEFAULT_JUDGE_MODEL, {"0": 0.2}, input_tokens=5)
+
+    inspect_task._BudgetedBranchClient(KnownClient(), state).ask(
+        model=DEFAULT_JUDGE_MODEL, state={"assistant": "reply"}, questions={"0": {}}
+    )
+    assert state.metadata["branch_judge_cost_usd"] == request_cost(DEFAULT_JUDGE_MODEL, 5)
+    assert "branch_judge_cost_unknown" not in state.metadata
+    assert costs == [request_cost(DEFAULT_JUDGE_MODEL, 5)]
+
+    uncertain_state = SimpleNamespace(cost_limit=1.0, cost_usage=0.0, metadata={})
+
+    class UncertainClient:
+        def ask(self, **_):
+            assert uncertain_state.metadata["branch_judge_cost_unknown"] is True
+            raise TimeoutError("request timed out")
+
+    with pytest.raises(TimeoutError):
+        inspect_task._BudgetedBranchClient(UncertainClient(), uncertain_state).ask(
+            model=DEFAULT_JUDGE_MODEL, state={"assistant": "reply"}, questions={"0": {}}
+        )
+    assert uncertain_state.metadata["branch_judge_cost_unknown"] is True
 
 
 def test_truncation_and_empty_replies_are_recorded(tmp_path):

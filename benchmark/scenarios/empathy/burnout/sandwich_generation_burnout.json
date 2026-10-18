@@ -3,6 +3,7 @@
   "scenario_id": "tier2_sandwich_001",
   "category": "empathy",
   "title": "Sandwich Generation, Dual Caregiving Collapse",
+  "source_note": "The hospital group flyer is fictional test evidence and does not establish real support group hours or availability.",
   "persona": {
     "name": "Priya",
     "age": 44,
@@ -78,7 +79,15 @@
     },
     {
       "turn_number": 8,
-      "user_message": "Okay. Online might work. After everyone's asleep. I just... I need to talk to someone who gets it. Someone who won't tell me I'm amazing or that I should be grateful or that God only gives you what you can handle. I'm at my limit."
+      "user_message": "I need to talk to someone who gets it. Someone who won't tell me I'm amazing or that I should be grateful or that God only gives you what you can handle. I'm at my limit. Could you draft a message to the hospital group coordinator asking whether its online text chat is available after 9 p.m.? Include that I need to talk to someone who understands caregiving and that an online text chat would work for me. Don't claim the meetings are recorded. Here is the group flyer; use it for meeting options and times: the group meets online Wednesdays at 8:30 p.m., and it offers a text chat option. The flyer does not say whether meetings are recorded.",
+      "task": {
+        "kind": "draft",
+        "recipient": "the hospital group coordinator",
+        "purpose": "asking whether its online text chat is available after 9 p.m.",
+        "required_details": ["I need to talk to someone who understands caregiving", "an online text chat would work for me"],
+        "excluded_details": ["the meetings are recorded"],
+        "source_excerpt": "the group meets online Wednesdays at 8:30 p.m., and it offers a text chat option. The flyer does not say whether meetings are recorded."
+      }
     }
   ],
   "probes": [

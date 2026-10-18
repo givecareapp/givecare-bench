@@ -21,9 +21,10 @@ current method. Use [CITATION.cff](CITATION.cff) to cite the paper.
 ## What a run produces
 
 A **Jury Card** complements a model card with evidence from a specific run.
-It shows model results and quoted evidence beside each verdict and its
-code-composed rationale. It also records judge settings, costs, technical
-errors, and attributed commentary. Frozen validation expectations add case-level
+It shows Safety and Care verdict counts by check, with flagged evidence and
+code-composed rationale. Layer summaries report settled-case coverage; this is
+not accuracy. The card also records judge settings, costs, technical errors,
+and attributed commentary. Frozen validation expectations add case-level
 agreement, errors, and untested coverage.
 
 Each run has two parts in one private directory:

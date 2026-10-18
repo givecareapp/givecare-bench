@@ -46,8 +46,12 @@ uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
 - Task options use `-T`: `category=`, `scenario=`, and `confidential=true`.
 - Concurrency uses Inspect's `--max-samples` and `--max-connections`.
 - `inspect view` browses runs.
-- `--cost-limit` bounds each conversation. The worst case is the number of
-  conversations times the limit.
+- `--cost-limit` is a per-conversation ceiling checked against reported usage.
+  A target-model call can cross it once before Inspect stops that sample. A
+  scenario with judged branches requires this limit; each branch request is
+  checked against its maximum input cost before dispatch, and reported branch
+  usage is included in the exported generation cost. If usage is unknown, the
+  sample records that uncertainty and Inspect reserves the request maximum.
 - To resume a failed generation, run `inspect eval-retry <log>`, then repeat
   `bench export`. Inspect owns retries, timeouts, and transport.
 
@@ -159,7 +163,7 @@ Review the estimate, then run it with `bench scan run`. The new bundle keeps its
 source files under `inputs/<source-hash>/`. Keep those relative paths intact,
 because the frozen plan refers to them.
 
-- `bench compare --old <run-id> --new <new-run-id>` reports verdict changes,
+- `bench compare --old results/<old-run> --new results/<new-run>` reports verdict changes,
   applicability, coverage, uncertainty, and cost on unchanged transcripts. Add
   `--expectations <file.jsonl>` to report agreement with frozen expectations.
   Read [Evaluator validation](validation.md) before treating that agreement as

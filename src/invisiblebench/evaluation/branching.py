@@ -31,6 +31,7 @@ import re
 from typing import Any
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
+from invisiblebench.evaluation.requests import input_hash
 from invisiblebench.models.scan import Thresholds
 
 DEFAULT_NOUL_MIN = 0.65
@@ -67,18 +68,43 @@ def resolve_branch(
     if not branches or not prev_assistant_msg:
         return turn["user_message"], None, []
 
-    response_lower = prev_assistant_msg.lower()
     noul_probabilities, judge_response = _ask_noul_conditions(
         branches, prev_assistant_msg, client=client, model=model
     )
+    user_message, branch_id, decisions = evaluate_branch(
+        turn, prev_assistant_msg, noul_probabilities=noul_probabilities
+    )
+    if judge_response is not None:
+        decisions[0]["judge_response"] = judge_response.model_dump(mode="json")
+        state, questions = noul_request(turn, prev_assistant_msg)
+        decisions[0]["judge_request_hash"] = input_hash({"state": state, "questions": questions})
+    return user_message, branch_id, decisions
 
+
+def evaluate_branch(
+    turn: dict[str, Any],
+    prev_assistant_msg: str | None,
+    *,
+    noul_probabilities: dict[int, float] | None = None,
+) -> tuple[str, str | None, list[dict[str, Any]]]:
+    """Apply authored branch rules to saved Noul probabilities and prior reply."""
+    branches: list[dict[str, Any]] | None = turn.get("branches")
+    if not branches or not prev_assistant_msg:
+        return turn["user_message"], None, []
+
+    response_lower = prev_assistant_msg.lower()
+    noul_probabilities = noul_probabilities or {}
     decisions: list[dict[str, Any]] = []
     for idx, branch in enumerate(branches):
         condition = branch["condition"]
         ctype = condition["type"]
 
         if ctype == "noul":
+            if idx not in noul_probabilities:
+                raise ValueError(f"missing saved noul probability for branch {idx}")
             probability = noul_probabilities[idx]
+            if not math.isfinite(probability) or not 0 <= probability <= 1:
+                raise ValueError(f"invalid noul probability for branch {idx}: {probability}")
             matched = probability >= condition.get("min", DEFAULT_NOUL_MIN)
             if not matched and probability > NOUL_MAX_FALSE:
                 raise ValueError(f"ambiguous noul probability for branch {idx}: {probability}")
@@ -96,8 +122,6 @@ def resolve_branch(
         )
         if matched:
             break
-    if judge_response is not None:
-        decisions[0]["judge_response"] = judge_response.model_dump(mode="json")
     if matched:
         return branch["user_message"], branch.get("branch_id"), decisions
     return turn["user_message"], None, decisions
@@ -119,11 +143,8 @@ def _ask_noul_conditions(
     if client is None:
         raise ValueError("a judge client is required for noul branch conditions")
 
-    questions = {
-        str(idx): {"type": "noul", "instructions": branches[idx]["condition"]["instructions"]}
-        for idx in noul_indices
-    }
-    result = client.ask(model=model, state={"assistant": prev_assistant_msg}, questions=questions)
+    state, questions = noul_request({"branches": branches}, prev_assistant_msg)
+    result = client.ask(model=model, state=state, questions=questions)
     nouls = result.nouls
     probabilities = {}
     for idx in noul_indices:
@@ -132,6 +153,18 @@ def _ask_noul_conditions(
             raise ValueError(f"invalid noul probability for branch {idx}: {probability}")
         probabilities[idx] = probability
     return probabilities, result
+
+
+def noul_request(
+    turn: dict[str, Any], prev_assistant_msg: str
+) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+    """Build the exact state and question payload used for authored Noul branches."""
+    questions = {
+        str(idx): {"type": "noul", "instructions": branch["condition"]["instructions"]}
+        for idx, branch in enumerate(turn.get("branches", []))
+        if branch["condition"]["type"] == "noul"
+    }
+    return {"assistant": prev_assistant_msg}, questions
 
 
 def _evaluate_condition(

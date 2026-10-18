@@ -9,7 +9,8 @@ from typing import Any
 import pytest
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL
-from invisiblebench.evaluation.branching import DEFAULT_NOUL_MIN, resolve_branch
+from invisiblebench.evaluation.branching import DEFAULT_NOUL_MIN, noul_request, resolve_branch
+from invisiblebench.evaluation.requests import input_hash
 
 # ---------------------------------------------------------------------------
 # resolve_branch — basic behaviour
@@ -262,6 +263,10 @@ class TestNoulCondition:
         assert msg == "Branch taken"
         assert bid == "missed_crisis"
         assert decisions[0].pop("judge_response")["usage"]["input_tokens"] == 42
+        state, questions = noul_request(self._turn(), "some reply")
+        assert decisions[0].pop("judge_request_hash") == input_hash(
+            {"state": state, "questions": questions}
+        )
         assert decisions == [
             {
                 "branch_id": "missed_crisis",
@@ -363,6 +368,9 @@ class TestNoulCondition:
         assert bid == "second"
         assert msg == "Second branch"
         assert set(decisions[0].pop("judge_response")["answers"]) == {"0", "1"}
+        assert decisions[0].pop("judge_request_hash") == input_hash(
+            {"state": client.calls[0]["state"], "questions": client.calls[0]["questions"]}
+        )
         assert decisions == [
             {"branch_id": "first", "type": "noul", "matched": False, "probability": 0.1},
             {"branch_id": "second", "type": "noul", "matched": True, "probability": 0.9},

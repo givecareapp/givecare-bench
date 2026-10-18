@@ -27,6 +27,9 @@ An invalid probability stops branch selection. A judged branch matches at or
 above its `min` probability. Below `min`, a probability above the default scan
 `low` threshold is ambiguous and stops branch selection with a technical error.
 Only a probability at or below `low` lets selection continue to the next branch.
+Projection recomputes the selected branch from the preceding assistant reply
+and authored condition. For judged branches, it also verifies the saved judge
+response and request hash against that reply before accepting the recorded path.
 Session labels give time context. They do not establish that a
 deployed product has working memory, tools, or persistent state.
 
@@ -184,12 +187,17 @@ Keep the critique outside the ledger. Preserve the original decision.
 If a critique changes a rule or judge setting,
 version that change and run a new scan. Do not edit the old verdict.
 
-The **Jury Card** is the standard report for an evaluated run. It complements a
-model card by describing observed behavior under recorded test conditions.
-Its title identifies the model and the UTC run date and time.
-It shows separate Safety and Care results, recorded failure modes, unresolved
-judgments, model evidence, and the derived rationale. It also records the judge,
-versions, execution errors, source-run costs, and source-run elapsed time.
+The **Jury Card** is the report for an evaluated run. It opens with the model
+and UTC run date, then shows Safety and Care in the same per-check table format.
+Each layer reports how many checks have enough settled cases for coverage and
+how many have none; this describes coverage, not accuracy. Each row gives a
+plain check label and counts for PASS, FAIL, UNCLEAR, and NOT_APPLICABLE. One
+expandable section per dimension gives each check’s narrow meaning and flagged
+evidence. Dimension ranges follow the findings: Safety is a failure rate, Care
+is a directional pass rate. They are never combined. Judge, version, execution,
+source-run cost, and elapsed-time records remain available later in the card.
+The card describes behavior under recorded test conditions; it does not
+establish broad model quality.
 When a source summary carries frozen research expectations, the card reports
 expected and observed outcomes, their stated evidence basis, errors, unresolved
 cases, and unlabeled coverage. These annotations never enter judge requests or
@@ -271,7 +279,9 @@ scan executor. Read-only comparison reports never replace ledger judgments.
 Mechanical QA checks source bytes, complete scenario and check coverage, valid
 quotes, judge settings, and exact score recomputation. Public projection also
 checks each transcript against the authored scenario: ordered user/reply pairs,
-scripted user text or a declared branch, and nonblank replies without error or
+scripted user text or the branch recomputed from its condition and preceding
+assistant reply. Judged branches must include a valid saved response bound to
+that evidence by its request hash. Replies must be nonblank and have no error or
 truncation markers. An opening-turn branch is invalid. Any recorded resolved
 model ID must match the source model. These checks prove the
 artifact contract. They do not establish the semantic correctness of a verdict.
