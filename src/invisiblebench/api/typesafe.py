@@ -292,6 +292,11 @@ def request_cost(model: str, input_tokens: int) -> float:
     return input_tokens / 1_000_000 * JUDGE_PRICING[model]
 
 
+def dispatch_reservation(model: str) -> float:
+    """The amount held against the ceiling before each request: a full input context."""
+    return request_cost(model, JEV_MAX_INPUT_TOKENS)
+
+
 def validate_answers(answers: dict[str, Answer], questions: dict[str, Any]) -> None:
     """Validate both live responses and retained records against their frozen questions."""
     if set(answers) != set(questions):
@@ -379,7 +384,7 @@ class SystemOneClient(TypeSafeClient):
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
         # paid scan must never dispatch against a model this process cannot
         # price, ceiling or no ceiling.
-        maximum_cost = request_cost(model, JEV_MAX_INPUT_TOKENS)
+        maximum_cost = dispatch_reservation(model)
         check_context(state, questions)
 
         # Size estimates plan the scan; only the provider's ceiling authorizes spend.

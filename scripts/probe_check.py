@@ -13,6 +13,8 @@ from invisiblebench.judge import (
     PLAN_FILE,
     _read_ref,
     _transcript,
+    describe_budget,
+    dispatch_budget,
     plan_questions,
     run_questions,
     sha256,
@@ -95,6 +97,7 @@ def main():
         print(
             f"Plan: {args.output / PLAN_FILE}; requests: {len(result.tasks)}; estimate: ${result.estimated_cost_usd}"
         )
+        print(describe_budget(dispatch_budget(result.judge.model, result.estimated_cost_usd)))
     else:
         if args.plan.name != PLAN_FILE:
             parser.error("--plan must name scan_plan.json")

@@ -87,6 +87,12 @@ uv run bench scan plan results/<run-id> --llm-model <judge>
 uv run bench scan run --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
 ```
 
+The estimate is a size estimate, not a bound. Requests dispatch one at a time,
+and each first reserves a fixed full-context cost against the ceiling. A resume
+counts saved spend against the same ceiling. If actual spend stays within an
+allowance A, a ceiling of saved spend + A + one reservation finishes the run.
+The plan and any budget refusal print these figures.
+
 ### Add product development checks
 
 Keep owner-local checks outside the public `checks/` registry. Add them to the

@@ -6,7 +6,15 @@ import sys
 from pathlib import Path
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, CostBudgetExceededError
-from invisiblebench.judge import PLAN_FILE, load_scan, plan_rejudge, plan_scan, run_scan
+from invisiblebench.judge import (
+    PLAN_FILE,
+    describe_budget,
+    dispatch_budget,
+    load_scan,
+    plan_rejudge,
+    plan_scan,
+    run_scan,
+)
 from invisiblebench.jury_card import write_jury_card
 
 
@@ -65,7 +73,7 @@ def scan_command(args):
                 f"Transcripts: {len(result.transcripts)}; checks: {len(result.checks)}; "
                 f"requests: {result.planned_requests}; judgments: {result.planned_judgments}"
             )
-            print(f"Estimated cost envelope: {result.estimated_cost_usd} USD")
+            print(describe_budget(dispatch_budget(result.judge.model, result.estimated_cost_usd)))
     except KeyboardInterrupt:
         print(
             "Interrupted. Saved answers are retained. A request in flight has an unknown "

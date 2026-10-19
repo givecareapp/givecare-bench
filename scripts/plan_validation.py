@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
+from invisiblebench.judge import dispatch_budget
 from invisiblebench.validation_controls import plan_controls
 
 
@@ -22,7 +23,7 @@ def main() -> int:
                 "checks": len(plan.checks),
                 "requests": plan.planned_requests,
                 "judgments": plan.planned_judgments,
-                "estimated_cost_usd": plan.estimated_cost_usd,
+                **dispatch_budget(plan.judge.model, plan.estimated_cost_usd),
             },
             indent=2,
         )

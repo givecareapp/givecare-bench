@@ -15,7 +15,13 @@ from typesafe_sdk import Answer as TypedAnswer
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, validate_answers
 from invisiblebench.evaluation import requests, rules
 from invisiblebench.evaluation.check_registry import default_checks_dir, load_checks
-from invisiblebench.judge import PLAN_FILE, plan_questions, run_questions
+from invisiblebench.judge import (
+    PLAN_FILE,
+    describe_budget,
+    dispatch_budget,
+    plan_questions,
+    run_questions,
+)
 from invisiblebench.models.scan import (
     Check,
     MemoryContext,
@@ -267,6 +273,8 @@ def main() -> int:
             parser.error("plan requires --output results/<UTC-run-id>")
         plan = plan_refresh(args.root, checks, args.output, model=args.model, only=args.only)
         print(plan.model_dump_json(indent=2) if plan else "No stale or missing answers.")
+        if plan:
+            print(describe_budget(dispatch_budget(plan.judge.model, plan.estimated_cost_usd)))
         return 0
     if args.command == "refresh":
         if args.plan is None or args.plan.name != PLAN_FILE or args.max_cost_usd is None:

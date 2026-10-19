@@ -26,11 +26,13 @@ from typesafe_sdk import SystemOneResponse
 
 from invisiblebench.api.typesafe import (
     DEFAULT_JUDGE_MODEL,
+    JUDGE_PRICING,
     CostBudgetExceededError,
     InvalidJudgeOutput,
     SystemOneClient,
     check_context,
     cost_tracker,
+    dispatch_reservation,
     estimated_cost,
     maximum_reasonable_cost_ceiling,
     validate_answers,
@@ -816,6 +818,53 @@ def _require_settled(attempts, answers: list[Answer]) -> None:
         )
 
 
+def dispatch_budget(
+    model: str,
+    estimate: float | None,
+    *,
+    spent: float = 0.0,
+    pending: int | None = None,
+    plan_estimate: float | None = None,
+) -> dict[str, Any]:
+    """Cost facts for choosing a ceiling. The size estimate is never a bound.
+
+    Requests dispatch one at a time, and each needs saved spend plus one fixed
+    reservation within the ceiling. So if the run's actual total spend stays
+    within an allowance A, a ceiling of A + reservation lets it finish. The
+    accepted ceiling comes from the whole plan's estimate (`plan_estimate`).
+    """
+    plan_estimate = estimate if plan_estimate is None else plan_estimate
+    priced = model in JUDGE_PRICING and estimate is not None and plan_estimate is not None
+    reservation = dispatch_reservation(model) if model in JUDGE_PRICING else None
+    return {
+        "estimated_cost_usd": estimate,
+        "reservation_usd": reservation,
+        "spent_usd": spent,
+        "pending_requests": pending,
+        "ceiling_at_estimate_usd": spent + estimate + reservation if priced else None,
+        "accepted_ceiling_usd": (
+            maximum_reasonable_cost_ceiling(plan_estimate) if priced else None
+        ),
+    }
+
+
+def describe_budget(budget: dict[str, Any]) -> str:
+    if budget["ceiling_at_estimate_usd"] is None:
+        return "Cost unknown: the judge is unpriced, so no ceiling can be accepted."
+    pending = budget["pending_requests"]
+    work = "" if pending is None else f"{pending} pending requests; "
+    return (
+        f"{work}saved spend ${budget['spent_usd']:.6f}; estimated remaining cost "
+        f"${budget['estimated_cost_usd']:.6f} (a size estimate, not a bound). Requests "
+        f"dispatch one at a time, each reserving a fixed ${budget['reservation_usd']:.6f} "
+        "first. If actual remaining spend stays within an allowance A, "
+        "--max-cost-usd = saved spend + A + reservation finishes the run; "
+        f"A = the estimate gives ${budget['ceiling_at_estimate_usd']:.6f}, which is not a "
+        f"worst case. Accepted ceiling for this plan: at most "
+        f"${budget['accepted_ceiling_usd']:.6f}."
+    )
+
+
 @contextmanager
 def execute_requests(
     bundle: Path,
@@ -859,7 +908,7 @@ def execute_requests(
             cost_tracker.reset(max_cost_usd=max_cost_usd - spent)
             if client is None:
                 client = clients.enter_context(SystemOneClient())
-            for mid, sid, role, turn, request in pending:
+            for index, (mid, sid, role, turn, request) in enumerate(pending):
                 key = [mid, sid, role, turn, input_hash(request)]
                 _append(attempts, {"event": "attempt", "key": key})
                 try:
@@ -873,10 +922,24 @@ def execute_requests(
                         turn=turn,
                         plan_sha256=plan_sha256,
                     )
-                except CostBudgetExceededError:
+                except CostBudgetExceededError as exc:
                     # The client reserves before dispatch; this proves no call was sent.
                     _append(attempts, {"event": "refused", "key": key})
-                    raise
+                    left = pending[index:]
+                    remaining = dispatch_budget(
+                        model,
+                        estimated_cost(
+                            model,
+                            sum(len(json.dumps(p[4], ensure_ascii=False).encode()) for p in left),
+                        ),
+                        spent=sum(a.cost_usd for a in answers),
+                        pending=len(left),
+                        plan_estimate=estimate,
+                    )
+                    raise type(exc)(
+                        f"{exc}. Saved answers are kept; resume with a new ceiling. "
+                        f"{describe_budget(remaining)}"
+                    ) from exc
                 except BaseException as exc:
                     response = getattr(exc, "response", None)
                     _append(
