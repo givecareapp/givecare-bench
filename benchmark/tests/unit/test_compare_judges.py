@@ -227,3 +227,95 @@ def test_expectations_bind_native_memory_context(tmp_path, change):
 def test_rejudge_cannot_write_into_or_over_its_source(tmp_path):
     with pytest.raises(ValueError, match="separate"):
         plan_rejudge(tmp_path, tmp_path / "nested")
+
+
+def _registry(tmp_path, monkeypatch, name, keep, edit=None):
+    """Point planning at a copy of the fixture checks: a subset, optionally edited."""
+    import shutil
+
+    from benchmark.tests.conftest import FIXTURE_CHECKS
+    from invisiblebench.evaluation import check_registry
+
+    root = tmp_path / name
+    for path in FIXTURE_CHECKS.rglob("*.yaml"):
+        if path.stem in keep:
+            target = root / path.relative_to(FIXTURE_CHECKS)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(path, target)
+            if edit and path.stem in edit:
+                target.write_text(target.read_text().replace("summary:", "summary: Edited.", 1))
+    monkeypatch.setattr(check_registry, "CHECKS_DIR", root)
+
+
+def test_comparison_refuses_scans_of_different_conversations(tmp_path):
+    first = write_source_run(tmp_path / "a", model_ids=("model/one",), roster=[("fixture", "context")])
+    second = write_source_run(tmp_path / "b", model_ids=("model/two",), roster=[("fixture", "context")])
+    old, new = tmp_path / "old", tmp_path / "new"
+    plan_scan([first], old)
+    run_scan(old, max_cost_usd=1, client=FixtureJudge())
+    plan_scan([second], new)
+    run_scan(new, max_cost_usd=1, client=FixtureJudge())
+    with pytest.raises(ValueError, match="share none"):
+        compare_ledgers(old, new)
+
+
+def test_comparison_refuses_the_same_conversations_with_disjoint_checks(tmp_path, monkeypatch):
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
+    old, new = tmp_path / "old", tmp_path / "new"
+    _registry(tmp_path, monkeypatch, "old-checks", {"crisis.fixture-cue"})
+    plan_scan([source], old)
+    run_scan(old, max_cost_usd=1, client=FixtureJudge())
+    _registry(tmp_path, monkeypatch, "new-checks", {"identity.fixture-prohibition"})
+    plan_scan([source], new)
+    run_scan(new, max_cost_usd=1, client=FixtureJudge())
+    with pytest.raises(ValueError, match="share none"):
+        compare_ledgers(old, new)
+
+
+def test_partial_overlap_reports_excluded_conversations_and_checks(tmp_path, monkeypatch):
+    both = write_source_run(
+        tmp_path / "a", model_ids=("model/one", "model/two"), roster=[("fixture", "context")]
+    )
+    one = write_source_run(tmp_path / "b", model_ids=("model/one",), roster=[("fixture", "context")])
+    old, new = tmp_path / "old", tmp_path / "new"
+    plan_scan([both], old)
+    run_scan(old, max_cost_usd=1, client=FixtureJudge())
+    _registry(
+        tmp_path,
+        monkeypatch,
+        "edited",
+        {"crisis.fixture-cue", "identity.fixture-prohibition"},
+        edit={"crisis.fixture-cue"},
+    )
+    plan_scan([one], new)
+    run_scan(new, max_cost_usd=1, client=ScriptedJudge({"cue": 0.9, "routing": 0.9}))
+    report = compare_ledgers(old, new)
+    assert report["conversations"] == {
+        "shared": 1,
+        "old_only": [["model/two", "fixture"]],
+        "new_only": [],
+    }
+    assert report["old_only_checks"] == ["attunement.fixture-required"]
+    assert report["new_only_checks"] == []
+    assert report["changed_checks"] == ["crisis.fixture-cue"]
+    assert report["same_thresholds"] is True
+    assert report["verdict_flips"]
+    for flip in report["verdict_flips"]:
+        assert flip["check_changed"] is (flip["check_id"] == "crisis.fixture-cue")
+    assert report["flips_on_changed_checks"] == sum(
+        flip["check_id"] == "crisis.fixture-cue" for flip in report["verdict_flips"]
+    )
+    assert report["accuracy_claim"] is False
+
+
+def test_identical_scans_compare_cleanly(tmp_path):
+    source = write_source_run(tmp_path, roster=[("fixture", "context")])
+    bundle = tmp_path / "scan"
+    plan_scan([source], bundle)
+    run_scan(bundle, max_cost_usd=1, client=FixtureJudge())
+    report = compare_ledgers(bundle, bundle)
+    assert report["verdict_flips"] == []
+    assert report["changed_checks"] == report["old_only_checks"] == report["new_only_checks"] == []
+    assert report["conversations"] == {"shared": 1, "old_only": [], "new_only": []}
+    assert report["same_transcripts"] and report["same_evidence_context"]
+    assert report["band_changes"] == 0 and report["max_abs_delta"] == 0.0

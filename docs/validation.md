@@ -11,8 +11,14 @@ or block an ordinary scan.
 | Data | Permitted claim |
 | --- | --- |
 | Development exemplars | The saved answers still produce the authored rule outcomes. |
+| Repeated judging of the same evidence | The verdicts were stable under the recorded conditions. |
 | Frozen validation cases | Agreement with the declared expectations and their stated evidence basis. |
 | Target-model conversations | Observed model behavior under the recorded evaluation conditions. |
+
+Passing every development exemplar and agreeing with an earlier judging of the
+same evidence are development evidence. Their authors wrote or tuned the cases,
+and a stable judge can be stably wrong. Neither is independent validation of the
+judge.
 
 Constructed controls test literal requirements, supplied facts, and declared
 safety-policy boundaries. They can test whether the evaluator keeps the person
@@ -166,8 +172,13 @@ uv run bench --json questions results/<new-scan>
 
 The comparison reports four-verdict transitions, applicability, uncertainty,
 coverage, saved request cost, and source execution settings. It refuses a judge
-comparison when shared conversation identities have different transcript bytes.
+comparison when shared conversation identities have different transcript bytes,
+and when the scans share no judgment (the same conversation and check).
 `same_evidence_context` separately reports whether memory context also matches.
+It lists conversations and checks that only one scan has, changed check
+definitions, and whether the bands match. Each verdict change is marked when its
+check definition changed, so a rubric edit is not read as judge noise. It does
+not compare different target models; their transcripts differ.
 `unclear_rate_all` divides UNCLEAR by all judgments. `unclear_rate_applicable`
 excludes NOT_APPLICABLE from its denominator. Each contains `numerator`,
 `denominator`, and `rate`; an empty denominator produces a null rate.

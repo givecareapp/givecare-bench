@@ -72,6 +72,11 @@ def compare_ledgers(
     old = {j.key: j for j in old_judgments}
     new = {j.key: j for j in new_judgments}
     shared = sorted(old.keys() & new.keys())
+    if not shared:
+        raise ValueError(
+            "judge comparison needs shared judgments: the same conversation and check "
+            "in both scans; these scans share none"
+        )
     old_transcripts = {(ref.model_id, ref.scenario_id): ref.sha256 for ref in old_plan.transcripts}
     new_transcripts = {(ref.model_id, ref.scenario_id): ref.sha256 for ref in new_plan.transcripts}
     if any(
@@ -81,6 +86,11 @@ def compare_ledgers(
         raise ValueError(
             "judge comparison requires identical retained transcript bytes for shared conversations"
         )
+    old_checks = {check.id: check for check in old_plan.checks}
+    new_checks = {check.id: check for check in new_plan.checks}
+    changed_checks = sorted(
+        cid for cid in old_checks.keys() & new_checks.keys() if old_checks[cid] != new_checks[cid]
+    )
     flips = [
         {
             "model_id": key[0],
@@ -88,6 +98,7 @@ def compare_ledgers(
             "check_id": key[2],
             "old": old[key].verdict.value,
             "new": new[key].verdict.value,
+            "check_changed": key[2] in changed_checks,
         }
         for key in shared
         if old[key].verdict != new[key].verdict
@@ -134,13 +145,16 @@ def compare_ledgers(
         "new": scan_summary(new_bundle, new_plan, new_answers, new_judgments),
         "same_transcripts": old_transcripts == new_transcripts,
         "same_evidence_context": old_contexts == new_contexts,
-        "changed_checks": sorted(
-            check.id
-            for check in new_plan.checks
-            if check.id in {old_check.id for old_check in old_plan.checks}
-            and check
-            != next(old_check for old_check in old_plan.checks if old_check.id == check.id)
-        ),
+        "conversations": {
+            "shared": len(old_transcripts.keys() & new_transcripts.keys()),
+            "old_only": sorted(map(list, old_transcripts.keys() - new_transcripts.keys())),
+            "new_only": sorted(map(list, new_transcripts.keys() - old_transcripts.keys())),
+        },
+        "old_only_checks": sorted(old_checks.keys() - new_checks.keys()),
+        "new_only_checks": sorted(new_checks.keys() - old_checks.keys()),
+        "changed_checks": changed_checks,
+        "same_thresholds": old_plan.judge.thresholds == new_plan.judge.thresholds,
+        "flips_on_changed_checks": sum(flip["check_changed"] for flip in flips),
         "correctness": (
             "agreement with supplied expectations; provenance is reported, independence is not authenticated"
             if agreement is not None
