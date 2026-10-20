@@ -52,6 +52,11 @@ def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", dest="json_output", action="store_true")
     sub = parser.add_subparsers(dest="command")
+    demo = sub.add_parser(
+        "demo",
+        help="Judge one synthetic run with a stub judge and write a Jury Card; no keys, no cost",
+    )
+    demo.add_argument("--output", type=Path, help="Directory to write into (default: a temp dir)")
     sub.add_parser(
         "doctor",
         help="Check credentials and run storage; creates runs dir if missing and writes a temporary probe",
@@ -104,6 +109,29 @@ def main(argv=None):
         return agent_commands._run_doctor(json_output=json_output)
     if args.command == "get":
         return agent_commands._run_get(args.run_id, json_output=json_output)
+    if args.command == "demo":
+        import tempfile
+
+        from invisiblebench.jury_card import write_jury_card
+        from invisiblebench.synthetic import write_current_qa_fixture
+
+        root = args.output or Path(tempfile.mkdtemp(prefix="invisiblebench-demo-"))
+        root.mkdir(parents=True, exist_ok=True)
+        paths = write_current_qa_fixture(root)
+        card = write_jury_card(paths["scan"])
+        if json_output:
+            emit_json("demo", {"scan": str(paths["scan"]), "jury_card": str(card)})
+            return 0
+        print(card.read_text())
+        print("Synthetic demo. The stub judge answered every question 'no'; nothing here is a result.")
+        print(f"Evidence: {paths['scan']}")
+        print(
+            "Next: "
+            + shlex.join(
+                ["uv", "run", "bench", "explain", "fixture/model", "<scenario-id>", "--scan", str(paths["scan"])]
+            )
+        )
+        return 0
     if args.command == "runs":
         return _run_runs(limit=args.limit, offset=args.offset, json_output=json_output)
     if args.command == "jury":
