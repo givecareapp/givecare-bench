@@ -5,6 +5,13 @@ Type: how-to.
 Generate transcripts with Inspect, judge them with a planned and budgeted scan,
 then read the evidence. Generation and judging each have their own cost ceiling.
 
+## Demo first
+
+`uv run bench demo` needs no keys. It writes a synthetic scan and a Jury Card
+into a temporary directory so you can read the output shape before running
+anything live. The stub judge answers every question "no"; the card is not a
+result.
+
 ## Install
 
 ```bash

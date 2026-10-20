@@ -42,6 +42,18 @@ The card reports model judgments. It does not establish judge accuracy or
 clinical outcomes. Care remains directional. Read the
 [method](docs/methodology.md) for definitions, rates, and limits.
 
+## Try it in 30 seconds, no keys
+
+```bash
+uv sync --extra dev
+uv run bench demo
+```
+
+This builds a synthetic run over the public scenarios, judges it with a stub
+that answers every question "no", and prints a Jury Card. Nothing in it is a
+result; it shows you the card, the evidence layout, and the `explain` path
+before you spend anything.
+
 ## Quickstart
 
 ```bash
