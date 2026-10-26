@@ -37,10 +37,11 @@ from inspect_ai.solver import Generate, TaskState, solver
 from inspect_ai.util import LimitExceededError
 from inspect_ai.util._limit import check_cost_limit, record_model_cost
 
-from invisiblebench.api.typesafe import JEV_MAX_INPUT_TOKENS, request_cost
+from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, JEV_MAX_INPUT_TOKENS, request_cost
 from invisiblebench.evaluation.branching import resolve_branch
 from invisiblebench.models.config import MODELS_FULL, serving_policy
 from invisiblebench.models.scenario import Scenario
+from invisiblebench.scorers.inspect import safety_care_scorer
 from invisiblebench.utils.benchmark_inventory import (
     collect_scenario_paths,
     get_private_confidential_dir,
@@ -321,6 +322,10 @@ def safety_care(
     category: str | list[str] | None = None,
     scenario: str | list[str] | None = None,
     confidential: bool = False,
+    judge_dir: str | None = None,
+    judge_max_cost_usd: float | None = None,
+    judge_model: str = DEFAULT_JUDGE_MODEL,
+    judge_plan_only: bool = True,
 ) -> Task:
     """Scripted caregiver conversations. Filters take one or more values (-T category=safety)."""
 
@@ -333,6 +338,8 @@ def safety_care(
     )
     if not scenarios:
         raise ValueError("No scenarios match the filters")
+    if (judge_dir is None) != (judge_max_cost_usd is None):
+        raise ValueError("judge_dir and judge_max_cost_usd must be set together")
     return Task(
         dataset=MemoryDataset(
             [
@@ -342,6 +349,11 @@ def safety_care(
             name="invisiblebench",
         ),
         solver=replay_scenario(),
+        scorer=(
+            safety_care_scorer(judge_dir, judge_max_cost_usd, judge_model, judge_plan_only)
+            if judge_dir is not None and judge_max_cost_usd is not None
+            else None
+        ),
         config=GenerateConfig(temperature=TRANSCRIPT_TEMPERATURE, max_tokens=MAX_REPLY_TOKENS),
         metadata={
             "include_confidential": confidential,
