@@ -28,6 +28,7 @@ from invisiblebench.api.typesafe import (
     DEFAULT_JUDGE_MODEL,
     JUDGE_PRICING,
     CostBudgetExceededError,
+    CostTracker,
     InvalidJudgeOutput,
     SystemOneClient,
     check_context,
@@ -38,7 +39,6 @@ from invisiblebench.api.typesafe import (
     validate_answers,
     validate_response,
 )
-from invisiblebench.evaluation import rules
 from invisiblebench.evaluation.branching import evaluate_branch, noul_request
 from invisiblebench.evaluation.check_registry import load_check, load_checks
 from invisiblebench.evaluation.requests import conversation_requests as _requests
@@ -60,6 +60,7 @@ from invisiblebench.models.scan import (
     TranscriptSource,
 )
 from invisiblebench.models.scenario import Scenario, TaskEvidence
+from invisiblebench.scorers.core import derive_conversation
 from invisiblebench.utils.benchmark_inventory import (
     collect_public_scenario_ids,
     collect_public_scenario_paths,
@@ -658,19 +659,19 @@ def derive_all(
     for ref in plan.transcripts:
         pair = (ref.model_id, ref.scenario_id)
         transcript, memory = conversations[pair]
-        for check in plan.checks:
-            judgments.append(
-                rules.derive(
-                    check,
-                    transcript,
-                    saved.get(pair, {}),
-                    plan.judge.thresholds,
-                    model_id=ref.model_id,
-                    scenario_id=ref.scenario_id,
-                    plan_sha256=plan_sha256,
-                    memory_declared=memory.persistent_memory,
-                )
+        judgments.extend(
+            judgment
+            for judgment, _ in derive_conversation(
+                plan.checks,
+                transcript,
+                saved.get(pair, {}),
+                plan.judge.thresholds,
+                model_id=ref.model_id,
+                scenario_id=ref.scenario_id,
+                plan_sha256=plan_sha256,
+                memory_declared=memory.persistent_memory,
             )
+        )
     return judgments
 
 
@@ -740,7 +741,9 @@ def _ask(
     role: Role,
     turn: int,
     plan_sha256: str,
+    tracker: CostTracker | None = None,
 ) -> Answer:
+    tracker = tracker if tracker is not None else cost_tracker
     identity = {
         "model_id": model_id,
         "scenario_id": scenario_id,
@@ -749,7 +752,7 @@ def _ask(
         "plan_sha256": plan_sha256,
         "input_sha256": input_hash(request),
     }
-    before = cost_tracker.total
+    before = tracker.total
     result = None
     error = detail = None
     try:
@@ -769,7 +772,7 @@ def _ask(
         judge=JudgeObservation(model=result.model if valid_response else None),
         answers=result.answers if valid_response and error is None else None,
         input_tokens=max(result.usage.input_tokens or 0, 0) if valid_response else 0,
-        cost_usd=cost_tracker.total - before,
+        cost_usd=tracker.total - before,
         error=error,
         error_detail=detail,
     )
@@ -875,8 +878,11 @@ def execute_requests(
     estimate: float | None,
     max_cost_usd: float,
     client: Any | None = None,
+    tracker: CostTracker | None = None,
 ):
     """The sole offline request loop. Hold the lock through the caller's projection."""
+    explicit_tracker = tracker is not None
+    tracker = tracker if tracker is not None else cost_tracker
     if not math.isfinite(max_cost_usd) or max_cost_usd <= 0:
         raise ValueError("max_cost_usd must be finite and positive")
     for turns in requests.values():
@@ -905,9 +911,11 @@ def execute_requests(
             spent = sum(a.cost_usd for a in answers)
             if spent >= max_cost_usd:
                 raise ValueError("saved judgment costs have reached max_cost_usd")
-            cost_tracker.reset(max_cost_usd=max_cost_usd - spent)
+            tracker.reset(max_cost_usd=max_cost_usd - spent)
             if client is None:
-                client = clients.enter_context(SystemOneClient())
+                client = clients.enter_context(
+                    SystemOneClient(tracker=tracker) if explicit_tracker else SystemOneClient()
+                )
             for index, (mid, sid, role, turn, request) in enumerate(pending):
                 key = [mid, sid, role, turn, input_hash(request)]
                 _append(attempts, {"event": "attempt", "key": key})
@@ -921,6 +929,7 @@ def execute_requests(
                         role=role,
                         turn=turn,
                         plan_sha256=plan_sha256,
+                        tracker=tracker,
                     )
                 except CostBudgetExceededError as exc:
                     # The client reserves before dispatch; this proves no call was sent.

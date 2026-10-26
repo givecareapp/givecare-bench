@@ -365,6 +365,7 @@ class SystemOneClient(TypeSafeClient):
         *,
         http_client: httpx2.Client | None = None,
         track_cost: bool = True,
+        tracker: CostTracker | None = None,
     ):
         http_client = http_client or httpx2.Client(timeout=timeout)
         http_client.event_hooks["request"].append(_user_agent)
@@ -379,6 +380,7 @@ class SystemOneClient(TypeSafeClient):
             http_client.close()
             raise
         self.track_cost = track_cost
+        self.cost_tracker = tracker if tracker is not None else cost_tracker
 
     def ask(self, *, model: str, state: Any, questions: dict[str, Any]) -> SystemOneResponse:
         # Unconditional: the judge has one price owner (JUDGE_PRICING) and a
@@ -388,18 +390,18 @@ class SystemOneClient(TypeSafeClient):
         check_context(state, questions)
 
         # Size estimates plan the scan; only the provider's ceiling authorizes spend.
-        reservation = cost_tracker.reserve(maximum_cost) if self.track_cost else None
+        reservation = self.cost_tracker.reserve(maximum_cost) if self.track_cost else None
         try:
             response = self.system_one(model=model, state=state, questions=questions)
         except BaseException:
             # No documented contract says a failed request is unbilled.
             if reservation is not None:
-                cost_tracker.settle(reservation, model, None, 0)
+                self.cost_tracker.settle(reservation, model, None, 0)
             raise
 
         tokens = response.usage.input_tokens
         if reservation is not None:
-            cost_tracker.settle(
+            self.cost_tracker.settle(
                 reservation, model, tokens if tokens is not None and tokens >= 0 else None, 0
             )
         try:
