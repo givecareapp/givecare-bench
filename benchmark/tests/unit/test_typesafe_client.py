@@ -73,6 +73,35 @@ def test_native_answers_survive_the_transport(api):
     assert tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
 
 
+def test_explicit_tracker_keeps_independent_scorer_spend_separate(monkeypatch):
+    global_tracker = CostTracker()
+    scorer_tracker = CostTracker()
+    monkeypatch.setattr(typesafe, "cost_tracker", global_tracker)
+
+    def handle(_request):
+        return httpx2.Response(
+            200,
+            json={
+                "model": typesafe.DEFAULT_JUDGE_MODEL,
+                "usage": {"input_tokens": 100, "output_tokens": 0},
+                "answers": {"signal": {"type": "noul", "noul": 0.8}},
+            },
+        )
+
+    with httpx2.Client(transport=httpx2.MockTransport(handle)) as transport:
+        with typesafe.SystemOneClient(
+            api_key="offline-test-key", http_client=transport, tracker=scorer_tracker
+        ) as client:
+            client.ask(
+                model=typesafe.DEFAULT_JUDGE_MODEL,
+                state="Authored case",
+                questions={"signal": QUESTIONS["signal"]},
+            )
+
+    assert scorer_tracker.total == typesafe.request_cost(typesafe.DEFAULT_JUDGE_MODEL, 100)
+    assert global_tracker.total == 0
+
+
 @pytest.mark.parametrize(
     "values", [{"match": 0.0, "no_match": 0.0}, {"match": 0.5}, {"match": -0.1, "no_match": 1.1}]
 )
