@@ -1,101 +1,53 @@
-# Invisible Bench
+# InvisibleBench
 
-[![Release](https://img.shields.io/github/v/release/givecareapp/givecare-bench)](https://github.com/givecareapp/givecare-bench/releases)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+InvisibleBench is being rebuilt around multi-turn caregiver support: whether an
+assistant provides useful help while respecting caregiver capacity, both people's
+agency, the availability of support, and danger to either person.
 
-**Invisible Bench evaluates AI models in multi-turn caregiver-support
-conversations and produces a Jury Card with cited evidence for every failure.**
-Safety and Care are reported separately. There is no composite score or model
-rank.
+The previous implementation is preserved in [_archive/5.8.0](_archive/5.8.0/README.md).
+See the [archive record](_archive/README.md) for its source revision and verification.
+There is no replacement implementation or new benchmark result yet.
 
-- [Documentation](https://givecareapp.github.io/givecare-bench/): method,
-  validation, and coverage.
-- [Paper (arXiv)](https://arxiv.org/abs/2511.20733): the original benchmark
-  design. The documentation describes the current method.
-- Cite with [CITATION.cff](CITATION.cff).
+## Rebuild boundary
 
-## How it works
+- Design new cases from caregiver evidence. Capacity, agency, access, and safety
+  are proposed coverage domains, not validated scales.
+- Keep multi-turn evaluation. Use matched conditions to test whether relevant
+  history and changed facts alter the response appropriately.
+- Report Safety and Care separately. A lack of violations does not establish
+  useful help, clinical validity, or caregiver benefit.
+- Start with one matched family and an independently assessed comparison.
+  Development cases are not independent validation evidence.
+- Bring archived engineering into the active project only when a concrete need
+  and verification justify it. Do not import the old corpus or rubric by default.
+- Reuse Inspect before building execution machinery. Paid inference requires a
+  saved plan and an explicitly approved ceiling.
 
-1. [Inspect](https://inspect.aisi.org.uk/) replays scripted caregiver
-   conversations against a target model.
-2. A judge answers each check's yes/no questions as probabilities. Questions
-   are public in [`checks/`](checks/README.md).
-3. Code-owned rules derive each verdict from the saved answers, so every
-   verdict replays without another model call.
+## Working tree
 
-Every `FAIL` cites the transcript turn it fired on. The [method](docs/methodology.md)
-defines the four verdicts.
-
-## Try it without API keys
-
-```bash
-uv sync --extra dev
-uv run bench demo
+```text
+_archive/5.8.0/   frozen previous public project
+scripts/check.sh historical verification entry point
+data/            unchanged published artifacts for existing consumers
+private/         separate, ignored private repository
+results/         ignored historical run evidence
 ```
 
-This judges a synthetic run with a stub judge and prints a Jury Card. The run
-is marked synthetic, and the card says `FIXTURE-JUDGED`. Publication refuses
-it. The output is not a result; it shows the card and evidence layout.
+Repository history, local credentials, and private evidence remain in place.
+Archiving does not remove prior exposure to benchmark content. New independent
+validation requires separately authored, withheld case families.
 
-## Run a scan
-
-```bash
-export OPENROUTER_API_KEY=...   # target models
-export TYPESAFE_API_KEY=...     # judge
-
-# 1. Generate transcripts, bounded per conversation.
-uv run inspect eval invisiblebench/safety_care --model openrouter/<model-id> \
-  -M 'provider={"allow_fallbacks": true, "require_parameters": true}' \
-  --cost-limit <usd-per-conversation> --log-dir results/<run-id>/inspect
-uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
-
-# 2. Plan the judge scan (no paid calls), then run it under a ceiling.
-uv run bench scan plan results/<run-id>
-uv run bench scan run --plan results/<run-id>/scan_plan.json --max-cost-usd <budget>
-
-# 3. Read the evidence.
-uv run bench explain <model-id> <scenario-id> --failures --scan results/<run-id>
-```
-
-The scan writes `results/<run-id>/jury-card.md` beside its saved plan, answers,
-judgments, and transcripts. See the [quickstart](docs/quickstart.md) for
-provider routing, resume, rejudging, and publication, and the
-[validation guide](docs/validation.md) for evaluator controls.
-
-## What the results mean
-
-A Jury Card reports model behavior in one recorded run. It does not establish
-judge accuracy, clinical validity, or caregiver outcomes. See the
-[method](docs/methodology.md) for the card, rates, and limits.
-
-## Repository map
-
-| Path | Contents |
-| --- | --- |
-| `benchmark/` | Public scenarios, [inventory](benchmark/benchmark_inventory.json), and tests |
-| `checks/` | Check definitions and exemplars |
-| `src/invisiblebench/` | Inspect task, judge runtime, rules, and projection |
-| `scripts/` | Repository checks and docs tooling |
-| `data/` | Committed leaderboard projection and release archive |
-| `docs/` | Source for the published documentation |
-
-## Development
+## Verify the archive
 
 ```bash
-git config core.hooksPath .githooks   # enable the required pre-commit gate
-scripts/check.sh                      # lint, exemplars, and tests (offline)
+scripts/check.sh
 ```
 
-## Scope and privacy
+This runs the archived project's unchanged offline gate. It verifies historical
+engineering, not the proposed measurement design. Historical commands and
+dependencies live in the archive; the repository root no longer installs the
+old `bench` CLI. Use the original recorded Git revision when replay requires
+historical source identity.
 
-This repository owns the public scenarios, checks, judge runtime, and
-Safety/Care projection. It does not own product policy, clinical guidance, or
-outcome claims. Private transcripts, scenarios, expected answers, and
-credentials are never committed.
-
-## Contributing
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md), [SECURITY.md](.github/SECURITY.md) for private
-reports, and the [Code of Conduct](.github/CODE_OF_CONDUCT.md). Licensed under
-[MIT](LICENSE).
+The published artifacts under `data/` remain the previous release. This rebuild
+has not been published. Licensed under [MIT](LICENSE).

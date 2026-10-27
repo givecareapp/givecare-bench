@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Offline health check: lint, scenario/exemplar gates, tests. Also run by .githooks/pre-commit.
+# Retain the historical gate while the replacement benchmark is designed.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
-uv run ruff check .
-uv run python scripts/lint_turn_indices.py --strict
-uv run python scripts/check_examples.py verify
-uv run pytest benchmark/tests -q
+cd "$(dirname "${BASH_SOURCE[0]}")/../_archive/5.8.0"
+exec uv run --locked --extra dev bash ./scripts/check.sh
