@@ -15,19 +15,9 @@ This directory contains the public benchmark contract.
   sessions, persona context, and provenance are retained.
 - `tests/` proves the runtime and artifact contract.
 
-The runtime package lives in `src/invisiblebench/`. The active scan path groups
-each turn's questions by identical evidence and splits groups to meet request-size
-limits. It saves each native response in `answers.jsonl` before the next request.
-Disjoint answers merge by turn before the rules derive `judgments.jsonl`.
-`NOT_APPLICABLE` is an explicit verdict.
-
-`PASS`, `FAIL`, `UNCLEAR`, and `NOT_APPLICABLE` are the machine verdicts. A
-`FAIL` needs transcript evidence. `UNCLEAR` stays visible. Optional critique
-stays outside the ledger. It cannot change a verdict or block a scan or projection.
-
-Safety and Care remain separate. The projection has no composite score or
-model rank. Use the JSON inventory and scoring contract for current counts,
-versions, and fields.
+The runtime lives in `src/invisiblebench/`. See the [method](../docs/methodology.md).
+Use the JSON inventory and scoring contract for current counts, versions, and
+fields.
 
 Private holdout scenarios are loaded from an external directory. Do not add
 private scenario text, expected answers, or judge prompts to public artifacts.

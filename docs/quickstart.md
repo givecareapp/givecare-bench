@@ -9,8 +9,9 @@ then read the evidence. Generation and judging each have their own cost ceiling.
 
 `uv run bench demo` needs no keys. It writes a synthetic scan and a Jury Card
 into a temporary directory so you can read the output shape before running
-anything live. The stub judge answers every question "no"; the card is not a
-result.
+anything live. The stub judge answers every question "no". The run is marked
+synthetic, and its card says `FIXTURE-JUDGED`. The card is not a result.
+Publication refuses a synthetic source.
 
 ## Install
 
@@ -65,6 +66,15 @@ uv run bench export results/<run-id>/inspect/*.eval --output results/<run-id>
 `bench export` writes `results/<run-id>/`. The run ID is a UTC timestamp in
 `YYYY-MM-DD_HH-MM-SSZ` form, and each run gets its own directory. Model identity
 lives in the manifest and the Jury Card, not in the directory name.
+
+`bench export` refuses these inputs:
+
+- Logs with repeated Inspect epochs. Export one epoch per scenario.
+- Logs whose `system_prompt_hash` metadata is missing or differs from the
+  current prompt.
+- Logs with a missing or mixed `inspect_ai` version.
+
+It records the `inspect_ai` version from the logs.
 
 ### Provider routing
 
@@ -185,9 +195,8 @@ because the frozen plan refers to them.
   verdicts they affect. `bench --json questions <run-id>` gives exact
   conversation, turn, and observation references.
 
-To replay a historical scan, use a source checkout at the engine version
-recorded in its plan, and keep its bundle unchanged. New judging needs a new
-plan; old plans are not migrated.
+To replay a historical scan, see [Method](methodology.md#reproducibility-and-limits).
+New judging needs a new plan. Old plans are not migrated.
 
 ## Read the evidence
 
@@ -220,8 +229,14 @@ The preview prints the scan's plan and judgments SHA-256 values and, for each
 output, its SHA-256 before and after. A reviewer uses these values to tie the
 Git change to the scan. Check `expected_effects`, then drop `--dry-run` to write.
 
-The script rejects a scan that is incomplete, was planned under a different
-benchmark, check, or judge version, or has a dirty or missing `git_sha`.
+The script rejects a scan that:
+
+- is incomplete;
+- was planned under a different benchmark, check, or judge version;
+- has a dirty or missing `git_sha`;
+- comes from a synthetic source run, such as the demo;
+- has no `attempts.jsonl`, or has attempts that do not settle against
+  `answers.jsonl`.
 
 - Separate model runs can share a publication when their code and common
   generation settings match.
@@ -248,4 +263,5 @@ uv run python scripts/rescore_diff.py --frozen <scan-dir>
 ```
 
 Replay re-derives verdicts from the frozen plan and the saved answers. It does
-not call the judge again. A scan from a retired format needs a new run.
+not call the judge again. Replay does not read `attempts.jsonl`. Only
+publication requires it. A scan from a retired format needs a new run.

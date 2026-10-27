@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Invisible Bench evaluates AI models in multi-turn caregiver-support
-conversations and produces a Jury Card with cited evidence for each check.**
+conversations and produces a Jury Card with cited evidence for every failure.**
 Safety and Care are reported separately. There is no composite score or model
 rank.
 
@@ -24,9 +24,8 @@ rank.
 3. Code-owned rules derive each verdict from the saved answers, so every
    verdict replays without another model call.
 
-Verdicts are `PASS`, `FAIL`, `UNCLEAR`, or `NOT_APPLICABLE`. Every `FAIL` cites
-the transcript turn it fired on. `UNCLEAR` stays visible and is never counted
-as a pass.
+Every `FAIL` cites the transcript turn it fired on. The [method](docs/methodology.md)
+defines the four verdicts.
 
 ## Try it without API keys
 
@@ -35,8 +34,9 @@ uv sync --extra dev
 uv run bench demo
 ```
 
-This judges a synthetic run with a stub judge and prints a Jury Card. The
-output is not a result; it shows the card and evidence layout.
+This judges a synthetic run with a stub judge and prints a Jury Card. The run
+is marked synthetic, and the card says `FIXTURE-JUDGED`. Publication refuses
+it. The output is not a result; it shows the card and evidence layout.
 
 ## Run a scan
 
@@ -65,10 +65,9 @@ provider routing, resume, rejudging, and publication, and the
 
 ## What the results mean
 
-A Jury Card reports model behavior in one recorded run: verdict counts per
-check, cited failures, judge settings, and cost. It does not establish judge
-accuracy, clinical validity, or caregiver outcomes. See the
-[method](docs/methodology.md) for definitions, rates, and limits.
+A Jury Card reports model behavior in one recorded run. It does not establish
+judge accuracy, clinical validity, or caregiver outcomes. See the
+[method](docs/methodology.md) for the card, rates, and limits.
 
 ## Repository map
 

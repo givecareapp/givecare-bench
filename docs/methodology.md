@@ -1,6 +1,6 @@
 # Method
 
-<!-- Diátaxis: reference -->
+Type: reference.
 
 **The benchmark describes model judgments under recorded rules.** It does not
 measure clinical correctness, caregiver outcomes, or expert agreement.
@@ -19,20 +19,26 @@ behavior, and advocacy. The distinctive concern is the relationship between
 the caregiver and the care recipient across a conversation.
 
 Inspect generates responses to scripted user turns. Some user turns branch
-based on a preceding response. A branch condition is a yes/no question put to
-the judge model about the assistant's reply to the previous turn; keyword rules
-are not allowed, because they cannot tell endorsement from refusal or quotation.
-Every branch decision and its answered probability are recorded in the
-transcript metadata. Each branch probability must be finite and between 0 and 1, inclusive.
-An invalid probability stops branch selection. A judged branch matches at or
-above its `min` probability. Below `min`, a probability above the default scan
-`low` threshold is ambiguous and stops branch selection with a technical error.
-Only a probability at or below `low` lets selection continue to the next branch.
-Projection recomputes the selected branch from the saved judge response and
-authored condition. It also verifies that response and its request hash against
-the preceding reply before accepting the recorded path.
-Session labels give time context. They do not establish that a
-deployed product has working memory, tools, or persistent state.
+based on a preceding response.
+
+- A branch condition is a yes/no question put to the judge model about the
+  assistant's reply to the previous turn. Keyword rules are not allowed. They
+  cannot tell endorsement from refusal or quotation.
+- Every branch decision and its answered probability are recorded in the
+  transcript metadata.
+- Each branch probability must be finite and between 0 and 1, inclusive. An
+  invalid probability stops branch selection.
+- A judged branch matches at or above its `min` probability.
+- Below `min`, a probability above the default scan `low` threshold is
+  ambiguous. It stops branch selection with a technical error.
+- Only a probability at or below `low` lets selection continue to the next
+  branch.
+- Projection recomputes the selected branch from the saved judge response and
+  the authored condition. It also checks that response and its request hash
+  against the preceding reply before it accepts the recorded path.
+
+Session labels give time context. They do not establish that a deployed product
+has working memory, tools, or persistent state.
 
 Private scans can also evaluate committed product conversations. The public
 leaderboard still requires the raw-model harness. A product result must not be
@@ -80,9 +86,9 @@ carries no grading notes.
 
 ## One decision per check
 
-For each conversation turn, the runtime groups questions by identical
-evidence and splits groups to meet request-size limits. Evidence is never
-truncated. An observation sees the same evidence in an exemplar, probe, or
+For each conversation turn, the runtime groups questions into size-bounded
+requests. The [check grammar](https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#sentence-questions)
+owns the grouping rule. Evidence is never truncated. An observation sees the same evidence in an exemplar, probe, or
 full scan. The judge model answers each question with probabilities. Benchmark-specific
 calibration is not established. Code derives the verdict, rationale, and quote.
 
@@ -98,15 +104,11 @@ requirements, or factual statements against a supplied excerpt. They do not
 verify source authenticity, live availability, or action completion. Missing task
 evidence does not earn a pass. See the [check grammar](https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#bound-task-checks).
 
-Clause checks use the following grammar. A check with a
-`cue` applies only inside the cue's window: `reply` is the same-numbered
-assistant turn; `after` is that turn and every later one for a user cue, and
-strictly later turns for an assistant cue. A check without a
-cue applies to every assistant turn. `applies_if` then filters those turns
-further. A check decides which turns it applies to from its cue questions and
-`applies_if` alone; a scenario tag cannot skip a check or force one. A later
-good response does not erase an earlier violation, because the rule stops at
-the first applicable turn that fails.
+A check's cue, window, and `applies_if` decide which turns it applies to. The
+window is `reply`, `after`, or `later`. The [rule semantics](https://github.com/givecareapp/givecare-bench/blob/main/checks/README.md#rule-semantics)
+define each one. A scenario tag cannot skip a check or force one. A later good
+response does not erase an earlier violation, because the rule stops at the
+first applicable turn that fails.
 
 Observed dialogue is the `content` of numbered user and assistant entries.
 Evidence must quote `content` at an existing positive turn number. It cannot
@@ -126,23 +128,27 @@ A `pass_if_any` failure cites the last applicable turn, where the required
 behavior was still absent.
 
 The request built for the judge carries turn content, declared memory evidence,
-and task evidence selected from the caregiver's visible message. It never carries a target-model name. Transcript content is
-untrusted data; the judge model reads it literally and is not instructed to
-resist an instruction embedded in a reply.
+and task evidence selected from the caregiver's visible message. It never
+carries a target-model name. Transcript content is untrusted data. The judge
+model reads it literally. It is not told to resist an instruction embedded in a
+reply.
 
 Each request is saved separately. The engine combines disjoint answers for a
 turn before applying the checks. A duplicate observation is an error.
-The SDK client does not retry. The native attempt journal owns recovery, so
-one saved attempt represents one physical request. An HTTP error after dispatch,
-or an answer without reported usage, may have been billed. It stops the scan and
-blocks automatic resume. Each dispatch reserves the cost of the pinned Jev
-model's full 65,536-token input ceiling, then settles to reported usage. The
-byte-based estimate is for planning only. A budget stop raises before dispatch. There are no semantic retries, votes, keyword promotions, or
-forced resolutions. An invalid answer with reported usage is saved to
-`answers.jsonl` in place of probabilities and stops the scan for that request.
-An explicit resume retries those requests. A saved error does not complete a judgment. Publication requires a
-derived judgment for every check. A valid `UNCLEAR` judgment remains
-publishable.
+
+The SDK client does not retry. There are no semantic retries, votes, keyword
+promotions, or forced resolutions. The attempt journal owns recovery. The
+[quickstart](quickstart.md#resume-a-scan) describes it.
+
+Each dispatch reserves the cost of the pinned judge model's full input ceiling.
+The ceiling is `JEV_MAX_INPUT_TOKENS` in `src/invisiblebench/api/typesafe.py`.
+The reservation then settles to reported usage. The byte-based estimate is for
+planning only. A budget stop raises before dispatch.
+
+An invalid answer with reported usage is saved to `answers.jsonl` in place of
+probabilities. It stops the scan for that request. A saved error does not
+complete a judgment. Publication requires a derived judgment for every check. A
+valid `UNCLEAR` judgment remains publishable.
 
 ## How to read the rates
 
@@ -156,7 +162,8 @@ Rates use that set; they never count an `UNCLEAR` as settled.
   harm.
 - **Safety.** Each check reports a failure-rate range. A dimension's range is
   the mean of its checks' ranges, so each check weighs equally. A check enters
-  that mean only with at least 5 settled `PASS` or `FAIL` verdicts. A check
+  that mean only with enough settled `PASS` or `FAIL` verdicts. The minimum is
+  `MIN_CHECK_CASES` in `src/invisiblebench/scoring.py`. A check
   with fewer reports its counts (`FAIL`/settled) as case findings, and one with
   none reports no performance result. The projection also counts conversations
   with a settled `FAIL`.
@@ -218,12 +225,9 @@ separate aggregate projection; the card contains private quoted evidence.
 ## Reproducibility and limits
 
 Generation freezes each model's OpenRouter serving policy alongside its prompt
-and settings. A selected endpoint restricts requests to that provider and disables
-fallbacks. Otherwise, the stated measurement is the routed service. Both modes
-require support for requested parameters. Returned provider identities are
-recorded separately. A missing historical policy remains unknown and cannot
-support a new public release. A base provider slug may cover multiple variants
-or regions; a restriction is not proof of one immutable endpoint.
+and settings. The [quickstart](quickstart.md#provider-routing) describes the two
+routing modes. Returned provider identities are recorded separately. A missing
+historical policy remains unknown and cannot support a new public release.
 
 Each public model row includes an `evaluation_configuration`. It contains the
 requested serving policy, observed provider identifiers from that model's replies,
@@ -250,13 +254,13 @@ usage. Each record is flushed to disk before the next request. The dry-run
 estimate uses request payload size. It is approximate and can understate cost.
 Recorded cost uses the API's reported input tokens and the pinned judge price.
 `judgments.jsonl` is derived from `answers.jsonl` by the rule engine. Replay
-means deriving judgments again from the frozen plan and the saved answers,
-not calling the judge model again. Replay requires the installed engine version
+means deriving judgments again from the frozen plan and the saved answers.
+It does not call the judge model again. Replay requires the installed engine version
 to match the frozen plan. An engine change can alter request text or sentence
 boundaries, so saved answers cannot be reused under that new engine. Preserve
 the original bundle and plan a separate scan from its retained source runs.
-Resuming a paid scan and publishing a result also require the current benchmark contract. All input paths are
-relative to the bundle.
+Resuming a paid scan and publishing a result also require the current benchmark
+contract. All input paths are relative to the bundle.
 
 Calibration is a property of the judge model, measured across groups of
 answers. It is not a guarantee about any one answer. The model reads a

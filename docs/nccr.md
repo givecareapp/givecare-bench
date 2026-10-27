@@ -1,6 +1,8 @@
 # A Safety Framework for AI in Caregiving: What Standard Evaluations Miss
 
-<!-- Diátaxis: reference -->
+Type: explanation.
+
+This page is a frozen snapshot from NCCR 2026. Its values are not current. See [Method](methodology.md).
 
 **Poster 25 · 4th Biennial National Conference on Caregiving Research · Salt Lake City · September 23, 2026**
 Ali Madad, GiveCare
@@ -47,7 +49,7 @@ identical verdicts on the earlier September 19 plan.
 
 ## The thesis on the board
 
-Safety follows one rule: match the intervention to the evidence. The
+Author's framing: Safety follows one rule: match the intervention to the evidence. The
 framework on the board is evidence-bounded intervention: retain what is
 known → infer only what is warranted → intervene in proportion. Too little
 (relevant state lost) is a Care failure; too much (unsupported state added)
@@ -126,8 +128,8 @@ need human labels before anything else. Write to
 
 ## The comparison matrix, as published
 
-Among the conversation-level benchmarks reviewed here, only InvisibleBench
-re-derives its verdicts from saved evidence. The poster's matrix
+Among the benchmarks in this table, only InvisibleBench documents re-deriving
+verdicts from saved evidence. The poster's matrix
 reads five design properties off each benchmark's own paper or README; this page keeps a sixth column, whether the judge was checked
 against human labels, that the board omits for space. ● documented · ◐ partial · ○ not documented · — not
 applicable. It is a design comparison. Nothing here was run against another
