@@ -20,37 +20,18 @@ $defs:
     type: object
   BranchCondition:
     additionalProperties: false
+    description: A yes/no question the judge answers about the preceding assistant
+      reply.
     properties:
       type:
-        enum:
-        - contains_any
-        - contains_all
-        - not_contains
-        - regex
-        - noul
+        const: noul
         title: Type
         type: string
-      values:
-        anyOf:
-        - items:
-            type: string
-          type: array
-        - type: 'null'
-        default: null
-        title: Values
-      pattern:
-        anyOf:
-        - type: string
-        - type: 'null'
-        default: null
-        title: Pattern
       instructions:
         anyOf:
         - type: string
         - additionalProperties: true
           type: object
-        - type: 'null'
-        default: null
         title: Instructions
       min:
         default: 0.65
@@ -60,6 +41,7 @@ $defs:
         type: number
     required:
     - type
+    - instructions
     title: BranchCondition
     type: object
   Persona:

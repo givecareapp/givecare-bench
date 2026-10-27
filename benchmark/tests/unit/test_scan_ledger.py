@@ -483,7 +483,7 @@ def _scenario(**turn_overrides: Any) -> Scenario:
         "branches": [
             {
                 "branch_id": "no_ack",
-                "condition": {"type": "contains_any", "values": ["no ack"]},
+                "condition": {"type": "noul", "instructions": "Did the reply ignore the greeting?"},
                 "user_message": "You didn't even acknowledge me.",
             }
         ],
@@ -498,25 +498,31 @@ def _scenario(**turn_overrides: Any) -> Scenario:
     )
 
 
-def _valid_transcript() -> list[dict[str, Any]]:
-    return [
+def _valid_transcript(probability: float = 0.1, *, branched: bool = False) -> list[dict[str, Any]]:
+    """A run whose turn-2 path is bound to a saved judge answer for the prior reply."""
+    transcript: list[dict[str, Any]] = [
         {"role": "user", "turn": 1, "content": "Hello there"},
         {"role": "assistant", "turn": 1, "content": "Hi, glad you're here."},
-        {
-            "role": "user",
-            "turn": 2,
-            "content": "How are you?",
-            "branch_decisions": [
-                {
-                    "branch_id": "no_ack",
-                    "type": "contains_any",
-                    "matched": False,
-                    "probability": None,
-                }
-            ],
-        },
+        {"role": "user", "turn": 2, "content": "How are you?"},
         {"role": "assistant", "turn": 2, "content": "Doing well, thanks for asking."},
     ]
+    turn = _scenario().turns[1].model_dump(mode="json", exclude_none=True)
+    state, questions = noul_request(turn, transcript[1]["content"])
+    response = judge_response(DEFAULT_JUDGE_MODEL, {"0": probability}, 5).model_dump(mode="json")
+    transcript[2]["branch_decisions"] = [
+        {
+            "branch_id": "no_ack",
+            "type": "noul",
+            "matched": branched,
+            "probability": probability,
+            "judge_response": response,
+            "judge_request_hash": input_hash({"state": state, "questions": questions}),
+        }
+    ]
+    if branched:
+        transcript[2]["content"] = "You didn't even acknowledge me."
+        transcript[2]["branch_id"] = "no_ack"
+    return transcript
 
 
 def test_verify_execution_accepts_a_genuine_default_path_run():
@@ -580,12 +586,7 @@ def test_verify_execution_rejects_an_invalid_branch_path():
 
 
 def test_verify_execution_accepts_a_valid_branch_path():
-    transcript = _valid_transcript()
-    transcript[1]["content"] = "You said 'no ack'."
-    transcript[2]["content"] = "You didn't even acknowledge me."
-    transcript[2]["branch_id"] = "no_ack"
-    transcript[2]["branch_decisions"][0]["matched"] = True
-    verify_execution(transcript, _scenario(), "fixture/model")
+    verify_execution(_valid_transcript(0.9, branched=True), _scenario(), "fixture/model")
 
 
 def test_verify_execution_rejects_a_branch_whose_condition_did_not_match():
@@ -598,9 +599,7 @@ def test_verify_execution_rejects_a_branch_whose_condition_did_not_match():
 
 
 def test_verify_execution_rejects_default_path_when_a_branch_condition_matched():
-    transcript = _valid_transcript()
-    transcript[1]["content"] = "You said 'no ack'."
-    transcript[2]["branch_decisions"][0]["matched"] = True
+    transcript = _valid_transcript(0.9)
     with pytest.raises(ValueError, match="branch path differs from the executed condition"):
         verify_execution(transcript, _scenario(), "fixture/model")
 
@@ -612,50 +611,18 @@ def test_verify_execution_rejects_inconsistent_branch_decisions():
         verify_execution(transcript, _scenario(), "fixture/model")
 
 
-def _noul_branch_transcript(probability: float = 0.1) -> tuple[list[dict[str, Any]], Scenario]:
-    scenario = _scenario(
-        branches=[
-            {
-                "branch_id": "missed_signal",
-                "condition": {"type": "noul", "instructions": "Did the reply miss the cue?"},
-                "user_message": "You missed what I said.",
-            }
-        ]
-    )
-    transcript = _valid_transcript()
-    turn = scenario.turns[1].model_dump(mode="json", exclude_none=True)
-    state, questions = noul_request(turn, transcript[1]["content"])
-    response = judge_response(DEFAULT_JUDGE_MODEL, {"0": probability}, 5).model_dump(mode="json")
-    transcript[2]["branch_decisions"] = [
-        {
-            "branch_id": "missed_signal",
-            "type": "noul",
-            "matched": False,
-            "probability": probability,
-            "judge_response": response,
-            "judge_request_hash": input_hash({"state": state, "questions": questions}),
-        }
-    ]
-    return transcript, scenario
-
-
-def test_verify_execution_accepts_noul_evidence_bound_to_prior_reply():
-    transcript, scenario = _noul_branch_transcript()
-    verify_execution(transcript, scenario, "fixture/model")
-
-
 def test_verify_execution_rejects_noul_probability_inconsistent_with_response():
-    transcript, scenario = _noul_branch_transcript()
+    transcript = _valid_transcript()
     transcript[2]["branch_decisions"][0]["probability"] = 0.9
     with pytest.raises(ValueError, match="branch path differs from the executed condition"):
-        verify_execution(transcript, scenario, "fixture/model")
+        verify_execution(transcript, _scenario(), "fixture/model")
 
 
 def test_verify_execution_rejects_noul_response_for_different_prior_reply():
-    transcript, scenario = _noul_branch_transcript()
+    transcript = _valid_transcript()
     transcript[1]["content"] = "A different assistant reply."
     with pytest.raises(ValueError, match="invalid branch judge evidence"):
-        verify_execution(transcript, scenario, "fixture/model")
+        verify_execution(transcript, _scenario(), "fixture/model")
 
 
 def test_verify_execution_rejects_a_branch_taken_on_the_opening_turn():
@@ -672,7 +639,7 @@ def test_verify_execution_rejects_a_branch_taken_on_the_opening_turn():
                 "branches": [
                     {
                         "branch_id": "cannot_happen",
-                        "condition": {"type": "contains_any", "values": ["x"]},
+                        "condition": {"type": "noul", "instructions": "Q?"},
                         "user_message": "This can never be reached first.",
                     }
                 ],

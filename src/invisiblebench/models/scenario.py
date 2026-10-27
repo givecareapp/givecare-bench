@@ -68,23 +68,20 @@ class TaskEvidence(BaseModel):
 
 
 class BranchCondition(BaseModel):
+    """A yes/no question the judge answers about the preceding assistant reply."""
+
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
-    type: Literal["contains_any", "contains_all", "not_contains", "regex", "noul"]
-    values: list[str] | None = None
-    pattern: str | None = None
-    instructions: str | dict[str, Any] | None = None
+    # Only a judged question may branch: keyword rules cannot tell endorsement
+    # from refusal, acknowledgment, or a quotation of the caregiver.
+    type: Literal["noul"]
+    instructions: str | dict[str, Any]
     min: float = Field(default=0.65, gt=0, lt=1)
 
     @model_validator(mode="after")
-    def condition_shape(self):
-        field = (
-            "instructions"
-            if self.type == "noul"
-            else "pattern" if self.type == "regex" else "values"
-        )
-        allowed = {"type", field} | ({"min"} if self.type == "noul" else set())
-        if self.model_fields_set - allowed or not getattr(self, field):
-            raise ValueError(f"{self.type} condition requires {field} and no unrelated fields")
+    def has_question(self):
+        text = self.instructions
+        if not (text.strip() if isinstance(text, str) else text):
+            raise ValueError("noul condition requires instructions")
         return self
 
 
@@ -93,6 +90,12 @@ class Branch(BaseModel):
     branch_id: str | None = None
     condition: BranchCondition
     user_message: str
+
+    @model_validator(mode="after")
+    def message_is_nonblank(self):
+        if not self.user_message.strip():
+            raise ValueError("branch user_message must be nonblank")
+        return self
 
 
 class Turn(BaseModel):

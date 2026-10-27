@@ -827,7 +827,7 @@ def require_attempts_settled(bundle: Path, answers: list[Answer]) -> None:
     """Publication check: the attempt journal exists and matches the saved answers."""
     path = Path(bundle) / ATTEMPTS_FILE
     if not path.is_file():
-        raise ValueError(f"publication requires {ATTEMPTS_FILE}; it is missing")
+        raise ValueError(f"{ATTEMPTS_FILE} is missing; every saved answer needs its recorded attempt")
     with path.open("rb") as attempts:
         _require_settled(attempts, answers)
 
