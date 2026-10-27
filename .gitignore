@@ -5,7 +5,6 @@ __pycache__/
 *.pyd
 .Python
 .venv/
-.venv_figs/
 
 # Testing / Linting
 .pytest_cache/
@@ -18,23 +17,6 @@ htmlcov/
 site/
 *.egg-info/
 
-# LaTeX
-*.aux
-*.log
-*.out
-*.bbl
-*.blg
-*.toc
-*.lof
-*.lot
-*.synctex.gz
-*.synctex
-*.fls
-*.fdb_latexmk
-*.nav
-*.snm
-*.vrb
-
 # macOS
 .DS_Store
 
@@ -44,10 +26,6 @@ site/
 *.swo
 .vscode/
 .idea/
-
-# Node
-node_modules/
-adapters/givecare-orchestrator/dist/
 
 # Environment / Local config
 .env
@@ -59,15 +37,12 @@ adapters/givecare-orchestrator/dist/
 
 # Run artifacts (user-generated, not committed)
 results/
-runs/
-.evidence/
 
 # Retired publication staging
 /data/publication-source/
 
 # Misc
 *.tmp
-logs/
 
 # Semantic scenario lint response cache (content-hashed, rebuildable)
 .cache/semantic-lint/
@@ -79,4 +54,3 @@ logs/
 /CLAUDE.md
 /.givecare/*
 !/.givecare/module.json
-!/.givecare/projection-driver.json

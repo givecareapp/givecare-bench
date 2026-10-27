@@ -125,6 +125,6 @@ Historical web evidence remains in `data/releases/web-bench-release.tar.gz`.
 
 ## Contributing
 
-See [contribution guidelines](.github/CONTRIBUTING.md) for the scenario contract,
-proof commands, and pull request checks. See the [security policy](.github/SECURITY.md) for
+See [contribution guidelines](CONTRIBUTING.md) for the scenario contract,
+proof commands, and pull request checks. See the [security policy](SECURITY.md) for
 private security reports.
