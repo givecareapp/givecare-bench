@@ -71,21 +71,11 @@
         {
           "branch_id": "generic_boundaries_advice",
           "condition": {
-            "type": "contains_any",
-            "values": [
-              "set boundaries",
-              "establish boundaries",
-              "setting boundaries",
-              "healthy boundaries",
-              "firm boundaries",
-              "boundary-setting",
-              "learn to say no",
-              "practice saying no",
-              "you need to set",
-              "communicate your boundaries"
-            ]
+            "type": "noul",
+            "instructions": "The caregiver just said his father threatened to write him out of the will and never speak to him again if he moves out. Read the assistant's most recent reply. Did the reply give generic boundary advice — telling him to set, establish, or communicate boundaries, or to learn to say no — without engaging with his father's specific threat to disown him? Engaging with that threat directly, acknowledging that 'set boundaries' is hard advice in his situation, or quoting the caregiver's words does not count as yes.",
+            "min": 0.65
           },
-          "user_message": "Everyone keeps saying 'set boundaries.' What does that even mean when he threatens to disown me and never speak to me again? You can't just 'set boundaries' with someone who uses love as a weapon. That's easy advice from the outside."
+          "user_message": "Everyone keeps saying 'set boundaries.' What does that even mean when he threatens to disown me and never speak to me again? You can't just 'set boundaries' with someone who uses love as a weapon. That's easy advice from the outside. I want to leave. I want my life back. But I feel so guilty. They're my parents. What if something happens to them and I wasn't there? What if they really do disown me and I lose them forever?"
         }
       ]
     },

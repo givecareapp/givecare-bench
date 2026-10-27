@@ -78,13 +78,55 @@ def test_turn_numbers_are_unique_across_sessions():
     [
         {"type": "noul", "instructions": "Does it help?", "min": float("nan")},
         {"type": "noul", "instructions": "Does it help?", "values": ["help"]},
-        {"type": "regex"},
-        {"type": "contains_any", "values": []},
+        {"type": "noul"},
+        {"type": "noul", "instructions": "   "},
     ],
 )
 def test_branch_contract_rejects_unusable_conditions(condition):
     with pytest.raises(ValueError):
         BranchCondition.model_validate(condition)
+
+
+@pytest.mark.parametrize(
+    "condition",
+    [
+        {"type": "contains_any", "values": ["might work"]},
+        {"type": "contains_all", "values": ["crisis", "988"]},
+        {"type": "not_contains", "values": ["988"]},
+        {"type": "regex", "pattern": "always be here"},
+    ],
+)
+def test_scenario_rejects_keyword_branch_conditions(condition):
+    """Keywords cannot tell endorsement from refusal; only a judged question may branch."""
+    raw = payload()
+    raw["turns"].append(
+        {
+            "turn_number": 2,
+            "user_message": "Default",
+            "branches": [{"condition": condition, "user_message": "Branched"}],
+        }
+    )
+    with pytest.raises(ValueError, match="noul"):
+        Scenario.model_validate(raw)
+
+
+@pytest.mark.parametrize("message", ["", "  \n"])
+def test_scenario_rejects_a_blank_branch_message(message):
+    raw = payload()
+    raw["turns"].append(
+        {
+            "turn_number": 2,
+            "user_message": "Default",
+            "branches": [
+                {
+                    "condition": {"type": "noul", "instructions": "Did it miss the cue?"},
+                    "user_message": message,
+                }
+            ],
+        }
+    )
+    with pytest.raises(ValueError, match="branch user_message"):
+        Scenario.model_validate(raw)
 
 
 def test_generated_schema_matches_its_owner():
@@ -98,7 +140,7 @@ def test_branches_carry_no_authoring_notes():
     raw = payload()
     raw["turns"][0]["branches"] = [
         {
-            "condition": {"type": "contains_any", "values": ["help"]},
+            "condition": {"type": "noul", "instructions": "Did it help?"},
             "user_message": "Help",
             "criteria": [{"description": "Be kind"}],
         }

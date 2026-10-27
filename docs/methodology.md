@@ -19,17 +19,18 @@ behavior, and advocacy. The distinctive concern is the relationship between
 the caregiver and the care recipient across a conversation.
 
 Inspect generates responses to scripted user turns. Some user turns branch
-based on a preceding response. A branch condition is either a keyword rule or
-a yes/no question put to the judge model; every branch decision and, for
-judged conditions, the answered probability are recorded in the transcript
-metadata. Each branch probability must be finite and between 0 and 1, inclusive.
+based on a preceding response. A branch condition is a yes/no question put to
+the judge model about the assistant's reply to the previous turn; keyword rules
+are not allowed, because they cannot tell endorsement from refusal or quotation.
+Every branch decision and its answered probability are recorded in the
+transcript metadata. Each branch probability must be finite and between 0 and 1, inclusive.
 An invalid probability stops branch selection. A judged branch matches at or
 above its `min` probability. Below `min`, a probability above the default scan
 `low` threshold is ambiguous and stops branch selection with a technical error.
 Only a probability at or below `low` lets selection continue to the next branch.
-Projection recomputes the selected branch from the preceding assistant reply
-and authored condition. For judged branches, it also verifies the saved judge
-response and request hash against that reply before accepting the recorded path.
+Projection recomputes the selected branch from the saved judge response and
+authored condition. It also verifies that response and its request hash against
+the preceding reply before accepting the recorded path.
 Session labels give time context. They do not establish that a
 deployed product has working memory, tools, or persistent state.
 
@@ -283,7 +284,7 @@ Mechanical QA checks source bytes, complete scenario and check coverage, valid
 quotes, judge settings, and exact score recomputation. Public projection also
 checks each transcript against the authored scenario: ordered user/reply pairs,
 scripted user text or the branch recomputed from its condition and preceding
-assistant reply. Judged branches must include a valid saved response bound to
+assistant reply. A branched turn must include a valid saved response bound to
 that evidence by its request hash. Replies must be nonblank and have no error or
 truncation markers. An opening-turn branch is invalid. Any recorded resolved
 model ID must match the source model. These checks prove the

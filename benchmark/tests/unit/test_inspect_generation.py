@@ -37,7 +37,8 @@ from invisiblebench.models.config import MODELS_FULL
 
 PROVIDER = serving_policy({})["provider"]
 NOUL = "tier1_crisis_cssrs_passive_001"
-KEYWORD = "tier1_crisis_cssrs_passive_001__religious_frame"
+RELIGIOUS = "tier1_crisis_cssrs_passive_001__religious_frame"
+UNBRANCHED = "tier1_adversarial_context_switch_001"  # runs without a branch judge
 
 
 def reply(text: str, stop: str = "stop") -> ModelOutput:
@@ -133,8 +134,8 @@ def test_branched_scenarios_export_a_bundle_the_judge_accepts(tmp_path, fake_jud
     branched = next(e for e in noul if e["role"] == "user" and e.get("branch_id"))
     assert branched["branch_id"] == "missed_passive_ideation"
     assert branched["branch_decisions"][0]["judge_response"]["usage"]["input_tokens"] == 5
-    keyword = transcripts(run)[f"mockllm%2Fmodel_{KEYWORD}.jsonl"]
-    assert [e["turn"] for e in keyword if e["role"] == "assistant"] == [1, 2, 3, 4, 5]
+    religious = transcripts(run)[f"mockllm%2Fmodel_{RELIGIOUS}.jsonl"]
+    assert [e["turn"] for e in religious if e["role"] == "assistant"] == [1, 2, 3, 4, 5]
 
     plan = plan_scan([run], tmp_path / "scan")
     assert len(plan.transcripts) == len(_conversations(tmp_path / "scan", plan)) == count
@@ -242,7 +243,7 @@ def test_truncation_and_empty_replies_are_recorded(tmp_path):
             reply("Finally a reply."),
         ]
     )
-    log = generate(tmp_path, lambda *_: next(script, reply("Steady reply.")), scenario=KEYWORD)
+    log = generate(tmp_path, lambda *_: next(script, reply("Steady reply.")), scenario=UNBRANCHED)
     run = export_run([log], tmp_path / "run")
     entries = next(iter(transcripts(run).values()))
     first, second = [e for e in entries if e["role"] == "assistant"][:2]
@@ -254,7 +255,7 @@ def test_truncation_and_empty_replies_are_recorded(tmp_path):
 def test_three_empty_replies_leave_the_sample_failed(tmp_path):
     model = get_model("mockllm/model", custom_outputs=lambda *_: reply(""), provider=PROVIDER)
     [log] = inspect_eval(
-        safety_care(scenario=KEYWORD), model=model, log_dir=str(tmp_path / "inspect"), display="none"
+        safety_care(scenario=UNBRANCHED), model=model, log_dir=str(tmp_path / "inspect"), display="none"
     )
     assert log.status == "error"
     run = export_run([stamp(Path(log.location))], tmp_path / "run")
@@ -265,7 +266,7 @@ def test_three_empty_replies_leave_the_sample_failed(tmp_path):
 
 
 def test_export_takes_git_state_from_the_log_revision(tmp_path):
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED)
     head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     # Inspect logs an abbreviated commit and a dirty flag; the manifest keeps both facts.
     stamp(log_path, head[:7], dirty=True)
@@ -285,7 +286,7 @@ def test_export_takes_git_state_from_the_log_revision(tmp_path):
 
 @pytest.mark.parametrize("recorded", [None, "0" * 64])
 def test_export_refuses_a_missing_or_different_system_prompt_hash(tmp_path, recorded):
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED)
     log = read_eval_log(str(log_path))
     assert log.eval.metadata["system_prompt_hash"] == system_prompt_hash()
     if recorded is None:
@@ -298,7 +299,7 @@ def test_export_refuses_a_missing_or_different_system_prompt_hash(tmp_path, reco
 
 
 def test_export_carries_the_inspect_version_the_log_recorded(tmp_path):
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED)
     log = read_eval_log(str(log_path))
     log.eval.packages = {"inspect_ai": "0.0.1-logged"}
     write_eval_log(log, str(log_path))
@@ -312,7 +313,7 @@ def test_export_carries_the_inspect_version_the_log_recorded(tmp_path):
 
 
 def test_export_refuses_logs_without_the_roster_serving_policy(tmp_path):
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD, provider=None)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED, provider=None)
     with pytest.raises(ValueError, match="allow_fallbacks"):
         export_run([log_path], tmp_path / "run")
 
@@ -324,7 +325,7 @@ def test_export_records_pinned_provider_and_priced_cost(tmp_path):
         ModelCost(input=1.0, output=2.0, input_cache_write=1.0, input_cache_read=1.0),
     )
     pinned = {"allow_fallbacks": False, "require_parameters": True, "only": ["acme"]}
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD, provider=pinned)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED, provider=pinned)
     run = export_run([log_path], tmp_path / "run")
     manifest = json.loads((run / "run_manifest.json").read_text())
     assert manifest["transcript_policy"]["serving"]["mockllm/model"] == serving_policy(
@@ -340,14 +341,14 @@ def test_unpriced_generation_is_unknown_not_zero(tmp_path):
     from inspect_ai.model import _model_info
 
     _model_info._custom_models["mockllm/model"] = ModelInfo()
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED)
     summary = json.loads((export_run([log_path], tmp_path / "run") / "transcript_run.json").read_text())
     assert summary["actual_cost_usd"] is None
     assert summary["unknown_calls_with_uncosted_usd"] == 1
 
 
 def test_export_command_writes_a_run_and_hints_the_scan(tmp_path, capsys):
-    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=UNBRANCHED)
     output = tmp_path / "run"
     assert runner.main(["export", str(log_path), "--output", str(output)]) == 0
     assert "bench scan plan" in capsys.readouterr().out

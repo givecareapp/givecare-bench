@@ -178,10 +178,6 @@ def _load(path: str) -> dict[str, Any]:
     )
 
 
-def _has_noul_branch(turn: dict[str, Any]) -> bool:
-    return any(b.get("condition", {}).get("type") == "noul" for b in turn.get("branches", []))
-
-
 def _judge_client():
     from invisiblebench.api.typesafe import SystemOneClient
 
@@ -267,7 +263,7 @@ def replay_scenario():
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         data = _load(state.metadata["path"])
         if state.cost_limit is None and any(
-            _has_noul_branch(turn) for turn, _ in iter_scenario_turns(data)
+            turn.get("branches") for turn, _ in iter_scenario_turns(data)
         ):
             raise ValueError("Noul branching requires an explicit Inspect per-sample --cost-limit")
         state.messages = [ChatMessageSystem(content=SYSTEM_PROMPT)]
@@ -276,7 +272,7 @@ def replay_scenario():
             for turn, session in iter_scenario_turns(data):
                 number = turn["turn_number"]
                 state.messages[0].content = session_system_prompt(SYSTEM_PROMPT, session)
-                if previous is not None and client is None and _has_noul_branch(turn):
+                if previous is not None and client is None and turn.get("branches"):
                     client = _BudgetedBranchClient(_judge_client(), state)
                 user, branch, decisions = await asyncio.to_thread(
                     resolve_branch, turn, previous, client=client
