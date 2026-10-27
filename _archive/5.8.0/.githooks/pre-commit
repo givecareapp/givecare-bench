@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Local checks — replaces .github/workflows/ci.yml (org standard: no GitHub Actions).
+# Activate once per clone:  git config core.hooksPath .githooks
+set -e
+# Fixture repositories must not inherit this commit's temporary Git index.
+while IFS= read -r git_context_var; do
+  unset "$git_context_var"
+done < <(git rev-parse --local-env-vars)
+exec scripts/check.sh

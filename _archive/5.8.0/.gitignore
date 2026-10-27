@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+
+# Testing / Linting
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Build / Docs
+site/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Editor
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Environment / Local config
+.env
+.env.*
+!.env.example
+.claude/
+.codex/
+.mcp.json
+
+# Run artifacts (user-generated, not committed)
+results/
+
+# Retired publication staging
+/data/publication-source/
+
+# Misc
+*.tmp
+
+# Semantic scenario lint response cache (content-hashed, rebuildable)
+.cache/semantic-lint/
+
+# Private overlay: nested private repo (givecareapp/givecare-bench-private).
+# Holds everything private to gc-bench; public code must not depend on it.
+/private/
+/AGENTS.md
+/CLAUDE.md
+/.givecare/*
+!/.givecare/module.json
