@@ -25,9 +25,9 @@ from invisiblebench.judge import (
     ANSWERS_FILE,
     ATTEMPTS_FILE,
     LEDGER_FILE,
-    _require_settled,
     execute_requests,
     json_bytes,
+    require_attempts_settled,
     sha256,
 )
 from invisiblebench.metrics.dimensions import DIMENSION_METRICS
@@ -81,7 +81,8 @@ def _saved_answers(path: Path) -> list[Answer]:
     return [Answer.model_validate_json(line) for line in path.read_bytes().splitlines() if line]
 
 
-def _saved_cost(root: Path) -> float:
+def _saved_cost(root: Path, *, own: Path | None = None) -> float:
+    """Saved spend across samples. Only `own` may lack a journal: dispatch settles it."""
     total = 0.0
     for bundle in root.iterdir():
         if bundle.is_symlink():
@@ -89,10 +90,8 @@ def _saved_cost(root: Path) -> float:
         if not bundle.is_dir():
             continue
         answers = _saved_answers(bundle / ANSWERS_FILE)
-        attempts = bundle / ATTEMPTS_FILE
-        if attempts.exists():
-            with attempts.open("r+b") as stream:
-                _require_settled(stream, answers)
+        if bundle != own and (answers or (bundle / ATTEMPTS_FILE).exists()):
+            require_attempts_settled(bundle, answers)
         total += sum(answer.cost_usd for answer in answers)
     return total
 
@@ -105,6 +104,18 @@ def _score_sync(
     max_cost_usd: float,
     plan_only: bool = True,
 ) -> Score:
+    transcript = state_transcript(state)
+    truncated = [turn["turn"] for turn in transcript if turn.get("truncated")]
+    if truncated:
+        return Score.unscored(
+            reason="truncated_reply",
+            metadata={
+                "truncated_turns": truncated,
+                "model_id": str(state.model),
+                "scenario_id": str(state.sample_id),
+                "epoch": state.epoch,
+            },
+        )
     root = ledger_dir.resolve()
     root.mkdir(parents=True, exist_ok=True)
     with (root / ".lock").open("a+b") as lock:
@@ -113,7 +124,6 @@ def _score_sync(
         if bundle.is_symlink():
             raise ValueError("Inspect sample journal must not be a symlink")
         bundle.mkdir(exist_ok=True)
-        transcript = state_transcript(state)
         checks = list(load_checks().values())
         thresholds = Thresholds()
         model_id, scenario_id = str(state.model), str(state.sample_id)
@@ -147,7 +157,7 @@ def _score_sync(
                 },
             )
         digest = sha256(content)
-        spent_elsewhere = _saved_cost(root) - sum(
+        spent_elsewhere = _saved_cost(root, own=bundle) - sum(
             answer.cost_usd for answer in _saved_answers(bundle / ANSWERS_FILE)
         )
         available = max_cost_usd - spent_elsewhere

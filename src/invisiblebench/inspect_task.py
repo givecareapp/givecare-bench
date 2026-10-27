@@ -294,7 +294,9 @@ def replay_scenario():
                 for attempt in range(1, EMPTY_RESPONSE_RETRIES + 1):
                     state = await generate(state)
                     if state.output.completion.strip():
-                        extra = {"empty_response_attempts": attempt} if attempt > 1 else {}
+                        extra: dict[str, Any] = (
+                            {"empty_response_attempts": attempt} if attempt > 1 else {}
+                        )
                         break
                     state.messages.pop()
                 else:
@@ -304,6 +306,8 @@ def replay_scenario():
                 reply = state.messages[-1]
                 # Later turns see reply text only, never reasoning blocks.
                 reply.content = reply.text
+                if state.output.stop_reason == "max_tokens":
+                    extra["truncated"] = True
                 reply.metadata = {**meta, **extra}
                 previous = reply.text
         finally:
