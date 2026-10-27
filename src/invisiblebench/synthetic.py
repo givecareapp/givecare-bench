@@ -6,6 +6,7 @@ Used by `bench demo` and by the test suite. No network, no keys, no cost.
 from __future__ import annotations
 
 import json
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -141,7 +142,9 @@ def write_source_run(
         get_project_root(),
         list(model_ids),
         [ident for ident, _ in roster],
-        transcript_policy=transcript_policy([{"id": model} for model in model_ids]),
+        transcript_policy=transcript_policy(
+            [{"id": model} for model in model_ids], version("inspect_ai")
+        ),
         run_id="synthetic-fixture",
         harness="llm",
         mode="raw",

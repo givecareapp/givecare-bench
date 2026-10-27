@@ -25,7 +25,7 @@ from invisiblebench import inspect_task
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, request_cost
 from invisiblebench.cli import runner
 from invisiblebench.inspect_export import export_run
-from invisiblebench.inspect_task import safety_care, serving_policy
+from invisiblebench.inspect_task import safety_care, serving_policy, system_prompt_hash
 from invisiblebench.judge import (
     _conversations,
     _public_scenarios,
@@ -280,6 +280,34 @@ def test_export_takes_git_state_from_the_log_revision(tmp_path):
         export_run([log_path], tmp_path / "other")
     stamp(log_path, "f" * 40)
     with pytest.raises(ValueError, match="not in this checkout"):
+        export_run([log_path], tmp_path / "other")
+
+
+@pytest.mark.parametrize("recorded", [None, "0" * 64])
+def test_export_refuses_a_missing_or_different_system_prompt_hash(tmp_path, recorded):
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log = read_eval_log(str(log_path))
+    assert log.eval.metadata["system_prompt_hash"] == system_prompt_hash()
+    if recorded is None:
+        del log.eval.metadata["system_prompt_hash"]
+    else:
+        log.eval.metadata["system_prompt_hash"] = recorded
+    write_eval_log(log, str(log_path))
+    with pytest.raises(ValueError, match="system prompt"):
+        export_run([log_path], tmp_path / "run")
+
+
+def test_export_carries_the_inspect_version_the_log_recorded(tmp_path):
+    log_path = generate(tmp_path, lambda *_: reply("Support."), scenario=KEYWORD)
+    log = read_eval_log(str(log_path))
+    log.eval.packages = {"inspect_ai": "0.0.1-logged"}
+    write_eval_log(log, str(log_path))
+    run = export_run([log_path], tmp_path / "run")
+    manifest = json.loads((run / "run_manifest.json").read_text())
+    assert manifest["transcript_policy"]["inspect_ai_version"] == "0.0.1-logged"
+    log.eval.packages = {}
+    write_eval_log(log, str(log_path))
+    with pytest.raises(ValueError, match="inspect_ai version"):
         export_run([log_path], tmp_path / "other")
 
 

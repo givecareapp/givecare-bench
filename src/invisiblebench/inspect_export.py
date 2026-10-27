@@ -17,6 +17,7 @@ from invisiblebench.api.typesafe import request_cost
 from invisiblebench.inspect_task import (
     MAX_REPLY_TOKENS,
     TRANSCRIPT_TEMPERATURE,
+    system_prompt_hash,
     transcript_policy,
 )
 from invisiblebench.models.config import MODELS_FULL, serving_policy
@@ -176,6 +177,7 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
     models, rows, errors, transcripts = [], [], [], {}
     cost_by_model: dict[str, float] = {}
     unknown_cost_samples = 0
+    inspect_versions: set[str | None] = set()
     for log in logs:
         meta = log.eval.metadata or {}
         if log.eval.task.rsplit("/", 1)[-1] != "safety_care":
@@ -187,6 +189,9 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
             raise ValueError("logs were generated at different git revisions")
         if meta.get("scenario_hash") != manifest["scenario_hash"]:
             raise ValueError(f"{log.location}: scenarios changed since generation")
+        if meta.get("system_prompt_hash") != system_prompt_hash():
+            raise ValueError(f"{log.location}: system prompt differs from the logged run")
+        inspect_versions.add(log.eval.packages.get("inspect_ai"))
         if sorted(map(str, log.eval.dataset.sample_ids or [])) != expected_ids:
             raise ValueError("logs cover different scenarios")
         config = log.plan.config
@@ -242,6 +247,8 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
                         ),
                     }
                 )
+    if len(inspect_versions) != 1 or None in inspect_versions:
+        raise ValueError("logs must record one inspect_ai version")
     expected = len(expected_ids) * len(logs)
     missing = expected - len(rows) - len(errors)
     complete = (
@@ -255,7 +262,7 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
         run_date=min(log.eval.created for log in logs),
         model_ids=[m["id"] for m in models],
         scenario_ids=expected_ids,
-        transcript_policy=transcript_policy(models),
+        transcript_policy=transcript_policy(models, inspect_versions.pop()),
         model_pricing={
             m.id: {"input_per_million": m.cost_per_m_input, "output_per_million": m.cost_per_m_output}
             for m in MODELS_FULL

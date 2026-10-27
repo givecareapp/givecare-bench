@@ -15,7 +15,7 @@ def source(root, models=("fixture/a",), *, endpoint=None, temperature=0.7, part=
     manifest_path = path / "run_manifest.json"
     manifest = json.loads(manifest_path.read_bytes())
     manifest["transcript_policy"] = transcript_policy(
-        [{"id": model, "endpoint": endpoint} for model in models]
+        [{"id": model, "endpoint": endpoint} for model in models], "0.3.0"
     )
     manifest["transcript_policy"]["temperature"] = temperature
     # A shared manifest may contain private fields; these must not be projected.

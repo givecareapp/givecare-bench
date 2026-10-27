@@ -12,7 +12,6 @@ import asyncio
 import hashlib
 import json
 from collections.abc import Iterator
-from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -79,13 +78,17 @@ def register_roster_prices() -> None:
 register_roster_prices()
 
 
-def transcript_policy(models: list[dict[str, Any]]) -> dict[str, Any]:
+def system_prompt_hash() -> str:
+    return hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest()
+
+
+def transcript_policy(models: list[dict[str, Any]], inspect_ai_version: str) -> dict[str, Any]:
     """The manifest's generation policy. Inspect owns transport, retries, and timeouts."""
     return {
         "backend": "inspect_ai/openrouter",
-        "inspect_ai_version": version("inspect_ai"),
+        "inspect_ai_version": inspect_ai_version,
         "serving": {model["id"]: serving_policy(model) for model in models},
-        "system_prompt_hash": hashlib.sha256(SYSTEM_PROMPT.strip().encode()).hexdigest(),
+        "system_prompt_hash": system_prompt_hash(),
         "temperature": TRANSCRIPT_TEMPERATURE,
         "max_reply_tokens": MAX_REPLY_TOKENS,
         "empty_response_retries": EMPTY_RESPONSE_RETRIES,
@@ -352,5 +355,6 @@ def safety_care(
         metadata={
             "include_confidential": confidential,
             "scenario_hash": scenario_hash(get_project_root(), confidential),
+            "system_prompt_hash": system_prompt_hash(),
         },
     )

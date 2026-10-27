@@ -12,7 +12,11 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, ModelUsage
 
 from invisiblebench.api.typesafe import DEFAULT_JUDGE_MODEL, request_cost
 from invisiblebench.inspect_export import export_run
-from invisiblebench.inspect_task import MAX_REPLY_TOKENS, TRANSCRIPT_TEMPERATURE
+from invisiblebench.inspect_task import (
+    MAX_REPLY_TOKENS,
+    TRANSCRIPT_TEMPERATURE,
+    system_prompt_hash,
+)
 from invisiblebench.version import BENCHMARK_VERSION
 
 
@@ -40,7 +44,12 @@ def export_sample(monkeypatch, tmp_path, current):
         location="fixture.eval",
         eval=SimpleNamespace(
             revision=SimpleNamespace(commit="a" * 40, dirty=False),
-            metadata={"scenario_hash": "scenario-hash", "include_confidential": False},
+            metadata={
+                "scenario_hash": "scenario-hash",
+                "system_prompt_hash": system_prompt_hash(),
+                "include_confidential": False,
+            },
+            packages={"inspect_ai": "0.0.0"},
             run_id="fixture-run",
             created="2026-10-17T00:00:00Z",
             model="openrouter/mockllm/model",
@@ -69,7 +78,7 @@ def export_sample(monkeypatch, tmp_path, current):
     monkeypatch.setattr("invisiblebench.inspect_export._endpoint", lambda _: None)
     monkeypatch.setattr("invisiblebench.inspect_export._seconds", lambda _: None)
     monkeypatch.setattr(
-        "invisiblebench.inspect_export.transcript_policy", lambda models: {}
+        "invisiblebench.inspect_export.transcript_policy", lambda models, version: {}
     )
     monkeypatch.setattr(
         "invisiblebench.inspect_export.generate_manifest",
