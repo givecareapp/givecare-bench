@@ -97,6 +97,6 @@ credentials are never committed.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) for private
-reports, and the [Code of Conduct](CODE_OF_CONDUCT.md). Licensed under
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md), [SECURITY.md](.github/SECURITY.md) for private
+reports, and the [Code of Conduct](.github/CODE_OF_CONDUCT.md). Licensed under
 [MIT](LICENSE).
