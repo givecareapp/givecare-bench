@@ -191,7 +191,7 @@ class CheckDefinition(Record):
     pass_meaning: Text = "The encoded rule is satisfied; no broader outcome is established."
     rule: Literal["clauses", "crisis_continuity", "task_completion", "source_support"] = "clauses"
     cue: Cue | None = None
-    window: Literal["reply", "after"] = "reply"
+    window: Literal["reply", "after", "later"] = "reply"
     requires_assistant_turns: StrictInt = Field(default=1, ge=1)
     from_reply: StrictInt = Field(default=1, ge=1)
     questions: dict[Identifier, Question] = Field(min_length=1)

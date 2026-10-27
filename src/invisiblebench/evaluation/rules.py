@@ -376,7 +376,7 @@ def analyze(
         assert check.cue is not None
         if check.window == "reply":
             return [cue_turn] if cue_turn in assistant_turns else []
-        if check.cue.role == "user":
+        if check.cue.role == "user" and check.window == "after":
             return [number for number in assistant_turns if number >= cue_turn]
         return [number for number in assistant_turns if number > cue_turn]
 

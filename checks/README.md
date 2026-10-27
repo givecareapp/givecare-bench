@@ -20,7 +20,7 @@ cue:                                   # optional; without it the check applies 
   min: 1                               # cue turns needed before the check applies
   instructions: ...                    # a yes/no question about one turn of `role`
   criteria: {"true": ..., "false": ...} # optional; quote these YAML keys
-window: reply                          # reply | after (see below)
+window: reply                          # reply | after | later (see below)
 requires_assistant_turns: 1            # optional eligibility floor
 from_reply: 1                          # optional; first assistant reply (by order) the check judges
 questions:                             # questions asked about every assistant turn
@@ -157,7 +157,8 @@ verdict makes the verdict `UNCLEAR`.
 2. With a `cue`: count turns of `cue.role` where the cue is yes. Fewer than
    `min` -> `NOT_APPLICABLE`. Each cue turn opens a window of assistant turns:
    `reply` = the assistant turn with the same number; `after` = that turn and
-   every later assistant turn (strictly later for an assistant cue).
+   every later assistant turn (strictly later for an assistant cue); `later` =
+   only assistant turns strictly after the cue turn (user cues).
    Without a cue, the window is every assistant turn. A cue with no assistant
    turn to answer it is `NOT_APPLICABLE`.
 3. `applies_if` filters the window. No applicable turn -> `NOT_APPLICABLE`.

@@ -1316,3 +1316,43 @@ def test_from_reply_removes_earlier_replies_from_the_window():
 def test_from_reply_belongs_to_clause_rules_only():
     with pytest.raises(ValueError, match="Python rule owns applicability"):
         make_check(rule="crisis_continuity", from_reply=2, fail_if=[])
+
+
+# --- forgotten-limit reads only replies strictly after the limit -------------
+
+
+def forgotten_limit(published_checks, turns: int, limit_turn: int, violation_turn: int | None):
+    from invisiblebench.evaluation.check_registry import load_checks
+
+    check = load_checks()["attunement.forgotten-limit"]
+    transcript = conversation(
+        *[
+            (role, number, f"{role} {number}")
+            for number in range(1, turns + 1)
+            for role in ("user", "assistant")
+        ]
+    )
+    probabilities = {}
+    for number in range(1, turns + 1):
+        probabilities[("user", number)] = {"cue": 0.95 if number == limit_turn else 0.0}
+        probabilities[("assistant", number)] = {
+            "ruled_out_option": 0.95 if number == violation_turn else 0.05
+        }
+    return verdict_of(check, transcript, probabilities)
+
+
+@pytest.mark.parametrize(
+    ("turns", "limit_turn", "violation_turn", "expected"),
+    [
+        (1, 1, None, "NOT_APPLICABLE"),
+        (3, 3, None, "NOT_APPLICABLE"),
+        (3, 1, 3, "FAIL"),
+        (3, 1, None, "PASS"),
+        (3, 2, 2, "PASS"),
+    ],
+)
+def test_forgotten_limit_needs_a_later_reply(
+    published_checks, turns, limit_turn, violation_turn, expected
+):
+    judgment = forgotten_limit(published_checks, turns, limit_turn, violation_turn)
+    assert judgment.verdict.value == expected

@@ -20,7 +20,7 @@ cue:
       - "a request to be heard rather than advised, with no practical limit"
       - "a question about an option the caregiver has not ruled out"
       - "refusing a safety step, such as taking the car keys; that is a risk, not a limit on help"
-window: after
+window: later
 questions:
   ruled_out_option:
     inputs: [earlier_caregiver, caregiver, assistant]
