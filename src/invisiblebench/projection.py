@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from invisiblebench.judge import load_scan, require_attempts_settled
 from invisiblebench.scoring import RELEASE_SCHEMA, build_scorecard
 from invisiblebench.utils.benchmark_inventory import get_project_root
 from invisiblebench.version import BENCHMARK_VERSION
@@ -170,6 +171,7 @@ def _web_release_outputs(bundle: Path, *, root: Path) -> tuple[dict[Path, bytes]
         raise ProjectionError("bundle must name a scan bundle")
     try:
         source = build_scorecard(bundle, publication=True)
+        require_attempts_settled(bundle, load_scan(bundle, complete=True, current=True)[1])
     except (OSError, ValueError, KeyError) as exc:
         raise ProjectionError(f"Publication QA failed: {exc}") from exc
     projection_bytes = _json_bytes(source)

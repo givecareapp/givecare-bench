@@ -546,6 +546,8 @@ def _publication_sources(bundle: Path, plan: ScanPlan) -> None:
         manifest = json.loads(_read_ref(bundle, source.manifest))
         summary = json.loads(_read_ref(bundle, source.summary))
         entries = summary.get("transcripts") or []
+        if manifest.get("synthetic"):
+            raise ValueError("publication refuses a synthetic fixture source run")
         if (
             manifest.get("schema") != "invisiblebench-run-manifest/v3"
             or manifest.get("benchmark_version") != plan.benchmark_version
@@ -819,6 +821,15 @@ def _require_settled(attempts, answers: list[Answer]) -> None:
             f"judge request {unsettled[0]} has no saved outcome and may have been billed; "
             f"no automatic resume. {replan}"
         )
+
+
+def require_attempts_settled(bundle: Path, answers: list[Answer]) -> None:
+    """Publication check: the attempt journal exists and matches the saved answers."""
+    path = Path(bundle) / ATTEMPTS_FILE
+    if not path.is_file():
+        raise ValueError(f"publication requires {ATTEMPTS_FILE}; it is missing")
+    with path.open("rb") as attempts:
+        _require_settled(attempts, answers)
 
 
 def dispatch_budget(

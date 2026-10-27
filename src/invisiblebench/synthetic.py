@@ -109,6 +109,7 @@ def write_source_run(
     *,
     model_ids: tuple[str, ...] = ("fixture/model",),
     roster: list[tuple[str, str]] | None = None,
+    synthetic: bool = False,
 ) -> Path:
     source_run = root / "source-run"
     transcripts = source_run / "transcripts"
@@ -146,6 +147,8 @@ def write_source_run(
         mode="raw",
     )
     manifest.update(git_sha="a" * 40, git_dirty=False)
+    if synthetic:
+        manifest["synthetic"] = True
     (source_run / "run_manifest.json").write_text(json.dumps(manifest))
     (source_run / "transcript_run.json").write_text(
         json.dumps(
@@ -178,8 +181,9 @@ def write_current_qa_fixture(
     root: Path,
     *,
     model_ids: tuple[str, ...] = ("fixture/model",),
+    synthetic: bool = False,
 ) -> dict[str, Path]:
-    source_run = write_source_run(root, model_ids=model_ids)
+    source_run = write_source_run(root, model_ids=model_ids, synthetic=synthetic)
     bundle = root / "scan"
     plan = plan_scan([source_run], bundle, judge_model=DEFAULT_JUDGE_MODEL)
     run_scan(bundle, max_cost_usd=plan.estimated_cost_usd, client=FixtureJudge())

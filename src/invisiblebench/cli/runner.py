@@ -117,7 +117,7 @@ def main(argv=None):
 
         root = args.output or Path(tempfile.mkdtemp(prefix="invisiblebench-demo-"))
         root.mkdir(parents=True, exist_ok=True)
-        paths = write_current_qa_fixture(root)
+        paths = write_current_qa_fixture(root, synthetic=True)
         card = write_jury_card(paths["scan"])
         if json_output:
             emit_json("demo", {"scan": str(paths["scan"]), "jury_card": str(card)})

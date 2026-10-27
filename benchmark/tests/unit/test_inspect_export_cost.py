@@ -34,6 +34,8 @@ def sample(*, metadata=None, error=None, limit=None, messages=None, usage=True):
 
 
 def export_sample(monkeypatch, tmp_path, current):
+    samples = current if isinstance(current, list) else [current]
+    current = samples[-1]
     log = SimpleNamespace(
         location="fixture.eval",
         eval=SimpleNamespace(
@@ -51,7 +53,7 @@ def export_sample(monkeypatch, tmp_path, current):
                 max_tokens=MAX_REPLY_TOKENS,
             ),
         ),
-        samples=[current],
+        samples=samples,
         status="success" if not (current.error or current.limit) else "error",
         error=None,
         stats=SimpleNamespace(
@@ -280,3 +282,11 @@ def test_no_target_or_branch_call_before_dispatch_is_known_zero(monkeypatch, tmp
     assert summary["actual_known_cost_usd"] == 0
     assert summary["actual_cost_by_model_usd"] == {"mockllm/model": 0}
     assert summary["unknown_calls_with_uncosted_usd"] == 0
+
+
+def test_repeated_epochs_are_refused(monkeypatch, tmp_path):
+    second = sample()
+    second.epoch = 2
+
+    with pytest.raises(ValueError, match="repeated epochs are not supported"):
+        export_sample(monkeypatch, tmp_path, [sample(), second])

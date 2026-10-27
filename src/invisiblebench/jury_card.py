@@ -157,9 +157,12 @@ def write_jury_card(bundle: Path) -> Path:
     model_label = models[0]["model"] if len(models) == 1 else f"{len(models)} models"
     validation_lines = _validation_lines(bundle, plan, records)
     no_frozen_expectations = not validation_lines
+    synthetic = any(manifest.get("synthetic") for _, manifest, _ in sources)
     lines = [
         f"# {_cell(model_label)} — {_cell(date_label)}", "", binding, "",
-        "**Jury Card · MODEL-JUDGED. Care remains directional.** This card describes the recorded run. "
+        *(["**SYNTHETIC FIXTURE. A stub judge answered every question; this is not a model result "
+           "and cannot be published.**", ""] if synthetic else []),
+        f"**Jury Card · {'FIXTURE-JUDGED' if synthetic else 'MODEL-JUDGED'}. Care remains directional.** This card describes the recorded run. "
         "It does not establish clinical outcomes, general model quality, or judge accuracy.", "",
         *(["**Product development scan.** Supplemental checks are included; this scan is not eligible "
            "for public benchmark projection.", ""] if plan.supplemental_checks else []),

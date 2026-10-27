@@ -13,6 +13,7 @@ import pytest
 
 from benchmark.tests.fixtures.current_scan import FixtureJudge, write_current_qa_fixture
 from invisiblebench import projection
+from invisiblebench.jury_card import write_jury_card
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -141,3 +142,33 @@ def test_incomplete_coverage_is_refused_and_writes_nothing(monkeypatch, tmp_path
     with pytest.raises(projection.ProjectionError, match="Publication QA failed"):
         projection.project_web_release(subset, root=tmp_path)
     assert not (tmp_path / "data").exists()
+
+
+def test_synthetic_demo_bundle_is_refused_by_projection(monkeypatch, tmp_path):
+    paths = write_current_qa_fixture(tmp_path, synthetic=True)
+    monkeypatch.setattr(projection, "ROOT", tmp_path)
+    with pytest.raises(projection.ProjectionError, match="synthetic fixture"):
+        projection.project_web_release(paths["scan"], root=tmp_path, dry_run=True)
+    assert "FIXTURE-JUDGED" in write_jury_card(paths["scan"]).read_text()
+
+
+def test_projection_requires_a_settled_attempt_journal(monkeypatch, tmp_path):
+    from invisiblebench.judge import replay_scan
+
+    paths = write_current_qa_fixture(tmp_path)
+    monkeypatch.setattr(projection, "ROOT", tmp_path)
+    bundle = paths["scan"]
+    journal = bundle / "attempts.jsonl"
+    original = journal.read_bytes()
+
+    assert projection.project_web_release(bundle, root=tmp_path, dry_run=True)["strict_qa"]
+
+    key = json.loads(original.splitlines()[0])["key"]
+    journal.write_bytes(original + json.dumps({"event": "attempt", "key": key}).encode() + b"\n")
+    with pytest.raises(projection.ProjectionError, match="no saved outcome"):
+        projection.project_web_release(bundle, root=tmp_path, dry_run=True)
+
+    journal.unlink()
+    with pytest.raises(projection.ProjectionError, match="attempts.jsonl"):
+        projection.project_web_release(bundle, root=tmp_path, dry_run=True)
+    assert replay_scan(bundle) == []

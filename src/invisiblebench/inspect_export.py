@@ -196,6 +196,13 @@ def export_run(log_paths: list[Path], output_dir: Path) -> Path:
         models.append({"id": model_id, "endpoint": _endpoint(log)})
         name = next((m.name for m in MODELS_FULL if m.id == model_id), model_id)
         present = {str(s.id): s for s in log.samples or []}
+        if len(present) != len(log.samples or []) or any(
+            s.epoch != 1 for s in log.samples or []
+        ):
+            raise ValueError(
+                f"{log.location}: repeated epochs are not supported; "
+                "export one epoch per scenario"
+            )
         for scenario_id in expected_ids:
             sample = present.get(scenario_id)
             row = {
