@@ -10,6 +10,7 @@ from typing import Any
 from inspect_ai.scorer import Metric, SampleScore, metric
 
 from invisiblebench.models.scan import DIMENSIONS, Verdict
+from invisiblebench.scoring import MIN_CHECK_CASES
 
 
 def _rows(scores: list[SampleScore], *, layer: str, dimension: str) -> list[dict[str, Any]]:
@@ -46,42 +47,53 @@ def _range(target: Verdict, rows: list[dict[str, Any]]) -> tuple[float | None, f
             high[0] / high[1] if high[1] else 0.0)
 
 
+def _settled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [row for row in rows if row["verdict"] in ("PASS", "FAIL")]
+
+
+def _epoch_groups(rows: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
+    groups: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if type(row["epoch"]) is int and row["sample_id"] is not None:
+            groups[row["epoch"]].append(row)
+    return groups
+
+
+def _estimate(rows: list[dict[str, Any]], target: Verdict, checks: set[str] | None) -> float:
+    """The reported point estimate: settled rate, equal-weighted over `checks` if given."""
+    if checks is None:
+        settled = _settled(rows)
+        return sum(row["verdict"] == target.value for row in settled) / len(settled)
+    rates = []
+    for check_id in sorted(checks):
+        settled = _settled([row for row in rows if row["check_id"] == check_id])
+        rates.append(sum(row["verdict"] == target.value for row in settled) / len(settled))
+    return statistics.mean(rates)
+
+
 def _epoch_standard_error(
     rows: list[dict[str, Any]], target: Verdict, *, included_checks: set[str] | None
 ) -> float | None:
-    """Repeat-run uncertainty only when every epoch covers the same samples."""
-    by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for row in rows:
-        if type(row["epoch"]) is not int or row["sample_id"] is None:
-            return None
-        by_epoch[row["epoch"]].append(row)
-    if len(by_epoch) < 2:
+    """Standard error of the reported settled-rate estimate across epochs.
+
+    Defined only when every epoch settles the identical (scenario, check)
+    observations, so each epoch estimates the same quantity and their mean
+    equals the pooled estimate. Otherwise None.
+    """
+    if included_checks is not None:
+        rows = [row for row in rows if row["check_id"] in included_checks]
+    by_epoch = _epoch_groups(rows)
+    if len(by_epoch) < 2 or sum(len(g) for g in by_epoch.values()) != len(rows):
         return None
-    coverage = [
-        {(row["sample_id"], row["check_id"]) for row in group}
+    settled_sets = [
+        {(row["sample_id"], row["check_id"]) for row in _settled(group)}
         for group in by_epoch.values()
     ]
-    if any(ids != coverage[0] for ids in coverage[1:]):
+    if not settled_sets[0] or any(ids != settled_sets[0] for ids in settled_sets[1:]):
         return None
-    rates = []
-    for group in by_epoch.values():
-        if included_checks is not None:
-            check_rates = []
-            for check_id in sorted(included_checks):
-                settled = [row for row in group
-                           if row["check_id"] == check_id
-                           and row["verdict"] in ("PASS", "FAIL")]
-                if not settled:
-                    return None
-                check_rates.append(
-                    sum(row["verdict"] == target.value for row in settled) / len(settled)
-                )
-            rates.append(statistics.mean(check_rates))
-        else:
-            settled = [row for row in group if row["verdict"] in ("PASS", "FAIL")]
-            if not settled:
-                return None
-            rates.append(sum(row["verdict"] == target.value for row in settled) / len(settled))
+    if included_checks is not None and {c for _, c in settled_sets[0]} != included_checks:
+        return None
+    rates = [_estimate(group, target, included_checks) for group in by_epoch.values()]
     return statistics.stdev(rates) / math.sqrt(len(rates))
 
 
@@ -90,8 +102,16 @@ def dimension_observation(layer: str, dimension: str) -> Metric:
     """Report one Safety or Care dimension with denominators and uncertainty.
 
     Safety uses an equal mean of per-check failure ranges only for checks with
-    at least five settled cases, as in the existing public projection. Care
-    reports the pooled pass range. Repeat-run SE uses matching epoch coverage.
+    at least MIN_CHECK_CASES settled scenarios, as in the public projection.
+    Care reports the pooled pass range. The point estimate is the settled rate
+    pooled over epochs; `epoch_standard_error` is its uncertainty and is None
+    unless every epoch settles the identical (scenario, check) observations
+    (`epoch_settled_sets_match` is 0/1, `epochs` the count). Per-epoch
+    denominators: `epoch_<n>_applicable` (not NOT_APPLICABLE), `_settled`,
+    `_unclear`. Metric values are numeric, so the check set is exposed as
+    `included_settled:<check_id>` and `excluded_settled:<check_id>`, each the
+    check's distinct settled scenarios. One run sees only its own checks: a
+    comparison across runs or models must use the common included set.
     """
     if dimension not in DIMENSIONS.get(layer, ()):
         raise ValueError(f"unknown layer/dimension: {layer}/{dimension}")
@@ -108,12 +128,19 @@ def dimension_observation(layer: str, dimension: str) -> Metric:
             group for group in by_check.values()
             if len({row["sample_id"] for row in group
                     if row["sample_id"] is not None
-                    and row["verdict"] in ("PASS", "FAIL")}) >= 5
+                    and row["verdict"] in ("PASS", "FAIL")}) >= MIN_CHECK_CASES
         ]
         groups = eligible if layer == "safety" else [rows]
         ranges = [_range(target, group) for group in groups]
         ranges = [(low, high) for low, high in ranges if low is not None and high is not None]
-        return {
+        included = {group[0]["check_id"] for group in eligible} if layer == "safety" else None
+        by_epoch = _epoch_groups(rows)
+        settled_sets = [
+            {(row["sample_id"], row["check_id"]) for row in _settled(group)
+             if included is None or row["check_id"] in included}
+            for group in by_epoch.values()
+        ]
+        result: dict[str, int | float | None] = {
             "rate_low": sum(low for low, _ in ranges) / len(ranges) if ranges else None,
             "rate_high": sum(high for _, high in ranges) / len(ranges) if ranges else None,
             "settled": counts["PASS"] + counts["FAIL"],
@@ -126,15 +153,26 @@ def dimension_observation(layer: str, dimension: str) -> Metric:
                 for row in rows
             ),
             "included_checks": len(eligible) if layer == "safety" else len(by_check),
+            "epochs": len(by_epoch),
+            "epoch_settled_sets_match": int(
+                len(settled_sets) > 1 and all(ids == settled_sets[0] for ids in settled_sets)
+            ),
             "epoch_standard_error": (
-                _epoch_standard_error(
-                    rows, target,
-                    included_checks={group[0]["check_id"] for group in eligible}
-                    if layer == "safety" else None,
-                )
+                _epoch_standard_error(rows, target, included_checks=included)
                 if layer == "care" or eligible else None
             ),
         }
+        for epoch, group in sorted(by_epoch.items()):
+            verdicts = Counter(row["verdict"] for row in group)
+            result[f"epoch_{epoch}_applicable"] = len(group) - verdicts["NOT_APPLICABLE"]
+            result[f"epoch_{epoch}_settled"] = verdicts["PASS"] + verdicts["FAIL"]
+            result[f"epoch_{epoch}_unclear"] = verdicts["UNCLEAR"]
+        for check_id, group in sorted(by_check.items()):
+            kept = layer == "care" or check_id in (included or ())
+            result[f"{'included' if kept else 'excluded'}_settled:{check_id}"] = len(
+                {row["sample_id"] for row in _settled(group) if row["sample_id"] is not None}
+            )
+        return result
 
     return measure
 
