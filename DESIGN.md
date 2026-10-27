@@ -13,7 +13,8 @@ judgment, or if a later correction is judged using obsolete facts.
 
 This is an authored challenge to a raw model with no tools. It is not a sample of
 caregiver prevalence, an independent holdout, a product evaluation, or evidence
-of clinical validity or reduced burden. No automated semantic grader exists yet.
+of clinical validity or reduced burden. A bounded grader pilot task exists, but
+its semantic judgments have not been validated.
 
 ## One family, one controlled difference
 
@@ -46,13 +47,16 @@ also supplies a concrete privacy exclusion for the requested messages.
 
 `rubric.json` owns the bounded questions, applicability, and verdict definitions.
 `controls.jsonl` holds complete authored response sequences and proposed verdicts
-for challenging a future grader. Neither file is read by the generation task.
+for grader development. Neither file is read by the generation task.
 These labels were authored during development; they are not expert judgments.
+The separate `grader.py` task uses each authored response as judge evidence and
+each proposed label only as a scoring reference. It does not score new target
+conversations or change the generation task.
 
 | Property | Verifier |
 | --- | --- |
 | Only one opening fact changes; future facts and grading criteria stay out of requests; actual replies survive; incomplete generation stays incomplete | Executable tests |
-| Coverage, drafting, consent, useful alternatives, privacy, action honesty | Conversation review against the bounded criteria; a future model judge needs separate validation |
+| Coverage, drafting, consent, useful alternatives, privacy, action honesty | Conversation review against the bounded criteria; the model judge still needs separate validation |
 | Realism, consequential ambiguities, acceptable alternatives | Independent caregiver and relevant domain review |
 | Relief, access actually achieved, or improved outcomes | Not measured by these conversations |
 
@@ -70,6 +74,28 @@ Keep Safety and Care separate. Report criterion-level evidence, applicability,
 UNCLEAR judgments, and missing responses. Execution errors are not behavioral
 failures or passes. Several criteria may describe one event; do not count those
 as independent harms. Do not derive a composite score or model ranking.
+
+## Grader development
+
+Each judge request contains one criterion and the conversation prefix ending at
+one response. The request omits the control's name, rationale, expected label,
+and future turns. The model returns a four-state verdict, explanation, quote from
+the assessed response, and quote from a visible triggering user turn. Code rejects
+duplicate JSON keys, unknown fields, invalid verdicts, and quotes outside that
+evidence. These checks verify provenance, not relevance or semantic correctness.
+
+Inspect retains the raw output and parsed judgment in its native log. Invalid,
+missing, blocked, or truncated judge outputs remain unscored. API errors remain
+execution errors. No automatic inference retries are requested by this task.
+The frozen log records source hashes and the full reference cohort. Reporting
+uses those saved references rather than the current files, and keeps repetitions
+and missing opportunities visible. Filters do not redefine the full cohort.
+
+Report a reference FAIL judged PASS as a false pass, and a reference PASS judged
+FAIL as a false failure. Keep UNCLEAR and applicability disagreements separate.
+Class counts and the full confusion counts accompany each criterion; do not pool
+them into overall accuracy. Always-PASS and always-FAIL mocks test these
+diagnostics. Their results say nothing about a real judge's accuracy.
 
 ## Comparison before claims
 

@@ -6,8 +6,8 @@ agency, the availability of support, and danger to either person.
 
 The previous implementation is preserved in [_archive/5.8.0](_archive/5.8.0/README.md).
 See the [archive record](_archive/README.md) for its source revision and verification.
-The first development slice is runnable. There is no new benchmark result or
-validated grader yet. [Design and measurement contract](DESIGN.md).
+The first development slice and its grader pilot task are runnable. There is no
+new benchmark result or validated grader yet. [Design and measurement contract](DESIGN.md).
 
 The visual walkthrough is available locally at
 `/home/deploy/wiki/pages/givecare/visuals/invisiblebench-walkthrough.html`.
@@ -33,6 +33,7 @@ snapshot. It is an explanation, not a live model evaluation.
 
 ```text
 task.py          Inspect task; actual multi-turn generation, no scorer
+grader.py        separate Inspect task for judging authored controls
 cases/
   backup_care/
     case.json    shared turns and matched availability conditions
@@ -71,7 +72,38 @@ uv run --locked inspect view --log-dir results/rebuild-smoke
 
 Mock output proves no caregiving capability. Paid runs require the frozen plan
 and explicit budget described in [DESIGN.md](DESIGN.md#comparison-before-claims).
-Review criteria are available for inspection; automated grading is not implemented.
+The grader pilot is separate from target generation. It submits one criterion
+and the conversation through one response to the judge. Expected labels and
+future turns stay out of the judge request. It validates the JSON verdict and
+exact evidence quotes; those mechanical checks cannot establish judgment accuracy.
+
+Run a free protocol smoke check with Inspect's default mock output:
+
+```bash
+uv run --locked inspect eval grader.py@control_judge --model mockllm/model --limit 1 --log-dir results/grader-smoke
+```
+
+The default mock returns non-JSON text, so this deliberately produces an unscored
+judge answer, not a passing verdict. Tests cover valid and invalid responses,
+all authored controls, repeated samples, and diagnostic reporting without inference.
+
+Read criterion-level diagnostics from a saved native Inspect log:
+
+```python
+from inspect_ai.log import read_eval_log
+from grader import summarize
+
+report = summarize(read_eval_log("results/<run>/<log>.eval"))
+```
+
+The report keeps Safety and Care separate and counts false passes, false failures,
+UNCLEAR judgments, applicability errors, execution errors, and unscored or missing
+opportunities.
+Native `--limit` or `--sample-id` selections leave unrun members of the frozen
+cohort marked missing; they are not failures. No composite score is calculated.
+Live judging requires an OpenRouter model and a positive task argument
+`-T cost_limit_usd=<per-sample-ceiling>`, plus the separately approved frozen plan.
+Inspect limits are cooperative; this is not a hard overall spending guarantee.
 
 The old `bench` CLI remains archived. Use the original recorded Git revision
 when historical replay requires the original source identity.
