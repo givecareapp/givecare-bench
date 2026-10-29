@@ -8,12 +8,12 @@ from pathlib import Path
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
-from inspect_ai.log import EvalLog
+from inspect_ai.log import EvalLog, read_eval_log
 from inspect_ai.model import ChatMessageSystem, ChatMessageUser, GenerateConfig
 from inspect_ai.scorer import Score, Scorer, Target, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 
-from task import CASE
+from task import CASE, PROJECT, VERSION
 
 RUBRIC = CASE.with_name("rubric.json")
 CONTROLS = CASE.with_name("controls.jsonl")
@@ -75,6 +75,79 @@ def control_samples() -> list[Sample]:
                     metadata={"check": check["id"], "layer": check["layer"], "turn": turn},
                 ))
     return result
+
+
+def target_samples(source_log: str) -> tuple[list[Sample], dict]:
+    """Freeze visible prefixes from one completed generation log for judging."""
+    path = Path(source_log)
+    log = read_eval_log(str(path))
+    if (log.eval.metadata or {}).get("use") != "development":
+        raise ValueError("Expected a development generation log")
+    if log.eval.metadata.get("case_sha256") != hashlib.sha256(CASE.read_bytes()).hexdigest():
+        raise ValueError("Generation case differs from the current case")
+    family = json.loads(CASE.read_text())
+    rubric = json.loads(RUBRIC.read_text())
+    openings = {
+        f"{family['id']}/{v['id']}": family["opening"].replace("{availability}", v["availability"])
+        for v in family["variants"]
+    }
+    result = []
+    seen = set()
+    for generated in log.samples or []:
+        key = (str(generated.id), generated.epoch)
+        if key in seen or str(generated.id) not in openings:
+            raise ValueError(f"Unexpected or duplicate generation sample: {key}")
+        seen.add(key)
+        if generated.error:
+            continue
+        messages = generated.messages or []
+        if len(messages) != 2 * (1 + len(family["followups"])):
+            raise ValueError(f"Incomplete generation conversation: {key}")
+        users = [openings[str(generated.id)], *family["followups"]]
+        transcript = []
+        for turn, user in enumerate(users, start=1):
+            actual_user, reply = messages[2 * turn - 2:2 * turn]
+            if actual_user.role != "user" or actual_user.text != user or reply.role != "assistant":
+                raise ValueError(f"Generation transcript differs from case: {key}")
+            transcript.extend([
+                {"role": "user", "turn": turn, "content": user},
+                {"role": "assistant", "turn": turn, "content": reply.text},
+            ])
+            for check in rubric["checks"]:
+                if turn not in check["turns"]:
+                    continue
+                payload = {"criterion": check, "response_turn": turn,
+                           "conversation": list(transcript)}
+                result.append(Sample(
+                    id=f"{generated.id}/epoch-{generated.epoch}/{check['id']}@{turn}",
+                    input=[ChatMessageSystem(content=SYSTEM), ChatMessageUser(
+                        content=json.dumps(payload, ensure_ascii=False)
+                    )],
+                    metadata={"check": check["id"], "layer": check["layer"], "turn": turn,
+                              "source_sample": str(generated.id), "source_epoch": generated.epoch},
+                ))
+    source = {"eval_id": log.eval.eval_id, "model": log.eval.model,
+              "status": log.status,
+              "settings": {
+                  "model_generate_config": log.eval.model_generate_config.model_dump(mode="json")
+                  if log.eval.model_generate_config else None,
+                  "config": log.eval.config.model_dump(mode="json"),
+                  "plan": log.plan.model_dump(mode="json") if log.plan else None,
+              },
+              "versions": log.eval.model_dump(mode="json", include={
+                  "task_version", "revision", "packages"}),
+              "source_log_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              "case_sha256": log.eval.metadata["case_sha256"],
+              "runner_sha256": log.eval.metadata["runner_sha256"],
+              "benchmark_version": log.eval.metadata["benchmark_version"],
+              "project_sha256": log.eval.metadata["project_sha256"],
+              "planned_samples": len(openings) * (log.eval.config.epochs or 1),
+              "recorded_samples": len(seen), "complete_samples": len(seen) - sum(
+                  bool(s.error) for s in log.samples or []),
+              "model_usage": {name: usage.model_dump(mode="json")
+                              for name, usage in (log.stats.model_usage or {}).items()}
+              if log.stats else {}}
+    return result, source
 
 
 def _unique_object(pairs):
@@ -154,7 +227,7 @@ def control_judge(cost_limit_usd: float | None = None) -> Task:
     ):
         raise ValueError("cost_limit_usd must be a finite positive amount")
     dataset = control_samples()
-    paths = [CASE, RUBRIC, CONTROLS, Path(__file__).resolve()]
+    paths = [CASE, RUBRIC, CONTROLS, PROJECT, Path(__file__).resolve()]
     return Task(
         dataset=dataset,
         solver=bounded_judge(cost_limit_usd),
@@ -163,11 +236,37 @@ def control_judge(cost_limit_usd: float | None = None) -> Task:
         cost_limit=cost_limit_usd,
         metadata={
             "use": "judge-development",
+            "benchmark_version": VERSION,
             "basis": "authored controls; no independent validation",
             "source_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
             "reference_manifest": {
                 str(s.id): {**s.metadata, "expected": s.target} for s in dataset
             },
+        },
+    )
+
+
+@task
+def target_judge(source_log: str, cost_limit_usd: float | None = None) -> Task:
+    """Judge saved target conversations; never expose rubric to generation."""
+    if cost_limit_usd is not None and (
+        isinstance(cost_limit_usd, bool) or not math.isfinite(cost_limit_usd) or cost_limit_usd <= 0
+    ):
+        raise ValueError("cost_limit_usd must be a finite positive amount")
+    dataset, source = target_samples(source_log)
+    paths = [CASE, RUBRIC, PROJECT, Path(__file__).resolve()]
+    return Task(
+        dataset=dataset, solver=bounded_judge(cost_limit_usd), scorer=control_verdict(),
+        config=GenerateConfig(max_tokens=1024, max_retries=0), cost_limit=cost_limit_usd,
+        metadata={
+            "use": "target-judging", "basis": "unvalidated development rubric",
+            "benchmark_version": VERSION,
+            "source": source,
+            "source_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
+            "check_plan": {check["id"]: {"layer": check["layer"],
+                                         "turns": check["turns"]}
+                           for check in json.loads(RUBRIC.read_text())["checks"]},
+            "reference_manifest": {str(s.id): s.metadata for s in dataset},
         },
     )
 
@@ -233,3 +332,55 @@ def summarize(log: EvalLog) -> dict:
         "basis": metadata["basis"], "source_sha256": metadata["source_sha256"],
         "epochs": epochs, "by_layer": groups,
     }
+
+
+def summarize_target(log: EvalLog) -> dict:
+    """Criterion counts from a saved target-judge log; missing is never PASS."""
+    metadata = log.eval.metadata or {}
+    if metadata.get("use") != "target-judging":
+        raise ValueError("Expected a target-judging log")
+    manifest = metadata["reference_manifest"]
+    epochs = log.eval.config.epochs or 1
+    records = {}
+    for sample in log.samples or []:
+        key = (str(sample.id), sample.epoch)
+        reference = manifest.get(str(sample.id))
+        if reference is None or not 1 <= sample.epoch <= epochs or key in records:
+            raise ValueError(f"Unexpected or duplicate sample: {key}")
+        if sample.target or sample.metadata != reference:
+            raise ValueError(f"Sample differs from frozen manifest: {key}")
+        records[key] = sample
+    source = metadata["source"]
+    source_gap = source["planned_samples"] - source["complete_samples"]
+    if source_gap < 0:
+        raise ValueError("Complete generation count exceeds planned count")
+    groups = {"Safety": {}, "Care": {}}
+    for check_id, plan in metadata["check_plan"].items():
+        gap = source_gap * len(plan["turns"]) * epochs
+        groups[plan["layer"]][check_id] = {
+            "planned": source["planned_samples"] * len(plan["turns"]) * epochs,
+            "recorded": 0, "missing": gap, "generation_missing": gap,
+            "judge_missing": 0, "execution_error": 0, "unscored": 0,
+            "PASS": 0, "FAIL": 0, "UNCLEAR": 0, "NOT_APPLICABLE": 0,
+        }
+    for sample_id, reference in manifest.items():
+        counts = groups[reference["layer"]][reference["check"]]
+        for epoch in range(1, epochs + 1):
+            sample = records.get((sample_id, epoch))
+            if sample is None:
+                counts["missing"] += 1
+                counts["judge_missing"] += 1
+                continue
+            counts["recorded"] += 1
+            if sample.error:
+                counts["execution_error"] += 1
+                continue
+            scores = list((sample.scores or {}).values())
+            if len(scores) != 1 or not isinstance(scores[0].value, str) or scores[0].value not in VERDICTS:
+                counts["unscored"] += 1
+                continue
+            counts[scores[0].value] += 1
+    return {"status": log.status, "judge_model": log.eval.model,
+            "target": metadata["source"], "basis": metadata["basis"],
+            "source_sha256": metadata["source_sha256"], "epochs": epochs,
+            "by_layer": groups}

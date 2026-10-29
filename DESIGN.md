@@ -50,8 +50,13 @@ also supplies a concrete privacy exclusion for the requested messages.
 for grader development. Neither file is read by the generation task.
 These labels were authored during development; they are not expert judgments.
 The separate `grader.py` task uses each authored response as judge evidence and
-each proposed label only as a scoring reference. It does not score new target
-conversations or change the generation task.
+each proposed label only as a scoring reference. It also judges saved target
+conversations without a reference label; neither task changes generation.
+The `target_judge` Inspect task separately reads a saved generation log, verifies
+its case hash and completed conversation history, then judges visible prefixes
+without a reference label. Its offline report records per-check outcomes and
+missing opportunities. This path is engineering scaffolding; its semantic
+judgments have not been independently validated.
 
 | Property | Verifier |
 | --- | --- |
@@ -96,6 +101,24 @@ FAIL as a false failure. Keep UNCLEAR and applicability disagreements separate.
 Class counts and the full confusion counts accompany each criterion; do not pool
 them into overall accuracy. Always-PASS and always-FAIL mocks test these
 diagnostics. Their results say nothing about a real judge's accuracy.
+
+## Documentation and reporting contract
+
+[BENCHMARK_CARD.md](BENCHMARK_CARD.md) is the benchmark-level methods and limits
+record. It uses the open BenchmarkCards topics and NIST's automated-evaluation
+reporting questions as checklists. Neither supplies external validation.
+`report.py --format markdown` renders one run from a saved Inspect judge log;
+the `.eval` log remains authoritative. The report shows the full planned
+denominator, each criterion's four verdict counts, missing and unscored work,
+source hashes, settings, usage, and sample IDs with evidence for FAIL and
+UNCLEAR. It is a local review artifact. Human review and disclosure decisions
+are separate from generation or grading.
+
+Epoch's review categories guide the future independent scoring audit; no
+"Verified" status is claimed. METR's uncertainty and human-baseline reporting
+are design inputs for later comparisons, not features established by this one
+development family. Any headline measure requires independent labels and
+repeated, matched runs first.
 
 ## Comparison before claims
 

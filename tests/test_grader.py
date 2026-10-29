@@ -2,14 +2,24 @@ import asyncio
 import json
 from collections import Counter
 from copy import deepcopy
+from glob import glob
 from types import SimpleNamespace
 
 import pytest
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
 
-from grader import bounded_judge, control_judge, control_samples, parse_judgment, summarize
-from task import CASE
+from grader import (
+    bounded_judge,
+    control_judge,
+    control_samples,
+    parse_judgment,
+    summarize,
+    target_judge,
+)
+from report import build_report, render_markdown
+from review_packet import build_packet
+from task import CASE, backup_care
 
 
 def _transcript(turn=3):
@@ -119,6 +129,83 @@ def test_control_samples_bind_each_control_to_one_prefix_only_check():
         )
 
 
+def test_target_judge_uses_saved_generation_without_control_labels(tmp_path):
+    generation_dir = tmp_path / "generation"
+    [generation] = inspect_eval(
+        backup_care(), model="mockllm/model", sample_id="backup_care/confirmed",
+        log_dir=str(generation_dir), display="none",
+    )
+    assert generation.status == "success"
+    task = target_judge(glob(str(generation_dir / "*.eval"))[0])
+    assert task.metadata["use"] == "target-judging"
+    assert len(task.dataset) == 14
+    assert task.metadata["source"]["complete_samples"] == 1
+    assert task.metadata["source"]["benchmark_version"] == task.metadata["benchmark_version"]
+    assert task.metadata["source"]["settings"]["config"]
+    assert task.metadata["source"]["settings"]["plan"]["config"]["max_tokens"] == 2048
+    assert task.metadata["source"]["runner_sha256"] == generation.eval.metadata["runner_sha256"]
+    packet = build_packet(glob(str(generation_dir / "*.eval"))[0])
+    assert len(packet["items"]) == 14
+    assert packet["complete_conversations"] == 1
+    assert packet["planned_conversations"] == 3
+    assert packet["source_log_sha256"] == task.metadata["source"]["source_log_sha256"]
+    assert packet["rubric_sha256"] == task.metadata["source_sha256"]["rubric.json"]
+    assert "model" not in packet and "verdict" not in json.dumps(packet)
+    assert all(set(item) == {"item_id", "family_id", "criterion", "response_turn", "conversation"}
+               for item in packet["items"])
+    assert not any(sample.target for sample in task.dataset)
+    for sample in task.dataset:
+        prompt = json.loads(sample.input[-1].text)
+        assert set(prompt) == {"criterion", "response_turn", "conversation"}
+        assert "expected" not in sample.input[-1].text
+
+    [judged] = inspect_eval(
+        task, model="mockllm/model", sample_id=str(task.dataset[0].id),
+        log_dir=str(tmp_path / "judged"), display="none", fail_on_error=False,
+    )
+    report = build_report(judged)
+    counts = report["summary"]["by_layer"][task.dataset[0].metadata["layer"]][
+        task.dataset[0].metadata["check"]]
+    assert counts["recorded"] == counts["unscored"] == 1
+    assert counts["missing"] == counts["planned"] - 1
+    assert counts["generation_missing"] == 2
+    assert counts["judge_missing"] == 0
+    other = report["summary"]["by_layer"]["Care"]["task.message"]
+    assert other["planned"] == other["generation_missing"] + other["judge_missing"] == 6
+    assert report["summary"]["target"]["source_log_sha256"]
+    assert report["trials"][0]["source_sample"] == "backup_care/confirmed"
+    assert report["run"]["versions"] is not None
+    assert report["run"]["benchmark_version"] == task.metadata["benchmark_version"]
+    assert report["trials"][0]["unscored_reason"]
+
+    def valid_judgment(messages, tools, tool_choice, config):
+        assert not tools
+        prompt = json.loads(messages[-1].text)
+        conversation = prompt["conversation"]
+        assert "expected" not in messages[-1].text
+        return ModelOutput.from_content("mockllm/model", _judgment(
+            response_quote=conversation[-1]["content"],
+            cue_turn=prompt["response_turn"], cue_quote=conversation[-2]["content"],
+        ))
+
+    [valid_log] = inspect_eval(
+        task, model=get_model("mockllm/model", custom_outputs=valid_judgment),
+        sample_id=str(task.dataset[0].id), log_dir=str(tmp_path / "valid"),
+        display="none", fail_on_error=False,
+    )
+    valid_report = build_report(valid_log)
+    valid_counts = valid_report["summary"]["by_layer"][task.dataset[0].metadata["layer"]][
+        task.dataset[0].metadata["check"]]
+    assert valid_counts["PASS"] == 1
+    assert valid_counts["unscored"] == 0
+    assert valid_report["trials"][0]["evidence"]["response_quote"]
+    readable = render_markdown(valid_report)
+    assert "# InvisibleBench evaluation report" in readable
+    assert "| 1 | 0 | 0 | 0 |" in readable
+    assert "Source generation" in readable
+    assert valid_report["summary"]["target"]["source_log_sha256"] in readable
+
+
 @pytest.mark.parametrize("prediction", ["PASS", "FAIL"])
 def test_fixed_verdict_mock_exposes_errors_without_claiming_accuracy(tmp_path, prediction):
     requests = []
@@ -155,6 +242,22 @@ def test_fixed_verdict_mock_exposes_errors_without_claiming_accuracy(tmp_path, p
     assert log.status == "success", log.error
     assert len(requests) == 238
     report = summarize(log)
+    audit = build_report(log)
+    assert audit["summary"] == report
+    assert len(audit["trials"]) == 238
+    assert audit["run"]["model"] == "mockllm/model"
+    assert audit["summary"]["source_sha256"] == task.metadata["source_sha256"]
+    assert all(trial["verdict"] == prediction and trial["evidence"] for trial in audit["trials"])
+    readable = render_markdown(audit)
+    first = next(iter(report["by_layer"]["Safety"].values()))
+    expected_verdicts = (
+        f"| {first['planned']} | {first['planned'] if prediction == 'PASS' else 0} | "
+        f"{first['planned'] if prediction == 'FAIL' else 0} | 0 | 0 |"
+    )
+    assert expected_verdicts in readable
+    assert "Control counts compare judge output" in readable
+    if prediction == "FAIL":
+        assert "Response evidence:" in readable
     assert report["status"] == "success"
     assert report["basis"] == "authored controls; no independent validation"
     totals = Counter()
@@ -249,6 +352,9 @@ def test_invalid_judge_output_is_unscored_not_a_false_pass(tmp_path, stop_reason
     )
     assert log.status == "success", log.error
     report = summarize(log)
+    audit = build_report(log)
+    assert audit["trials"][0]["verdict"] is None
+    assert audit["trials"][0]["unscored_reason"]
     coverage = report["by_layer"]["Care"]["coverage.status"]
     assert coverage["recorded"] == 1
     assert coverage["unscored"] == 1
