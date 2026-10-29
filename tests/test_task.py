@@ -8,7 +8,8 @@ from inspect_ai.model import ModelOutput, get_model
 
 from task import ROOT, conversation_family, load_case, opening, samples
 
-FAMILIES = ["backup_care", "fluctuating_capacity"]
+# Every directory under cases/ is a family; new families are covered without listing them.
+FAMILIES = sorted(p.parent.name for p in (ROOT / "cases").glob("*/case.json"))
 
 
 def _field(variant):

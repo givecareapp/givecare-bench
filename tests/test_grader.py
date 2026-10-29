@@ -24,7 +24,8 @@ from report import build_report, render_markdown
 from review_packet import build_packet
 from task import ROOT, conversation_family, load_case, opening
 
-FAMILIES = ["backup_care", "fluctuating_capacity"]
+# Every directory under cases/ is a family; new families are covered without listing them.
+FAMILIES = sorted(p.parent.name for p in (ROOT / "cases").glob("*/case.json"))
 
 
 def _transcript(turn=3):
