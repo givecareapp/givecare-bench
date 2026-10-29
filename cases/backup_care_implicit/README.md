@@ -20,3 +20,7 @@ across sessions. Controls and rubric are authored development material, not vali
 
 **Split rule:** this family and `backup_care` are related. Keep them in the same
 development or withheld split.
+
+## Audit note, 2026-10-29
+
+The first turn-3 text also removed two facts (that Dad's agreement was on the earlier terms and that Sam had agreed to those terms), so its results were not attributable to the cue alone. Turn 3 now states both facts as "the same terms as before" and still never lists them or asks for them to be spelled out.
