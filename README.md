@@ -8,6 +8,10 @@ The previous implementation is preserved in [_archive/5.8.0](_archive/5.8.0/READ
 See the [archive record](_archive/README.md) for its source revision and verification.
 The first development slice and its grader pilot task are runnable. There is no
 new benchmark result or validated grader yet. [Design and measurement contract](DESIGN.md).
+The [development benchmark card](BENCHMARK_CARD.md) records methods, coverage,
+limits, validation status, and interoperability.
+The package is versioned `0.1.0` as a development slice; this is not a validated
+InvisibleBench 6.0 release. Native logs also record exact source hashes.
 
 The visual walkthrough is available locally at
 `/home/deploy/wiki/pages/givecare/visuals/invisiblebench-walkthrough.html`.
@@ -33,12 +37,15 @@ snapshot. It is an explanation, not a live model evaluation.
 
 ```text
 task.py          Inspect task; actual multi-turn generation, no scorer
-grader.py        separate Inspect task for judging authored controls
+grader.py        separate Inspect tasks for controls and saved target logs
+report.py        offline audit from native Inspect judge logs
+BENCHMARK_CARD.md benchmark-level methods and limits
 cases/
   backup_care/
     case.json    shared turns and matched availability conditions
     rubric.json  separate Safety/Care review criteria
     controls.jsonl authored responses and expected judgments
+    README.md   family contract, contrasts, and validation status
 tests/           offline harness and case-contract checks
 DESIGN.md        claim, falsifiers, evidence limits, comparison design
 _archive/5.8.0/   frozen previous public project
@@ -87,6 +94,27 @@ The default mock returns non-JSON text, so this deliberately produces an unscore
 judge answer, not a passing verdict. Tests cover valid and invalid responses,
 all authored controls, repeated samples, and diagnostic reporting without inference.
 
+To judge a saved target-generation log with the same criterion prompt and parser,
+use the separate Inspect task. This reads the native `.eval` log; it does not
+regenerate target replies or expose the rubric during generation:
+
+```bash
+uv run --locked inspect eval grader.py@target_judge \
+  -T source_log=results/<generation>/<log>.eval \
+  --model mockllm/model --log-dir results/target-judge-smoke
+uv run --locked python report.py results/<target-judge-smoke>/<log>.eval \
+  > /tmp/bench-target-audit.json
+```
+
+The mock judge's default text is deliberately unscored. The target audit counts
+Safety and Care verdicts, UNCLEAR, NOT_APPLICABLE, execution errors, and
+unscored opportunities per check. Missing opportunities are split between source
+generation gaps and unrun judge samples, using the full frozen family denominator.
+It identifies the source generation log by
+hash and carries its model usage alongside judge usage. It is a development
+instrument, not a validated measurement of target-model quality. Live judging
+requires the separately approved frozen plan and cost ceiling below.
+
 Read criterion-level diagnostics from a saved native Inspect log:
 
 ```python
@@ -99,6 +127,26 @@ report = summarize(read_eval_log("results/<run>/<log>.eval"))
 The report keeps Safety and Care separate and counts false passes, false failures,
 UNCLEAR judgments, applicability errors, execution errors, and unscored or missing
 opportunities.
+For an offline JSON audit report with run settings, model usage and reported cost,
+source hashes, per-check counts, and each recorded trial's verdict and cited
+evidence, run:
+
+```bash
+uv run --locked python report.py results/<run>/<log>.eval > /tmp/bench-audit.json
+uv run --locked python report.py results/<run>/<log>.eval --format markdown \
+  > /tmp/bench-audit.md
+```
+
+The report reads only the saved Inspect log. Its trial list contains recorded
+samples; the per-check summary counts missing members of the frozen cohort.
+The Markdown view is a readable run report with per-check denominators, source
+binding, settings, and cited FAIL or UNCLEAR evidence keyed to Inspect sample IDs.
+Open the `.eval` log in Inspect to review full transcripts. The local report is
+not an independently validated score card.
+Control reports describe grader behavior on authored controls. Target reports
+describe unvalidated judge verdicts on saved conversations. Neither establishes
+grader accuracy on independent labels or target-model quality. Review the output before sharing it:
+Inspect logs and reports may contain private conversations.
 Native `--limit` or `--sample-id` selections leave unrun members of the frozen
 cohort marked missing; they are not failures. No composite score is calculated.
 Live judging requires an OpenRouter model and a positive task argument
@@ -107,6 +155,10 @@ Inspect limits are cooperative; this is not a hard overall spending guarantee.
 
 The old `bench` CLI remains archived. Use the original recorded Git revision
 when historical replay requires the original source identity.
+
+Every Eval Ever is an interoperability candidate. The tested converter does not
+preserve this slice's four-state evidence and failed on the offline mock log.
+See [the benchmark card](BENCHMARK_CARD.md#interoperability) for the export gate.
 
 The published artifacts under `data/` remain the previous release. This rebuild
 has not been published. Licensed under [MIT](LICENSE).
