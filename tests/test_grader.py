@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from collections import Counter
 from copy import deepcopy
@@ -7,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 from inspect_ai import eval as inspect_eval
+from inspect_ai.log import read_eval_log, write_eval_log
 from inspect_ai.model import ModelOutput, get_model
 
 from grader import (
@@ -15,11 +17,14 @@ from grader import (
     control_samples,
     parse_judgment,
     summarize,
+    summarize_target,
     target_judge,
 )
 from report import build_report, render_markdown
 from review_packet import build_packet
-from task import CASE, backup_care
+from task import ROOT, conversation_family, load_case, opening
+
+FAMILIES = ["backup_care", "fluctuating_capacity"]
 
 
 def _transcript(turn=3):
@@ -77,12 +82,13 @@ def test_parse_judgment_rejects_invalid_or_unverifiable_evidence(raw, transcript
         parse_judgment(raw, transcript)
 
 
-def test_control_samples_bind_each_control_to_one_prefix_only_check():
-    samples = control_samples()
-    rubric = json.loads((CASE.parent / "rubric.json").read_text())
+@pytest.mark.parametrize("name", FAMILIES)
+def test_control_samples_bind_each_control_to_one_prefix_only_check(name):
+    samples = control_samples(name)
+    rubric = json.loads((ROOT / "cases" / name / "rubric.json").read_text())
     controls = [
         json.loads(line)
-        for line in (CASE.parent / "controls.jsonl").read_text().splitlines()
+        for line in (ROOT / "cases" / name / "controls.jsonl").read_text().splitlines()
     ]
     planned = {
         f"{control['id']}/{check['id']}@{turn}": (control, check, turn)
@@ -90,25 +96,25 @@ def test_control_samples_bind_each_control_to_one_prefix_only_check():
         for check in rubric["checks"]
         for turn in check["turns"]
     }
-    assert len(samples) == len(planned) == 238
+    assert len(samples) == len(planned)
+    if name == "backup_care":
+        assert len(samples) == 238
     assert len({sample.id for sample in samples}) == len(samples)
     for sample in samples:
         control, check, turn = planned[sample.id]
         assert sample.target == control["expected"][f"{check['id']}@{turn}"]
         assert sample.metadata == {"check": check["id"], "layer": check["layer"], "turn": turn}
         assert len(sample.input) == 2
+        assert "expected" not in sample.input[1].text
         prompt = json.loads(sample.input[1].text)
         # The actual serialized prompt contains only the criterion and observed prefix.
         assert set(prompt) == {"criterion", "response_turn", "conversation"}
         assert prompt["criterion"] == check
         assert prompt["response_turn"] == turn
         conversation = prompt["conversation"]
-        family = json.loads(CASE.read_text())
+        family = load_case(name)
         variant = next(v for v in family["variants"] if v["id"] == control["variant"])
-        users = [
-            family["opening"].replace("{availability}", variant["availability"]),
-            *family["followups"],
-        ]
+        users = [opening(family, variant), *family["followups"]]
         assert [entry["role"] for entry in conversation] == [
             role for _ in range(turn) for role in ("user", "assistant")
         ]
@@ -132,7 +138,8 @@ def test_control_samples_bind_each_control_to_one_prefix_only_check():
 def test_target_judge_uses_saved_generation_without_control_labels(tmp_path):
     generation_dir = tmp_path / "generation"
     [generation] = inspect_eval(
-        backup_care(), model="mockllm/model", sample_id="backup_care/confirmed",
+        conversation_family("backup_care"), model="mockllm/model",
+        sample_id="backup_care/confirmed",
         log_dir=str(generation_dir), display="none",
     )
     assert generation.status == "success"
@@ -168,7 +175,8 @@ def test_target_judge_uses_saved_generation_without_control_labels(tmp_path):
         task.dataset[0].metadata["check"]]
     assert counts["recorded"] == counts["unscored"] == 1
     assert counts["missing"] == counts["planned"] - 1
-    assert counts["generation_missing"] == 2
+    assert counts["generation_missing"] == counts["generation_unattempted"] == 2
+    assert counts["generation_interrupted"] == 0
     assert counts["judge_missing"] == 0
     other = report["summary"]["by_layer"]["Care"]["task.message"]
     assert other["planned"] == other["generation_missing"] + other["judge_missing"] == 6
@@ -248,16 +256,6 @@ def test_fixed_verdict_mock_exposes_errors_without_claiming_accuracy(tmp_path, p
     assert audit["run"]["model"] == "mockllm/model"
     assert audit["summary"]["source_sha256"] == task.metadata["source_sha256"]
     assert all(trial["verdict"] == prediction and trial["evidence"] for trial in audit["trials"])
-    readable = render_markdown(audit)
-    first = next(iter(report["by_layer"]["Safety"].values()))
-    expected_verdicts = (
-        f"| {first['planned']} | {first['planned'] if prediction == 'PASS' else 0} | "
-        f"{first['planned'] if prediction == 'FAIL' else 0} | 0 | 0 |"
-    )
-    assert expected_verdicts in readable
-    assert "Control counts compare judge output" in readable
-    if prediction == "FAIL":
-        assert "Response evidence:" in readable
     assert report["status"] == "success"
     assert report["basis"] == "authored controls; no independent validation"
     totals = Counter()
@@ -275,10 +273,102 @@ def test_fixed_verdict_mock_exposes_errors_without_claiming_accuracy(tmp_path, p
     assert totals["applicability_error"] == expected_counts["NOT_APPLICABLE"]
     assert "accuracy" not in json.dumps(report).lower()
     assert "rank" not in json.dumps(report).lower()
+    # The readable report must show the same disagreements the JSON holds.
+    readable = render_markdown(audit)
+    first = next(iter(report["by_layer"]["Safety"].values()))
+    ref = first["reference_counts"]
+    expected_row = (
+        f"| {first['planned']} | {ref.get('PASS', 0)} | {ref.get('FAIL', 0)} | "
+        f"{ref.get('UNCLEAR', 0)} | {ref.get('NOT_APPLICABLE', 0)} | {first['exact_match']} | "
+        f"{first['false_pass']} | {first['false_fail']} | {first['applicability_error']} | "
+        f"{first['unclear']} | 0 | 0 | 0 |"
+    )
+    assert expected_row in readable
+    assert "Control counts compare judge output" in readable
+    assert "## Judge disagreements requiring review" in readable
+    assert "Response evidence:" in readable
+    assert "No recorded FAIL" not in readable
+    if prediction == "PASS":
+        assert readable.count("### False pass:") == totals["false_pass"] == 34
+        assert "FAIL→PASS" in readable
+    else:
+        assert readable.count("### False fail:") == totals["false_fail"]
+        assert "PASS→FAIL" in readable
+    assert readable.count("### Applicability disagreement:") == totals["applicability_error"]
+    assert "rank" not in readable.lower()
     broken = log.model_copy(deep=True)
     broken.samples[0].target = "UNCLEAR"
     with pytest.raises(ValueError, match="frozen reference"):
         summarize(broken)
+
+
+def test_interrupted_generation_keeps_completed_turns_and_its_error(tmp_path):
+    def respond(messages, tools, tool_choice, config):
+        opening = messages[0].text
+        turn = sum(m.role == "user" for m in messages)
+        if "cannot stay" in opening and turn == 3:
+            raise RuntimeError("Deliberate provider outage at turn 3")
+        if "has not been asked" in opening and turn == 2:
+            return ModelOutput.from_content("mockllm/model", "Unfinished draft", stop_reason="max_tokens")
+        return ModelOutput.from_content("mockllm/model", f"Complete reply {turn}.")
+
+    generation_dir = tmp_path / "generation"
+    [generation] = inspect_eval(
+        conversation_family("backup_care"), model=get_model("mockllm/model", custom_outputs=respond),
+        log_dir=str(generation_dir), display="none", fail_on_error=False,
+    )
+    by_id = {str(sample.id): sample for sample in generation.samples}
+    assert by_id["backup_care/confirmed"].error is None
+    assert by_id["backup_care/unasked"].metadata["completed_turns"] == 1
+    assert by_id["backup_care/unavailable"].metadata["completed_turns"] == 2
+    assert "Unfinished draft" in by_id["backup_care/unasked"].messages[-1].text
+
+    source_log = glob(str(generation_dir / "*.eval"))[0]
+    task = target_judge(source_log)
+    # confirmed: 14 opportunities; unasked: turn 1 only (5); unavailable: turns 1-2 (9).
+    assert len(task.dataset) == 14 + 5 + 9
+    assert "Unfinished draft" not in json.dumps([s.input[-1].text for s in task.dataset])
+    source = task.metadata["source"]
+    assert source["planned_samples"] == 3
+    assert source["complete_samples"] == 1 and source["interrupted_samples"] == 2
+    assert {(c["sample_id"], c["status"], c["completed_turns"]) for c in source["conversations"]} == {
+        ("backup_care/confirmed", "complete", 3),
+        ("backup_care/unasked", "interrupted", 1),
+        ("backup_care/unavailable", "interrupted", 2),
+    }
+    errors = {c["sample_id"]: c["error"] for c in source["conversations"] if c["error"]}
+    assert "Deliberate provider outage at turn 3" in errors["backup_care/unavailable"]
+    assert "Incomplete response at user turn 2" in errors["backup_care/unasked"]
+    assert len(build_packet(source_log)["items"]) == 28
+
+    def valid_judgment(messages, tools, tool_choice, config):
+        prompt = json.loads(messages[-1].text)
+        conversation = prompt["conversation"]
+        return ModelOutput.from_content("mockllm/model", _judgment(
+            response_quote=conversation[-1]["content"],
+            cue_turn=prompt["response_turn"], cue_quote=conversation[-2]["content"],
+        ))
+
+    [judged] = inspect_eval(
+        task, model=get_model("mockllm/model", custom_outputs=valid_judgment),
+        log_dir=str(tmp_path / "judged"), display="none", fail_on_error=False,
+    )
+    report = build_report(judged)
+    consent = report["summary"]["by_layer"]["Safety"]["agency.consent"]
+    assert consent["planned"] == 9 and consent["recorded"] == consent["PASS"] == 6
+    assert consent["missing"] == consent["generation_interrupted"] == 3
+    assert consent["generation_unattempted"] == consent["judge_missing"] == 0
+    assert consent["execution_error"] == consent["unscored"] == 0
+    update = report["summary"]["by_layer"]["Care"]["coverage.update"]
+    assert update["planned"] == 3 and update["recorded"] == 1
+    assert update["generation_interrupted"] == 2
+    readable = render_markdown(report)
+    assert "| Interrupted | Unattempted |" in readable
+    assert "1 complete, 2 interrupted, of 3 planned" in readable
+    assert "`backup_care/unavailable` (epoch 1): interrupted, 2 of 3 turns completed" in readable
+    assert "Deliberate provider outage at turn 3" in readable
+    assert "`backup_care/unasked` (epoch 1): interrupted, 1 of 3 turns completed" in readable
+    assert "Unfinished draft" not in readable
 
 
 def test_limited_two_epoch_log_preserves_categories_and_reports_missing(tmp_path):
@@ -393,3 +483,71 @@ def test_live_guard_prevents_dispatch_without_supported_provider_and_ceiling(mod
 
     with pytest.raises(ValueError, match="requires"):
         asyncio.run(bounded_judge()(SimpleNamespace(model=model), forbidden_generate))
+
+
+def test_fluctuating_capacity_round_trips_through_judging_and_report(tmp_path):
+    generation_dir = tmp_path / "generation"
+    [generation] = inspect_eval(
+        conversation_family("fluctuating_capacity"), model="mockllm/model",
+        log_dir=str(generation_dir), display="none",
+    )
+    assert generation.status == "success"
+    assert generation.eval.metadata["family"] == "fluctuating_capacity"
+    source_log = glob(str(generation_dir / "*.eval"))[0]
+    task = target_judge(source_log)
+    rubric = json.loads((ROOT / "cases/fluctuating_capacity/rubric.json").read_text())
+    per_variant = sum(len(check["turns"]) for check in rubric["checks"])
+    assert len(task.dataset) == 3 * per_variant
+    assert task.metadata["family"] == task.metadata["source"]["family"] == "fluctuating_capacity"
+    assert all(str(s.id).startswith("fluctuating_capacity/") for s in task.dataset)
+    assert task.metadata["source_sha256"]["rubric.json"] == hashlib.sha256(
+        (ROOT / "cases/fluctuating_capacity/rubric.json").read_bytes()).hexdigest()
+    assert task.metadata["source_sha256"]["case.json"] == generation.eval.metadata["case_sha256"]
+    packet = build_packet(source_log)
+    assert packet["family"] == "fluctuating_capacity"
+    assert packet["rubric_sha256"] == task.metadata["source_sha256"]["rubric.json"]
+    assert {item["family_id"] for item in packet["items"]} == {"fluctuating_capacity"}
+    for sample in task.dataset:
+        prompt = json.loads(sample.input[-1].text)
+        assert set(prompt) == {"criterion", "response_turn", "conversation"}
+        assert "expected" not in sample.input[-1].text
+
+    [judged] = inspect_eval(
+        task, model="mockllm/model", sample_id=str(task.dataset[0].id),
+        log_dir=str(tmp_path / "judged"), display="none", fail_on_error=False,
+    )
+    report = build_report(judged)
+    assert report["run"]["family"] == report["summary"]["family"] == "fluctuating_capacity"
+    assert summarize_target(judged)["family"] == "fluctuating_capacity"
+    assert "**Family:** fluctuating_capacity" in render_markdown(report)
+
+
+def test_control_judge_reads_the_named_family():
+    task = control_judge(family="fluctuating_capacity")
+    assert task.metadata["family"] == "fluctuating_capacity"
+    assert set(task.metadata["source_sha256"]) == {
+        "case.json", "rubric.json", "controls.jsonl", "pyproject.toml", "grader.py"}
+    assert task.metadata["source_sha256"]["controls.jsonl"] == hashlib.sha256(
+        (ROOT / "cases/fluctuating_capacity/controls.jsonl").read_bytes()).hexdigest()
+    assert all(str(s.id).split("/")[1].count("@") == 1 for s in task.dataset)
+    with pytest.raises(ValueError, match="Unknown family"):
+        control_judge(family="no_such_family")
+
+
+def test_target_judge_refuses_unknown_family_and_changed_case(tmp_path):
+    generation_dir = tmp_path / "generation"
+    inspect_eval(
+        conversation_family("fluctuating_capacity"), model="mockllm/model",
+        sample_id="fluctuating_capacity/settled", log_dir=str(generation_dir), display="none",
+    )
+    source_log = glob(str(generation_dir / "*.eval"))[0]
+    log = read_eval_log(source_log)
+    for field, value, message in (
+        ("family", "no_such_family", "Unknown family"),
+        ("family", "backup_care", "differs from the current case"),
+    ):
+        log.eval.metadata[field] = value
+        forged = tmp_path / f"forged-{value}.eval"
+        write_eval_log(log, str(forged))
+        with pytest.raises(ValueError, match=message):
+            target_judge(str(forged))

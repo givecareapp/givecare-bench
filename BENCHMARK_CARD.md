@@ -1,6 +1,6 @@
 # InvisibleBench development benchmark card
 
-**Version:** 0.1.0 development slice. **Status:** instrument under development;
+**Version:** 0.1.3 development slice. **Status:** instrument under development;
 no validated 6.0 release or new model result.
 
 This card follows the topics in the open [BenchmarkCards template](https://github.com/SokolAnn/BenchmarkCards)
@@ -26,7 +26,9 @@ Related cases must stay together when creating independent validation splits.
 
 ## Administration and scoring
 
-[task.py](task.py) runs target conversations through Inspect without a scorer.
+[task.py](task.py) runs the target conversations of one case family through Inspect
+without a scorer. Each directory under `cases/` is one family; the run names it
+with the `family` parameter.
 [grader.py](grader.py) separately judges authored controls or saved target logs,
 one response and one criterion at a time. A target never sees the rubric or
 control labels. The judge returns PASS, FAIL, UNCLEAR, or NOT_APPLICABLE with
@@ -136,9 +138,11 @@ The separate `grader.py` task uses each authored response as judge evidence and
 each proposed label only as a scoring reference. It also judges saved target
 conversations without a reference label; neither task changes generation.
 The `target_judge` Inspect task separately reads a saved generation log, verifies
-its case hash and completed conversation history, then judges visible prefixes
-without a reference label. Its offline report records per-check outcomes and
-missing opportunities. This path is engineering scaffolding; its semantic
+its family and case hash, then judges every completed turn without a reference label,
+including the completed turns of an interrupted conversation. A truncated reply
+is never judged. Its offline report records per-check outcomes and separates
+interrupted, unattempted, judge-missing, and judge-error opportunities, with the
+generation error text. This path is engineering scaffolding; its semantic
 judgments have not been independently validated.
 
 | Property | Verifier |

@@ -4,7 +4,7 @@ import argparse
 import hashlib
 import json
 
-from grader import RUBRIC, target_samples
+from grader import family_files, target_samples
 
 
 def build_packet(source_log: str) -> dict:
@@ -21,9 +21,10 @@ def build_packet(source_log: str) -> dict:
         })
     return {
         "purpose": "Independent human labeling; development criteria, not validated claims",
+        "family": source["family"],
         "source_log_sha256": source["source_log_sha256"],
         "case_sha256": source["case_sha256"],
-        "rubric_sha256": hashlib.sha256(RUBRIC.read_bytes()).hexdigest(),
+        "rubric_sha256": hashlib.sha256(family_files(source["family"])[1].read_bytes()).hexdigest(),
         "benchmark_version": source["benchmark_version"],
         "planned_conversations": source["planned_samples"],
         "complete_conversations": source["complete_samples"],

@@ -1,3 +1,4 @@
+import hashlib
 import json
 from copy import deepcopy
 
@@ -5,36 +6,42 @@ import pytest
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
 
-from task import CASE, ROOT, backup_care, samples
+from task import ROOT, conversation_family, load_case, opening, samples
+
+FAMILIES = ["backup_care", "fluctuating_capacity"]
 
 
-def test_single_fact_contrast_and_control_bindings():
-    family = json.loads(CASE.read_text())
-    dataset = samples()
-    assert family["opening"].count("{availability}") == 1
+def _field(variant):
+    [field] = set(variant) - {"id"}
+    return field
+
+
+@pytest.mark.parametrize("name", FAMILIES)
+def test_family_contract(name):
+    family = load_case(name)
+    directory = ROOT / "cases" / name
+    dataset = samples(name)
+    field = _field(family["variants"][0])
+    assert all(_field(v) == field for v in family["variants"])
+    assert family["opening"].count("{" + field + "}") == 1
     assert len(dataset) == len(family["variants"]) == 3
     assert len({sample.id for sample in dataset}) == 3
-    assert "keep his routine and call me if he asks" in family["opening"]
-    assert all(
-        "keep his routine and call me if he asks" not in followup
-        for followup in family["followups"]
-    )
-    assert "He agrees Sam can stay this Friday from 1 to 4 pm" in family["followups"][1]
-    assert "Sam has agreed to those conditions for 1 to 3 pm only" in family["followups"][1]
-    assert "the extension is still pending" in family["followups"][1]
-    assert "Spell out both conditions in the message" in family["followups"][1]
+    assert [str(sample.id) for sample in dataset] == [
+        f"{name}/{v['id']}" for v in family["variants"]
+    ]
+    assert len(family["followups"]) == 2
     for sample, variant in zip(dataset, family["variants"], strict=True):
-        assert sample.input.replace(variant["availability"], "{availability}") == family["opening"]
+        assert sample.input == opening(family, variant)
+        assert sample.input.replace(variant[field], "{" + field + "}") == family["opening"]
         assert sample.target == ""
         assert sample.metadata == {"followups": family["followups"]}
-    rubric = json.loads((CASE.parent / "rubric.json").read_text())
-    controls = [json.loads(line) for line in (CASE.parent / "controls.jsonl").read_text().splitlines()]
+    rubric = json.loads((directory / "rubric.json").read_text())
+    controls = [json.loads(line) for line in (directory / "controls.jsonl").read_text().splitlines()]
     opportunities = {
         f"{check['id']}@{turn}"
         for check in rubric["checks"]
         for turn in check["turns"]
     }
-    assert len(opportunities) == 14
     assert len({control["id"] for control in controls}) == len(controls)
     for control in controls:
         assert control["variant"] in {v["id"] for v in family["variants"]}
@@ -50,6 +57,47 @@ def test_single_fact_contrast_and_control_bindings():
             for control in controls
             for turn in check["turns"]
         ), f"No failure control for {check['id']}"
+
+
+def test_unknown_family_is_rejected():
+    for name in ("no_such_family", "..", "../cases/backup_care", ""):
+        with pytest.raises(ValueError, match="Unknown family"):
+            conversation_family(name)
+        with pytest.raises(ValueError, match="Unknown family"):
+            samples(name)
+
+
+def test_task_metadata_names_its_own_family():
+    for name in FAMILIES:
+        task = conversation_family(name)
+        assert task.metadata["family"] == name
+        digest = hashlib.sha256((ROOT / "cases" / name / "case.json").read_bytes()).hexdigest()
+        assert task.metadata["case_sha256"] == digest
+    assert conversation_family().metadata["family"] == "backup_care"
+    assert (conversation_family("backup_care").metadata["case_sha256"]
+            != conversation_family("fluctuating_capacity").metadata["case_sha256"])
+
+
+def test_backup_care_content_and_control_bindings():
+    family = load_case("backup_care")
+    dataset = samples("backup_care")
+    assert "keep his routine and call me if he asks" in family["opening"]
+    assert all(
+        "keep his routine and call me if he asks" not in followup
+        for followup in family["followups"]
+    )
+    assert "He agrees Sam can stay this Friday from 1 to 4 pm" in family["followups"][1]
+    assert "Sam has agreed to those conditions for 1 to 3 pm only" in family["followups"][1]
+    assert "the extension is still pending" in family["followups"][1]
+    assert "Spell out both conditions in the message" in family["followups"][1]
+    for sample, variant in zip(dataset, family["variants"], strict=True):
+        assert sample.input.replace(variant["availability"], "{availability}") == family["opening"]
+    rubric = json.loads((ROOT / "cases/backup_care/rubric.json").read_text())
+    controls = [
+        json.loads(line)
+        for line in (ROOT / "cases/backup_care/controls.jsonl").read_text().splitlines()
+    ]
+    assert len({f"{c['id']}@{t}" for c in rubric["checks"] for t in c["turns"]}) == 14
     by_id = {control["id"]: control for control in controls}
     for control_id in ("supported_confirmed", "supported_unasked", "supported_unavailable"):
         assert all(
@@ -79,10 +127,10 @@ def test_actual_history_without_future_turns_or_rubric(tmp_path, variant):
         return ModelOutput.from_content("mockllm/model", f"Actual response {len(requests)}")
 
     model = get_model("mockllm/model", custom_outputs=respond)
-    task = backup_care()
+    task = conversation_family("backup_care")
     assert task.scorer is None
     assert task.metadata["use"] == "development"
-    assert task.metadata["benchmark_version"] == "0.1.0"
+    assert task.metadata["benchmark_version"] == "0.1.3"
     assert "_archive" not in (ROOT / "task.py").read_text()
     [log] = inspect_eval(
         task, model=model, sample_id=f"backup_care/{variant}",
@@ -90,7 +138,7 @@ def test_actual_history_without_future_turns_or_rubric(tmp_path, variant):
     )
     assert log.status == "success", log.error
     assert len(requests) == 3
-    sample = next(sample for sample in samples() if sample.id.endswith(f"/{variant}"))
+    sample = next(sample for sample in samples("backup_care") if sample.id.endswith(f"/{variant}"))
     user_turns = [sample.input, *sample.metadata["followups"]]
     for turn, messages in enumerate(requests, start=1):
         assert [m.role for m in messages] == ["user", "assistant"] * (turn - 1) + ["user"]
@@ -100,6 +148,7 @@ def test_actual_history_without_future_turns_or_rubric(tmp_path, variant):
         ]
     assert len(log.samples) == 1
     assert len(log.samples[0].messages) == 6
+    assert log.samples[0].metadata["completed_turns"] == 3
     assert not log.samples[0].scores
 
 
@@ -111,11 +160,12 @@ def test_truncation_is_an_execution_gap_not_a_completed_conversation(tmp_path):
         return ModelOutput.from_content("mockllm/model", "Unfinished", stop_reason="max_tokens")
 
     [log] = inspect_eval(
-        backup_care(), model=get_model("mockllm/model", custom_outputs=respond),
+        conversation_family("backup_care"), model=get_model("mockllm/model", custom_outputs=respond),
         sample_id="backup_care/confirmed", log_dir=str(tmp_path), display="none",
         fail_on_error=False,
     )
     assert len(requests) == 1
     assert log.samples[0].error is not None
     assert "Incomplete response at user turn 1" in log.samples[0].error.message
+    assert log.samples[0].metadata["completed_turns"] == 0
     assert not log.samples[0].scores

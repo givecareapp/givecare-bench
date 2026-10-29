@@ -1,7 +1,7 @@
 # InvisibleBench
 
 InvisibleBench evaluates how an assistant handles multi-turn caregiver-support
-conversations. The active project is a **0.1.0 development slice**, not a
+conversations. The active project is a **0.1.3 development slice**, not a
 validated InvisibleBench 6.0 release. There is no new model result or validated
 grader. Safety and Care remain separate; there is no composite score or model rank.
 
@@ -13,11 +13,12 @@ helper's availability and the care recipient's consent change.
 ## Layout
 
 ```text
-task.py                  Inspect generation task and solver
+task.py                  Inspect generation task (one family per run) and solver
 grader.py                Inspect control and target judging tasks; shared scorer
 report.py                Offline JSON or Markdown report from judge logs
 review_packet.py         Blind human-review packet from a generation log
-cases/backup_care/       Case, rubric, authored controls, and family notes
+cases/<family>/          One case family: case, rubric, authored controls, notes
+                         (backup_care, fluctuating_capacity)
 tests/                   Offline harness and contract tests
 scripts/check.sh         Active checks, then the archived gate
 BENCHMARK_CARD.md        Methods, evidence, limits, and review protocol
@@ -44,20 +45,26 @@ locked environment may download free dependencies. For active tests alone, run
 
 ## Use the development tasks
 
+Each directory under `cases/` is one family. Name the family with `-T family=<name>`.
+The default is `backup_care`. An unknown name fails with the list of known families.
+
 Generate a free mock conversation log and inspect it:
 
 ```bash
-uv run --locked inspect eval task.py@backup_care --model mockllm/model --log-dir /tmp/bench-generation
+uv run --locked inspect eval task.py@conversation_family -T family=backup_care \
+  --model mockllm/model --log-dir /tmp/bench-generation
 uv run --locked inspect view --log-dir /tmp/bench-generation
 ```
 
 Judge authored controls with a mock response:
 
 ```bash
-uv run --locked inspect eval grader.py@control_judge --model mockllm/model --limit 1 --log-dir /tmp/bench-controls
+uv run --locked inspect eval grader.py@control_judge -T family=backup_care \
+  --model mockllm/model --limit 1 --log-dir /tmp/bench-controls
 ```
 
-Judge a saved generation log without regenerating the target conversation:
+Judge a saved generation log without regenerating the target conversation.
+The judge reads the family from the log:
 
 ```bash
 uv run --locked inspect eval grader.py@target_judge \
@@ -70,9 +77,11 @@ uv run --locked python report.py /tmp/bench-judge/<log>.eval --format markdown \
 Replace `<log>.eval` with the actual filename Inspect wrote. The default mock
 judge returns non-JSON text, so its answer is deliberately **unscored**. A mock
 run proves the plumbing, not caregiver-support capability. The report preserves
-per-check denominators, four-state verdicts, missing and error counts, cited
-evidence, source hashes, settings, and usage. Inspect `.eval` logs are the
-source of truth.
+per-check denominators, four-state verdicts, interrupted and unattempted
+generation, judge errors, cited evidence, source hashes, settings, and usage.
+The control report lists every disagreement with the authored labels: false
+passes, false failures, and applicability. Inspect `.eval` logs are the source
+of truth.
 
 For a blind packet from a saved generation log:
 
