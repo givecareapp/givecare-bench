@@ -52,6 +52,11 @@ These labels were authored during development; they are not expert judgments.
 The separate `grader.py` task uses each authored response as judge evidence and
 each proposed label only as a scoring reference. It does not score new target
 conversations or change the generation task.
+The `target_judge` Inspect task separately reads a saved generation log, verifies
+its case hash and completed conversation history, then judges visible prefixes
+without a reference label. Its offline report records per-check outcomes and
+missing opportunities. This path is engineering scaffolding; its semantic
+judgments have not been independently validated.
 
 | Property | Verifier |
 | --- | --- |
