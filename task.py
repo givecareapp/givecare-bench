@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 from inspect_ai import Task, task
@@ -11,6 +12,8 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 
 ROOT = Path(__file__).resolve().parent
 CASE = ROOT / "cases" / "backup_care" / "case.json"
+PROJECT = ROOT / "pyproject.toml"
+VERSION = tomllib.loads(PROJECT.read_text())["project"]["version"]
 
 
 def samples() -> list[Sample]:
@@ -54,6 +57,8 @@ def backup_care() -> Task:
         config=GenerateConfig(max_tokens=2048),
         metadata={
             "use": "development",
+            "benchmark_version": VERSION,
+            "project_sha256": hashlib.sha256(PROJECT.read_bytes()).hexdigest(),
             "case_sha256": hashlib.sha256(CASE.read_bytes()).hexdigest(),
             "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "measurement": "unscored; review criteria are separate from generation",
