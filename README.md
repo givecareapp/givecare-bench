@@ -1,7 +1,7 @@
 # InvisibleBench
 
 InvisibleBench evaluates how an assistant handles multi-turn caregiver-support
-conversations. The active project is a **0.1.3 development slice**, not a
+conversations. The active project is a **0.1.4 development slice**, not a
 validated InvisibleBench 6.0 release. There is no new model result or validated
 grader. Safety and Care remain separate; there is no composite score or model rank.
 
