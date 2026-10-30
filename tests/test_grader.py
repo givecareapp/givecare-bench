@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import subprocess
 from collections import Counter
 from copy import deepcopy
 from glob import glob
@@ -12,6 +13,7 @@ from inspect_ai.log import read_eval_log, write_eval_log
 from inspect_ai.model import ModelOutput, get_model
 
 from grader import (
+    VERDICTS,
     bounded_judge,
     control_judge,
     control_samples,
@@ -46,6 +48,12 @@ def _judgment(**overrides):
     }
     value.update(overrides)
     return json.dumps(value)
+
+
+def _record_git_revision(monkeypatch):
+    # Inspect skips git while pytest runs, so a mock log has no native revision. Call this
+    # inside the test body: pytest sets the variable again at the start of each phase.
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
 
 
 def test_parse_judgment_accepts_only_grounded_exact_shape():
@@ -554,11 +562,12 @@ def test_target_judge_refuses_unknown_family_and_changed_case(tmp_path):
             target_judge(str(forged))
 
 
-def test_judge_tasks_bind_to_committed_case_files():
+def test_judge_tasks_bind_to_committed_case_files(tmp_path, monkeypatch):
     # A judge run records the commit it ran at and refuses uncommitted case files,
     # so a saved verdict can always be traced to the rubric and labels git holds.
     task = control_judge()
-    assert len(task.metadata["git_commit"]) == 40
+    # Inspect records the commit in the log; the task keeps only the uncommitted files.
+    assert "git_commit" not in task.metadata
     # Code edits in progress are recorded, never a reason to refuse; case files are.
     assert not [p for p in task.metadata["uncommitted"] if p.startswith("cases/")]
     rubric = ROOT / "cases/backup_care/rubric.json"
@@ -571,8 +580,29 @@ def test_judge_tasks_bind_to_committed_case_files():
         rubric.write_bytes(original)
     assert not [p for p in control_judge().metadata["uncommitted"] if p.startswith("cases/")]
 
+    _record_git_revision(monkeypatch)
+    [log] = inspect_eval(
+        task, model="mockllm/model", sample_id=str(task.dataset[0].id),
+        log_dir=str(tmp_path), display="none", fail_on_error=False,
+    )
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+    native = log.eval.revision
+    assert native.commit == head and isinstance(native.dirty, bool)
+    revision = {"origin": native.origin, "commit": head, "dirty": native.dirty}
+    audit = build_report(log)
+    assert audit["summary"]["revision"] == audit["run"]["revision"] == revision
+    assert f"**Revision:** commit {head}, dirty {native.dirty}" in render_markdown(audit)
+    # A log that recorded no revision still reports, with every field None.
+    unrecorded = log.model_copy(deep=True)
+    unrecorded.eval.revision = None
+    audit = build_report(unrecorded)
+    assert audit["summary"]["revision"] == audit["run"]["revision"] == {
+        "origin": None, "commit": None, "dirty": None}
+    assert "**Revision:** none recorded" in render_markdown(audit)
 
-def test_report_diff_pairs_samples_and_lists_every_flip(tmp_path):
+
+def test_report_diff_pairs_samples_and_lists_every_flip(tmp_path, monkeypatch):
     from report import build_report, diff_reports
 
     def constant(verdict):
@@ -588,6 +618,7 @@ def test_report_diff_pairs_samples_and_lists_every_flip(tmp_path):
     task = control_judge()
     ids = [str(s.id) for s in task.dataset[:6]]
     logs = []
+    _record_git_revision(monkeypatch)
     for name, verdict in (("before", "PASS"), ("after", "FAIL")):
         [log] = inspect_eval(
             control_judge(), model=get_model("mockllm/model", custom_outputs=constant(verdict)),
@@ -597,9 +628,50 @@ def test_report_diff_pairs_samples_and_lists_every_flip(tmp_path):
     diff = diff_reports(*logs)
     assert diff["kind"] == "verdict-diff"
     assert diff["paired"] == 6 and diff["only_before"] == diff["only_after"] == 0
-    assert diff["before"]["git_commit"] == diff["after"]["git_commit"]
+    assert diff["before"]["revision"] == diff["after"]["revision"]
+    assert diff["before"]["revision"]["commit"]
+    assert set(diff["before"]) == {"eval_id", "model", "revision", "source_sha256"}
     assert len(diff["flips"]) == 6
     assert set(diff["flip_counts"]) == {"PASS->FAIL"}
     assert {flip["reference"] for flip in diff["flips"]} <= {"PASS", "FAIL", "UNCLEAR", "NOT_APPLICABLE"}
     with pytest.raises(ValueError, match="Compare two"):
         diff_reports(logs[0], {**logs[1], "kind": "target-judging-audit"})
+
+
+@pytest.mark.parametrize("epochs", [1, 2])
+def test_judge_log_results_carry_native_verdict_frequencies(tmp_path, epochs):
+    # Inspect's own results hold the per-verdict frequencies: every verdict is present,
+    # including one that never occurred, and an unscored sample is not a category.
+    verdicts = {"care.alternative": "PASS", "privacy.message": "FAIL",
+                "scope.action": "NOT_APPLICABLE"}
+
+    def respond(messages, tools, tool_choice, config):
+        prompt = json.loads(messages[-1].text)
+        check = prompt["criterion"]["id"]
+        if check not in verdicts:
+            return ModelOutput.from_content("mockllm/model", "not JSON")
+        turn = prompt["response_turn"]
+        said = {e["role"]: e["content"] for e in prompt["conversation"] if e["turn"] == turn}
+        return ModelOutput.from_content("mockllm/model", _judgment(
+            verdict=verdicts[check], response_quote=said["assistant"],
+            cue_quote=said["user"], cue_turn=turn))
+
+    [log] = inspect_eval(
+        control_judge(), model=get_model("mockllm/model", custom_outputs=respond),
+        sample_id=["supported_confirmed/care.alternative@2",
+                   "supported_confirmed/privacy.message@2",
+                   "supported_confirmed/scope.action@2",
+                   "supported_confirmed/coverage.status@1"],
+        epochs=epochs, log_dir=str(tmp_path), display="none", fail_on_error=False,
+    )
+    assert log.status == "success", log.error
+    saved = read_eval_log(log.location)
+    unscored = [s for s in saved.samples if s.scores["criterion_verdict"].reason == "grader_failed"]
+    assert [str(s.id) for s in unscored] == ["supported_confirmed/coverage.status@1"] * epochs
+    [score] = saved.results.scores
+    assert score.name == "criterion_verdict"
+    assert VERDICTS == {"PASS", "FAIL", "UNCLEAR", "NOT_APPLICABLE"}
+    assert {name: metric.value for name, metric in score.metrics.items()} == {
+        "PASS": pytest.approx(1 / 3), "FAIL": pytest.approx(1 / 3), "UNCLEAR": 0.0,
+        "NOT_APPLICABLE": pytest.approx(1 / 3)}
+    assert score.scored_samples == 3 * epochs and score.unscored_samples == epochs

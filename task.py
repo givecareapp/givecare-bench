@@ -8,13 +8,48 @@ from pathlib import Path
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
-from inspect_ai.model import ChatMessageUser, GenerateConfig
+from inspect_ai.model import (
+    ChatMessageUser,
+    GenerateConfig,
+    ModelCost,
+    ModelInfo,
+    get_model_info,
+    set_model_info,
+)
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 
 ROOT = Path(__file__).resolve().parent
 CASES = ROOT / "cases"
 PROJECT = ROOT / "pyproject.toml"
 VERSION = tomllib.loads(PROJECT.read_text())["project"]["version"]
+
+# OpenRouter list prices in USD per million tokens, read from /api/v1/models on 2026-10-30.
+# Refresh them before a paid run. Each value is (input, output, input_cache_read).
+# Llama lists no cache price, so its cache-read entry repeats the input price.
+OPENROUTER_PRICES: dict[str, tuple[float, float, float]] = {
+    "openrouter/anthropic/claude-haiku-5.5": (0.10, 0.50, 0.01),
+    "openrouter/openai/gpt-5.6-luna-pro": (0.20, 1.20, 0.02),
+    "openrouter/openai/gpt-5.6-luna": (0.20, 1.20, 0.02),
+    "openrouter/google/gemini-3.1-flash-lite": (0.25, 1.50, 0.025),
+    "openrouter/deepseek/deepseek-v4.1-flash": (0.045, 0.50, 0.006),
+    "openrouter/meta-llama/llama-3.3-70b-instruct": (0.10, 0.32, 0.10),
+}
+
+
+def register_prices() -> None:
+    """Give Inspect each price so it records `total_cost` and `cost_limit` binds."""
+    for name, (input_price, output_price, cache_read_price) in OPENROUTER_PRICES.items():
+        cost = ModelCost(
+            input=input_price,
+            output=output_price,
+            input_cache_write=input_price,
+            input_cache_read=cache_read_price,
+        )
+        info = get_model_info(name) or ModelInfo()
+        set_model_info(name, info.model_copy(update={"cost": cost}))
+
+
+register_prices()
 
 
 def case_path(family: str) -> Path:
@@ -27,16 +62,17 @@ def case_path(family: str) -> Path:
 
 
 def revision(paths: list[Path]) -> dict:
-    """Git identity of the files a run depends on; None outside a repository, as in Harbor."""
+    """Uncommitted files among those a run depends on; None outside a repository, as in Harbor.
+
+    The commit itself is Inspect's native `log.eval.revision`.
+    """
     git = ["git", "-C", str(ROOT)]
     try:
-        commit = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True,
-                                check=True).stdout.strip()
         status = subprocess.run([*git, "status", "--porcelain", "--", *map(str, paths)],
                                 capture_output=True, text=True, check=True).stdout
     except (OSError, subprocess.CalledProcessError):
-        return {"git_commit": None, "uncommitted": None}
-    return {"git_commit": commit, "uncommitted": sorted(line[3:] for line in status.splitlines())}
+        return {"uncommitted": None}
+    return {"uncommitted": sorted(line[3:] for line in status.splitlines())}
 
 
 def load_case(family: str) -> dict:

@@ -94,7 +94,9 @@ conversation text; use the [review protocol](BENCHMARK_CARD.md#independent-revie
 before sharing or labeling it. Authored controls are development material, not
 independent validation evidence.
 
-Paid inference requires a saved plan and explicit cost ceiling. No paid run,
+Paid inference requires a saved plan and explicit cost ceiling. `task.py`
+registers OpenRouter list prices with the date they were read, so Inspect
+records cost; refresh that table before a paid run. No paid run,
 publication, push, or deployment is implied by these commands. The prior
 [paper](https://arxiv.org/abs/2511.20733) describes the original benchmark;
 it does not validate this rebuild. Licensed under [MIT](LICENSE).
