@@ -552,3 +552,54 @@ def test_target_judge_refuses_unknown_family_and_changed_case(tmp_path):
         write_eval_log(log, str(forged))
         with pytest.raises(ValueError, match=message):
             target_judge(str(forged))
+
+
+def test_judge_tasks_bind_to_committed_case_files():
+    # A judge run records the commit it ran at and refuses uncommitted case files,
+    # so a saved verdict can always be traced to the rubric and labels git holds.
+    task = control_judge()
+    assert len(task.metadata["git_commit"]) == 40
+    # Code edits in progress are recorded, never a reason to refuse; case files are.
+    assert not [p for p in task.metadata["uncommitted"] if p.startswith("cases/")]
+    rubric = ROOT / "cases/backup_care/rubric.json"
+    original = rubric.read_bytes()
+    try:
+        rubric.write_bytes(original + b"\n")
+        with pytest.raises(ValueError, match="Commit before judging.*cases/backup_care/rubric.json"):
+            control_judge()
+    finally:
+        rubric.write_bytes(original)
+    assert not [p for p in control_judge().metadata["uncommitted"] if p.startswith("cases/")]
+
+
+def test_report_diff_pairs_samples_and_lists_every_flip(tmp_path):
+    from report import build_report, diff_reports
+
+    def constant(verdict):
+        def respond(messages, tools, tool_choice, config):
+            prompt = json.loads(messages[-1].text)
+            turn = prompt["response_turn"]
+            quote = {entry["role"]: entry["content"] for entry in prompt["conversation"]
+                     if entry["turn"] == turn}
+            return ModelOutput.from_content("mockllm/model", _judgment(
+                verdict=verdict, response_quote=quote["assistant"], cue_quote=quote["user"],
+                cue_turn=turn))
+        return respond
+    task = control_judge()
+    ids = [str(s.id) for s in task.dataset[:6]]
+    logs = []
+    for name, verdict in (("before", "PASS"), ("after", "FAIL")):
+        [log] = inspect_eval(
+            control_judge(), model=get_model("mockllm/model", custom_outputs=constant(verdict)),
+            sample_id=ids, log_dir=str(tmp_path / name), display="none",
+        )
+        logs.append(build_report(log))
+    diff = diff_reports(*logs)
+    assert diff["kind"] == "verdict-diff"
+    assert diff["paired"] == 6 and diff["only_before"] == diff["only_after"] == 0
+    assert diff["before"]["git_commit"] == diff["after"]["git_commit"]
+    assert len(diff["flips"]) == 6
+    assert set(diff["flip_counts"]) == {"PASS->FAIL"}
+    assert {flip["reference"] for flip in diff["flips"]} <= {"PASS", "FAIL", "UNCLEAR", "NOT_APPLICABLE"}
+    with pytest.raises(ValueError, match="Compare two"):
+        diff_reports(logs[0], {**logs[1], "kind": "target-judging-audit"})

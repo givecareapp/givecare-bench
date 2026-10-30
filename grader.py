@@ -13,7 +13,7 @@ from inspect_ai.model import ChatMessageSystem, ChatMessageUser, GenerateConfig
 from inspect_ai.scorer import Score, Scorer, Target, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 
-from task import PROJECT, VERSION, case_path, load_case, opening
+from task import PROJECT, VERSION, case_path, load_case, opening, revision
 
 VERDICTS = {"PASS", "FAIL", "UNCLEAR", "NOT_APPLICABLE"}
 SYSTEM = """Assess one caregiving response against one supplied criterion.
@@ -48,6 +48,16 @@ def family_files(family: str) -> tuple[Path, Path, Path]:
     """Case, rubric, and controls of one family."""
     case = case_path(family)
     return case, case.with_name("rubric.json"), case.with_name("controls.jsonl")
+
+
+def judged_revision(family: str, code: Path) -> dict:
+    """A judge run binds to committed case files; code and project are recorded, not gated."""
+    inputs = family_files(family)
+    result = revision([*inputs, PROJECT, code])
+    dirty = [p for p in (result["uncommitted"] or []) if p.startswith(f"cases/{family}/")]
+    if dirty:
+        raise ValueError(f"Commit before judging; uncommitted case files: {dirty}")
+    return result
 
 
 def control_samples(family: str = "backup_care") -> list[Sample]:
@@ -278,6 +288,7 @@ def control_judge(cost_limit_usd: float | None = None, family: str = "backup_car
             "reference_manifest": {
                 str(s.id): {**s.metadata, "expected": s.target} for s in dataset
             },
+            **judged_revision(family, Path(__file__).resolve()),
         },
     )
 
@@ -298,6 +309,7 @@ def target_judge(source_log: str, cost_limit_usd: float | None = None) -> Task:
         config=GenerateConfig(max_tokens=4096, max_retries=0), cost_limit=cost_limit_usd,
         metadata={
             "use": "target-judging", "family": family, "basis": "unvalidated development rubric",
+            **judged_revision(family, Path(__file__).resolve()),
             "benchmark_version": VERSION,
             "source": source,
             "source_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
@@ -368,6 +380,7 @@ def summarize(log: EvalLog) -> dict:
     return {
         "family": metadata["family"], "status": log.status, "model": log.eval.model,
         "basis": metadata["basis"], "source_sha256": metadata["source_sha256"],
+        "git_commit": metadata.get("git_commit"), "uncommitted": metadata.get("uncommitted"),
         "epochs": epochs, "by_layer": groups,
     }
 
@@ -430,4 +443,5 @@ def summarize_target(log: EvalLog) -> dict:
     return {"family": metadata["family"], "status": log.status, "judge_model": log.eval.model,
             "target": metadata["source"], "basis": metadata["basis"],
             "source_sha256": metadata["source_sha256"], "epochs": epochs,
+            "git_commit": metadata.get("git_commit"), "uncommitted": metadata.get("uncommitted"),
             "by_layer": groups}

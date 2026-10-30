@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -23,6 +24,19 @@ def case_path(family: str) -> Path:
         known = sorted(p.parent.name for p in CASES.glob("*/case.json"))
         raise ValueError(f"Unknown family {family!r}; known families: {known}")
     return path
+
+
+def revision(paths: list[Path]) -> dict:
+    """Git identity of the files a run depends on; None outside a repository, as in Harbor."""
+    git = ["git", "-C", str(ROOT)]
+    try:
+        commit = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True,
+                                check=True).stdout.strip()
+        status = subprocess.run([*git, "status", "--porcelain", "--", *map(str, paths)],
+                                capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return {"git_commit": None, "uncommitted": None}
+    return {"git_commit": commit, "uncommitted": sorted(line[3:] for line in status.splitlines())}
 
 
 def load_case(family: str) -> dict:
@@ -90,5 +104,6 @@ def conversation_family(family: str = "backup_care") -> Task:
             "case_sha256": hashlib.sha256(case_path(family).read_bytes()).hexdigest(),
             "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "measurement": "unscored; review criteria are separate from generation",
+            **revision([case_path(family), PROJECT, Path(__file__)]),
         },
     )

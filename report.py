@@ -56,6 +56,36 @@ def build_report(log: EvalLog) -> dict:
     }
 
 
+def diff_reports(before: dict, after: dict) -> dict:
+    """Verdict-for-verdict comparison of two judge logs over the same samples."""
+    if before["kind"] != after["kind"]:
+        raise ValueError("Compare two control reports or two target reports, not one of each")
+    trials = lambda report: {(t["sample_id"], t["epoch"]): t for t in report["trials"]}  # noqa: E731
+    first, second = trials(before), trials(after)
+    shared = sorted(set(first) & set(second))
+    flips = [
+        {"sample_id": key[0], "epoch": key[1], "check": first[key]["check"],
+         "turn": first[key]["turn"], "reference": first[key]["reference"],
+         "before": first[key]["verdict"], "after": second[key]["verdict"]}
+        for key in shared if first[key]["verdict"] != second[key]["verdict"]
+    ]
+    counts = {}
+    for flip in flips:
+        label = f"{flip['before']}->{flip['after']}"
+        counts[label] = counts.get(label, 0) + 1
+    identity = lambda report: {  # noqa: E731
+        "eval_id": report["run"]["eval_id"], "model": report["run"]["model"],
+        "git_commit": report["summary"].get("git_commit"),
+        "source_sha256": report["summary"].get("source_sha256"),
+    }
+    return {
+        "kind": "verdict-diff", "before": identity(before), "after": identity(after),
+        "paired": len(shared), "only_before": len(set(first) - set(second)),
+        "only_after": len(set(second) - set(first)), "flip_counts": dict(sorted(counts.items())),
+        "flips": flips,
+    }
+
+
 def _disagreement(reference: str, verdict: str) -> str:
     if reference == "FAIL" and verdict == "PASS":
         return "False pass"
@@ -215,8 +245,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", help="Saved Inspect .eval judge-development log")
     parser.add_argument("--format", choices=("json", "markdown"), default="json")
+    parser.add_argument("--diff", metavar="EARLIER_LOG",
+                        help="Print the verdict-for-verdict diff from this earlier judge log to LOG")
     args = parser.parse_args()
     report = build_report(read_eval_log(args.log))
+    if args.diff:
+        diff = diff_reports(build_report(read_eval_log(args.diff)), report)
+        print(json.dumps(diff, indent=2, ensure_ascii=False, default=str))
+        return
     if args.format == "markdown":
         print(render_markdown(report), end="")
     else:
