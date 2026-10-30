@@ -170,3 +170,20 @@ def test_truncation_is_an_execution_gap_not_a_completed_conversation(tmp_path):
     assert "Incomplete response at user turn 1" in log.samples[0].error.message
     assert log.samples[0].metadata["completed_turns"] == 0
     assert not log.samples[0].scores
+
+
+@pytest.mark.parametrize("name", [f for f in FAMILIES if f.endswith("_implicit")])
+def test_implicit_twin_shares_parent_labels(name):
+    # A twin removes only the cue, so every parent control and label applies to it unchanged.
+    # The twin may add controls of its own; it may not relabel a parent control.
+    parent = name.removesuffix("_implicit")
+    assert parent in FAMILIES
+
+    def labels(family):
+        rows = [json.loads(line) for line in (ROOT / "cases" / family / "controls.jsonl").read_text().splitlines()]
+        return {row["id"]: row["expected"] for row in rows}
+
+    parent_labels, twin_labels = labels(parent), labels(name)
+    assert set(parent_labels) <= set(twin_labels)
+    for control_id, expected in parent_labels.items():
+        assert twin_labels[control_id] == expected, control_id
