@@ -1,15 +1,35 @@
 import hashlib
+import importlib
 import json
+import sys
 from copy import deepcopy
 
 import pytest
 from inspect_ai import eval as inspect_eval
-from inspect_ai.model import ModelOutput, get_model
+from inspect_ai.log import read_eval_log
+from inspect_ai.model import (
+    ModelCost,
+    ModelInfo,
+    ModelOutput,
+    get_model,
+    get_model_info,
+    set_model_info,
+)
 
-from task import ROOT, conversation_family, load_case, opening, samples
+from task import OPENROUTER_PRICES, ROOT, conversation_family, load_case, opening, samples
 
 # Every directory under cases/ is a family; new families are covered without listing them.
 FAMILIES = sorted(p.parent.name for p in (ROOT / "cases").glob("*/case.json"))
+
+# The models whose list prices task.py must register so Inspect can record their cost.
+PRICED = [
+    "openrouter/anthropic/claude-haiku-5.5",
+    "openrouter/openai/gpt-5.6-luna-pro",
+    "openrouter/openai/gpt-5.6-luna",
+    "openrouter/google/gemini-3.1-flash-lite",
+    "openrouter/deepseek/deepseek-v4.1-flash",
+    "openrouter/meta-llama/llama-3.3-70b-instruct",
+]
 
 
 def _field(variant):
@@ -187,3 +207,49 @@ def test_implicit_twin_shares_parent_labels(name):
     assert set(parent_labels) <= set(twin_labels)
     for control_id, expected in parent_labels.items():
         assert twin_labels[control_id] == expected, control_id
+
+
+@pytest.mark.parametrize("name", PRICED)
+def test_registered_price_matches_the_table(name):
+    input_price, output_price, cache_read_price = OPENROUTER_PRICES[name]
+    assert get_model_info(name).cost == ModelCost(
+        input=input_price,
+        output=output_price,
+        input_cache_write=input_price,
+        input_cache_read=cache_read_price,
+    )
+
+
+def test_importing_task_again_changes_no_price():
+    def registered():
+        return {name: get_model_info(name).model_dump() for name in PRICED}
+
+    before = registered()
+    importlib.reload(sys.modules["task"])
+    assert registered() == before
+
+
+def test_unlisted_model_is_not_priced():
+    info = get_model_info("openrouter/example")
+    assert info is None or info.cost is None
+
+
+def test_registered_price_becomes_recorded_cost(tmp_path):
+    # Inspect has no call to unregister one model. A name no other test uses keeps this
+    # price out of every run that uses mockllm/model.
+    set_model_info(
+        "mockllm/priced",
+        ModelInfo(cost=ModelCost(input=1.0, output=2.0, input_cache_write=1.0, input_cache_read=0.1)),
+    )
+    [log] = inspect_eval(
+        conversation_family("backup_care"), model="mockllm/priced",
+        sample_id="backup_care/confirmed", log_dir=str(tmp_path), display="none",
+    )
+    assert log.status == "success", log.error
+    saved = read_eval_log(log.location, header_only=True)
+    usage = saved.stats.model_usage["mockllm/priced"]
+    assert usage.input_tokens > 0 and usage.output_tokens > 0
+    assert usage.total_cost is not None
+    assert usage.total_cost == pytest.approx(
+        (usage.input_tokens * 1.0 + usage.output_tokens * 2.0) / 1_000_000
+    )

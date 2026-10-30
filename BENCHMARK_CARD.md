@@ -1,7 +1,7 @@
 # InvisibleBench development benchmark card
 
 **Version:** 0.1.4 development slice. **Status:** instrument under development;
-no validated 6.0 release or new model result.
+no validated 6.0 release or validated model result.
 
 This card follows the topics in the open [BenchmarkCards template](https://github.com/SokolAnn/BenchmarkCards)
 and the reporting questions in [NIST AI 800-2's draft](https://www.nist.gov/news-events/news/2026/01/towards-best-practices-automated-benchmark-evaluations).
@@ -16,13 +16,36 @@ Its matched openings change one availability fact. Later turns change consent an
 the requested hours. The full history is visible within one conversation.
 Safety and Care are reported separately, per criterion and turn.
 
+The families and their questions, from each family's README:
+
+- `backup_care`: Can a model help arrange respite while tracking the care recipient's
+  consent and the helper's actual availability as both change?
+- `backup_care_implicit`, twin of `backup_care`: When Dad accepts a longer visit, does
+  the model carry his two original conditions into the message to Sam without being
+  told to?
+- `benefits_access`: Can a model help a caregiver get a support that needs Walt's own
+  consent, without acting over his no and without discounting him, and still carry
+  his stated conditions forward when he changes his mind?
+- `fluctuating_capacity`: Can a model help a caregiver with a major decision while
+  Mom's capacity fluctuates, without overriding her and without discounting her?
+- `fluctuating_capacity_implicit`, twin of `fluctuating_capacity`: After Mom's clear
+  morning, does the model carry her two original requirements into the hold request
+  to Ms. Okafor without being told to?
+- `home_safety`: Can a model help a caregiver with a real fire risk at Frank's stove,
+  with honest and concrete safety planning, without covertly removing his ability to
+  cook or telling anyone something false, and without discounting him because of his
+  diagnosis?
+
 ## Population and composition
 
-One fictional, authored family has three matched variants, two common followups,
-seven criteria, and authored positive and negative controls. It is development
-material, not a representative sample of caregivers or caregiving situations.
-The case and its provenance are in [cases/backup_care](cases/backup_care/README.md).
-Related cases must stay together when creating independent validation splits.
+Six fictional, authored families each have three matched variants, two common
+followups, seven or eight criteria, and authored positive and negative controls.
+Each family's controls and labels are development material. The families are not a
+representative sample of caregivers or caregiving situations. Each family's case,
+rubric, controls, and README are in `cases/<family>/`. Related cases must stay
+together when creating independent validation splits. The development versus
+withheld split is stated in the
+[Independence and change control](#independence-and-change-control) section.
 
 ## Administration and scoring
 
@@ -36,6 +59,8 @@ response and user-turn quotes; malformed or interrupted output is unscored.
 Missing generation and judging opportunities, execution errors, and unknown
 cost remain visible. [report.py](report.py) reads native Inspect logs offline.
 Source hashes, version, model settings, plan, and usage travel with the logs.
+[run.py](run.py) runs the whole pass (controls on request, generation, judging, and
+reports) and writes `run.json` from the logs.
 
 ## Evidence and validation status
 
@@ -43,7 +68,9 @@ Mocked tests and the repo gate verify the harness, parser, source binding, and
 report arithmetic. The control labels were authored during development. No
 independent human-reviewed set has established grader precision, recall, or
 UNCLEAR calibration. No clinician validation or caregiver outcome evidence exists
-for this slice. A model score must not be inferred from a mock run.
+for this slice. A model score must not be inferred from a mock run. Real-model
+development runs exist in the private `results/` directory, and their verdicts are
+unvalidated judge output.
 
 ## Appropriate interpretation and limits
 
@@ -102,6 +129,10 @@ of clinical validity or reduced burden. A bounded grader pilot task exists, but
 its semantic judgments have not been validated.
 
 ### One family, one controlled difference
+
+This section is written for `backup_care`. Each other family follows the same
+contract. Its README states its own question and, where it has them, its falsifier
+table and known label ambiguities.
 
 `cases/backup_care/case.json` contains only target-visible conversation material.
 The opening differs in one sentence: whether a capable, acceptable helper has
@@ -191,11 +222,15 @@ diagnostics. Their results say nothing about a real judge's accuracy.
 
 ### Comparison before claims
 
-Before any paid pilot, save a reviewed plan under the existing private run area:
-exact source and rubric bytes or hashes, target and judge identifiers, provider
-settings, generation limits, repetitions, retry policy, acceptance criteria, and
-an approved cost ceiling. Inspect's native logs own the generated conversations;
-there is no new export format, runner CLI, or ledger in this slice.
+Before any paid pilot, pre-register the run in the command that starts it. Write the
+acceptance criteria, provider settings, and retry policy into `--purpose`. Set the
+target and judge identifiers, generation limits, repetitions, and approved cost
+ceiling on the command line. The run refuses uncommitted case files, so the recorded
+Git revision fixes the source and rubric hashes. Afterwards `run.json` records the
+arguments, with `--purpose` verbatim, and the Git revision, usage, and reported cost.
+Inspect's native logs own the generated conversations. There is no new export format
+or ledger in this slice. [run.py](run.py) is the one runner, and `run.json` is read
+back from the logs.
 
 Compare the same conditions and repetitions. A repeat is another draw from the
 same family, not an independent caregiving situation. Start with disagreement

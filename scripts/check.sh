@@ -9,7 +9,7 @@ for pair in "UV_CACHE_DIR:${HOME}/.cache/uv" "XDG_DATA_HOME:${HOME}/.local/share
     export "$var=${TMPDIR:-/tmp}/gc-bench-${var,,}"
   fi
 done
-uv run --locked ruff check task.py grader.py report.py review_packet.py tests
+uv run --locked ruff check task.py grader.py report.py review_packet.py run.py tests
 uv run --locked pytest tests -q
 cd _archive/5.8.0
 exec uv run --locked --extra dev bash ./scripts/check.sh
