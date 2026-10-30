@@ -42,6 +42,7 @@ def build_report(log: EvalLog) -> dict:
             "family": summary["family"],
             "model": log.eval.model,
             "benchmark_version": log.eval.metadata["benchmark_version"],
+            "revision": summary["revision"],
             "versions": log.eval.model_dump(mode="json", include={
                 "task_version", "revision", "packages"}),
             "model_generate_config": log.eval.model_generate_config.model_dump(mode="json")
@@ -75,7 +76,7 @@ def diff_reports(before: dict, after: dict) -> dict:
         counts[label] = counts.get(label, 0) + 1
     identity = lambda report: {  # noqa: E731
         "eval_id": report["run"]["eval_id"], "model": report["run"]["model"],
-        "git_commit": report["summary"].get("git_commit"),
+        "revision": report["run"]["revision"],
         "source_sha256": report["summary"].get("source_sha256"),
     }
     return {
@@ -115,6 +116,9 @@ def render_markdown(report: dict) -> str:
     run = report["run"]
     summary = report["summary"]
     control = report["kind"] == "judge-development-audit"
+    revision = run["revision"]
+    revision_text = (f"commit {revision['commit']}, dirty {revision['dirty']}"
+                     if revision["commit"] else "none recorded")
     lines = [
         "# InvisibleBench evaluation report",
         "",
@@ -123,6 +127,7 @@ def render_markdown(report: dict) -> str:
         f"**Status:** {summary['status']}  ",
         f"**Judge model:** {run['model']}  ",
         f"**Development version:** {run['benchmark_version']}  ",
+        f"**Revision:** {revision_text}  ",
         f"**Validation:** {report['validation']}",
         "",
     ]
